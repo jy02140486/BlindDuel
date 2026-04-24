@@ -1,0 +1,109 @@
+{
+  "machine": "rabble_stick",
+  "initialState": "idle",
+  "inputs": {
+    "commands": ["thrust", "swing", "hit"],
+    "parameters": {
+      "moveMagnitude": {
+        "type": "number"
+      }
+    }
+  },
+  "states": {
+    "idle": {
+      "clip": "idle",
+      "loop": true,
+      "transitions": [
+        {
+          "to": "thrust",
+          "when": [
+            { "command": "thrust" }
+          ]
+        },
+        {
+          "to": "swing",
+          "when": [
+            { "command": "swing" }
+          ]
+        },
+        {
+          "to": "move",
+          "when": [
+            { "parameter": "moveMagnitude", "op": ">", "value": 0.2 }
+          ]
+        },
+        {
+          "to": "hit",
+          "when": [
+            { "command": "hit" }
+          ]
+        }
+      ]
+    },
+    "move": {
+      "clip": "move",
+      "loop": true,
+      "transitions": [
+        {
+          "to": "thrust",
+          "when": [
+            { "command": "thrust" }
+          ]
+        },
+        {
+          "to": "swing",
+          "when": [
+            { "command": "swing" }
+          ]
+        },
+        {
+          "to": "idle",
+          "when": [
+            { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "thrust": {
+      "clip": "thrust",
+      "attackActive": true,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,0.1,-0.3]
+    },
+    "swing": {
+      "clip": "swing",
+      "attackActive": true,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0.1,-0.4]
+    },
+    "hit": {
+      "clip": "hit",
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0.4,-0.1]
+    }
+  }
+}

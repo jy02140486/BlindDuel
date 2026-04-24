@@ -1,0 +1,276 @@
+export class ContactResolver {
+    constructor(options = {}) {
+        // 命中去重：同一攻击实例对同一目标只生效一次（跨帧保留，攻击结束后清理）。
+        this.hitDedupe = new Set();
+        // 拼刀去重：同一对攻击实例只处理一次拼刀结果（跨帧保留，任一攻击结束后清理）。
+        this.clashDedupe = new Set();
+        // 防守接触去重：同一攻击实例对同一防守方只处理一次拦截结果。
+        this.guardDedupe = new Set();
+        this.hitKnockback = options.hitKnockback ?? 0.12;
+        this.clashKnockback = options.clashKnockback ?? 0.2;
+    }
+
+    resolve(characters = []) {
+        const snapshots = [];
+        const snapshotById = new Map();
+        for (const character of characters) {
+            if (!character || typeof character.getCombatSnapshot !== "function") {
+                continue;
+            }
+            const snapshot = character.getCombatSnapshot();
+            snapshots.push(snapshot);
+            snapshotById.set(snapshot.characterId, snapshot);
+        }
+
+        const activeAttackIds = this.#collectActiveAttackIds(snapshots);
+        this.#cleanupDedupe(activeAttackIds);
+
+        // 同帧快照接触：先收集，不立即生效，避免“调用先后”影响结果。
+        const frameContacts = this.#collectFrameContacts(snapshots);
+        const invalidatedAttacks = new Set();
+        const effects = [];
+
+        // Phase 1: 先结算 weapon vs weapon（拼刀优先于打到身体）。
+        for (const contact of frameContacts.weaponVsWeapon) {
+            const attackA = contact.boxA.attackInstanceId;
+            const attackB = contact.boxB.attackInstanceId;
+            const aOffense = Boolean(attackA);
+            const bOffense = Boolean(attackB);
+
+            if (!aOffense && !bOffense) {
+                continue;
+            }
+
+            if (aOffense !== bOffense) {
+                const offenseAttackId = aOffense ? attackA : attackB;
+                const offenseCharacterId = aOffense ? contact.characterA : contact.characterB;
+                const guardCharacterId = aOffense ? contact.characterB : contact.characterA;
+                const offenseBox = aOffense ? contact.boxA : contact.boxB;
+                const guardBox = aOffense ? contact.boxB : contact.boxA;
+                const guardKey = `${offenseAttackId}|${guardCharacterId}`;
+                if (this.guardDedupe.has(guardKey)) {
+                    continue;
+                }
+                this.guardDedupe.add(guardKey);
+
+                const offenseLevel = this.#toWeaponLevel(offenseBox.subtype);
+                const guardLevel = this.#toWeaponLevel(guardBox.subtype);
+                if (this.#weaponLevelRank(guardLevel) >= this.#weaponLevelRank(offenseLevel)) {
+                    invalidatedAttacks.add(offenseAttackId);
+                    const offensePos = snapshotById.get(offenseCharacterId)?.rootPositionX ?? 0;
+                    const guardPos = snapshotById.get(guardCharacterId)?.rootPositionX ?? 0;
+                    effects.push(
+                        this.#buildClashEffect(offenseCharacterId, guardCharacterId, "clash_lose", offensePos, guardPos)
+                    );
+                }
+                continue;
+            }
+
+            const clashKey = this.#buildClashKey(attackA, attackB);
+            if (this.clashDedupe.has(clashKey)) {
+                continue;
+            }
+
+            this.clashDedupe.add(clashKey);
+            const levelA = this.#toWeaponLevel(contact.boxA.subtype);
+            const levelB = this.#toWeaponLevel(contact.boxB.subtype);
+            const posA = snapshotById.get(contact.characterA)?.rootPositionX ?? 0;
+            const posB = snapshotById.get(contact.characterB)?.rootPositionX ?? 0;
+
+            if (levelA === levelB) {
+                // 同级拼刀：双方攻击都失效，双方都进入弹刀/受击反馈。
+                invalidatedAttacks.add(attackA);
+                invalidatedAttacks.add(attackB);
+
+                effects.push(
+                    this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB),
+                    this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA)
+                );
+                continue;
+            }
+
+            const strongIsA = levelA === "strong_blade";
+            const loserId = strongIsA ? contact.characterB : contact.characterA;
+            const winnerId = strongIsA ? contact.characterA : contact.characterB;
+            const loserAttack = strongIsA ? attackB : attackA;
+            const loserPos = strongIsA ? posB : posA;
+            const winnerPos = strongIsA ? posA : posB;
+
+            // 强压弱：仅弱方攻击失效并触发弹刀/受击反馈。
+            invalidatedAttacks.add(loserAttack);
+            effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
+        }
+
+        // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效则跳过）。
+        for (const contact of frameContacts.weaponVsHitbox) {
+            const attackId = contact.weapon.attackInstanceId;
+            if (!attackId || invalidatedAttacks.has(attackId)) {
+                continue;
+            }
+
+            const hitKey = `${attackId}|${contact.targetId}`;
+            if (this.hitDedupe.has(hitKey)) {
+                continue;
+            }
+
+            this.hitDedupe.add(hitKey);
+            const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
+            const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
+            const knockback = this.#signedKnockback(targetPos, attackerPos, this.hitKnockback);
+
+            effects.push({
+                targetId: contact.targetId,
+                context: {
+                    attackInstanceId: attackId,
+                    attackerId: contact.attackerId,
+                    targetId: contact.targetId,
+                    attackLevel: this.#toWeaponLevel(contact.weapon.subtype),
+                    contactType: "weapon_vs_hitbox",
+                    damage: 1,
+                    hitState: "hit",
+                    knockbackX: knockback
+                }
+            });
+        }
+
+        return { frameContacts, effects };
+    }
+
+    #collectActiveAttackIds(snapshots) {
+        const ids = new Set();
+        for (const snapshot of snapshots) {
+            for (const box of snapshot.boxes) {
+                if (box.type === "weaponbox" && box.attackInstanceId) {
+                    ids.add(box.attackInstanceId);
+                }
+            }
+        }
+        return ids;
+    }
+
+    #cleanupDedupe(activeAttackIds) {
+        // 攻击实例不再活跃时，释放相关命中去重记录。
+        for (const key of this.hitDedupe) {
+            const [attackId] = key.split("|");
+            if (!activeAttackIds.has(attackId)) {
+                this.hitDedupe.delete(key);
+            }
+        }
+
+        // 任一攻击实例结束时，释放对应拼刀去重记录。
+        for (const key of this.clashDedupe) {
+            const [attackA, attackB] = key.split("::");
+            if (!activeAttackIds.has(attackA) || !activeAttackIds.has(attackB)) {
+                this.clashDedupe.delete(key);
+            }
+        }
+
+        for (const key of this.guardDedupe) {
+            const [attackId] = key.split("|");
+            if (!activeAttackIds.has(attackId)) {
+                this.guardDedupe.delete(key);
+            }
+        }
+    }
+
+    #collectFrameContacts(snapshots) {
+        const weaponVsWeapon = [];
+        const weaponVsHitbox = [];
+
+        for (let i = 0; i < snapshots.length; i += 1) {
+            for (let j = i + 1; j < snapshots.length; j += 1) {
+                const a = snapshots[i];
+                const b = snapshots[j];
+                const aWeapons = a.boxes.filter((box) => box.type === "weaponbox");
+                const bWeapons = b.boxes.filter((box) => box.type === "weaponbox");
+                const aHitboxes = a.boxes.filter((box) => box.type === "hitbox");
+                const bHitboxes = b.boxes.filter((box) => box.type === "hitbox");
+
+                for (const boxA of aWeapons) {
+                    for (const boxB of bWeapons) {
+                        if (!this.#intersects(boxA, boxB)) {
+                            continue;
+                        }
+                        weaponVsWeapon.push({
+                            characterA: a.characterId,
+                            characterB: b.characterId,
+                            boxA,
+                            boxB
+                        });
+                    }
+                }
+
+                for (const weapon of aWeapons) {
+                    for (const hitbox of bHitboxes) {
+                        if (!this.#intersects(weapon, hitbox)) {
+                            continue;
+                        }
+                        weaponVsHitbox.push({
+                            attackerId: a.characterId,
+                            targetId: b.characterId,
+                            weapon,
+                            hitbox
+                        });
+                    }
+                }
+
+                for (const weapon of bWeapons) {
+                    for (const hitbox of aHitboxes) {
+                        if (!this.#intersects(weapon, hitbox)) {
+                            continue;
+                        }
+                        weaponVsHitbox.push({
+                            attackerId: b.characterId,
+                            targetId: a.characterId,
+                            weapon,
+                            hitbox
+                        });
+                    }
+                }
+            }
+        }
+
+        return { weaponVsWeapon, weaponVsHitbox };
+    }
+
+    #intersects(a, b) {
+        // 现阶段使用 AABB 快速判定（忽略旋转角度），用于原型先跑通。
+        return (
+            Math.abs(a.center.x - b.center.x) <= (a.half.x + b.half.x) &&
+            Math.abs(a.center.y - b.center.y) <= (a.half.y + b.half.y) &&
+            Math.abs(a.center.z - b.center.z) <= (a.half.z + b.half.z)
+        );
+    }
+
+    #toWeaponLevel(subtype) {
+        return subtype === "strong_blade" ? "strong_blade" : "weak_blade";
+    }
+
+    #weaponLevelRank(level) {
+        return level === "strong_blade" ? 2 : 1;
+    }
+
+    #buildClashKey(attackA, attackB) {
+        return [attackA, attackB].sort().join("::");
+    }
+
+    #signedKnockback(targetPos, sourcePos, amount) {
+        return targetPos >= sourcePos ? Math.abs(amount) : -Math.abs(amount);
+    }
+
+    #buildClashEffect(targetId, otherId, contactType, targetPos, otherPos) {
+        return {
+            targetId,
+            context: {
+                attackInstanceId: null,
+                attackerId: otherId,
+                targetId,
+                attackLevel: null,
+                contactType,
+                damage: 0,
+                hitState: "hit",
+                knockbackX: this.#signedKnockback(targetPos, otherPos, this.clashKnockback)
+            }
+        };
+    }
+}

@@ -1,0 +1,142 @@
+# Odinlike 2D+3D 多层卷轴方案（SceneVisualSystem）
+
+更新时间：2026-04-24
+
+目标：在 Babylon 中以 3D 场景承载 2D 资产，做出类似《奥丁领域》的多层卷轴视觉效果，并保持当前项目的分层架构（Scene 负责编排，System 负责运行时逻辑）。
+
+## 1. 设计目标与边界
+- 目标风格：2.5D 舞台感，强调层次纵深、前后景差速移动、前景遮挡。
+- 技术边界：本轮只做视觉层方案，不引入玩法逻辑耦合，不改角色状态机与战斗判定。
+- 架构边界：CameraRig 只负责镜头；SceneVisualSystem 负责环境层更新与视差。
+
+## 2. 坐标与镜头约定
+- 世界坐标约定：
+- `X`：战斗主轴（左右移动）。
+- `Y`：高度。
+- `Z`：视觉景深层级（远近层）。
+- 角色移动与碰撞仍以 `X/Y` 为主，`Z` 仅用于视觉分层。
+- 镜头约定：
+- 保留当前 DuelCameraRig 跟随逻辑。
+- SceneVisualSystem 读取镜头状态（推荐 `camera.target.x`）驱动视差。
+
+## 3. 视觉分层模型（建议 5 层）
+- `BG_FAR`：天空/远山/远建筑，最慢视差。
+- `BG_MID`：中景树群/建筑群，中慢视差。
+- `STAGE`：地面与可玩舞台，基准层（parallax=1.0）。
+- `FG_DECOR`：前景草木/栏杆/碎片，中快视差。
+- `FG_OCCLUDER`：可遮挡角色的前景物（树干、柱子、黑影），最快或单独控制。
+
+推荐初始视差系数：
+- `BG_FAR`: `0.15`
+- `BG_MID`: `0.45`
+- `STAGE`: `1.0`
+- `FG_DECOR`: `1.35`
+- `FG_OCCLUDER`: `1.65`
+
+## 4. 资产形态策略
+- 主要使用 `Plane + PNG 透明贴图`（2D 资产放在 3D 空间）。
+- 不把所有内容都做成 Babylon Sprite，避免排序与遮挡控制受限。
+- Tile 与单件混合：
+- 可重复纹理层（如远山带、草带）采用 tile 思路。
+- 独特资产（大树、雕像、断桥）采用单件摆放。
+
+## 5. SceneVisualSystem 职责
+- 初始化：
+- 创建各层 root 节点（TransformNode）。
+- 按配置生成贴片（tile strip 或单件装饰）。
+- 维护层级元数据（parallax、loop、bounds、render group）。
+- 每帧更新：
+- 基于镜头 `x` 计算各层偏移。
+- 处理可循环层的“无缝回卷”。
+- 处理前景遮挡层可见性与排序微调。
+- 释放：
+- 统一销毁层 root、mesh、材质引用。
+
+## 6. 与 Scene / Camera 的关系
+- `Scene`：
+- `init()` 创建并初始化 `SceneVisualSystem`。
+- `update()` 先更新 `cameraRig`，再更新 `sceneVisualSystem`。
+- `dispose()` 负责系统销毁。
+- `CameraRig`：
+- 只输出镜头结果，不承担视觉层节点移动职责。
+
+更新顺序建议：
+1. `cameraRig.update(dt, context)`
+2. `sceneVisualSystem.update(dt, { camera })`
+3. `scene.render()`
+
+## 7. 配置驱动（EnvironmentConfig）建议
+建议新增环境配置（json 或 js 常量），至少包含：
+
+```ts
+type VisualLayerConfig = {
+  id: "BG_FAR" | "BG_MID" | "STAGE" | "FG_DECOR" | "FG_OCCLUDER";
+  z: number;
+  parallaxFactor: number;
+  renderingGroupId: number;
+  loopX?: boolean;
+  loopWidth?: number;
+  elements: VisualElementConfig[];
+};
+
+type VisualElementConfig = {
+  id: string;
+  texture: string;
+  kind: "tile" | "single";
+  x: number;
+  y: number;
+  zOffset?: number;
+  width: number;
+  height: number;
+  alphaIndex?: number;
+  flipX?: boolean;
+};
+```
+
+## 8. 视差计算与循环策略
+- 层偏移公式（横向）：
+- `layerOffsetX = cameraAnchorX * (1 - parallaxFactor)`
+- 每层 root 的基础位置 + `layerOffsetX`。
+- 循环层（tile）：
+- 使用 2~3 段条带拼接。
+- 当某段超出可视阈值时平移到队尾，形成无缝循环。
+
+## 9. 排序、遮挡、透明建议
+- 大层顺序：用 `renderingGroupId` 固化。
+- 同层细节：用 `alphaIndex` 微调。
+- 透明边缘控制：
+- 素材导出时做干净 alpha（避免白边）。
+- 尽量统一预乘 alpha 策略，减少边缘发灰。
+- 与地面重叠时给轻微 `y` 抬升避免闪烁。
+
+## 10. 分阶段落地（建议）
+1. Phase A：最小可见层
+- 只接入 `BG_FAR + STAGE + FG_DECOR` 三层。
+- 先验证 parallax 稳定、不抖动。
+
+2. Phase B：加循环与遮挡
+- 给 `BG_FAR/FG_DECOR` 增加 loop。
+- 加 `FG_OCCLUDER` 并验证角色遮挡关系。
+
+3. Phase C：资产管线稳态
+- 统一贴图命名、尺寸、pivot 约定。
+- 配置化摆放，Scene 不再写死视觉元素。
+
+## 11. 验收清单（视觉向）
+- [ ] 相机左右移动时，远景明显慢于舞台，前景明显快于舞台。
+- [ ] 层间无突兀跳变，无明显抖动。
+- [ ] 循环层无接缝闪断。
+- [ ] 前景遮挡不穿帮（角色经过时前后关系正确）。
+- [ ] Scene 不直接持有大段视觉摆放细节（配置与系统接管）。
+
+## 12. 风险与规避
+- 风险：层级太多导致 draw call 上升。
+- 规避：同层可合批资产统一材质与纹理图集。
+- 风险：透明排序冲突。
+- 规避：固定 renderingGroup + alphaIndex，关键遮挡物单独层。
+- 风险：镜头抖动放大视差抖动。
+- 规避：相机平滑参数优先稳定，视差读取使用平滑后的 camera anchor。
+
+---
+
+结论：采用 `SceneVisualSystem + EnvironmentConfig + Plane 贴片层` 的方案，能最大化复用你当前 Scene/Camera 分层成果，同时最接近 Odinlike 的多层卷轴表现，并为后续 AI 控制器接入保留清晰边界。

@@ -1,0 +1,122 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_move.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_move.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_move.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_move.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#E37800"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#FF0000"
+                                               }
+                                           ],
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-04-19T16:17:01.3657834Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_move (Collision) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  44.5,
+                                         "cy":  80,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  39.5,
+                                                    "cy":  119.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_move (Collision) 1.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  44.5,
+                                         "cy":  79,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  39.5,
+                                                    "cy":  119.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_move (Collision) 2.ase",
+                       "frameRect":  {
+                                         "x":  256,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  44.5,
+                                         "cy":  79,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  39.5,
+                                                    "cy":  119.5
+                                                }
+                                   }
+                   }
+               ]
+}

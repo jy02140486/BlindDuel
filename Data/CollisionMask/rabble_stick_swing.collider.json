@@ -1,0 +1,133 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick_swing.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick_swing.png",
+                   "rootAtlasJson":  "Data/RootMotion/rabble_stick_swing.json",
+                   "rootAtlasPng":  "Data/RootMotion/rabble_stick_swing.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#E37800"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#FF0000"
+                                               }
+                                           ],
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-04-22T17:32:16.2540311Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "rabble_stick_swing (Collision) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  97.5,
+                                         "cy":  92.5,
+                                         "w":  98,
+                                         "h":  40,
+                                         "angle":  90,
+                                         "pixelCount":  3920
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  136
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "rabble_stick_swing (Collision) 1.ase",
+                       "frameRect":  {
+                                         "x":  160,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  99.5,
+                                         "cy":  91.5,
+                                         "w":  98,
+                                         "h":  40,
+                                         "angle":  90,
+                                         "pixelCount":  3920
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  107,
+                                                    "cy":  136
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "rabble_stick_swing (Collision) 2.ase",
+                       "frameRect":  {
+                                         "x":  320,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  92.5,
+                                         "w":  98,
+                                         "h":  40,
+                                         "angle":  90,
+                                         "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "weaponbox_weak_blade_0",
+                                         "type":  "weaponbox",
+                                         "subtype":  "weak_blade",
+                                         "cx":  28.5,
+                                         "cy":  85,
+                                         "w":  43,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  1634
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  96,
+                                                    "cy":  136
+                                                }
+                                   }
+                   }
+               ]
+}

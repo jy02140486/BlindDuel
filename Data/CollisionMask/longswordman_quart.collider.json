@@ -1,0 +1,173 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_quart.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_quart.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_quart.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_quart.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#E37800"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#FF0000"
+                                               }
+                                           ],
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-04-22T15:47:37.5491279Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_quart (CollisionMask) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  50.5,
+                                         "cy":  144,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  182.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_quart (CollisionMask) 1.ase",
+                       "frameRect":  {
+                                         "x":  192,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  50.5,
+                                         "cy":  144,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  182.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_quart (CollisionMask) 2.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  50.5,
+                                         "cy":  144,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  42.5,
+                                                    "cy":  182.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_quart (CollisionMask) 3.ase",
+                       "frameRect":  {
+                                         "x":  576,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  50.5,
+                                         "cy":  144,
+                                         "w":  93,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  3534
+                                     },
+                                     {
+                                         "id":  "weaponbox_strong_blade_0",
+                                         "type":  "weaponbox",
+                                         "subtype":  "strong_blade",
+                                         "cx":  98.963,
+                                         "cy":  122.505,
+                                         "w":  55.496,
+                                         "h":  28.202,
+                                         "angle":  81.732,
+                                         "pixelCount":  1486
+                                     },
+                                     {
+                                         "id":  "weaponbox_weak_blade_0",
+                                         "type":  "weaponbox",
+                                         "subtype":  "weak_blade",
+                                         "cx":  139.501,
+                                         "cy":  131.011,
+                                         "w":  50.475,
+                                         "h":  35.285,
+                                         "angle":  -7.896,
+                                         "pixelCount":  1697
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  40.5,
+                                                    "cy":  182.5
+                                                }
+                                   }
+                   }
+               ]
+}

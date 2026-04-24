@@ -1,0 +1,45 @@
+{ "frames": {
+   "rabble_stick_thrust (RootMotion) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 100
+   },
+   "rabble_stick_thrust (RootMotion) 1.ase": {
+    "frame": { "x": 160, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 400
+   },
+   "rabble_stick_thrust (RootMotion) 2.ase": {
+    "frame": { "x": 320, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 300
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "G:\\SpriteOutput\\rabble_stick_thrust.png",
+  "format": "RGBA8888",
+  "size": { "w": 480, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Collision", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "lowerbody", "opacity": 255, "blendMode": "normal" },
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
+   { "name": "leftarm", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

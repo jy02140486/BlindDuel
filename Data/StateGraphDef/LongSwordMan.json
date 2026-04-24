@@ -1,0 +1,113 @@
+{
+  "machine": "longswordman",
+  "initialState": "idle",
+  "inputs": {
+    "commands": ["thrust", "quart"],
+    "parameters": {
+      "moveMagnitude": {
+        "type": "number"
+      }
+    }
+  },
+  "states": {
+    "idle": {
+      "clip": "idle",
+      "loop": true,
+      "transitions": [
+        {
+          "to": "thrust",
+          "when": [
+            { "command": "thrust" }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" }
+          ]
+        },
+        {
+          "to": "move",
+          "when": [
+            { "parameter": "moveMagnitude", "op": ">", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "move": {
+      "clip": "move",
+      "loop": true,
+      "transitions": [
+        {
+          "to": "thrust",
+          "when": [
+            { "command": "thrust" }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" }
+          ]
+        },
+        {
+          "to": "idle",
+          "when": [
+            { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "thrust": {
+      "clip": "thrust",
+      "attackActive": true,
+      "loop": false,
+      "events": [
+        { "atFrame": 1, "name": "hitbox_on" },
+        { "atFrame": 2, "name": "hitbox_off" }
+      ],
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [-0.2, 0, 0.2]
+    },
+    "quart": {
+      "clip": "quart",
+      "attackActive": true,
+      "loop": false,
+      "events": [
+        { "atFrame": 1, "name": "hitbox_on" },
+        { "atFrame": 2, "name": "hitbox_off" },
+        { "atFrame": 3, "name": "hitbox_off" },
+        { "atFrame": 4, "name": "hitbox_off" }
+      ],
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,0.1,0.4,0.1]
+    },
+    "hit": {
+      "clip": "hit",
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [-0.4,0.1]
+    }
+  }
+}

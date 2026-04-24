@@ -1,0 +1,46 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a2e; /* Dark theme suitable for game */
+    color: #fff;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+#ui-layer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    pointer-events: none;
+}
+#ui-layer h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+button {
+    pointer-events: auto;
+    background: #e84118;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: background 0.2s, transform 0.1s;
+    margin-right: 10px;
+}
+button:hover {
+    background: #c23616;
+}
+button:active {
+    transform: scale(0.95);
+}
