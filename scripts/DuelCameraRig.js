@@ -36,11 +36,15 @@ export class DuelCameraRig {
             new BABYLON.Vector3(0, this.targetHeight, 0),
             scene
         );
+        
+        // 使用透视摄像机（默认模式）
+        this.camera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
+        
         this.camera.attachControl(canvas, false);
         this.camera.lowerRadiusLimit = this.minRadius;
         this.camera.upperRadiusLimit = this.maxRadius;
         this.camera.inputs.clear();
-        console.info("[CameraRig] mode=duel");
+        console.info("[CameraRig] mode=duel (perspective)");
     }
 
     update(dtMs, context) {

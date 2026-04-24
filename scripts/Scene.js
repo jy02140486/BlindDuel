@@ -6,6 +6,7 @@ import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
 import { createHeroCharacter, createRabbleStickCharacter } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
+import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 
 export class Scene {
     constructor(engine, canvas) {
@@ -19,6 +20,7 @@ export class Scene {
         this.rabbleController = null;
         this.combatSystem = null;
         this.cameraRig = null;
+        this.sceneVisualSystem = null;
         this._onKeyDown = null;
     }
 
@@ -26,14 +28,18 @@ export class Scene {
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
 
+        // 添加调试层（按Ctrl+Shift+I打开）
+        await this.scene.debugLayer.show({
+            overlay: true,
+            globalRoot: document.getElementById("canvas") || undefined
+        });
+
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.scene);
         light.intensity = 1.0;
 
-        const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 12 }, this.scene);
-        ground.position.y = -2.2;
-        const groundMat = new BABYLON.StandardMaterial("groundMat", this.scene);
-        groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.24);
-        ground.material = groundMat;
+        // 初始化视觉系统（替换原有的地面创建）
+        this.sceneVisualSystem = new SceneVisualSystem(this.scene);
+        await this.sceneVisualSystem.init(DEFAULT_ENVIRONMENT_CONFIG);
 
         const assets = await loadDataAssets(ASSET_MANIFEST);
 
@@ -68,10 +74,19 @@ export class Scene {
         this.character.update(dtMs);
         this.rabbleStick.update(dtMs);
         this.combatSystem.update([this.character, this.rabbleStick]);
+        
+        // 先更新相机，再更新视觉系统（按文档要求的顺序）
         this.cameraRig.update(dtMs, {
             hero: this.character,
             opponent: this.rabbleStick
         });
+        
+        // 更新视觉系统，传递相机信息
+        if (this.sceneVisualSystem) {
+            this.sceneVisualSystem.update(dtMs, {
+                camera: this.cameraRig.camera
+            });
+        }
     }
 
     render() {
@@ -92,6 +107,10 @@ export class Scene {
         if (this.cameraRig) {
             this.cameraRig.dispose();
             this.cameraRig = null;
+        }
+        if (this.sceneVisualSystem) {
+            this.sceneVisualSystem.dispose();
+            this.sceneVisualSystem = null;
         }
     }
 }

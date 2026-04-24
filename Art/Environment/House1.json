@@ -1,0 +1,26 @@
+{ "frames": {
+   "House1.ase": {
+    "frame": { "x": 0, "y": 0, "w": 192, "h": 192 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 192 },
+    "sourceSize": { "w": 192, "h": 192 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\Env\\House1.png",
+  "format": "RGBA8888",
+  "size": { "w": 192, "h": 192 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "mainpart", "opacity": 255, "blendMode": "normal" },
+   { "name": "Deco", "opacity": 255, "blendMode": "normal" },
+   { "name": "roof", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}
