@@ -7,13 +7,29 @@ async function start() {
 
     await scene.init();
 
+    // 暴露到全局，方便控制台调试
+    window.gameScene = scene;
+
+    // 暂停键监听（P 或 Esc）
+    window.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "p" || e.key === "Escape") {
+            scene.togglePause();
+        }
+        if (e.key.toLowerCase() === "o") {
+            scene.toggleCameraProjection();
+        }
+    });
+
     engine.runRenderLoop(() => {
         const dtMs = engine.getDeltaTime();
         scene.update(dtMs);
         scene.render();
     });
 
-    window.addEventListener("resize", () => engine.resize());
+    window.addEventListener("resize", () => {
+        scene.onResize();
+        engine.resize();
+    });
     window.addEventListener("beforeunload", () => {
         scene.dispose();
     }, { once: true });

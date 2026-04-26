@@ -22,6 +22,7 @@ export class Scene {
         this.cameraRig = null;
         this.sceneVisualSystem = null;
         this._onKeyDown = null;
+        this.paused = false;
     }
 
     async init() {
@@ -54,8 +55,23 @@ export class Scene {
         this.playerController = new PlayerController(this.inputSystem, this.character);
         this.rabbleController = new TestController(this.rabbleStick, assets.testScripts.rabbleBasicSequence);
         this.combatSystem = new CombatSystem();
-        this.cameraRig = new DuelCameraRig();
+        this.cameraRig = new DuelCameraRig({
+            cameraHeight: 8,        // 相机高度（Y 偏移）
+            cameraDistance: 25,     // 相机在人物后方的距离（Z 偏移，正数 = 后方）
+            minZoomDistance: 15,    // 透视最小距离
+            maxZoomDistance: 35,    // 透视最大距离
+            zoomScale: 1.5,         // 人物远离时的额外距离
+            baseOrthoWidth: 20,
+            minOrthoWidth: 15,
+            maxOrthoWidth: 40,
+            orthoZoomScale: 8,
+            targetAspect: 16 / 9
+        });
         this.cameraRig.init(this.scene, this.canvas);
+
+        // 复用 Vector3 避免每帧创建对象
+        this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
+        this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "c") {
@@ -67,18 +83,66 @@ export class Scene {
         window.addEventListener("keydown", this._onKeyDown);
     }
 
+    togglePause() {
+        this.paused = !this.paused;
+        console.log(this.paused ? "Paused" : "Resumed");
+    }
+
+    toggleCameraProjection() {
+        if (this.cameraRig) {
+            this.cameraRig.toggleProjection();
+        }
+    }
+
+    onResize() {
+        if (this.cameraRig) {
+            this.cameraRig.onResize();
+        }
+    }
+
     update(dtMs) {
+        // 计算相机参数（无论是否暂停都需要）
+        const heroPos = this.character.root.position;
+        const opponentPos = this.rabbleStick.root.position;
+        const centerX = (heroPos.x + opponentPos.x) * 0.5;
+        const centerZ = (heroPos.z + opponentPos.z) * 0.5;
+        const targetHeight = 0;
+
+        // 复用 Vector3 避免 GC 压力
+        this._cameraBasePosition.x = centerX;
+        this._cameraBasePosition.y = targetHeight + 8;
+        this._cameraBasePosition.z = centerZ - 25;
+        this._cameraTarget.x = centerX;
+        this._cameraTarget.y = targetHeight;
+        this._cameraTarget.z = centerZ;
+
+        // 暂停时只更新相机和视觉层，跳过 gameplay
+        if (this.paused) {
+            this.cameraRig.update(dtMs, {
+                basePosition: this._cameraBasePosition,
+                target: this._cameraTarget,
+                fighterDistance: Math.abs(opponentPos.x - heroPos.x)
+            });
+            if (this.sceneVisualSystem) {
+                this.sceneVisualSystem.update(dtMs, {
+                    camera: this.cameraRig.camera
+                });
+            }
+            return;
+        }
+
         this.inputSystem.update();
         this.playerController.update(dtMs);
         this.rabbleController.update(dtMs);
         this.character.update(dtMs);
         this.rabbleStick.update(dtMs);
         this.combatSystem.update([this.character, this.rabbleStick]);
-        
+
         // 先更新相机，再更新视觉系统（按文档要求的顺序）
         this.cameraRig.update(dtMs, {
-            hero: this.character,
-            opponent: this.rabbleStick
+            basePosition: this._cameraBasePosition,
+            target: this._cameraTarget,
+            fighterDistance: Math.abs(opponentPos.x - heroPos.x)
         });
         
         // 更新视觉系统，传递相机信息

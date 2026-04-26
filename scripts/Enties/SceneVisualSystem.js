@@ -2,6 +2,8 @@
  * SceneVisualSystem - 多层卷轴视觉效果系统
  * 负责管理背景、中景、前景等视觉层的视差移动和渲染
  */
+import { AnimatedTileComponent } from "../Components/AnimatedTileComponent.js";
+
 export class SceneVisualSystem {
     constructor(scene) {
         this.scene = scene;
@@ -52,6 +54,11 @@ export class SceneVisualSystem {
      * @param {Object} elementConfig - 元素配置
      */
     async _createVisualElement(layer, elementConfig) {
+        if (elementConfig.kind === "animated_tile") {
+            await this._createAnimatedTileElement(layer, elementConfig);
+            return;
+        }
+
         // 创建平面网格
         const plane = BABYLON.MeshBuilder.CreatePlane(
             `element_${elementConfig.id}`,
@@ -108,6 +115,97 @@ export class SceneVisualSystem {
     }
 
     /**
+     * 创建动画 tile 元素（spritesheet 帧动画 + 平铺重复）
+     * @param {Object} layer - 所属层
+     * @param {Object} elementConfig - 元素配置
+     */
+    async _createAnimatedTileElement(layer, elementConfig) {
+        // 加载 atlas json
+        const atlasResponse = await fetch(elementConfig.atlas || elementConfig.texture.replace('.png', '.json'));
+        const atlasData = await atlasResponse.json();
+
+        // 创建 Plane（尺寸由配置决定，如 1024x256）
+        const plane = BABYLON.MeshBuilder.CreatePlane(
+            `element_${elementConfig.id}`,
+            {
+                width: elementConfig.width,
+                height: elementConfig.height
+            },
+            this.scene
+        );
+
+        plane.position.x = elementConfig.x;
+        plane.position.y = elementConfig.y;
+        plane.position.z = elementConfig.zOffset || 0;
+        plane.parent = layer.root;
+
+        // 创建材质
+        const material = new BABYLON.StandardMaterial(`mat_${elementConfig.id}`, this.scene);
+        const texture = new BABYLON.Texture(elementConfig.texture, this.scene);
+
+        // 设置 wrap 模式以支持 tile 重复
+        texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+        texture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+        texture.hasAlpha = true;
+
+        material.diffuseTexture = texture;
+        material.useAlphaFromDiffuseTexture = true;
+        material.backFaceCulling = false;
+        material.disableLighting = true;
+        material.specularColor = new BABYLON.Color3(0, 0, 0);
+        material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        material.renderingGroupId = layer.config.renderingGroupId;
+
+        plane.material = material;
+
+        // 计算 tile 重复次数
+        const atlasW = atlasData.meta.size.w;
+        const atlasH = atlasData.meta.size.h;
+        const firstFrameKey = Object.keys(atlasData.frames)[0];
+        const frameW = atlasData.frames[firstFrameKey].frame.w;
+        const frameH = atlasData.frames[firstFrameKey].frame.h;
+
+        // uScale/vScale 决定贴图在 Plane 上重复多少次
+        const tileSizeW = elementConfig.tileSize?.width ?? (frameW * (elementConfig.pxToWorld || 0.03));
+        const tileSizeH = elementConfig.tileSize?.height ?? (frameH * (elementConfig.pxToWorld || 0.03));
+
+        texture.uScale = elementConfig.width / tileSizeW;
+        texture.vScale = elementConfig.height / tileSizeH;
+
+        // 创建动画组件
+        const animator = new AnimatedTileComponent(atlasData, {
+            loop: elementConfig.loop ?? true,
+            frameDurationMs: elementConfig.frameDurationMs ?? null
+        });
+
+        // 应用初始帧的 UV 偏移
+        this.#applyAnimatedTileFrame(texture, animator.currentFrame, atlasW, atlasH);
+
+        if (elementConfig.flipX) {
+            plane.rotation.y = Math.PI;
+        }
+
+        const element = {
+            mesh: plane,
+            config: elementConfig,
+            originalX: elementConfig.x,
+            animator: animator,
+            texture: texture,
+            atlasW: atlasW,
+            atlasH: atlasH
+        };
+
+        layer.elements.push(element);
+    }
+
+    #applyAnimatedTileFrame(texture, frame, atlasW, atlasH) {
+        // 水平排列的 spritesheet：每帧占 atlas 宽度的一部分
+        texture.uOffset = frame.x / atlasW;
+        // vOffset 保持 0（单排水平排列）
+        texture.vOffset = 0;
+    }
+
+    /**
      * 更新视觉系统（每帧调用）
      * @param {number} dtMs - 时间增量（毫秒）
      * @param {Object} context - 上下文信息（包含相机）
@@ -115,12 +213,27 @@ export class SceneVisualSystem {
     update(dtMs, context) {
         if (!context.camera) return;
 
-        // 获取相机锚点（使用相机的目标位置）
-        const cameraAnchorX = context.camera.target ? context.camera.target.x : 0;
+        // 获取相机锚点（UniversalCamera 使用 position.x 作为视差驱动）
+        const cameraAnchorX = context.camera.position ? context.camera.position.x : 0;
 
         // 更新各层的视差偏移
         for (const [layerId, layer] of this.layers) {
             this._updateLayerParallax(layer, cameraAnchorX);
+        }
+
+        // 更新动画 tile 的帧
+        for (const [layerId, layer] of this.layers) {
+            for (const element of layer.elements) {
+                if (element.animator) {
+                    element.animator.update(dtMs);
+                    this.#applyAnimatedTileFrame(
+                        element.texture,
+                        element.animator.currentFrame,
+                        element.atlasW,
+                        element.atlasH
+                    );
+                }
+            }
         }
     }
 
@@ -227,7 +340,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     texture: "Art/Environment/House1.png",
                     kind: "single",
                     x: -5,
-                    y: 0,
+                    y: 4.8,
                     width: 8,
                     height: 12
                 }
@@ -243,12 +356,15 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
             elements: [
                 {
                     id: "ground_1",
-                    texture: "Art/Environment/groundbase.png",
-                    kind: "tile", 
+                    texture: "Art/Environment/grassbase-sheet.png",
+                    atlas: "Art/Environment/grassbase.json",
+                    kind: "animated_tile",
                     x: 0,
-                    y: -2.2,
-                    width: 20,
-                    height: 0.5
+                    y: -3.2,
+                    width: 32,
+                    height: 8,
+                    tileSize: { width: 1.28, height: 1.28 },
+                    loop: true
                 }
             ]
         }

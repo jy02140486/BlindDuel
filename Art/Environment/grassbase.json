@@ -1,0 +1,32 @@
+{ "frames": {
+   "grassbase 0.png": {
+    "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 1000
+   },
+   "grassbase 1.png": {
+    "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 1000
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\Env\\grassbase-sheet.png",
+  "format": "RGBA8888",
+  "size": { "w": 256, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Layer", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

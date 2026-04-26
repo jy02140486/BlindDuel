@@ -1,6 +1,12 @@
 # Odinlike 2D+3D 多层卷轴方案（SceneVisualSystem）
 
-更新时间：2026-04-24
+更新时间：2026-04-25
+
+> 变更记录：
+> - 2026-04-25：相机基类从 `ArcRotateCamera` 迁移至 `UniversalCamera`；`SceneVisualSystem` 视差锚点从 `camera.target.x` 改为 `camera.position.x` 以兼容 UniversalCamera。
+> - 2026-04-25：Phase D 落地——DuelCameraRig 支持透视/正交投影切换（O 键），正交模式根据实际窗口比例动态调整 `orthoLeft/Right/Top/Bottom`。
+> - 2026-04-25：Scene 负责计算相机基准位置（basePosition）和 target，DuelCameraRig 只负责平滑移动和 zoom/ortho 范围调整。
+> - 2026-04-25：添加 AnimatedTileComponent 支持 spritesheet 帧动画地面（grassbase-sheet.png）。
 
 目标：在 Babylon 中以 3D 场景承载 2D 资产，做出类似《奥丁领域》的多层卷轴视觉效果，并保持当前项目的分层架构（Scene 负责编排，System 负责运行时逻辑）。
 
@@ -11,13 +17,15 @@
 
 ## 2. 坐标与镜头约定
 - 世界坐标约定：
-- `X`：战斗主轴（左右移动）。
-- `Y`：高度。
-- `Z`：视觉景深层级（远近层）。
+  - `X`：战斗主轴（左右移动）。
+  - `Y`：高度。
+  - `Z`：视觉景深层级（远近层）。
 - 角色移动与碰撞仍以 `X/Y` 为主，`Z` 仅用于视觉分层。
 - 镜头约定：
-- 保留当前 DuelCameraRig 跟随逻辑。
-- SceneVisualSystem 读取镜头状态（推荐 `camera.target.x`）驱动视差。
+  - DuelCameraRig 使用 `UniversalCamera` 作为基类（原 `ArcRotateCamera` 已迁移）。
+  - Scene 负责计算相机基准位置（basePosition）和 target（人物连线中点），传递给 DuelCameraRig。
+  - DuelCameraRig 负责平滑移动、透视 zoom、正交范围调整。
+  - SceneVisualSystem 读取镜头状态（`camera.position.x`）驱动视差。
 
 ## 3. 视觉分层模型（建议 5 层）
 - `BG_FAR`：天空/远山/远建筑，最慢视差。
@@ -79,18 +87,24 @@ type VisualLayerConfig = {
   elements: VisualElementConfig[];
 };
 
+```ts
 type VisualElementConfig = {
   id: string;
   texture: string;
-  kind: "tile" | "single";
+  atlas?: string;           // spritesheet atlas json（仅 animated_tile）
+  kind: "tile" | "single" | "animated_tile";
   x: number;
   y: number;
   zOffset?: number;
   width: number;
   height: number;
+  tileSize?: { width: number; height: number };  // 单 tile 尺寸（仅 animated_tile）
+  loop?: boolean;           // 是否循环播放（仅 animated_tile）
+  frameDurationMs?: number; // 强制帧时长（仅 animated_tile）
   alphaIndex?: number;
   flipX?: boolean;
 };
+```
 ```
 
 ## 8. 视差计算与循环策略
@@ -110,17 +124,25 @@ type VisualElementConfig = {
 - 与地面重叠时给轻微 `y` 抬升避免闪烁。
 
 ## 10. 分阶段落地（建议）
-1. Phase A：最小可见层
-- 只接入 `BG_FAR + STAGE + FG_DECOR` 三层。
-- 先验证 parallax 稳定、不抖动。
+1. Phase A：最小可见层 ✅
+   - 接入 `BG_FAR + BG_MID + STAGE` 三层。
+   - 验证 parallax 稳定、不抖动。
+   - 添加 AnimatedTileComponent 支持 spritesheet 帧动画地面。
 
 2. Phase B：加循环与遮挡
-- 给 `BG_FAR/FG_DECOR` 增加 loop。
-- 加 `FG_OCCLUDER` 并验证角色遮挡关系。
+   - 给 `BG_FAR/FG_DECOR` 增加 loop。
+   - 加 `FG_OCCLUDER` 并验证角色遮挡关系。
 
 3. Phase C：资产管线稳态
-- 统一贴图命名、尺寸、pivot 约定。
-- 配置化摆放，Scene 不再写死视觉元素。
+   - 统一贴图命名、尺寸、pivot 约定。
+   - 配置化摆放，Scene 不再写死视觉元素。
+
+4. Phase D：相机投影切换 ✅
+   - DuelCameraRig 基类迁移至 `UniversalCamera`。
+   - Scene 计算 basePosition 和 target，Rig 负责平滑和 zoom。
+   - 支持透视/正交投影切换（O 键切换）。
+   - 正交模式根据实际窗口比例动态调整 `orthoLeft/Right/Top/Bottom`。
+   - 窗口缩放时保持正交比例。
 
 ## 11. 验收清单（视觉向）
 - [ ] 相机左右移动时，远景明显慢于舞台，前景明显快于舞台。
