@@ -4,6 +4,8 @@
                    "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_quart.png",
                    "rootAtlasJson":  "Data\\RootMotion\\longswordman_quart.json",
                    "rootAtlasPng":  "Data\\RootMotion\\longswordman_quart.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_quart.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -24,11 +26,12 @@
                                                    "color":  "#FF0000"
                                                }
                                            ],
+                   "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-22T15:47:37.5491279Z"
+                   "generatedAtUtc":  "2026-04-26T13:30:57.7447094Z"
                },
     "frames":  [
                    {
@@ -45,12 +48,34 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
-                                         "cy":  144,
-                                         "w":  93,
-                                         "h":  38,
-                                         "angle":  90,
-                                         "pixelCount":  3534
+                                         "cx":  43.5,
+                                         "cy":  125.5,
+                                         "w":  59.5,
+                                         "h":  30.199,
+                                         "angle":  84.746,
+                                         "pixelCount":  1692
+                                     },
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  57.5,
+                                         "cy":  171,
+                                         "w":  33.883,
+                                         "h":  19.396,
+                                         "angle":  84.044,
+                                         "pixelCount":  548
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  31,
+                                         "cy":  174,
+                                         "w":  45,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1215
                                      }
                                  ],
                        "anchors":  {
@@ -71,15 +96,37 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_1",
+                                         "id":  "hitbox_2",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
-                                         "cy":  144,
-                                         "w":  93,
-                                         "h":  38,
-                                         "angle":  90,
-                                         "pixelCount":  3534
+                                         "cx":  43.5,
+                                         "cy":  125.5,
+                                         "w":  59.5,
+                                         "h":  30.199,
+                                         "angle":  84.746,
+                                         "pixelCount":  1692
+                                     },
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  62.5,
+                                         "cy":  171,
+                                         "w":  33.883,
+                                         "h":  19.396,
+                                         "angle":  84.044,
+                                         "pixelCount":  548
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40,
+                                         "cy":  174,
+                                         "w":  45,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1215
                                      }
                                  ],
                        "anchors":  {
@@ -100,15 +147,48 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_2",
+                                         "id":  "hitbox_4",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
-                                         "cy":  144,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  56.5,
+                                         "cy":  113,
+                                         "w":  44,
+                                         "h":  37,
+                                         "angle":  0,
+                                         "pixelCount":  1628
+                                     },
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  37,
+                                         "cy":  143,
+                                         "w":  31,
+                                         "h":  17,
+                                         "angle":  0,
+                                         "pixelCount":  527
+                                     },
+                                     {
+                                         "id":  "hitbox_6",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  57,
+                                         "cy":  172,
+                                         "w":  35,
+                                         "h":  21,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  735
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  37,
+                                         "cy":  174,
+                                         "w":  45,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1215
                                      }
                                  ],
                        "anchors":  {
@@ -129,15 +209,26 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_3",
+                                         "id":  "hitbox_7",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
-                                         "cy":  144,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  47.5,
+                                         "cy":  128,
+                                         "w":  54.624,
+                                         "h":  39.206,
+                                         "angle":  59.151,
+                                         "pixelCount":  2031
+                                     },
+                                     {
+                                         "id":  "hitbox_8",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  60,
+                                         "cy":  174,
+                                         "w":  31,
+                                         "h":  19,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  589
                                      },
                                      {
                                          "id":  "weaponbox_strong_blade_0",
@@ -160,6 +251,17 @@
                                          "h":  35.285,
                                          "angle":  -7.896,
                                          "pixelCount":  1697
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  41,
+                                         "cy":  174,
+                                         "w":  45,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1215
                                      }
                                  ],
                        "anchors":  {

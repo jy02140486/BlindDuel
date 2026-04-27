@@ -4,6 +4,8 @@
                    "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_thrust.png",
                    "rootAtlasJson":  "Data\\RootMotion\\longswordman_thrust.json",
                    "rootAtlasPng":  "Data\\RootMotion\\longswordman_thrust.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_thrust.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -24,11 +26,12 @@
                                                    "color":  "#FF0000"
                                                }
                                            ],
+                   "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-18T02:19:33.1310639Z"
+                   "generatedAtUtc":  "2026-04-26T13:31:11.8019644Z"
                },
     "frames":  [
                    {
@@ -95,6 +98,17 @@
                                          "h":  7.648,
                                          "angle":  -28.059,
                                          "pixelCount":  203
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  41.5,
+                                         "cy":  107.5,
+                                         "w":  48,
+                                         "h":  28,
+                                         "angle":  0,
+                                         "pixelCount":  1344
                                      }
                                  ],
                        "anchors":  {
@@ -157,6 +171,17 @@
                                          "h":  8.996,
                                          "angle":  -23.314,
                                          "pixelCount":  278
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40.5,
+                                         "cy":  108.5,
+                                         "w":  48,
+                                         "h":  28,
+                                         "angle":  0,
+                                         "pixelCount":  1344
                                      }
                                  ],
                        "anchors":  {
@@ -230,6 +255,17 @@
                                          "h":  5.971,
                                          "angle":  -8.074,
                                          "pixelCount":  174
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  41.5,
+                                         "cy":  107.5,
+                                         "w":  48,
+                                         "h":  28,
+                                         "angle":  0,
+                                         "pixelCount":  1344
                                      }
                                  ],
                        "anchors":  {

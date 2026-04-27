@@ -80,8 +80,7 @@ export class DuelCameraRig {
             this.projection = "orthographic";
             this.camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
 
-            const canvas = this.camera.getEngine().getRenderingCanvas();
-            const windowAspect = canvas ? (canvas.width / canvas.height) : (16 / 9);
+            const windowAspect = window.innerWidth / window.innerHeight;
 
             const halfWidth = this.baseOrthoWidth / 2;
             const halfHeight = (this.baseOrthoWidth / windowAspect) / 2;
@@ -167,8 +166,9 @@ export class DuelCameraRig {
                 this.maxOrthoWidth
             );
 
+            const windowAspect = window.innerWidth / window.innerHeight;
             const halfWidth = desiredWidth / 2;
-            const halfHeight = (desiredWidth / this.targetAspect) / 2;
+            const halfHeight = (desiredWidth / windowAspect) / 2;
 
             this.camera.orthoLeft += (-halfWidth - this.camera.orthoLeft) * blend;
             this.camera.orthoRight += (halfWidth - this.camera.orthoRight) * blend;

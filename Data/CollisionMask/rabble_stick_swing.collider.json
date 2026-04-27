@@ -1,9 +1,11 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick_swing.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick_swing.png",
-                   "rootAtlasJson":  "Data/RootMotion/rabble_stick_swing.json",
-                   "rootAtlasPng":  "Data/RootMotion/rabble_stick_swing.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick_swing.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick_swing.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick_swing.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick_swing.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick_swing.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick_swing.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -24,11 +26,12 @@
                                                    "color":  "#FF0000"
                                                }
                                            ],
+                   "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-22T17:32:16.2540311Z"
+                   "generatedAtUtc":  "2026-04-26T13:31:42.4226756Z"
                },
     "frames":  [
                    {
@@ -51,6 +54,17 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  104.5,
+                                         "cy":  121.5,
+                                         "w":  42,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  1596
                                      }
                                  ],
                        "anchors":  {
@@ -80,6 +94,17 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  107.5,
+                                         "cy":  121.5,
+                                         "w":  48,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  1824
                                      }
                                  ],
                        "anchors":  {
@@ -120,6 +145,17 @@
                                          "h":  38,
                                          "angle":  90,
                                          "pixelCount":  1634
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  101.5,
+                                         "cy":  121.5,
+                                         "w":  58,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  2204
                                      }
                                  ],
                        "anchors":  {

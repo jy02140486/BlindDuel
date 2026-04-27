@@ -4,6 +4,8 @@
                    "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_move.png",
                    "rootAtlasJson":  "Data\\RootMotion\\longswordman_move.json",
                    "rootAtlasPng":  "Data\\RootMotion\\longswordman_move.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_move.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_move.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -24,16 +26,17 @@
                                                    "color":  "#FF0000"
                                                }
                                            ],
+                   "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-19T16:17:01.3657834Z"
+                   "generatedAtUtc":  "2026-04-26T13:30:31.9234385Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_move (Collision) 0.ase",
+                       "frameName":  "longswordman_move (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -45,12 +48,34 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  44.5,
-                                         "cy":  80,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  45,
+                                         "cy":  62,
+                                         "w":  57,
+                                         "h":  33,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  1881
+                                     },
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  58.5,
+                                         "cy":  109,
+                                         "w":  35,
+                                         "h":  12,
+                                         "angle":  90,
+                                         "pixelCount":  420
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  41,
+                                         "cy":  112,
+                                         "w":  39,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1053
                                      }
                                  ],
                        "anchors":  {
@@ -62,7 +87,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_move (Collision) 1.ase",
+                       "frameName":  "longswordman_move (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,
@@ -71,15 +96,26 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_1",
+                                         "id":  "hitbox_2",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  44.5,
-                                         "cy":  79,
-                                         "w":  93,
-                                         "h":  38,
-                                         "angle":  90,
-                                         "pixelCount":  3534
+                                         "cx":  49.458,
+                                         "cy":  79.511,
+                                         "w":  99.303,
+                                         "h":  45.828,
+                                         "angle":  75.716,
+                                         "pixelCount":  2307
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  43,
+                                         "cy":  112,
+                                         "w":  39,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1053
                                      }
                                  ],
                        "anchors":  {
@@ -91,7 +127,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman_move (Collision) 2.ase",
+                       "frameName":  "longswordman_move (CollisionMask) 2.ase",
                        "frameRect":  {
                                          "x":  256,
                                          "y":  0,
@@ -100,15 +136,37 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_2",
+                                         "id":  "hitbox_3",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  44.5,
-                                         "cy":  79,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  40.76,
+                                         "cy":  60.342,
+                                         "w":  59.057,
+                                         "h":  34.111,
+                                         "angle":  78.29,
+                                         "pixelCount":  1872
+                                     },
+                                     {
+                                         "id":  "hitbox_4",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  58.5,
+                                         "cy":  109,
+                                         "w":  35,
+                                         "h":  12,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  420
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  41,
+                                         "cy":  112,
+                                         "w":  39,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1053
                                      }
                                  ],
                        "anchors":  {

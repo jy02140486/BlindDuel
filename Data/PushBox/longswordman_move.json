@@ -1,5 +1,5 @@
 { "frames": {
-   "longswordman_move (CollisionMask) 0.ase": {
+   "longswordman_move (PushBox) 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 128, "h": 128 },
     "duration": 600
    },
-   "longswordman_move (CollisionMask) 1.ase": {
+   "longswordman_move (PushBox) 1.ase": {
     "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -15,7 +15,7 @@
     "sourceSize": { "w": 128, "h": 128 },
     "duration": 500
    },
-   "longswordman_move (CollisionMask) 2.ase": {
+   "longswordman_move (PushBox) 2.ase": {
     "frame": { "x": 256, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -34,7 +34,7 @@
   "frameTags": [
   ],
   "layers": [
-   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
+   { "name": "Collision", "opacity": 255, "blendMode": "normal" },
    { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
    { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
    { "name": "lower body_abandonned", "opacity": 255, "blendMode": "normal" },

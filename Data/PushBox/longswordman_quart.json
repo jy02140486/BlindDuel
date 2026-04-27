@@ -1,5 +1,5 @@
 { "frames": {
-   "longswordman_quart (CollisionMask) 0.ase": {
+   "longswordman_quart (PushBox) 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 192, "h": 192 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 192, "h": 192 },
     "duration": 100
    },
-   "longswordman_quart (CollisionMask) 1.ase": {
+   "longswordman_quart (PushBox) 1.ase": {
     "frame": { "x": 192, "y": 0, "w": 192, "h": 192 },
     "rotated": false,
     "trimmed": false,
@@ -15,7 +15,7 @@
     "sourceSize": { "w": 192, "h": 192 },
     "duration": 300
    },
-   "longswordman_quart (CollisionMask) 2.ase": {
+   "longswordman_quart (PushBox) 2.ase": {
     "frame": { "x": 384, "y": 0, "w": 192, "h": 192 },
     "rotated": false,
     "trimmed": false,
@@ -23,7 +23,7 @@
     "sourceSize": { "w": 192, "h": 192 },
     "duration": 300
    },
-   "longswordman_quart (CollisionMask) 3.ase": {
+   "longswordman_quart (PushBox) 3.ase": {
     "frame": { "x": 576, "y": 0, "w": 192, "h": 192 },
     "rotated": false,
     "trimmed": false,

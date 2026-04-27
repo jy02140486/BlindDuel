@@ -1,11 +1,11 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_hit.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_hit.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_hit.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_hit.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_hit.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_hit.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick_hit.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick_hit.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick_hit.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick_hit.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick_hit.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick_hit.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-26T13:31:18.7096168Z"
+                   "generatedAtUtc":  "2026-04-26T14:07:43.7274261Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_hit (CollisionMask) 0.ase",
+                       "frameName":  "rabble_stick_hit (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -48,35 +48,35 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  34.5,
-                                         "cy":  80,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  91,
+                                         "cy":  55,
+                                         "w":  55,
+                                         "h":  35,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  1925
                                      },
                                      {
                                          "id":  "pushbox_0",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  35.5,
-                                         "cy":  113,
-                                         "w":  46,
-                                         "h":  27,
+                                         "cx":  89,
+                                         "cy":  108.5,
+                                         "w":  45,
+                                         "h":  36,
                                          "angle":  0,
-                                         "pixelCount":  1242
+                                         "pixelCount":  1620
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  31.5,
-                                                    "cy":  118.5
+                                                    "cx":  74,
+                                                    "cy":  119
                                                 }
                                    }
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_hit (CollisionMask) 1.ase",
+                       "frameName":  "rabble_stick_hit (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,
@@ -88,28 +88,28 @@
                                          "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
-                                         "cy":  80,
-                                         "w":  93,
-                                         "h":  38,
+                                         "cx":  90,
+                                         "cy":  57,
+                                         "w":  59,
+                                         "h":  39,
                                          "angle":  90,
-                                         "pixelCount":  3534
+                                         "pixelCount":  2301
                                      },
                                      {
                                          "id":  "pushbox_1",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  37.5,
-                                         "cy":  113,
-                                         "w":  46,
-                                         "h":  27,
+                                         "cx":  88,
+                                         "cy":  108.5,
+                                         "w":  45,
+                                         "h":  36,
                                          "angle":  0,
-                                         "pixelCount":  1242
+                                         "pixelCount":  1620
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  38.5,
+                                                    "cx":  86.5,
                                                     "cy":  118.5
                                                 }
                                    }

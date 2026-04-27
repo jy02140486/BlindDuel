@@ -7,6 +7,8 @@ import { loadDataAssets } from "./DataLoader.js";
 import { createHeroCharacter, createRabbleStickCharacter } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
+import { StageBoundary } from "./Systems/StageBoundary.js";
+import { PushboxResolver } from "./Systems/PushboxResolver.js";
 
 export class Scene {
     constructor(engine, canvas) {
@@ -55,6 +57,8 @@ export class Scene {
         this.playerController = new PlayerController(this.inputSystem, this.character);
         this.rabbleController = new TestController(this.rabbleStick, assets.testScripts.rabbleBasicSequence);
         this.combatSystem = new CombatSystem();
+        this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
+        this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
             cameraHeight: 8,        // 相机高度（Y 偏移）
             cameraDistance: 25,     // 相机在人物后方的距离（Z 偏移，正数 = 后方）
@@ -78,6 +82,7 @@ export class Scene {
                 const nextVisible = !this.character.collision.visible;
                 this.character.setCollisionVisible(nextVisible);
                 this.rabbleStick.setCollisionVisible(nextVisible);
+                this.stageBoundary.setVisible(nextVisible);
             }
         };
         window.addEventListener("keydown", this._onKeyDown);
@@ -136,6 +141,9 @@ export class Scene {
         this.rabbleController.update(dtMs);
         this.character.update(dtMs);
         this.rabbleStick.update(dtMs);
+        this.pushboxResolver.resolve([this.character, this.rabbleStick]);
+        this.stageBoundary.clampCharacter(this.character);
+        this.stageBoundary.clampCharacter(this.rabbleStick);
         this.combatSystem.update([this.character, this.rabbleStick]);
 
         // 先更新相机，再更新视觉系统（按文档要求的顺序）
@@ -175,6 +183,10 @@ export class Scene {
         if (this.sceneVisualSystem) {
             this.sceneVisualSystem.dispose();
             this.sceneVisualSystem = null;
+        }
+        if (this.stageBoundary) {
+            this.stageBoundary.dispose();
+            this.stageBoundary = null;
         }
     }
 }

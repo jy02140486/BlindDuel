@@ -1,5 +1,5 @@
 { "frames": {
-   "rabble_stick_idle (Collisoin) 0.ase": {
+   "rabble_stick_idle (PushBox) 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 128, "h": 128 },
     "duration": 100
    },
-   "rabble_stick_idle (Collisoin) 1.ase": {
+   "rabble_stick_idle (PushBox) 1.ase": {
     "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,

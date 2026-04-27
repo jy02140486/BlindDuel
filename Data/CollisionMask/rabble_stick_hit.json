@@ -1,38 +1,39 @@
 { "frames": {
-   "rabble_stick_idle (Collisoin) 0.ase": {
+   "rabble_stick_hit (CollisionMask) 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
-    "duration": 100
+    "duration": 400
    },
-   "rabble_stick_idle (Collisoin) 1.ase": {
+   "rabble_stick_hit (CollisionMask) 1.ase": {
     "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
-    "duration": 100
+    "duration": 200
    }
  },
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\rabble_stick_idle.png",
+  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\rabble_stick_hit.png",
   "format": "RGBA8888",
   "size": { "w": 256, "h": 128 },
   "scale": "1",
   "frameTags": [
   ],
   "layers": [
-   { "name": "mainvisual", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
    { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
-   { "name": "Collisoin", "opacity": 255, "blendMode": "normal" },
+   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
    { "name": "lowerbody", "opacity": 255, "blendMode": "normal" },
    { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
    { "name": "body", "opacity": 255, "blendMode": "normal" },
-   { "name": "leftarm", "opacity": 255, "blendMode": "normal" }
+   { "name": "leftarm", "opacity": 255, "blendMode": "normal" },
+   { "name": "mainvisual", "opacity": 255, "blendMode": "normal" }
   ]
  }
 }
