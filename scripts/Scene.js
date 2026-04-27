@@ -1,6 +1,6 @@
 import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
-import { TestController } from "./Systems/TestController.js";
+import { DummyController } from "./Systems/DummyController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
@@ -55,12 +55,12 @@ export class Scene {
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new TestController(this.rabbleStick, assets.testScripts.rabbleBasicSequence);
+        this.rabbleController = new DummyController(this.rabbleStick);
         this.combatSystem = new CombatSystem();
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
-            cameraHeight: 8,        // 相机高度（Y 偏移）
+            cameraHeight: 4,        // 相机高度（Y 偏移）
             cameraDistance: 25,     // 相机在人物后方的距离（Z 偏移，正数 = 后方）
             minZoomDistance: 15,    // 透视最小距离
             maxZoomDistance: 35,    // 透视最大距离

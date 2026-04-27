@@ -117,6 +117,20 @@ export class ContactResolver {
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
             const knockback = this.#signedKnockback(targetPos, attackerPos, this.hitKnockback);
+/*
+            const attackerSnap = snapshotById.get(contact.attackerId);
+            const targetSnap = snapshotById.get(contact.targetId);
+            const w = contact.weapon;
+            const h = contact.hitbox;
+            console.log(
+                `[HIT] ${contact.attackerId} -> ${contact.targetId} | ` +
+                `attackerState=${attackerSnap?.stateName} frame=${attackerSnap?.frameIndex} ` +
+                `targetState=${targetSnap?.stateName} frame=${targetSnap?.frameIndex} | ` +
+                `weaponBox=${w.id} center=(${w.center.x.toFixed(3)},${w.center.y.toFixed(3)}) half=(${w.half.x.toFixed(3)},${w.half.y.toFixed(3)}) | ` +
+                `hitbox=${h.id} center=(${h.center.x.toFixed(3)},${h.center.y.toFixed(3)}) half=(${h.half.x.toFixed(3)},${h.half.y.toFixed(3)}) | ` +
+                `distX=${Math.abs(w.center.x - h.center.x).toFixed(3)} sumHalfX=${(w.half.x + h.half.x).toFixed(3)} | ` +
+                `distY=${Math.abs(w.center.y - h.center.y).toFixed(3)} sumHalfY=${(w.half.y + h.half.y).toFixed(3)}`
+            );*/
 
             effects.push({
                 targetId: contact.targetId,
@@ -234,12 +248,56 @@ export class ContactResolver {
     }
 
     #intersects(a, b) {
-        // 现阶段使用 AABB 快速判定（忽略旋转角度），用于原型先跑通。
-        return (
-            Math.abs(a.center.x - b.center.x) <= (a.half.x + b.half.x) &&
-            Math.abs(a.center.y - b.center.y) <= (a.half.y + b.half.y) &&
-            Math.abs(a.center.z - b.center.z) <= (a.half.z + b.half.z)
-        );
+        return this.#obbIntersect2D(a, b);
+    }
+
+    #obbIntersect2D(a, b) {
+        const aAngle = (a.angle ?? 0) * Math.PI / 180;
+        const bAngle = (b.angle ?? 0) * Math.PI / 180;
+
+        const aCos = Math.cos(aAngle);
+        const aSin = Math.sin(aAngle);
+        const bCos = Math.cos(bAngle);
+        const bSin = Math.sin(bAngle);
+
+        const axes = [
+            { x: aCos, y: aSin },
+            { x: -aSin, y: aCos },
+            { x: bCos, y: bSin },
+            { x: -bSin, y: bCos }
+        ];
+
+        for (const axis of axes) {
+            if (this.#separatedOnAxis(a, b, axis)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    #separatedOnAxis(a, b, axis) {
+        const aAngle = (a.angle ?? 0) * Math.PI / 180;
+        const bAngle = (b.angle ?? 0) * Math.PI / 180;
+
+        const aCos = Math.cos(aAngle);
+        const aSin = Math.sin(aAngle);
+        const bCos = Math.cos(bAngle);
+        const bSin = Math.sin(bAngle);
+
+        const aRx = Math.abs(axis.x * aCos + axis.y * aSin);
+        const aRy = Math.abs(axis.x * -aSin + axis.y * aCos);
+        const aProj = a.half.x * aRx + a.half.y * aRy;
+
+        const bRx = Math.abs(axis.x * bCos + axis.y * bSin);
+        const bRy = Math.abs(axis.x * -bSin + axis.y * bCos);
+        const bProj = b.half.x * bRx + b.half.y * bRy;
+
+        const dx = b.center.x - a.center.x;
+        const dy = b.center.y - a.center.y;
+        const dist = Math.abs(dx * axis.x + dy * axis.y);
+
+        return dist > (aProj + bProj);
     }
 
     #toWeaponLevel(subtype) {

@@ -195,7 +195,7 @@ export class Character {
         if (!canvas) return;
 
         const worldPos = this.root.position.clone();
-        worldPos.y += 1.5;
+        worldPos.y -= 0.3;
         
         const projected = BABYLON.Vector3.Project(
             worldPos,
@@ -207,7 +207,7 @@ export class Character {
         if (projected.z > 0 && projected.z < 1) {
             this.debugPanel.style.display = "block";
             this.debugPanel.style.left = `${projected.x - this.debugPanel.offsetWidth / 2}px`;
-            this.debugPanel.style.top = `${projected.y - 30}px`;
+            this.debugPanel.style.top = `${projected.y}px`;
         } else {
             this.debugPanel.style.display = "none";
         }
@@ -426,13 +426,15 @@ export class Character {
                     x: widthWorld / 2,
                     y: heightWorld / 2,
                     z: depthWorld / 2
-                }
+                },
+                angle: box.angle ?? 0
             };
         });
 
         return {
             characterId: this.id,
             stateName: this.currentStateName,
+            frameIndex: this.animation.currentFrameIndex,
             rootPositionX: this.root.position.x,
             attackInstanceId,
             boxes: worldBoxes
@@ -449,8 +451,6 @@ export class Character {
             this.enterState(nextStateBeforeUpdate);
         }
 
-        this.#applyMovement(dtMs);
-
         const oldFrame = this.animation.currentFrameIndex;
         this.animation.update(dtMs);
         const newFrame = this.animation.currentFrameIndex;
@@ -465,6 +465,10 @@ export class Character {
         this.#syncRootDebug(anchor);
         this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
 
+        const preMoveX = this.root.position.x;
+        this.#applyMovement(dtMs);
+        const moved = this.root.position.x !== preMoveX;
+
         const nextStateAfterUpdate = this.#consumeTransition();
         if (nextStateAfterUpdate) {
             this.enterState(nextStateAfterUpdate);
@@ -473,7 +477,11 @@ export class Character {
             this.#applyRootAlignment(updatedCurrent.w, updatedCurrent.h, updatedAnchor);
             this.#syncRootDebug(updatedAnchor);
             this.collision.syncToFrame(this.animation.currentFrameIndex, updatedCurrent.w, updatedCurrent.h, updatedAnchor);
-        }
+        } /*else if (moved) {
+            const current = this.animation.currentFrame;
+            const anchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
+            this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, anchor);
+        }*/
 
         this.#updateDebugPanel();
     }
