@@ -91,6 +91,10 @@ export class Character {
         this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, initialAnchor);
 
         this.currentSpd=0;
+
+        // 全局冷却（Global Cooldown）
+        this.globalCooldownMs = config.globalCooldownMs ?? 700;
+        this.lastActionTime = -Infinity;
     }
 
     #buildTextures(scene, clips) {
@@ -215,8 +219,9 @@ export class Character {
         const moveSpeed =this.currentSpd;
         const currentState = this.currentStateName || "unknown";
         const currentClip = this.animation.currentClipName || "none";
+        const cdRemaining = this.getCooldownRemaining().toFixed(0);
         
-        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)}`;
+        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms`;
     }
 
     #compareValues(actualValue, op, expectedValue) {
@@ -297,6 +302,10 @@ export class Character {
 
     #matchesTransitionCondition(condition) {
         if (condition.command) {
+            // 全局冷却期间不响应攻击指令
+            if (!this.canAct()) {
+                return false;
+            }
             return this.pendingCommands.includes(condition.command);
         }
 
@@ -359,6 +368,26 @@ export class Character {
 
     pushCommand(command) {
         this.pendingCommands.push(command);
+        return true;
+    }
+
+    canAct() {
+        const now = performance.now();
+        return now - this.lastActionTime >= this.globalCooldownMs;
+    }
+
+    getCooldownRemaining() {
+        const now = performance.now();
+        const remaining = this.globalCooldownMs - (now - this.lastActionTime);
+        return Math.max(0, remaining);
+    }
+
+    /**
+     * 触发全局冷却
+     * 应在动画/硬直结束后调用
+     */
+    triggerCooldown() {
+        this.lastActionTime = performance.now();
     }
 
     hasState(stateName) {
@@ -446,6 +475,8 @@ export class Character {
     }
 
     update(dtMs) {
+        const oldState = this.currentStateName;
+
         const nextStateBeforeUpdate = this.#consumeTransition();
         if (nextStateBeforeUpdate) {
             this.enterState(nextStateBeforeUpdate);
@@ -482,6 +513,12 @@ export class Character {
             const anchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
             this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, anchor);
         }*/
+
+        // 检测状态变化：从非idle状态回到idle时触发CD
+        const newState = this.currentStateName;
+        if (oldState !== newState && newState === "idle" && oldState !== null) {
+            this.triggerCooldown();
+        }
 
         this.#updateDebugPanel();
     }
