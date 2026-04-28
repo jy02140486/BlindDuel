@@ -59,6 +59,7 @@ export class Character {
         this.material.useAlphaFromDiffuseTexture = true;
         this.material.disableLighting = true;
         this.spritePlane.material = this.material;
+        this.spritePlane.renderingGroupId = config.renderingGroupId ?? 3;
 
         this.rootDebugNode = new BABYLON.TransformNode(`${config.name || "character"}_root_debug`, scene);
         this.rootDebugNode.parent = this.root;

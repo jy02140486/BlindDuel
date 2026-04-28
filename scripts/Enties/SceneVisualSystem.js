@@ -94,10 +94,15 @@ export class SceneVisualSystem {
         material.specularColor = new BABYLON.Color3(0, 0, 0);
         material.emissiveColor = new BABYLON.Color3(1, 1, 1);
         
-        // 设置渲染组
-        material.renderingGroupId = layer.config.renderingGroupId;
-        
         plane.material = material;
+
+        // 设置渲染组（必须在 mesh 上，不是 material 上）
+        plane.renderingGroupId = layer.config.renderingGroupId;
+
+        // alphaIndex：同层内精细排序（数值大的在前）
+        if (elementConfig.alphaIndex !== undefined) {
+            plane.alphaIndex = elementConfig.alphaIndex;
+        }
 
         // 水平翻转
         if (elementConfig.flipX) {
@@ -154,9 +159,15 @@ export class SceneVisualSystem {
         material.disableLighting = true;
         material.specularColor = new BABYLON.Color3(0, 0, 0);
         material.emissiveColor = new BABYLON.Color3(1, 1, 1);
-        material.renderingGroupId = layer.config.renderingGroupId;
-
         plane.material = material;
+
+        // 设置渲染组（必须在 mesh 上，不是 material 上）
+        plane.renderingGroupId = layer.config.renderingGroupId;
+
+        // alphaIndex：同层内精细排序（数值大的在前）
+        if (elementConfig.alphaIndex !== undefined) {
+            plane.alphaIndex = elementConfig.alphaIndex;
+        }
 
         // 计算 tile 重复次数
         const atlasW = atlasData.meta.size.w;
@@ -322,9 +333,21 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     texture: "Art/Environment/skybase.png",
                     kind: "tile",
                     x: 0,
-                    y: 5,
-                    width: 40,
-                    height: 20
+                    y: 8,
+                    width: 48,
+                    height: 32,
+                    alphaIndex: 0
+                },
+                {
+                    id: "mountain_1",
+                    texture: "Art/Environment/Mountain.png",
+                    kind: "tile",
+                    x: 0,
+                    y: 8,
+                    width: 48,
+                    height: 16,
+                    parallaxFactor: 0.08,
+                    alphaIndex: 1
                 }
             ]
         },
@@ -340,9 +363,20 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     texture: "Art/Environment/House1.png",
                     kind: "single",
                     x: -5,
-                    y: 4.8,
-                    width: 8,
-                    height: 12
+                    y: 3,
+                    width: 6,
+                    height: 6,
+                    alphaIndex: 0
+                },
+                {
+                    id: "building_2",
+                    texture: "Art/Environment/House2.png",
+                    kind: "single",
+                    x: 4,
+                    y: 4,
+                    width: 16,
+                    height: 8,
+                    alphaIndex: 1
                 }
             ]
         },
@@ -356,14 +390,26 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
             elements: [
                 {
                     id: "ground_1",
-                    texture: "Art/Environment/grassbase-sheet.png",
+                    texture: "Art/Environment/grassbase.png",
                     atlas: "Art/Environment/grassbase.json",
                     kind: "animated_tile",
                     x: 0,
                     y: -3.2,
-                    width: 32,
+                    width: 64,
                     height: 8,
                     tileSize: { width: 1.28, height: 1.28 },
+                    loop: true
+                },
+                {
+                    id: "ground_2",
+                    texture: "Art/Environment/grasstop.png",
+                    atlas: "Art/Environment/grasstop.json",
+                    kind: "animated_tile",
+                    x: 0,
+                    y: 0.9,
+                    width: 64,
+                    height: 0.32,
+                    tileSize: { width: 1.28, height: 0.32 },
                     loop: true
                 }
             ]

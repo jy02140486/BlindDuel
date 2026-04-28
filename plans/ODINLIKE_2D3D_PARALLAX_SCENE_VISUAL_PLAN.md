@@ -3,6 +3,11 @@
 更新时间：2026-04-25
 
 > 变更记录：
+> - 2026-04-28：角色渲染层级——`Character` 构造函数默认设置 `spritePlane.renderingGroupId = 3`，位于 STAGE（group 2）之上、FG_DECOR/FG_OCCLUDER（未来 group 4/5）之下。
+> - 2026-04-28：`renderingGroupId` 修复——从 `material.renderingGroupId` 改为 `mesh.renderingGroupId`，解决层间遮挡失效问题。
+> - 2026-04-28：`alphaIndex` 支持——同层内元素可通过 `alphaIndex` 精细控制渲染顺序（数值大的在前）。
+> - 2026-04-28：普通 tile wrap——`kind: "tile"` 的 PNG 支持 `wrapU/V` 和 `uScale/vScale` 重复平铺。
+> - 2026-04-28：元素级视差——`VisualElementConfig` 支持可选的 `parallaxFactor`，允许同一层内不同元素（如云与山）拥有独立视差速度。
 > - 2026-04-25：相机基类从 `ArcRotateCamera` 迁移至 `UniversalCamera`；`SceneVisualSystem` 视差锚点从 `camera.target.x` 改为 `camera.position.x` 以兼容 UniversalCamera。
 > - 2026-04-25：Phase D 落地——DuelCameraRig 支持透视/正交投影切换（O 键），正交模式根据实际窗口比例动态调整 `orthoLeft/Right/Top/Bottom`。
 > - 2026-04-25：Scene 负责计算相机基准位置（basePosition）和 target，DuelCameraRig 只负责平滑移动和 zoom/ortho 范围调整。
@@ -80,7 +85,7 @@
 type VisualLayerConfig = {
   id: "BG_FAR" | "BG_MID" | "STAGE" | "FG_DECOR" | "FG_OCCLUDER";
   z: number;
-  parallaxFactor: number;
+  parallaxFactor: number;   // 层基础视差系数
   renderingGroupId: number;
   loopX?: boolean;
   loopWidth?: number;
@@ -103,16 +108,37 @@ type VisualElementConfig = {
   frameDurationMs?: number; // 强制帧时长（仅 animated_tile）
   alphaIndex?: number;
   flipX?: boolean;
+  parallaxFactor?: number;  // 【可选】元素独立视差，覆盖层默认值
 };
 ```
 
+### 7.1 元素级视差（同层多速度）
+
+同一层内可放置多个元素，并为每个元素指定独立的 `parallaxFactor`。不指定时继承层默认值。
+
+**用途示例**：
+- `BG_FAR` 层内：远山（`parallaxFactor: 0.12`）移动较慢，云（`parallaxFactor: 0.06`）移动更慢，产生相对漂移。
+- `BG_MID` 层内：建筑群统一速度，但某棵大树可单独调慢以突出厚重感。
+
+**计算方式**：
+```
+layerOffsetX  = cameraAnchorX * (1 - layer.parallaxFactor)
+elementOffset = cameraAnchorX * (1 - element.parallaxFactor) - layerOffsetX
+finalX        = element.config.x + elementOffset
+```
+
+层根节点仍按层系数整体移动；元素若有自己的系数，则在层偏移基础上叠加额外偏移。
+
 ## 8. 视差计算与循环策略
 - 层偏移公式（横向）：
-- `layerOffsetX = cameraAnchorX * (1 - parallaxFactor)`
-- 每层 root 的基础位置 + `layerOffsetX`。
+  - `layerOffsetX = cameraAnchorX * (1 - layer.parallaxFactor)`
+  - 每层 root 的基础位置 + `layerOffsetX`。
+- 元素级偏移（可选）：
+  - 若元素配置了 `parallaxFactor`，则额外计算 `elementOffsetX = cameraAnchorX * (1 - element.parallaxFactor) - layerOffsetX`。
+  - 元素最终位置 = `config.x + elementOffsetX`。
 - 循环层（tile）：
-- 使用 2~3 段条带拼接。
-- 当某段超出可视阈值时平移到队尾，形成无缝循环。
+  - 使用 2~3 段条带拼接。
+  - 当某段超出可视阈值时平移到队尾，形成无缝循环。
 
 ## 9. 排序、遮挡、透明建议
 - 大层顺序：用 `renderingGroupId` 固化。
@@ -128,9 +154,13 @@ type VisualElementConfig = {
    - 验证 parallax 稳定、不抖动。
    - 添加 AnimatedTileComponent 支持 spritesheet 帧动画地面。
 
-2. Phase B：加循环与遮挡
+2. Phase B：元素级视差 + 循环与遮挡 ✅
+   - 支持同一层内不同元素的独立 `parallaxFactor`（如 BG_FAR 的云与山）。
    - 给 `BG_FAR/FG_DECOR` 增加 loop。
    - 加 `FG_OCCLUDER` 并验证角色遮挡关系。
+   - `alphaIndex` 支持同层内精细排序。
+   - `renderingGroupId` 修复，层间遮挡可靠。
+   - 角色独立渲染层（group 3），位于背景与前景之间。
 
 3. Phase C：资产管线稳态
    - 统一贴图命名、尺寸、pivot 约定。
@@ -144,11 +174,13 @@ type VisualElementConfig = {
    - 窗口缩放时保持正交比例。
 
 ## 11. 验收清单（视觉向）
-- [ ] 相机左右移动时，远景明显慢于舞台，前景明显快于舞台。
-- [ ] 层间无突兀跳变，无明显抖动。
+- [x] 相机左右移动时，远景明显慢于舞台，前景明显快于舞台。
+- [x] 层间无突兀跳变，无明显抖动。
 - [ ] 循环层无接缝闪断。
-- [ ] 前景遮挡不穿帮（角色经过时前后关系正确）。
-- [ ] Scene 不直接持有大段视觉摆放细节（配置与系统接管）。
+- [x] 前景遮挡不穿帮（角色经过时前后关系正确）。
+- [x] Scene 不直接持有大段视觉摆放细节（配置与系统接管）。
+- [x] 同层内元素可通过 `alphaIndex` 精细排序。
+- [x] 角色位于独立渲染层，不被背景/前景错误遮挡。
 
 ## 12. 已知问题与排查记录
 - **GPU 内存占用高**： GPU 专用内存约 422MB/496MB，可能导致系统整体性能下降。

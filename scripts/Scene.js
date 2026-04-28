@@ -48,10 +48,11 @@ export class Scene {
 
         this.character = createHeroCharacter(this.scene, assets);
         this.character.root.position.y = 0;
+        this.character.root.position.x = -3.2;
 
         this.rabbleStick = createRabbleStickCharacter(this.scene, assets);
         this.rabbleStick.root.position.y = 0;
-        this.rabbleStick.root.position.x = 2.5;
+        this.rabbleStick.root.position.x = 3.2;
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
