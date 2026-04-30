@@ -1,6 +1,6 @@
 import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
-import { AIController } from "./Systems/AIController.js";
+import { DummyController } from "./Systems/DummyController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
@@ -56,20 +56,19 @@ export class Scene {
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new AIController(this.rabbleStick, { opponent: this.character });
+        this.rabbleController = new DummyController(this.rabbleStick, { fixedMoveIntent: { x: 0, y: 0 } });
         this.combatSystem = new CombatSystem();
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
-            cameraHeight: 4,        // 相机高度（Y 偏移）
-            cameraDistance: 25,     // 相机在人物后方的距离（Z 偏移，正数 = 后方）
-            minZoomDistance: 15,    // 透视最小距离
-            maxZoomDistance: 35,    // 透视最大距离
-            zoomScale: 1.5,         // 人物远离时的额外距离
-            baseOrthoWidth: 20,
-            minOrthoWidth: 15,
-            maxOrthoWidth: 40,
-            orthoZoomScale: 8,
+            zoomMinDistance: 3.2,      // 角色间距最小时（贴脸）
+            zoomMaxDistance: 6.4,      // 角色间距最大时（最远）
+            orthoMinWidth: 16,         // 间距最小时的 ortho width（最大 zoom in）
+            orthoMaxWidth: 46,         // 间距最大时的 ortho width（最大 zoom out）
+            perspMinDistance: 15,      // 间距最小时的 camera distance（最近）
+            perspMaxDistance: 35,      // 间距最大时的 camera distance（最远）
+            minCameraHeight: 4,        // 间距最小时的高度（最低）
+            maxCameraHeight: 10,        // 间距最大时的高度（最高）
             targetAspect: 16 / 9
         });
         this.cameraRig.init(this.scene, this.canvas);
@@ -77,6 +76,7 @@ export class Scene {
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
         this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
+        this._smoothedFighterDistance = Math.abs(this.rabbleStick.root.position.x - this.character.root.position.x);
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "c") {
@@ -114,6 +114,13 @@ export class Scene {
         const centerZ = (heroPos.z + opponentPos.z) * 0.5;
         const targetHeight = 0;
 
+        // 平滑角色间距，避免出招时的 root 位移导致 zoom 抖动
+        const rawDistance = Math.abs(opponentPos.x - heroPos.x);
+        const distanceBlend = 1 - Math.exp((-this.cameraRig.smoothing * dtMs) / 1000);
+        // Smoothstep 让 blend 曲线更缓和，减少抖动
+        const smoothBlend = distanceBlend * distanceBlend * (3 - 2 * distanceBlend);
+        this._smoothedFighterDistance += (rawDistance - this._smoothedFighterDistance) * smoothBlend;
+
         // 复用 Vector3 避免 GC 压力
         this._cameraBasePosition.x = centerX;
         this._cameraBasePosition.y = targetHeight + 8;
@@ -127,7 +134,7 @@ export class Scene {
             this.cameraRig.update(dtMs, {
                 basePosition: this._cameraBasePosition,
                 target: this._cameraTarget,
-                fighterDistance: Math.abs(opponentPos.x - heroPos.x)
+                fighterDistance: this._smoothedFighterDistance
             });
             if (this.sceneVisualSystem) {
                 this.sceneVisualSystem.update(dtMs, {
@@ -151,7 +158,7 @@ export class Scene {
         this.cameraRig.update(dtMs, {
             basePosition: this._cameraBasePosition,
             target: this._cameraTarget,
-            fighterDistance: Math.abs(opponentPos.x - heroPos.x)
+            fighterDistance: this._smoothedFighterDistance
         });
         
         // 更新视觉系统，传递相机信息

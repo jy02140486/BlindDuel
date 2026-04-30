@@ -322,7 +322,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
     layers: [
         {
             id: "BG_FAR",
-            z: 50,
+            z: 40,
             parallaxFactor: 0.15,
             renderingGroupId: 0,
             loopX: true,
@@ -355,7 +355,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
             id: "BG_MID", 
             z: 30,
             parallaxFactor: 0.45,
-            renderingGroupId: 1,
+            renderingGroupId: 0,
             loopX: false,
             elements: [
                 {
@@ -366,7 +366,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     y: 3,
                     width: 6,
                     height: 6,
-                    alphaIndex: 0
+                    alphaIndex: 2
                 },
                 {
                     id: "building_2",
@@ -376,15 +376,25 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     y: 4,
                     width: 16,
                     height: 8,
-                    alphaIndex: 1
-                }
+                    alphaIndex: 3
+                }/*,
+                {
+                    id: "building_3",
+                    texture: "Art/Environment/FG_Fence.png",
+                    kind: "single",
+                    x: 0,
+                    y: 0,
+                    width: 16,
+                    height: 6,
+                    alphaIndex: 2
+                }*/
             ]
         },
         {
             id: "STAGE",
-            z: 0,
+            z: 10,
             parallaxFactor: 1.0,
-            renderingGroupId: 2,
+            renderingGroupId: 1,
             loopX: true,
             loopWidth: 20,
             elements: [
@@ -398,7 +408,8 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     width: 64,
                     height: 8,
                     tileSize: { width: 1.28, height: 1.28 },
-                    loop: true
+                    loop: true,
+                    alphaIndex: 1
                 },
                 {
                     id: "ground_2",
@@ -410,7 +421,27 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     width: 64,
                     height: 0.32,
                     tileSize: { width: 1.28, height: 0.32 },
-                    loop: true
+                    loop: true,
+                    alphaIndex: 1
+                }
+            ]
+        },
+        {
+            id: "FG_DECOR",
+            z: -10,
+            parallaxFactor: 1.35,
+            renderingGroupId: 2,
+            loopX: false,
+            elements: [
+                {
+                    id: "fence_1",
+                    texture: "Art/Environment/FG_Fence.png",
+                    kind: "single",
+                    x: 4,
+                    y: -0.2,
+                    width: 8,
+                    height: 4,
+                    alphaIndex: 0
                 }
             ]
         }

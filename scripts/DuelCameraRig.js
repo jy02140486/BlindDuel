@@ -22,27 +22,31 @@ export class DuelCameraRig {
         // 通用配置
         this.smoothing = options.smoothing ?? 8;
 
-        // 相机高度（Y 方向偏移）
-        this.cameraHeight = options.cameraHeight ?? 8;
-        // 相机在 target 后方的距离（Z 方向，正数 = 后方）
-        this.cameraDistance = options.cameraDistance ?? 25;
+        // 角色间距 → zoom 映射（共用输入范围）
+        this.zoomMinDistance = options.zoomMinDistance ?? 1.6;  // 角色间距最小时（贴脸）
+        this.zoomMaxDistance = options.zoomMaxDistance ?? 6.4;  // 角色间距最大时（最远）
 
-        // 透视模式 zoom 范围
-        this.minZoomDistance = options.minZoomDistance ?? 15;
-        this.maxZoomDistance = options.maxZoomDistance ?? 35;
-        this.zoomScale = options.zoomScale ?? 1.5;
+        // 正交模式输出
+        this.orthoMinWidth = options.orthoMinWidth ?? 12;       // 间距最小时的 width（最大 zoom in）
+        this.orthoMaxWidth = options.orthoMaxWidth ?? 50;       // 间距最大时的 width（最大 zoom out）
 
-        // 正交模式
-        this.baseOrthoWidth = options.baseOrthoWidth ?? 20;
-        this.minOrthoWidth = options.minOrthoWidth ?? 15;
-        this.maxOrthoWidth = options.maxOrthoWidth ?? 40;
-        this.orthoZoomScale = options.orthoZoomScale ?? 8;
+        // 透视模式输出
+        this.perspMinDistance = options.perspMinDistance ?? 15; // 间距最小时的 camera distance（最近）
+        this.perspMaxDistance = options.perspMaxDistance ?? 35; // 间距最大时的 camera distance（最远）
+
+        // 高度输出（共用同一套 t）
+        this.minCameraHeight = options.minCameraHeight ?? 3;    // 间距最小时的高度（最低）
+        this.maxCameraHeight = options.maxCameraHeight ?? 8;    // 间距最大时的高度（最高）
+
         this.targetAspect = options.targetAspect ?? (16 / 9);
 
         // 运行时状态
-        this.currentBasePosition = new BABYLON.Vector3(0, this.cameraHeight, -this.cameraDistance);
+        this.currentBasePosition = new BABYLON.Vector3(0, this.maxCameraHeight, -this.perspMaxDistance);
         this.currentTarget = new BABYLON.Vector3(0, 0, 0);
         this.projection = "perspective"; // "perspective" | "orthographic"
+
+        // Debug 面板
+        this.debugPanel = this.#createDebugPanel();
     }
 
     init(scene, canvas) {
@@ -50,7 +54,7 @@ export class DuelCameraRig {
 
         this.camera = new BABYLON.UniversalCamera(
             "duel_camera",
-            new BABYLON.Vector3(0, this.cameraHeight, -this.cameraDistance),
+            new BABYLON.Vector3(0, this.maxCameraHeight, -this.perspMaxDistance),
             scene
         );
 
@@ -70,6 +74,39 @@ export class DuelCameraRig {
         console.info("[CameraRig] mode=duel (UniversalCamera, perspective, rotation-free)");
     }
 
+    #createDebugPanel() {
+        const panel = document.createElement("pre");
+        panel.style.position = "fixed";
+        panel.style.left = "12px";
+        panel.style.bottom = "140px";
+        panel.style.margin = "0";
+        panel.style.padding = "10px 12px";
+        panel.style.background = "rgba(0, 0, 0, 0.55)";
+        panel.style.color = "#d8e7ff";
+        panel.style.font = "12px/1.5 Consolas, monospace";
+        panel.style.zIndex = "10";
+        panel.style.pointerEvents = "none";
+        panel.style.border = "1px solid rgba(255,255,255,0.12)";
+        panel.textContent = "Camera Debug";
+        document.body.appendChild(panel);
+        return panel;
+    }
+
+    #renderDebugPanel(fighterDistance, desiredWidth, desiredDistance, desiredHeight, zoomT) {
+        if (!this.debugPanel) return;
+        const mode = this.projection;
+        const zoomVal = mode === "orthographic" ? desiredWidth.toFixed(2) : desiredDistance.toFixed(2);
+        const zoomLabel = mode === "orthographic" ? "orthoWidth" : "distance";
+        this.debugPanel.textContent = [
+            "Camera Debug",
+            `Mode: ${mode}`,
+            `FighterDistance: ${fighterDistance.toFixed(2)}`,
+            `zoomT: ${zoomT.toFixed(2)}`,
+            `${zoomLabel}: ${zoomVal}`,
+            `Height Y: ${desiredHeight.toFixed(2)}`
+        ].join("\n");
+    }
+
     /**
      * 切换透视/正交投影
      */
@@ -82,8 +119,8 @@ export class DuelCameraRig {
 
             const windowAspect = window.innerWidth / window.innerHeight;
 
-            const halfWidth = this.baseOrthoWidth / 2;
-            const halfHeight = (this.baseOrthoWidth / windowAspect) / 2;
+            const halfWidth = this.orthoMaxWidth / 2;
+            const halfHeight = (this.orthoMaxWidth / windowAspect) / 2;
             this.camera.orthoLeft = -halfWidth;
             this.camera.orthoRight = halfWidth;
             this.camera.orthoTop = halfHeight;
@@ -142,29 +179,31 @@ export class DuelCameraRig {
         this.currentTarget.y += (target.y - this.currentTarget.y) * blend;
         this.currentTarget.z += (target.z - this.currentTarget.z) * blend;
 
+        // 角色间距 → 归一化 t（0=贴脸/minDistance，1=最远/maxDistance）
+        const zoomT = BABYLON.Scalar.Clamp(
+            (fighterDistance - this.zoomMinDistance) / (this.zoomMaxDistance - this.zoomMinDistance),
+            0, 1
+        );
+
+        // 高度随间距变化
+        const desiredHeight = BABYLON.Scalar.Lerp(this.minCameraHeight, this.maxCameraHeight, zoomT);
+
         if (this.projection === "perspective") {
-            // 透视模式：根据人物距离调整 cameraDistance（zoom）
-            const desiredDistance = BABYLON.Scalar.Clamp(
-                this.cameraDistance + fighterDistance * this.zoomScale,
-                this.minZoomDistance,
-                this.maxZoomDistance
-            );
+            // 透视模式：相机 distance 随间距变化
+            const desiredDistance = BABYLON.Scalar.Lerp(this.perspMinDistance, this.perspMaxDistance, zoomT);
 
-            // 相机位置 = target 后方 desiredDistance 处
             this.camera.position.x = this.currentBasePosition.x;
-            this.camera.position.y = this.currentBasePosition.y;
+            this.camera.position.y = desiredHeight;
             this.camera.position.z = this.currentTarget.z - desiredDistance;
-        } else {
-            // 正交模式：固定相机位置，调整 ortho 范围
-            this.camera.position.x = this.currentBasePosition.x;
-            this.camera.position.y = this.currentBasePosition.y;
-            this.camera.position.z = this.currentBasePosition.z;
 
-            const desiredWidth = BABYLON.Scalar.Clamp(
-                this.baseOrthoWidth + fighterDistance * this.orthoZoomScale,
-                this.minOrthoWidth,
-                this.maxOrthoWidth
-            );
+            this.#renderDebugPanel(fighterDistance, 0, desiredDistance, desiredHeight, zoomT);
+        } else {
+            // 正交模式：ortho width 随间距变化
+            const desiredWidth = BABYLON.Scalar.Lerp(this.orthoMinWidth, this.orthoMaxWidth, zoomT);
+
+            this.camera.position.x = this.currentBasePosition.x;
+            this.camera.position.y = desiredHeight;
+            this.camera.position.z = this.currentBasePosition.z;
 
             const windowAspect = window.innerWidth / window.innerHeight;
             const halfWidth = desiredWidth / 2;
@@ -174,6 +213,8 @@ export class DuelCameraRig {
             this.camera.orthoRight += (halfWidth - this.camera.orthoRight) * blend;
             this.camera.orthoTop += (halfHeight - this.camera.orthoTop) * blend;
             this.camera.orthoBottom += (-halfHeight - this.camera.orthoBottom) * blend;
+
+            this.#renderDebugPanel(fighterDistance, desiredWidth, 0, desiredHeight, zoomT);
         }
 
         // 让相机朝向 target（只在需要时启用）
@@ -188,5 +229,7 @@ export class DuelCameraRig {
         this.camera.dispose();
         this.camera = null;
         this.canvas = null;
+        this.debugPanel?.remove();
+        this.debugPanel = null;
     }
 }
