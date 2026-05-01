@@ -61,11 +61,8 @@
     "thrust": {
       "clip": "thrust",
       "attackActive": true,
+      "attackActiveFrames": [2],
       "loop": false,
-      "events": [
-        { "atFrame": 1, "name": "hitbox_on" },
-        { "atFrame": 2, "name": "hitbox_off" }
-      ],
       "transitions": [
         {
           "to": "idle",
@@ -79,13 +76,8 @@
     "quart": {
       "clip": "quart",
       "attackActive": true,
+      "attackActiveFrames": [3],
       "loop": false,
-      "events": [
-        { "atFrame": 1, "name": "hitbox_on" },
-        { "atFrame": 2, "name": "hitbox_off" },
-        { "atFrame": 3, "name": "hitbox_off" },
-        { "atFrame": 4, "name": "hitbox_off" }
-      ],
       "transitions": [
         {
           "to": "idle",

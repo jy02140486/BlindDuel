@@ -2,7 +2,7 @@
   "machine": "rabble_stick",
   "initialState": "idle",
   "inputs": {
-    "commands": ["thrust", "swing", "hit"],
+    "commands": ["thrust", "swing", "hit", "dodge"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -37,6 +37,12 @@
           "when": [
             { "command": "hit" }
           ]
+        },
+        {
+          "to": "dodge",
+          "when": [
+            { "command": "dodge" }
+          ]
         }
       ]
     },
@@ -61,8 +67,28 @@
           "when": [
             { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
           ]
+        },
+        {
+          "to": "dodge",
+          "when": [
+            { "command": "dodge" }
+          ]
         }
       ]
+    },
+    "dodge": {
+      "clip": "dodge",
+      "loop": false,
+      "invincible": true,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [1,0.4]
     },
     "thrust": {
       "clip": "thrust",

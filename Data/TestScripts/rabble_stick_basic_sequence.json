@@ -1,29 +1,14 @@
 {
-  "name": "rabble_stick_basic_sequence",
+  "name": "rabble_stick_swing_retreat_loop",
   "loop": true,
   "steps": [
     {
-      "moveIntent": { "x": -1, "y": 0 },
-      "waitMs": 800
-    },
-    {
-      "moveIntent": { "x": 0, "y": 0 },
-      "waitMs": 1000
-    },
-    {
-      "command": "thrust",
-      "waitMs": 2000
-    },
-    {
-      "waitMs": 350
-    },
-    {
       "command": "swing",
-      "waitMs": 2500
+      "waitMs": 1300
     },
     {
-      "repeat": 2,
-      "waitMs": 500
+      "moveIntent": { "x": 1, "y": 0 },
+      "waitMs": 1500
     }
   ]
 }

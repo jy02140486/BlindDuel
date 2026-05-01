@@ -397,6 +397,10 @@ export class Character {
     }
 
     takeDamage(ctx = {}) {
+        if (this.currentStateDef?.invincible) {
+            return false;
+        }
+
         const knockbackX = Number(ctx.knockbackX ?? 0);
         if (knockbackX !== 0) {
             this.root.position.x += knockbackX;
@@ -433,34 +437,41 @@ export class Character {
             ? `${this.id}:${this.currentStateName}:${this.stateEntrySerial}`
             : null;
 
-        const worldBoxes = boxes.map((box) => {
-            const localX = (box.cx - frameWidth / 2) * this.pxToWorld - anchorOffsetX;
-            const localY = (frameHeight / 2 - box.cy) * this.pxToWorld - anchorOffsetY;
-            const widthWorld = box.w * this.pxToWorld;
-            const heightWorld = box.h * this.pxToWorld;
-            const depthWorld = this.thicknessPx * this.pxToWorld;
+        const attackActiveFrames = this.currentStateDef?.attackActiveFrames;
+        const isActiveAttackFrame = isAttackState && hasWeapon &&
+            (attackActiveFrames === undefined || attackActiveFrames.includes(frameIndex));
 
-            return {
-                id: box.id,
-                type: box.type,
-                subtype: box.subtype ?? null,
-                attackInstanceId: box.type === "weaponbox" ? attackInstanceId : null,
-                weaponRole: box.type === "weaponbox"
-                    ? (attackInstanceId ? "offense" : "guard")
-                    : null,
-                center: {
-                    x: this.root.position.x + localX,
-                    y: this.root.position.y + localY,
-                    z: this.root.position.z
-                },
-                half: {
-                    x: widthWorld / 2,
-                    y: heightWorld / 2,
-                    z: depthWorld / 2
-                },
-                angle: box.angle ?? 0
-            };
-        });
+        const isInvincible = this.currentStateDef?.invincible === true;
+        const worldBoxes = boxes
+            .filter((box) => !(isInvincible && box.type === "hitbox"))
+            .map((box) => {
+                const localX = (box.cx - frameWidth / 2) * this.pxToWorld - anchorOffsetX;
+                const localY = (frameHeight / 2 - box.cy) * this.pxToWorld - anchorOffsetY;
+                const widthWorld = box.w * this.pxToWorld;
+                const heightWorld = box.h * this.pxToWorld;
+                const depthWorld = this.thicknessPx * this.pxToWorld;
+
+                return {
+                    id: box.id,
+                    type: box.type,
+                    subtype: box.subtype ?? null,
+                    attackInstanceId: box.type === "weaponbox" ? attackInstanceId : null,
+                    weaponRole: box.type === "weaponbox"
+                        ? (isActiveAttackFrame ? "offense" : "guard")
+                        : null,
+                    center: {
+                        x: this.root.position.x + localX,
+                        y: this.root.position.y + localY,
+                        z: this.root.position.z
+                    },
+                    half: {
+                        x: widthWorld / 2,
+                        y: heightWorld / 2,
+                        z: depthWorld / 2
+                    },
+                    angle: box.angle ?? 0
+                };
+            });
 
         return {
             characterId: this.id,

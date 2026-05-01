@@ -154,25 +154,33 @@ export class AIKnowledgeRegistry {
             warnings.push(`Frame count mismatch: atlas=${atlasFrames.length}, collider=${colliderFrames.length} for ${stateName}`);
         }
 
-        // 找有 weaponbox 的帧
+        // 确定哪些帧有有效攻击判定
+        const attackActiveFrames = stateDef.attackActiveFrames;
+
+        // 找有 weaponbox 的帧，并过滤出有效攻击帧
         const weaponFrames = [];
         for (let i = 0; i < colliderFrames.length; i++) {
             const frame = colliderFrames[i];
             const weaponBoxes = frame.boxes?.filter(b => b.type === "weaponbox") || [];
-            if (weaponBoxes.length > 0) {
-                weaponFrames.push({
-                    frameIndex: i,
-                    durationMs: atlasFrames[i]?.durationMs ?? 100,
-                    weaponBoxes,
-                    anchor: frame.anchors?.root,
-                    frameWidth: frame.frameRect?.w ?? atlasFrames[i]?.w ?? 0,
-                    frameHeight: frame.frameRect?.h ?? atlasFrames[i]?.h ?? 0
-                });
+            if (weaponBoxes.length === 0) continue;
+
+            // 如果定义了 attackActiveFrames，只保留其中的帧
+            if (attackActiveFrames !== undefined && !attackActiveFrames.includes(i)) {
+                continue;
             }
+
+            weaponFrames.push({
+                frameIndex: i,
+                durationMs: atlasFrames[i]?.durationMs ?? 100,
+                weaponBoxes,
+                anchor: frame.anchors?.root,
+                frameWidth: frame.frameRect?.w ?? atlasFrames[i]?.w ?? 0,
+                frameHeight: frame.frameRect?.h ?? atlasFrames[i]?.h ?? 0
+            });
         }
 
         if (weaponFrames.length === 0) {
-            warnings.push(`State ${stateName} has attackActive=true but no weaponbox frames`);
+            warnings.push(`State ${stateName} has attackActive=true but no active weaponbox frames`);
             return null;
         }
 

@@ -1,0 +1,118 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data\\CollisionMask\\Dodge.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\Dodge.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\Dodge.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\Dodge.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\Dodge.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\Dodge.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#E37800"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#FF0000"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-04-30T15:09:26.8979539Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "Dodge (CollisionMask) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  62.5,
+                                         "w":  82,
+                                         "h":  36,
+                                         "angle":  90,
+                                         "pixelCount":  2952
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  73.5,
+                                         "cy":  107,
+                                         "w":  48,
+                                         "h":  29,
+                                         "angle":  0,
+                                         "pixelCount":  1392
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  78,
+                                                    "cy":  119.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "Dodge (CollisionMask) 1.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  80.5,
+                                         "cy":  71.5,
+                                         "w":  82,
+                                         "h":  36,
+                                         "angle":  90,
+                                         "pixelCount":  2952
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  107,
+                                         "w":  48,
+                                         "h":  29,
+                                         "angle":  0,
+                                         "pixelCount":  1392
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  83,
+                                                    "cy":  114.5
+                                                }
+                                   }
+                   }
+               ]
+}

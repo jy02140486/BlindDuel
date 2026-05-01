@@ -84,6 +84,12 @@ export function createRabbleStickCharacter(scene, assets) {
                 // Temporary fallback: reuse idle collider data until hit collider is exported.
                 colliderData: assets.colliders.rabble.idle,
                 loop: false
+            },
+            dodge: {
+                spriteSheetUrl: "./Art/Sprite/Dodge.png",
+                atlasData: assets.atlas.rabble.dodge,
+                colliderData: assets.colliders.rabble.dodge,
+                loop: false
             }
         }
     });

@@ -101,10 +101,10 @@ export class ContactResolver {
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
         }
 
-        // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效则跳过）。
+        // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效或非激活攻击帧则跳过）。
         for (const contact of frameContacts.weaponVsHitbox) {
             const attackId = contact.weapon.attackInstanceId;
-            if (!attackId || invalidatedAttacks.has(attackId)) {
+            if (!attackId || contact.weapon.weaponRole !== "offense" || invalidatedAttacks.has(attackId)) {
                 continue;
             }
 

@@ -1,0 +1,36 @@
+{ "frames": {
+   "Dodge (RootMotion) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 450
+   },
+   "Dodge (RootMotion) 1.ase": {
+    "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 700
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\Dodge.png",
+  "format": "RGBA8888",
+  "size": { "w": 256, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "mainvisual", "opacity": 255, "blendMode": "normal" },
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
+   { "name": "PushBox", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

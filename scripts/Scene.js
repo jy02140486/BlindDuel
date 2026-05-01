@@ -1,6 +1,7 @@
 import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
 import { DummyController } from "./Systems/DummyController.js";
+import { TestController } from "./Systems/TestController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
@@ -56,7 +57,7 @@ export class Scene {
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new DummyController(this.rabbleStick, { fixedMoveIntent: { x: 0, y: 0 } });
+        this.rabbleController = new TestController(this.rabbleStick, assets.testScripts.rabbleBasicSequence);
         this.combatSystem = new CombatSystem();
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();

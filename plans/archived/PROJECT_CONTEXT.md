@@ -1,4 +1,4 @@
-# 项目上下文（GemeniPrototype-BlindBattle）
+# 项目上下文_ARCHIVED（GemeniPrototype-BlindBattle）
 
 ## 1. 项目概述
 这是一个基于 Babylon.js 的 2D 格斗游戏原型，当前专注于实现角色动画、碰撞系统和状态机。

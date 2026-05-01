@@ -19,7 +19,8 @@ export const ASSET_MANIFEST = {
             move: "./Art/Sprite/rabble_stick_move.json",
             swing: "./Art/Sprite/rabble_stick_swing.json",
             thrust: "./Art/Sprite/rabble_stick_thrust.json",
-            hit: "./Art/Sprite/rabble_stick_hit.json"
+            hit: "./Art/Sprite/rabble_stick_hit.json",
+            dodge: "./Art/Sprite/Dodge.json"
         }
     },
     colliders: {
@@ -34,7 +35,8 @@ export const ASSET_MANIFEST = {
             idle: "./Data/CollisionMask/rabble_stick_idle.collider.json",
             move: "./Data/CollisionMask/rabble_stick_move.collider.json",
             swing: "./Data/CollisionMask/rabble_stick_swing.collider.json",
-            thrust: "./Data/CollisionMask/rabble_stick_thrust.collider.json"
+            thrust: "./Data/CollisionMask/rabble_stick_thrust.collider.json",
+            dodge: "./Data/CollisionMask/Dodge.collider.json"
         }
     }
 };
