@@ -17,6 +17,12 @@ export class PlayerController extends BaseController {
         if (event.action === "quart") {
             this.queueCommand("quart");
         }
+        if (event.action === "zornhut") {
+            this.queueCommand("zornhut");
+        }
+        if (event.action === "guard") {
+            this.queueCommand("guard");
+        }
     }
 
     #combineMoveIntent() {

@@ -1,0 +1,40 @@
+{ "frames": {
+   "longswordman_Guard (RootMotion) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 500
+   },
+   "longswordman_Guard (RootMotion) 1.ase": {
+    "frame": { "x": 160, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 400
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_Guard.png",
+  "format": "RGBA8888",
+  "size": { "w": 320, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
+   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower body", "opacity": 255, "blendMode": "normal" },
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "left arm", "opacity": 255, "blendMode": "normal" },
+   { "name": "weapon", "opacity": 255, "blendMode": "normal" },
+   { "name": "right arm", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

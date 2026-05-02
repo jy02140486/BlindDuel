@@ -406,22 +406,38 @@ update(dtMs) {
 3. ✅ 修改 `Character.getCombatSnapshot()`：`attackInstanceId` 始终生成，`weaponRole` 根据 `attackActiveFrames` 决定
 4. ✅ 修改 `ContactResolver`：Phase 2 增加 `weaponRole === "offense"` 检查
 5. ✅ 修改 `AIKnowledgeRegistry`：扫描逻辑适配 `attackActiveFrames`
-6. ⏳ 验证：thrust frame 0-1 碰到 hitbox 不命中，frame 2 正常命中
+6. ✅ 验证：thrust frame 0-1 碰到 hitbox 不命中，frame 2 正常命中
 
-### 🔄 阶段 3：规则 3 基础设施（状态标记 + 动画速度）—— 当前重点
+### ✅ 阶段 3：规则 3 基础设施（状态标记 + 动画速度 + 移动输入控制）—— 已完成
 
-1. `Character.js` 新增 `stateTags` 系统
-2. `FrameAnimationComponent.js` 新增 `timeScale` 支持
-3. 状态图条件扩展 `hasTag` / `tagValue`
-4. 验证：基础机制可用
+1. ✅ `Character.js` 新增 `stateTags` 系统（`addTag` / `hasTag` / `getTag` / `removeTag`）
+2. ✅ `FrameAnimationComponent.js` 新增 `timeScale` 支持
+3. ✅ 状态图条件扩展 `hasTag` / `tagValue`
+4. ✅ 状态图新增 `allowMoveInput` 声明式标记，区分玩家输入与动画根运动
+5. ✅ 验证：基础机制可用，默认不影响现有角色行为
 
-### ⏳ 阶段 4：规则 3 格挡与重击
+### ✅ 阶段 4a：Zornhut 重击 —— 已完成
 
-1. 新增 `parry` 状态（状态图定义，动画资源后续补，暂用占位动画）
-2. 新增 `hellish_quart` 状态（状态图定义，动画资源后续补，暂用占位动画）
-3. `ContactResolver` 扩展 `canParry` 逻辑，打 `parryBonus` 标记
-4. 输入绑定（parry / hellish_quart 按键）
-5. 验证：格挡 → 派生重击/中击流程跑通
+1. ✅ 新增 `zornhut` 状态（`attackActiveFrames: [3, 4]`, `frameSpeeds`）
+2. ✅ 新增 zornhut 动画资源（5 帧，总时长 1650ms）
+3. ✅ 输入绑定（`K` 键）
+4. ✅ 接入 `AssetManifest.js` / `CharacterFactory.js`
+5. ⏳ 验证：攻击判定、拼刀、位移正常
+
+### ✅ 阶段 4b：Guard 格挡状态 —— 已完成
+
+1. ✅ 新增 `guard` 状态（`guardActive: true`, `allowMoveInput: false`）
+2. ✅ 新增 guard 动画资源
+3. ✅ 输入绑定（`J` 键）
+4. ✅ 接入 `AssetManifest.js` / `CharacterFactory.js`
+5. ⏳ 验证：可进入 guard 状态，动画播放正常
+
+### 🔄 阶段 4c：格挡与重击联动 —— 当前重点
+
+1. `ContactResolver` 扩展：`guardActive` weaponbox 带 `canParry: true`
+2. `ContactResolver` 扩展：`offense vs guard` 且 `canParry` 时给防守方打 `parryBonus` 标记
+3. `LongSwordMan.json`：guard 状态增加向 `zornhut` 的 `hasTag: "parryBonus"` 转移
+4. 验证：格挡成功 → 快速派生 zornhut
 
 ---
 
@@ -435,6 +451,21 @@ update(dtMs) {
 | `scripts/Components/FrameAnimationComponent.js` | 新增 `timeScale` 支持 |
 | `scripts/Systems/ContactResolver.js` | 扩展 `guard` 逻辑，支持 `canParry` 和 `parryBonus` 标记 |
 | `scripts/Systems/AIKnowledgeRegistry.js` | 扫描逻辑适配新的攻击帧标记 |
+| `scripts/Components/CollisionComponent.js` | debug mesh 增加 `renderingGroupId = 2`，避免被 STAGE 地面遮挡 |
+| `scripts/AssetManifest.js` | 新增 hero `zornhut` / `guard` atlas 和 collider 路径 |
+| `scripts/CharacterFactory.js` | 新增 hero `zornhut` / `guard` clip 配置 |
+| `scripts/Systems/InputSystem.js` | `K` 键绑定 `zornhut`，`J` 键绑定 `guard` |
+| `scripts/Systems/PlayerController.js` | 处理 `zornhut` / `guard` 命令 |
+| `scripts/Scene.js` | TestController 配置 swing + 右移循环序列 |
+
+---
+
+## 已修复问题
+
+### Pushbox 被地面遮挡
+**现象**：位置较低的 pushbox 被 STAGE 层地面完全遮挡，debug 可视化时不可见。  
+**原因**：碰撞盒 debug mesh 未设置 `renderingGroupId`，默认在 group 0；STAGE 地面在 group 1，后渲染导致遮挡。  
+**修复**：创建 debug mesh 时设置 `mesh.renderingGroupId = 2`，确保在所有场景层之上渲染。
 
 ---
 
@@ -444,4 +475,6 @@ update(dtMs) {
 2. **事件系统扩展**：如果选择选项 B（`events` 语义），需要明确 `hitbox_on`/`hitbox_off` 的规范，避免与未来的"真正 hitbox 开关"混淆。
 3. **AI 扫描**：`AIKnowledgeRegistry` 当前扫描攻击时间时，以有 weaponbox 的帧为准。规则 1 落地后，需要改为以 `attackInstanceId` 实际存在的帧为准，否则 AI 会误判 thrust 的攻击前摇和持续帧。
 4. **格挡派生窗口**：`parryBonus` 标记的有效期需要仔细调试，太长会过于强势，太短会难以触发。
-5. **动画资源依赖**：`guard` 和 `heavy` 的动画资源尚未就绪，阶段 4 需要等资源到位后才能完整验证。
+5. **Guard 动画资源**：`guard` 资源已就绪（`longswordman_Guard.ase` 及全套导出），`.collider.json` 待生成。
+6. **Zornhut 动画资源**：`zornhut` 资源已就绪，`.collider.json` 已生成。
+7. **Clash 动画资源**：`longswordman_clash.ase` 制作中，暂不接入。

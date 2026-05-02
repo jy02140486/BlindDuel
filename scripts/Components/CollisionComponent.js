@@ -78,6 +78,7 @@ export class CollisionComponent {
             if (!mesh) {
                 mesh = BABYLON.MeshBuilder.CreateBox(`box_${box.id}`, { size: 1 }, this.scene);
                 mesh.parent = this.rootNode;
+                mesh.renderingGroupId = 2;
                 this.debugMeshesById.set(box.id, mesh);
             }
 

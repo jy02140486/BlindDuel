@@ -12,6 +12,8 @@ export const ASSET_MANIFEST = {
             move: "./Art/Sprite/longswordman_move.json",
             thrust: "./Art/Sprite/longswordman_thrust.json",
             quart: "./Art/Sprite/longswordman_quart.json",
+            zornhut: "./Art/Sprite/longswordman_zornhut.json",
+            guard: "./Art/Sprite/longswordman_Guard.json",
             hit: "./Art/Sprite/longswordman_hit.json"
         },
         rabble: {
@@ -29,6 +31,8 @@ export const ASSET_MANIFEST = {
             move: "./Data/CollisionMask/longswordman_move.collider.json",
             thrust: "./Data/CollisionMask/longswordman_thrust.collider.json",
             quart: "./Data/CollisionMask/longswordman_quart.collider.json",
+            zornhut: "./Data/CollisionMask/longswordman_zornhut.collider.json",
+            guard: "./Data/CollisionMask/longswordman_Guard.collider.json",
             hit: "./Data/CollisionMask/longswordman_hit.collider.json"
         },
         rabble: {

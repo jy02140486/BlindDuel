@@ -38,6 +38,18 @@ export function createHeroCharacter(scene, assets) {
                 colliderData: assets.colliders.hero.quart,
                 loop: false
             },
+            zornhut: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_zornhut.png",
+                atlasData: assets.atlas.hero.zornhut,
+                colliderData: assets.colliders.hero.zornhut,
+                loop: false
+            },
+            guard: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_Guard.png",
+                atlasData: assets.atlas.hero.guard,
+                colliderData: assets.colliders.hero.guard,
+                loop: false
+            },
             hit: {
                 spriteSheetUrl: "./Art/Sprite/longswordman_hit.png",
                 atlasData: assets.atlas.hero.hit,

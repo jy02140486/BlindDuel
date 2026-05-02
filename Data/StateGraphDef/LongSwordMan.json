@@ -2,7 +2,7 @@
   "machine": "longswordman",
   "initialState": "idle",
   "inputs": {
-    "commands": ["thrust", "quart"],
+    "commands": ["thrust", "quart", "zornhut", "guard"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -12,6 +12,7 @@
   "states": {
     "idle": {
       "clip": "idle",
+      "allowMoveInput": true,
       "loop": true,
       "transitions": [
         {
@@ -24,6 +25,18 @@
           "to": "quart",
           "when": [
             { "command": "quart" }
+          ]
+        },
+        {
+          "to": "zornhut",
+          "when": [
+            { "command": "zornhut" }
+          ]
+        },
+        {
+          "to": "guard",
+          "when": [
+            { "command": "guard" }
           ]
         },
         {
@@ -36,6 +49,7 @@
     },
     "move": {
       "clip": "move",
+      "allowMoveInput": true,
       "loop": true,
       "transitions": [
         {
@@ -51,6 +65,18 @@
           ]
         },
         {
+          "to": "zornhut",
+          "when": [
+            { "command": "zornhut" }
+          ]
+        },
+        {
+          "to": "guard",
+          "when": [
+            { "command": "guard" }
+          ]
+        },
+        {
           "to": "idle",
           "when": [
             { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
@@ -60,6 +86,7 @@
     },
     "thrust": {
       "clip": "thrust",
+      "allowMoveInput": false,
       "attackActive": true,
       "attackActiveFrames": [2],
       "loop": false,
@@ -75,8 +102,9 @@
     },
     "quart": {
       "clip": "quart",
+      "allowMoveInput": false,
       "attackActive": true,
-      "attackActiveFrames": [3],
+      "attackActiveFrames": [3, 4],
       "loop": false,
       "transitions": [
         {
@@ -88,8 +116,39 @@
       ],
       "frameSpeeds": [0,0.1,0.4,0.1]
     },
+    "zornhut": {
+      "clip": "zornhut",
+      "allowMoveInput": false,
+      "attackActive": true,
+      "attackActiveFrames": [3],
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0.4, 0.6, 0.8, 0.7, 0.4]
+    },
+    "guard": {
+      "clip": "guard",
+      "allowMoveInput": false,
+      "guardActive": true,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
     "hit": {
       "clip": "hit",
+      "allowMoveInput": false,
       "loop": false,
       "transitions": [
         {

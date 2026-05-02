@@ -257,37 +257,43 @@ export class Character {
         // 获取当前状态的速度设置
         const stateSpeed = this.currentStateDef?.speed;
         const frameSpeeds = this.currentStateDef?.frameSpeeds;
-        
-        // 优先使用每帧速度数组
+
+        // 优先使用每帧速度数组（动画根运动，不受 allowMoveInput 影响）
         if (frameSpeeds && frameSpeeds.length > 0) {
             const frameIndex = this.animation.currentFrameIndex;
             const frameSpeed = frameSpeeds[frameIndex % frameSpeeds.length];
-            
+
             if (frameSpeed !== undefined) {
                 const dtSec = dtMs / 1000;
-                
+
                 // 每帧速度：符号代表方向，数值代表速度
                 this.root.position.x += frameSpeed * dtSec;
                 this.currentSpd = Math.abs(frameSpeed);
                 return;
             }
         }
-        
+
         // 如果没有每帧速度，检查状态速度
         if (stateSpeed !== undefined) {
             const dtSec = dtMs / 1000;
-            
+
             // 状态速度：符号代表方向，数值代表速度
             this.root.position.x += stateSpeed * dtSec;
             this.currentSpd = Math.abs(stateSpeed);
             return;
         }
-        
+
+        // 状态显式禁止玩家移动输入
+        if (this.currentStateDef?.allowMoveInput === false) {
+            this.currentSpd = 0;
+            return;
+        }
+
         // 如果都没有定义，使用玩家输入控制移动
         const x = Number(this.moveIntent?.x ?? 0);
         const y = Number(this.moveIntent?.y ?? 0);
         const magnitude = Math.hypot(x, y);
-        
+
         if (magnitude <= this.moveDeadzone) {
             this.currentSpd = 0;
             return;

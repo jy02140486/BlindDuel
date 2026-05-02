@@ -12,7 +12,9 @@ export class InputSystem {
             s: false,
             d: false,
             l: false,
-            i: false
+            i: false,
+            k: false,
+            j: false
         };
 
         this.gamepad = {
@@ -63,6 +65,18 @@ export class InputSystem {
                 this.#emitActionPressed("quart", {
                     source: "keyboard",
                     key: "i"
+                });
+            }
+            if (!wasDown && isDown && key === "k") {
+                this.#emitActionPressed("zornhut", {
+                    source: "keyboard",
+                    key: "k"
+                });
+            }
+            if (!wasDown && isDown && key === "j") {
+                this.#emitActionPressed("guard", {
+                    source: "keyboard",
+                    key: "j"
                 });
             }
         }

@@ -30,7 +30,7 @@
 
 ## 快速参考：当前开发状态
 
-- **最新完成**: 规则 1（thrust 帧级判定）+ 规则 2（dodge 无敌）代码落地
-- **当前重点**: 规则 3 基础设施（stateTags + timeScale + hasTag）
-- **下一步**: 规则 4 格挡（parry）与重击（hellish_quart）
-- **已知阻塞**: `parry` / `hellish_quart` 动画资源待美术补充（暂用占位动画）
+- **最新完成**: 规则 3 基础设施（stateTags + timeScale + hasTag + allowMoveInput）+ zornhut 重击 + guard 格挡状态接入
+- **当前重点**: 规则 4 格挡与重击联动（parryBonus + canParry + 派生攻击）
+- **下一步**: `ContactResolver` 扩展 guard 拦截逻辑，格挡成功打 `parryBonus` 标记
+- **已知阻塞**: `parryBonus` 派生转移条件已支持（`hasTag`），但 `ContactResolver` 的 `canParry` 逻辑待实现

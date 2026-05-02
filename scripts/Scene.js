@@ -57,7 +57,13 @@ export class Scene {
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new TestController(this.rabbleStick, assets.testScripts.rabbleBasicSequence);
+        this.rabbleController = new TestController(this.rabbleStick, {
+            loop: true,
+            steps: [
+                { command: "swing", waitMs: 800 },
+                { moveIntent: { x: 1, y: 0 }, waitMs: 1500 }
+            ]
+        });
         this.combatSystem = new CombatSystem();
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();
