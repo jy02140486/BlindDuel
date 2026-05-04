@@ -8,6 +8,11 @@ export class FrameAnimationComponent {
         this.timeInFrameMs = 0;
         this.loop = true;
         this.finished = false;
+        this.timeScale = 1.0;
+    }
+
+    setTimeScale(scale) {
+        this.timeScale = scale;
     }
 
     #buildFrames(atlasData) {
@@ -100,7 +105,8 @@ export class FrameAnimationComponent {
             return;
         }
 
-        this.timeInFrameMs += dtMs;
+        const scaledDt = dtMs * this.timeScale;
+        this.timeInFrameMs += scaledDt;
         while (this.timeInFrameMs >= this.currentFrame.durationMs) {
             this.timeInFrameMs -= this.currentFrame.durationMs;
             if (this.currentFrameIndex + 1 < this.frames.length) {

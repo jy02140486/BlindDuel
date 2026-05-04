@@ -62,6 +62,16 @@ export class ContactResolver {
                     effects.push(
                         this.#buildClashEffect(offenseCharacterId, guardCharacterId, "clash_lose", offensePos, guardPos)
                     );
+
+                    // 格挡成功且 guardBox 带 canParry，给防守方打 parryBonus 标记
+                    console.log(`[GUARD] guardBox.canParry=${guardBox.canParry}, guardLevel=${guardLevel}, offenseLevel=${offenseLevel}`);
+                    if (guardBox.canParry) {
+                        console.log(`[PARRY] Adding parryBonus to ${guardCharacterId}`);
+                        effects.push({
+                            type: "parryBonus",
+                            targetId: guardCharacterId
+                        });
+                    }
                 }
                 continue;
             }
@@ -104,6 +114,14 @@ export class ContactResolver {
         // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效或非激活攻击帧则跳过）。
         for (const contact of frameContacts.weaponVsHitbox) {
             const attackId = contact.weapon.attackInstanceId;
+            const attackerSnap = snapshotById.get(contact.attackerId);
+            const targetSnap = snapshotById.get(contact.targetId);
+            console.log(
+                `[Phase2] ${contact.attackerId} -> ${contact.targetId} | ` +
+                `weaponRole=${contact.weapon.weaponRole} attackId=${attackId ?? 'null'} | ` +
+                `attackerState=${attackerSnap?.stateName} frame=${attackerSnap?.frameIndex} | ` +
+                `targetState=${targetSnap?.stateName} frame=${targetSnap?.frameIndex}`
+            );
             if (!attackId || contact.weapon.weaponRole !== "offense" || invalidatedAttacks.has(attackId)) {
                 continue;
             }

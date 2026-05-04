@@ -122,6 +122,8 @@
       "attackActive": true,
       "attackActiveFrames": [3],
       "loop": false,
+      "timeScale": 1.0,
+      "parryTimeScale": 1.75,
       "transitions": [
         {
           "to": "idle",
@@ -142,6 +144,20 @@
           "to": "idle",
           "when": [
             { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        },
+        {
+          "to": "zornhut",
+          "when": [
+            { "command": "zornhut" },
+            { "hasTag": "parryBonus" }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" },
+            { "hasTag": "parryBonus" }
           ]
         }
       ]

@@ -21,6 +21,7 @@ export class Character {
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
         this.currentSpeed = 0;
         this.stateEntrySerial = 0;
+        this.stateTags = new Set();
 
         this.animation = new FrameAnimationComponent(config.clips);
 
@@ -97,6 +98,22 @@ export class Character {
         // 全局冷却（Global Cooldown）
         this.globalCooldownMs = config.globalCooldownMs ?? 700;
         this.lastActionTime = -Infinity;
+    }
+
+    addTag(tag) {
+        this.stateTags.add(tag);
+    }
+
+    hasTag(tag) {
+        return this.stateTags.has(tag);
+    }
+
+    removeTag(tag) {
+        this.stateTags.delete(tag);
+    }
+
+    clearTags() {
+        this.stateTags.clear();
     }
 
     #buildTextures(scene, clips) {
@@ -329,6 +346,12 @@ export class Character {
             return this.#compareValues(parameterValue, condition.op, condition.value);
         }
 
+        if (condition.hasTag) {
+            const hasIt = this.stateTags.has(condition.hasTag);
+            console.log(`[hasTag] checking ${condition.hasTag} = ${hasIt}, tags=[${[...this.stateTags].join(",")}]`);
+            return hasIt;
+        }
+
         return false;
     }
 
@@ -359,9 +382,24 @@ export class Character {
             throw new Error(`Unknown character state: ${stateName}`);
         }
 
+        console.log(`[enterState] ${this.id}: ${this.currentStateName} -> ${stateName}, tags before clear=[${[...this.stateTags].join(",")}]`);
+
         this.stateEntrySerial += 1;
         this.currentStateName = stateName;
         this.currentStateDef = stateDef;
+
+        // 设置动画速度：有 parryBonus 时用 parryTimeScale，否则用 timeScale
+        // 注意：先计算 timeScale，再清除 tags
+        const timeScale = this.hasTag("parryBonus")
+            ? (stateDef.parryTimeScale ?? stateDef.timeScale ?? 1.0)
+            : (stateDef.timeScale ?? 1.0);
+        console.log(`[enterState] ${this.id}: timeScale=${timeScale}, has parryBonus=${this.hasTag("parryBonus")}`);
+
+        // 进入新状态时清除所有标记
+        this.clearTags();
+
+        this.animation.setTimeScale(timeScale);
+
         this.animation.play(stateDef.clip, { restart: true });
         this.collision.setClip(stateDef.clip);
         this.#applyCurrentClipTexture();
@@ -465,6 +503,7 @@ export class Character {
                     weaponRole: box.type === "weaponbox"
                         ? (isActiveAttackFrame ? "offense" : "guard")
                         : null,
+                    canParry: box.type === "weaponbox" && this.currentStateDef?.guardActive === true,
                     center: {
                         x: this.root.position.x + localX,
                         y: this.root.position.y + localY,
@@ -519,19 +558,19 @@ export class Character {
         this.#applyMovement(dtMs);
         const moved = this.root.position.x !== preMoveX;
 
-        const nextStateAfterUpdate = this.#consumeTransition();
-        if (nextStateAfterUpdate) {
-            this.enterState(nextStateAfterUpdate);
-            const updatedCurrent = this.animation.currentFrame;
-            const updatedAnchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
-            this.#applyRootAlignment(updatedCurrent.w, updatedCurrent.h, updatedAnchor);
-            this.#syncRootDebug(updatedAnchor);
-            this.collision.syncToFrame(this.animation.currentFrameIndex, updatedCurrent.w, updatedCurrent.h, updatedAnchor);
-        } /*else if (moved) {
-            const current = this.animation.currentFrame;
-            const anchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
-            this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, anchor);
-        }*/
+        // const nextStateAfterUpdate = this.#consumeTransition();
+        // if (nextStateAfterUpdate) {
+        //     this.enterState(nextStateAfterUpdate);
+        //     const updatedCurrent = this.animation.currentFrame;
+        //     const updatedAnchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
+        //     this.#applyRootAlignment(updatedCurrent.w, updatedCurrent.h, updatedAnchor);
+        //     this.#syncRootDebug(updatedAnchor);
+        //     this.collision.syncToFrame(this.animation.currentFrameIndex, updatedCurrent.w, updatedCurrent.h, updatedAnchor);
+        // } /*else if (moved) {
+        //     const current = this.animation.currentFrame;
+        //     const anchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
+        //     this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, anchor);
+        // }*/
 
         // 检测状态变化：从非idle状态回到idle时触发CD
         const newState = this.currentStateName;

@@ -1,3 +1,9 @@
+> **状态：已归档**（2026-05-04）
+> 
+> 所有实施阶段已完成。后续工作转移至 [FIXED_UPDATE_PLAN.md](FIXED_UPDATE_PLAN.md)。
+
+---
+
 # 战斗规则细化计划
 
 ## 背景与目标
@@ -475,6 +481,8 @@ update(dtMs) {
 2. **事件系统扩展**：如果选择选项 B（`events` 语义），需要明确 `hitbox_on`/`hitbox_off` 的规范，避免与未来的"真正 hitbox 开关"混淆。
 3. **AI 扫描**：`AIKnowledgeRegistry` 当前扫描攻击时间时，以有 weaponbox 的帧为准。规则 1 落地后，需要改为以 `attackInstanceId` 实际存在的帧为准，否则 AI 会误判 thrust 的攻击前摇和持续帧。
 4. **格挡派生窗口**：`parryBonus` 标记的有效期需要仔细调试，太长会过于强势，太短会难以触发。
-5. **Guard 动画资源**：`guard` 资源已就绪（`longswordman_Guard.ase` 及全套导出），`.collider.json` 待生成。
-6. **Zornhut 动画资源**：`zornhut` 资源已就绪，`.collider.json` 已生成。
-7. **Clash 动画资源**：`longswordman_clash.ase` 制作中，暂不接入。
+5.7. **Guard 动画资源**：`guard` 资源已就绪（`longswordman_Guard.ase` 及全套导出），`.collider.json` 已生成。
+8. **Zornhut 动画资源**：`zornhut` 资源已就绪，`.collider.json` 已生成。
+9. **Clash 动画资源**：`longswordman_clash.ase` 制作中，暂不接入。
+10. **Hitstop 缺失导致的视觉不同步**：当前无 hitstop 机制，rabble swing 进入 attackActive 帧的瞬间若被 guard 拦截，同一帧内立即切到 hit 状态，玩家看不到 swing 的攻击帧。典型 2D 格斗游戏通过 8-24 帧 hitstop 解决（双方动画暂停，玩家看到拼刀/命中瞬间）。建议后续补充 hitstop + blockstun/hitstun 硬直系统。
+11. **状态切换延迟**：`takeDamage()` 内立即 `enterState()` 过于激进，应考虑在硬直期间冻结角色，而非直接切换动画。可与 hitstop 统一设计。

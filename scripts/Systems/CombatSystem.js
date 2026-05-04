@@ -9,10 +9,22 @@ export class CombatSystem {
         const result = this.resolver.resolve(characters);
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
-            if (!target || typeof target.takeDamage !== "function") {
+            if (!target) {
                 continue;
             }
-            target.takeDamage(effect.context);
+
+            if (effect.type === "parryBonus") {
+                console.log(`[CombatSystem] Applying parryBonus to ${target.id}, has addTag=${typeof target.addTag === "function"}`);
+                if (typeof target.addTag === "function") {
+                    target.addTag("parryBonus");
+                    console.log(`[CombatSystem] parryBonus added, tags=${[...target.stateTags].join(",")}`);
+                }
+                continue;
+            }
+
+            if (typeof target.takeDamage === "function") {
+                target.takeDamage(effect.context);
+            }
         }
         return result;
     }
