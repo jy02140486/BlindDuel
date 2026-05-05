@@ -162,6 +162,33 @@
         }
       ]
     },
+    "clash": {
+      "clip": "clash",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        },
+        {
+          "to": "zornhut",
+          "when": [
+            { "command": "zornhut" },
+            { "hasTag": "parryBonus" }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" },
+            { "hasTag": "parryBonus" }
+          ]
+        }
+      ]
+    },
     "hit": {
       "clip": "hit",
       "allowMoveInput": false,

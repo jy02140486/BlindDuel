@@ -11,6 +11,8 @@ import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVis
 import { StageBoundary } from "./Systems/StageBoundary.js";
 import { PushboxResolver } from "./Systems/PushboxResolver.js";
 
+const FIXED_DT = 1000 / 60;
+
 export class Scene {
     constructor(engine, canvas) {
         this.engine = engine;
@@ -26,6 +28,7 @@ export class Scene {
         this.sceneVisualSystem = null;
         this._onKeyDown = null;
         this.paused = false;
+        this.tickCount = 0;
     }
 
     async init() {
@@ -113,7 +116,25 @@ export class Scene {
         }
     }
 
-    update(dtMs) {
+    fixedUpdate(dtMs, tickCount) {
+        this.tickCount = tickCount;
+
+        if (this.paused) {
+            return;
+        }
+
+        this.inputSystem.fixedUpdate(tickCount);
+        this.playerController.fixedUpdate(dtMs, tickCount);
+        this.rabbleController.fixedUpdate(dtMs);
+        this.character.fixedUpdate(dtMs, tickCount);
+        this.rabbleStick.fixedUpdate(dtMs, tickCount);
+        this.pushboxResolver.resolve([this.character, this.rabbleStick]);
+        this.stageBoundary.clampCharacter(this.character);
+        this.stageBoundary.clampCharacter(this.rabbleStick);
+        this.combatSystem.fixedUpdate([this.character, this.rabbleStick]);
+    }
+
+    updateRender(dtMs) {
         // 计算相机参数（无论是否暂停都需要）
         const heroPos = this.character.root.position;
         const opponentPos = this.rabbleStick.root.position;
@@ -136,38 +157,13 @@ export class Scene {
         this._cameraTarget.y = targetHeight;
         this._cameraTarget.z = centerZ;
 
-        // 暂停时只更新相机和视觉层，跳过 gameplay
-        if (this.paused) {
-            this.cameraRig.update(dtMs, {
-                basePosition: this._cameraBasePosition,
-                target: this._cameraTarget,
-                fighterDistance: this._smoothedFighterDistance
-            });
-            if (this.sceneVisualSystem) {
-                this.sceneVisualSystem.update(dtMs, {
-                    camera: this.cameraRig.camera
-                });
-            }
-            return;
-        }
-
-        this.inputSystem.update();
-        this.playerController.update(dtMs);
-        this.rabbleController.update(dtMs);
-        this.character.update(dtMs);
-        this.rabbleStick.update(dtMs);
-        this.pushboxResolver.resolve([this.character, this.rabbleStick]);
-        this.stageBoundary.clampCharacter(this.character);
-        this.stageBoundary.clampCharacter(this.rabbleStick);
-        this.combatSystem.update([this.character, this.rabbleStick]);
-
         // 先更新相机，再更新视觉系统（按文档要求的顺序）
         this.cameraRig.update(dtMs, {
             basePosition: this._cameraBasePosition,
             target: this._cameraTarget,
             fighterDistance: this._smoothedFighterDistance
         });
-        
+
         // 更新视觉系统，传递相机信息
         if (this.sceneVisualSystem) {
             this.sceneVisualSystem.update(dtMs, {

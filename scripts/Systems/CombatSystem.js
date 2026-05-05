@@ -5,7 +5,7 @@ export class CombatSystem {
         this.resolver = options.resolver ?? new ContactResolver(options);
     }
 
-    update(characters = []) {
+    fixedUpdate(characters = []) {
         const result = this.resolver.resolve(characters);
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
@@ -18,6 +18,28 @@ export class CombatSystem {
                 if (typeof target.addTag === "function") {
                     target.addTag("parryBonus");
                     console.log(`[CombatSystem] parryBonus added, tags=${[...target.stateTags].join(",")}`);
+                }
+                continue;
+            }
+
+            if (effect.type === "hitstop") {
+                if (typeof target.applyHitstop === "function") {
+                    target.applyHitstop(effect.durationFrames);
+                }
+                continue;
+            }
+
+            if (effect.type === "clash") {
+                const hitState = effect.context?.hitState ?? "clash";
+                if (typeof target.enterState === "function" && target.hasState(hitState)) {
+                    target.enterState(hitState);
+                }
+                continue;
+            }
+
+            if (effect.type === "blockstun") {
+                if (typeof target.applyBlockstun === "function") {
+                    target.applyBlockstun(effect.durationFrames);
                 }
                 continue;
             }

@@ -63,14 +63,28 @@ export class ContactResolver {
                         this.#buildClashEffect(offenseCharacterId, guardCharacterId, "clash_lose", offensePos, guardPos)
                     );
 
-                    // 格挡成功且 guardBox 带 canParry，给防守方打 parryBonus 标记
-                    console.log(`[GUARD] guardBox.canParry=${guardBox.canParry}, guardLevel=${guardLevel}, offenseLevel=${offenseLevel}`);
-                    if (guardBox.canParry) {
+                    // Just Guard 时机判定
+                    const offenseSnapshot = snapshotById.get(offenseCharacterId);
+                    const guardSnapshot = snapshotById.get(guardCharacterId);
+                    const offenseEnterTick = offenseSnapshot?.stateEnterTick ?? 0;
+                    const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
+                    const tickDiff = guardEnterTick - offenseEnterTick;
+                    const canParry = guardBox.canParry && tickDiff <= 2;
+
+                    console.log(`[GUARD] guardBox.canParry=${guardBox.canParry}, tickDiff=${tickDiff}, canParry=${canParry}`);
+                    if (canParry) {
                         console.log(`[PARRY] Adding parryBonus to ${guardCharacterId}`);
                         effects.push({
                             type: "parryBonus",
                             targetId: guardCharacterId
                         });
+                        effects.push({ type: "clash", targetId: guardCharacterId });
+                        effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 8 });
+                        effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 8 });
+                    } else {
+                        effects.push({ type: "blockstun", targetId: guardCharacterId, durationFrames: 10 });
+                        effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 4 });
+                        effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 4 });
                     }
                 }
                 continue;
@@ -96,6 +110,8 @@ export class ContactResolver {
                     this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB),
                     this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA)
                 );
+                effects.push({ type: "hitstop", targetId: contact.characterA, durationFrames: 8 });
+                effects.push({ type: "hitstop", targetId: contact.characterB, durationFrames: 8 });
                 continue;
             }
 
@@ -109,6 +125,8 @@ export class ContactResolver {
             // 强压弱：仅弱方攻击失效并触发弹刀/受击反馈。
             invalidatedAttacks.add(loserAttack);
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
+            effects.push({ type: "hitstop", targetId: loserId, durationFrames: 6 });
+            effects.push({ type: "hitstop", targetId: winnerId, durationFrames: 4 });
         }
 
         // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效或非激活攻击帧则跳过）。
@@ -336,6 +354,7 @@ export class ContactResolver {
 
     #buildClashEffect(targetId, otherId, contactType, targetPos, otherPos) {
         return {
+            type: "clash",
             targetId,
             context: {
                 attackInstanceId: null,
@@ -344,7 +363,7 @@ export class ContactResolver {
                 attackLevel: null,
                 contactType,
                 damage: 0,
-                hitState: "hit",
+                hitState: "clash",
                 knockbackX: this.#signedKnockback(targetPos, otherPos, this.clashKnockback)
             }
         };

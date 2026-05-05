@@ -25,7 +25,7 @@ export class TestController extends BaseController {
         this.setMoveIntent({ x: 0, y: 0 });
     }
 
-    update(dtMs = 0) {
+    fixedUpdate(dtMs = 0) {
         const delta = Math.max(0, Number(dtMs) || 0);
         this.#advance(delta);
         this.applyToCharacter();

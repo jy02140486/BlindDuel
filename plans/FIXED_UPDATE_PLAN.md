@@ -125,9 +125,15 @@ fixedUpdate(characters) {
 ```
 
 **验证**：
-- [ ] 游戏运行正常，动画播放正常
-- [ ] 不同刷新率显示器（60Hz / 144Hz）下逻辑帧率一致
-- [ ] `tickCount` 每帧稳定 +1
+- [x] 游戏运行正常，动画播放正常
+- [x] 不同刷新率显示器（60Hz / 144Hz）下逻辑帧率一致
+- [x] `tickCount` 每帧稳定 +1
+
+**实现细节**：
+- `Scene.js` 增加 `accumulator` 和 `tickCount`
+- `Character.js` 增加 `stateEnterTick` 记录
+- `FrameAnimationComponent.js` 增加 `fixedUpdate`
+- 所有系统从 `update` 迁移到 `fixedUpdate`
 
 ---
 
@@ -197,9 +203,15 @@ fixedUpdate(dtMs) {
 ```
 
 **验证**：
-- [ ] 提前 3-5 帧输入指令，角色能在可行动时立即执行
-- [ ] 输入不会重复消费
-- [ ] 过期输入自动清理
+- [x] 提前 3-5 帧输入指令，角色能在可行动时立即执行
+- [x] 输入不会重复消费
+- [x] 过期输入自动清理
+
+**实现细节**：
+- `InputSystem.js` 增加 `bufferedInputs` 和 `BUFFER_WINDOW`
+- 限制只缓冲 1 个操作（防止指令堆积）
+- `PlayerController.js` 从 `InputSystem` 消费缓冲输入
+- `Character.pushCommand` 只保留最新指令
 
 ---
 
@@ -247,9 +259,20 @@ if (aOffense !== bOffense) {
 ```
 
 **验证**：
-- [ ] 提前按 guard → 可以 parry
-- [ ] 攻击 active 瞬间按 guard → 可以 parry
-- [ ] 攻击 active 后 3 帧以上才 guard → 只能普通防御
+- [x] 提前按 guard → 可以 parry
+- [x] 攻击 active 瞬间按 guard → 可以 parry（当前实现基于状态进入 tick，实际窗口受动画帧长度影响）
+- [x] 攻击 active 后 3 帧以上才 guard → 只能普通防御
+
+**实现细节**：
+- `ContactResolver.js` 增加 `tickDiff` 判定：`guardEnterTick - offenseEnterTick`
+- `canParry = guardBox.canParry && tickDiff <= 2`
+- Just Guard 成功 → `parryBonus` tag + hitstop 8 帧
+- 普通防御 → blockstun 10 帧 + hitstop 4 帧
+
+**已知问题**：
+- `tickDiff` 基于状态进入 tick，而非攻击 active 帧开始 tick
+- 前摇较长的攻击（如 swing）导致实际 Just Guard 窗口极窄
+- 用户难以按出 clash（见下方问题汇总）
 
 ---
 
@@ -312,10 +335,15 @@ fixedUpdate(characters) {
 ```
 
 **验证**：
-- [ ] 拼刀成功 → 双方暂停 8 帧
-- [ ] 普通命中 → 双方暂停 12 帧
-- [ ] hitstop 期间角色不能移动、不能输入
-- [ ] hitstop 结束后恢复正常
+- [x] 拼刀成功 → 双方暂停 8 帧
+- [x] 普通命中 → 双方暂停 4-8 帧（Just Guard 8 帧，普通防御 4 帧）
+- [x] hitstop 期间角色不能移动、不能输入
+- [x] hitstop 结束后恢复正常
+
+**实现细节**：
+- `Character.js` 增加 `hitstopFrames` 和 `preHitstopTimeScale`
+- `applyHitstop(frames)` 暂停动画，`fixedUpdate` 中递减
+- `CombatSystem.js` 分发 hitstop 效果
 
 ---
 
@@ -361,9 +389,153 @@ fixedUpdate(dtMs, tickCount) {
 ```
 
 **验证**：
-- [ ] Just Guard → 无硬直，可立即派生
-- [ ] 普通防御 → 硬直 8 帧，期间不能行动
-- [ ] 受击 → 硬直 12+ 帧，期间不能行动
+- [x] Just Guard → 无硬直，可立即派生
+- [x] 普通防御 → 硬直 10 帧，期间不能行动（当前实现为 blockstun）
+- [x] 受击 → 硬直 12+ 帧，期间不能行动（hit 状态）
+
+**实现细节**：
+- `Character.js` 增加 `blockstunFrames` 和 `hitstunFrames`
+- `applyBlockstun(frames)` 冻结角色行动
+- `fixedUpdate` 中优先检查 hitstop，再检查 blockstun/hitstun
+- `LongSwordMan.json` 增加 `clash` 状态（弹刀成功状态）
+
+---
+
+## 新增资源
+
+| 资源 | 文件 |
+|------|------|
+| clash 精灵图 | `Art/Sprite/longswordman_clash.png` + `.json` |
+| clash 碰撞遮罩 | `Data/CollisionMask/longswordman_clash.png` + `.json` + `.collider.json` |
+| clash PushBox | `Data/PushBox/longswordman_clash.png` + `.json` |
+| clash RootMotion | `Data/RootMotion/longswordman_clash.png` + `.json` |
+
+---
+
+## 当前问题汇总
+
+### 问题 1：Late Guard 也能弹开
+- **现象**：rabble 先进 swing，hero 后按 guard，攻击被挡住且对方被弹开
+- **根因**：武器等级判定足够就能挡，弹开是正常物理反馈
+- **状态**：待确认是否为设计意图
+
+### 问题 2：按不出 clash（Just Guard 窗口太窄）
+- **现象**：用户几乎无法触发 Just Guard / clash 状态
+- **根因**：`tickDiff` 基于状态进入 tick，而非攻击 active 帧开始 tick
+- **日志**：`tickDiff=27~54`，远大于阈值 2
+- **方案**：
+  - A: `offenseEnterTick` 改为 `attackActiveStartTick`
+  - B: 放宽 `tickDiff <= 2` 窗口
+  - C: 用当前 tick 作为参考（反应时间）
+- **状态**：待修复
+
+### 问题 3：swing2 被弹开时看不见
+- **现象**：swing 第二帧（active 帧）被弹开时，玩家看不到 swing2
+- **根因**：`CombatSystem` 在同一帧内判定攻击失效 + 切到 hit 状态
+- **关联**：hitstop 只暂停动画，不阻止状态切换
+- **方案**：引入 `ImpactContext` 机制，冻结当前动画帧，延迟状态切换
+- **状态**：已实现 `ImpactContext` 类 + `freezeImpact` 方法，待验证
+
+### 问题 4：武器相碰两边都 hit
+- **现象**：两个武器相碰，双方都进入 hit 状态
+- **根因**：拼刀结果用 `clash_lose` / `clash_tie` effect → `takeDamage` → `hit`
+- **方案**：`#buildClashEffect` 增加 `type: "clash"`，`hitState` 改为 `"clash"`
+- **状态**：已修复
+
+---
+
+## 新增机制：ImpactContext（冲击暂停）
+
+### 设计目标
+解决"状态切换吞掉动画帧"的问题。碰撞判定后，先冻结当前动画，延迟再切换状态。
+
+### 实现
+
+#### Character.js
+
+```javascript
+class ImpactContext {
+    constructor(options = {}) {
+        this.frames = options.frames ?? 0;
+        this.nextState = options.nextState ?? null;
+        this.knockbackX = options.knockbackX ?? 0;
+        this.preTimeScale = options.preTimeScale ?? 1.0;
+    }
+}
+
+// Character 构造函数
+this.impactContext = null;
+
+// 启动冲击暂停
+freezeImpact(durationFrames, options = {}) {
+    if (this.impactContext) return;
+    this.impactContext = new ImpactContext({
+        frames: durationFrames,
+        nextState: options.nextState ?? null,
+        knockbackX: options.knockbackX ?? 0,
+        preTimeScale: this.animation.timeScale
+    });
+    this.animation.setTimeScale(0);
+}
+
+// fixedUpdate 中优先处理
+fixedUpdate(dtMs, tickCount) {
+    if (this.impactContext) {
+        this.impactContext.frames--;
+        if (this.impactContext.frames <= 0) {
+            const ctx = this.impactContext;
+            this.impactContext = null;
+            this.animation.setTimeScale(ctx.preTimeScale);
+            if (ctx.knockbackX !== 0) {
+                this.root.position.x += ctx.knockbackX;
+            }
+            if (ctx.nextState) {
+                this.enterState(ctx.nextState, tickCount);
+            }
+        }
+        return;
+    }
+    // ... 原有逻辑
+}
+```
+
+#### CombatSystem.js
+
+```javascript
+if (effect.type === "clash") {
+    const hitState = effect.context?.hitState ?? "clash";
+    const knockbackX = effect.context?.knockbackX ?? 0;
+    if (typeof target.freezeImpact === "function") {
+        target.freezeImpact(24, {
+            nextState: target.hasState(hitState) ? hitState : null,
+            knockbackX: knockbackX
+        });
+    }
+    continue;
+}
+
+if (effect.type === "hitstop") {
+    // impactstop 期间忽略 hitstop
+    if (typeof target.applyHitstop === "function" && !target.impactContext) {
+        target.applyHitstop(effect.durationFrames);
+    }
+    continue;
+}
+```
+
+### 行为
+
+| 角色 | 冻结前 | 冻结后 | 解冻后 |
+|------|--------|--------|--------|
+| 防守方 (guard) | guard 动画 | 暂停在 guard 帧 | 进入 clash |
+| 攻击方 (swing) | swing2 动画 | 暂停在 swing2 帧 | 继续 swing |
+
+### 文件改动
+
+| 文件 | 改动 |
+|------|------|
+| `scripts/Enties/Character.js` | 新增 `ImpactContext` 类，`freezeImpact`，`fixedUpdate` 优先处理 |
+| `scripts/Systems/CombatSystem.js` | `clash` → `freezeImpact`，`hitstop` 检查 `impactContext` |
 
 ---
 

@@ -20,9 +20,22 @@ async function start() {
         }
     });
 
+    const FIXED_DT = 1000 / 60;
+    let accumulator = 0;
+    let tickCount = 0;
+
     engine.runRenderLoop(() => {
         const dtMs = engine.getDeltaTime();
-        scene.update(dtMs);
+        accumulator += dtMs;
+        if (accumulator > 100) accumulator = 100;
+
+        while (accumulator >= FIXED_DT) {
+            tickCount++;
+            scene.fixedUpdate(FIXED_DT, tickCount);
+            accumulator -= FIXED_DT;
+        }
+
+        scene.updateRender(dtMs);
         scene.render();
     });
 

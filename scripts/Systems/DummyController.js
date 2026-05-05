@@ -21,7 +21,7 @@ export class DummyController extends BaseController {
         };
     }
 
-    update() {
+    fixedUpdate(dtMs) {
         this.setMoveIntent(this.fixedMoveIntent);
 
         if (this.emitInitialCommands && !this._didEmitInitialCommands) {

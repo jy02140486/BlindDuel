@@ -52,7 +52,7 @@ export class AIController extends BaseController {
         }
     }
 
-    update(dtMs = 0) {
+    fixedUpdate(dtMs = 0) {
         if (!this.character || !this.opponent) {
             this.applyToCharacter();
             return;

@@ -22,6 +22,7 @@ export class Character {
         this.currentSpeed = 0;
         this.stateEntrySerial = 0;
         this.stateTags = new Set();
+        this.stateEnterTick = 0;
 
         this.animation = new FrameAnimationComponent(config.clips);
 
@@ -98,6 +99,14 @@ export class Character {
         // 全局冷却（Global Cooldown）
         this.globalCooldownMs = config.globalCooldownMs ?? 700;
         this.lastActionTime = -Infinity;
+
+        // Hitstop（卡帧）
+        this.hitstopFrames = 0;
+        this.preHitstopTimeScale = 1.0;
+
+        // Blockstun / Hitstun（硬直）
+        this.blockstunFrames = 0;
+        this.hitstunFrames = 0;
     }
 
     addTag(tag) {
@@ -376,7 +385,7 @@ export class Character {
         return null;
     }
 
-    enterState(stateName) {
+    enterState(stateName, tickCount = null) {
         const stateDef = this.stateGraph?.states?.[stateName];
         if (!stateDef) {
             throw new Error(`Unknown character state: ${stateName}`);
@@ -387,6 +396,7 @@ export class Character {
         this.stateEntrySerial += 1;
         this.currentStateName = stateName;
         this.currentStateDef = stateDef;
+        this.stateEnterTick = tickCount ?? this.stateEnterTick;
 
         // 设置动画速度：有 parryBonus 时用 parryTimeScale，否则用 timeScale
         // 注意：先计算 timeScale，再清除 tags
@@ -413,8 +423,25 @@ export class Character {
     }
 
     pushCommand(command) {
+        if (!this.#canAcceptCommand(command)) {
+            return false;
+        }
+        this.pendingCommands.length = 0;
         this.pendingCommands.push(command);
         return true;
+    }
+
+    #canAcceptCommand(command) {
+        const transitions = this.currentStateDef?.transitions ?? [];
+        for (const transition of transitions) {
+            const conditions = transition.when ?? [];
+            for (const condition of conditions) {
+                if (condition.command === command) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     canAct() {
@@ -524,6 +551,7 @@ export class Character {
             frameIndex: this.animation.currentFrameIndex,
             rootPositionX: this.root.position.x,
             attackInstanceId,
+            stateEnterTick: this.stateEnterTick,
             boxes: worldBoxes
         };
     }
@@ -532,16 +560,47 @@ export class Character {
         this.moveIntent = { ...intent };
     }
 
-    update(dtMs) {
+    applyHitstop(frames) {
+        if (this.hitstopFrames > 0) return;
+        this.hitstopFrames = frames;
+        this.preHitstopTimeScale = this.animation.timeScale;
+        this.animation.setTimeScale(0);
+    }
+
+    applyBlockstun(frames) {
+        this.blockstunFrames = frames;
+    }
+
+    fixedUpdate(dtMs, tickCount) {
+        if (this.hitstopFrames > 0) {
+            this.hitstopFrames--;
+            if (this.hitstopFrames <= 0) {
+                this.animation.setTimeScale(this.preHitstopTimeScale);
+            }
+            return;
+        }
+
+        if (this.blockstunFrames > 0) {
+            this.blockstunFrames--;
+            this.animation.fixedUpdate(dtMs);
+            return;
+        }
+
+        if (this.hitstunFrames > 0) {
+            this.hitstunFrames--;
+            this.animation.fixedUpdate(dtMs);
+            return;
+        }
+
         const oldState = this.currentStateName;
 
         const nextStateBeforeUpdate = this.#consumeTransition();
         if (nextStateBeforeUpdate) {
-            this.enterState(nextStateBeforeUpdate);
+            this.enterState(nextStateBeforeUpdate, tickCount);
         }
 
         const oldFrame = this.animation.currentFrameIndex;
-        this.animation.update(dtMs);
+        this.animation.fixedUpdate(dtMs);
         const newFrame = this.animation.currentFrameIndex;
 
         if (newFrame !== oldFrame) {
@@ -557,20 +616,6 @@ export class Character {
         const preMoveX = this.root.position.x;
         this.#applyMovement(dtMs);
         const moved = this.root.position.x !== preMoveX;
-
-        // const nextStateAfterUpdate = this.#consumeTransition();
-        // if (nextStateAfterUpdate) {
-        //     this.enterState(nextStateAfterUpdate);
-        //     const updatedCurrent = this.animation.currentFrame;
-        //     const updatedAnchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
-        //     this.#applyRootAlignment(updatedCurrent.w, updatedCurrent.h, updatedAnchor);
-        //     this.#syncRootDebug(updatedAnchor);
-        //     this.collision.syncToFrame(this.animation.currentFrameIndex, updatedCurrent.w, updatedCurrent.h, updatedAnchor);
-        // } /*else if (moved) {
-        //     const current = this.animation.currentFrame;
-        //     const anchor = this.#getCurrentRootAnchor(this.animation.currentFrameIndex);
-        //     this.collision.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, anchor);
-        // }*/
 
         // 检测状态变化：从非idle状态回到idle时触发CD
         const newState = this.currentStateName;

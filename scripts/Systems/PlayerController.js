@@ -4,25 +4,6 @@ export class PlayerController extends BaseController {
     constructor(inputSystem, character = null) {
         super(character);
         this.inputSystem = inputSystem;
-
-        this._unsubscribeAction = this.inputSystem.onActionPressed((event) => {
-            this.#handleActionPressed(event);
-        });
-    }
-
-    #handleActionPressed(event) {
-        if (event.action === "thrust") {
-            this.queueCommand("thrust");
-        }
-        if (event.action === "quart") {
-            this.queueCommand("quart");
-        }
-        if (event.action === "zornhut") {
-            this.queueCommand("zornhut");
-        }
-        if (event.action === "guard") {
-            this.queueCommand("guard");
-        }
     }
 
     #combineMoveIntent() {
@@ -43,13 +24,26 @@ export class PlayerController extends BaseController {
         return keyboardMove;
     }
 
-    update() {
+    fixedUpdate(dtMs, tickCount) {
         this.setMoveIntent(this.#combineMoveIntent());
+
+        if (this.inputSystem.consumeAction("thrust", tickCount)) {
+            this.queueCommand("thrust");
+        }
+        if (this.inputSystem.consumeAction("quart", tickCount)) {
+            this.queueCommand("quart");
+        }
+        if (this.inputSystem.consumeAction("zornhut", tickCount)) {
+            this.queueCommand("zornhut");
+        }
+        if (this.inputSystem.consumeAction("guard", tickCount)) {
+            this.queueCommand("guard");
+        }
+
         this.applyToCharacter();
     }
 
     dispose() {
-        this._unsubscribeAction?.();
         super.dispose();
     }
 }

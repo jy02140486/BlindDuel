@@ -27,6 +27,10 @@ export class InputSystem {
             y: false
         };
 
+        this.bufferedInputs = [];
+        this.BUFFER_WINDOW = 1;
+        this.currentTick = 0;
+
         this._onKeyDown = (event) => this.#setKeyState(event, true);
         this._onKeyUp = (event) => this.#setKeyState(event, false);
 
@@ -56,30 +60,27 @@ export class InputSystem {
             const wasDown = this.keyboard[key];
             this.keyboard[key] = isDown;
             if (!wasDown && isDown && key === "l") {
-                this.#emitActionPressed("thrust", {
-                    source: "keyboard",
-                    key: "l"
-                });
+                this.#bufferAction("thrust", { source: "keyboard", key: "l" });
             }
             if (!wasDown && isDown && key === "i") {
-                this.#emitActionPressed("quart", {
-                    source: "keyboard",
-                    key: "i"
-                });
+                this.#bufferAction("quart", { source: "keyboard", key: "i" });
             }
             if (!wasDown && isDown && key === "k") {
-                this.#emitActionPressed("zornhut", {
-                    source: "keyboard",
-                    key: "k"
-                });
+                this.#bufferAction("zornhut", { source: "keyboard", key: "k" });
             }
             if (!wasDown && isDown && key === "j") {
-                this.#emitActionPressed("guard", {
-                    source: "keyboard",
-                    key: "j"
-                });
+                this.#bufferAction("guard", { source: "keyboard", key: "j" });
             }
         }
+    }
+
+    #bufferAction(action, payload = {}) {
+        this.bufferedInputs.push({
+            action,
+            ...payload,
+            tick: this.currentTick,
+            consumed: false
+        });
     }
 
     #emitActionPressed(action, payload = {}) {
@@ -143,12 +144,15 @@ export class InputSystem {
         return Math.abs(value) >= this.deadzone ? value : 0;
     }
 
-    update() {
+    fixedUpdate(tickCount) {
+        this.currentTick = tickCount;
+
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         const connectedPad = Array.from(pads || []).find((pad) => pad && pad.connected);
 
         if (!connectedPad) {
             this.#resetGamepadState();
+            this.#cleanupBufferedInputs();
             this.#renderDebugPanel();
             return;
         }
@@ -160,22 +164,35 @@ export class InputSystem {
         this.gamepad.leftStickY = this.#applyDeadzone(connectedPad.axes?.[1] ?? 0);
         const nextB = Boolean(connectedPad.buttons?.[1]?.pressed);
         if (!this.gamepad.b && nextB) {
-            this.#emitActionPressed("thrust", {
-                source: "gamepad",
-                button: "b"
-            });
+            this.#bufferAction("thrust", { source: "gamepad", button: "b" });
         }
         this.gamepad.b = nextB;
-        
+
         const nextY = Boolean(connectedPad.buttons?.[3]?.pressed);
         if (!this.gamepad.y && nextY) {
-            this.#emitActionPressed("quart", {
-                source: "gamepad",
-                button: "y"
-            });
+            this.#bufferAction("quart", { source: "gamepad", button: "y" });
         }
         this.gamepad.y = nextY;
+
+        this.#cleanupBufferedInputs();
         this.#renderDebugPanel();
+    }
+
+    #cleanupBufferedInputs() {
+        this.bufferedInputs = this.bufferedInputs.filter(
+            (input) => this.currentTick - input.tick <= this.BUFFER_WINDOW
+        );
+    }
+
+    consumeAction(action, tickCount) {
+        const input = this.bufferedInputs.find(
+            (input) => input.action === action && !input.consumed && tickCount - input.tick <= this.BUFFER_WINDOW
+        );
+        if (input) {
+            input.consumed = true;
+            return true;
+        }
+        return false;
     }
 
     onActionPressed(listener) {

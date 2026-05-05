@@ -97,7 +97,7 @@ export class FrameAnimationComponent {
         return this.finished;
     }
 
-    update(dtMs) {
+    fixedUpdate(dtMs) {
         if (this.frames.length <= 1) {
             if (!this.loop) {
                 this.finished = true;
