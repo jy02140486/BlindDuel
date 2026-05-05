@@ -119,10 +119,18 @@ export class Character {
 
         // Impactstop（冲击暂停）
         this.impactContext = null;
+
+        // Timed Tags（带有效期的状态标记）
+        this.timedTags = new Map();
     }
 
     addTag(tag) {
         this.stateTags.add(tag);
+    }
+
+    addTimedTag(tag, durationFrames) {
+        this.stateTags.add(tag);
+        this.timedTags.set(tag, this.tickCount + durationFrames);
     }
 
     hasTag(tag) {
@@ -131,10 +139,21 @@ export class Character {
 
     removeTag(tag) {
         this.stateTags.delete(tag);
+        this.timedTags.delete(tag);
     }
 
     clearTags() {
+        // 只清除不在 timedTags 中的普通标记
+        for (const tag of this.stateTags) {
+            if (!this.timedTags.has(tag)) {
+                this.stateTags.delete(tag);
+            }
+        }
+    }
+
+    clearAllTags() {
         this.stateTags.clear();
+        this.timedTags.clear();
     }
 
     #buildTextures(scene, clips) {
@@ -349,10 +368,13 @@ export class Character {
     #matchesTransitionCondition(condition) {
         if (condition.command) {
             // 全局冷却期间不响应攻击指令
-            if (!this.canAct()) {
+            const canAct = this.canAct();
+            const hasCmd = this.pendingCommands.includes(condition.command);
+            console.log(`[matchCmd] ${this.id}: cmd=${condition.command}, canAct=${canAct}, hasCmd=${hasCmd}, pending=${JSON.stringify(this.pendingCommands)}, cdRemaining=${this.getCooldownRemaining()}`);
+            if (!canAct) {
                 return false;
             }
-            return this.pendingCommands.includes(condition.command);
+            return hasCmd;
         }
 
         if (condition.time === "normalized") {
@@ -417,7 +439,7 @@ export class Character {
             : (stateDef.timeScale ?? 1.0);
         console.log(`[enterState] ${this.id}: timeScale=${timeScale}, has parryBonus=${this.hasTag("parryBonus")}`);
 
-        // 进入新状态时清除所有标记
+        // 进入新状态时清除普通标记，保留未到期的 Timed Tags
         this.clearTags();
 
         this.animation.setTimeScale(timeScale);
@@ -435,11 +457,13 @@ export class Character {
     }
 
     pushCommand(command) {
+        console.log(`[pushCommand] ${this.id}: command=${command}, state=${this.currentStateName}, canAccept=${this.#canAcceptCommand(command)}`);
         if (!this.#canAcceptCommand(command)) {
             return false;
         }
         this.pendingCommands.length = 0;
         this.pendingCommands.push(command);
+        console.log(`[pushCommand] ${this.id}: pushed, pending=${JSON.stringify(this.pendingCommands)}`);
         return true;
     }
 
@@ -599,6 +623,20 @@ export class Character {
     }
 
     fixedUpdate(dtMs, tickCount) {
+        this.tickCount = tickCount;
+
+        // impact / hitstop / blockstun / hitstun 期间暂停 Timed Tags 倒计时
+        const isFrozen = this.impactContext || this.hitstopFrames > 0 || this.blockstunFrames > 0 || this.hitstunFrames > 0;
+        if (!isFrozen) {
+            for (const [tag, expireTick] of this.timedTags) {
+                if (tickCount >= expireTick) {
+                    this.stateTags.delete(tag);
+                    this.timedTags.delete(tag);
+                    console.log(`[TimedTag] ${this.id}: ${tag} expired at tick ${tickCount}`);
+                }
+            }
+        }
+
         if (this.impactContext) {
             this.impactContext.frames--;
             if (this.impactContext.frames <= 0) {
@@ -661,9 +699,11 @@ export class Character {
         this.#applyMovement(dtMs);
         const moved = this.root.position.x !== preMoveX;
 
-        // 检测状态变化：从非idle状态回到idle时触发CD
+        // 检测状态变化：从攻击状态回到 idle 时才触发全局冷却
         const newState = this.currentStateName;
-        if (oldState !== newState && newState === "idle" && oldState !== null) {
+        const oldStateDef = oldState ? this.stateGraph?.states?.[oldState] : null;
+        const wasAttackState = oldStateDef?.attackActive === true;
+        if (oldState !== newState && newState === "idle" && wasAttackState) {
             this.triggerCooldown();
         }
 

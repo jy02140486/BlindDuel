@@ -37,11 +37,11 @@
 
 ## 快速参考：当前开发状态
 
-- **最新完成**: 阶段 4c 格挡与重击联动（parryBonus + canParry + 派生攻击 + timeScale 加速）
-- **当前重点**: Fixed Update 改造（逻辑帧固定 60fps + 输入缓冲 + Just Guard 时机判定）
-- **下一步**: 见 [FIXED_UPDATE_PLAN.md](FIXED_UPDATE_PLAN.md)
+- **最新完成**: Timed Tags 机制 + 指令生命周期解耦 + parryBonus 派生修复
+- **当前重点**: 无
+- **下一步**: 见 [BACKLOG.md](BACKLOG.md)
 - **已知问题**: 
-  - guard 动画仅 2 帧，parry 窗口可能不足
-  - 无 hitstop，视觉反馈不足
-  - 无输入缓冲，精确时机难以掌握
-  - 当前变帧率更新，不利于格斗游戏判定
+  - guard 动画仅 2 帧，parry 窗口依赖 `guardFrame === 0` 预判
+  - 无连击系统
+  - AI 行为单一
+  - **guard 后被 hit，hit 结束会意外进入 clash**（impactContext 与 takeDamage 冲突，待修复）

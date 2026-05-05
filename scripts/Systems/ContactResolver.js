@@ -70,12 +70,11 @@ export class ContactResolver {
                     const isPreemptiveGuard = guardSnapshot?.frameIndex === 0 || tickDiff <= 7;
                     const canParry = guardBox.canParry && isPreemptiveGuard;
 
-                    console.log(`[GUARD] ${guardCharacterId} guardBox.canParry=${guardBox.canParry}, tickDiff=${tickDiff}, guardFrame=${guardSnapshot?.frameIndex}, isPreemptive=${isPreemptiveGuard}, canParry=${canParry}, guardState=${guardSnapshot?.stateName}, offenseState=${offenseSnapshot?.stateName}`);
                     if (canParry) {
-                        console.log(`[PARRY] Adding parryBonus to ${guardCharacterId}`);
                         effects.push({
                             type: "parryBonus",
-                            targetId: guardCharacterId
+                            targetId: guardCharacterId,
+                            context: { durationFrames: 40 }
                         });
                         effects.push({ type: "clash", targetId: guardCharacterId });
                         // 攻击方也被弹开，进入硬直

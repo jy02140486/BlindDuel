@@ -14,10 +14,10 @@ export class CombatSystem {
             }
 
             if (effect.type === "parryBonus") {
-                console.log(`[CombatSystem] Applying parryBonus to ${target.id}, has addTag=${typeof target.addTag === "function"}`);
-                if (typeof target.addTag === "function") {
-                    target.addTag("parryBonus");
-                    console.log(`[CombatSystem] parryBonus added, tags=${[...target.stateTags].join(",")}`);
+                const durationFrames = effect.context?.durationFrames ?? 15;
+                console.log(`[CombatSystem] parryBonus -> ${target.id}, duration=${durationFrames}`);
+                if (typeof target.addTimedTag === "function") {
+                    target.addTimedTag("parryBonus", durationFrames);
                 }
                 continue;
             }
@@ -25,13 +25,11 @@ export class CombatSystem {
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
                 const knockbackX = effect.context?.knockbackX ?? 0;
-                console.log(`[CombatSystem] clash effect on ${target.id}, hitState=${hitState}, hasState=${target.hasState(hitState)}, hasFreezeImpact=${typeof target.freezeImpact === "function"}`);
                 if (typeof target.freezeImpact === "function") {
                     target.freezeImpact(24, {
                         nextState: target.hasState(hitState) ? hitState : null,
                         knockbackX: knockbackX
                     });
-                    console.log(`[CombatSystem] freezeImpact called on ${target.id}, impactContext=${target.impactContext ? 'yes' : 'no'}`);
                 }
                 continue;
             }

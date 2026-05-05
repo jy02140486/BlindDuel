@@ -12,7 +12,7 @@
 
 ## 战斗系统
 
-> 以下事项已在 [FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md)（2026-05-05 归档）中全部完成。
+> 以下事项已在 [FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md)（2026-05-05 归档）中完成。
 
 | 事项 | 描述 | 状态 | 备注 |
 |------|------|------|------|
@@ -20,3 +20,11 @@
 | 状态切换与渲染同步 | `CombatSystem` 同一帧内立即切状态导致吞帧 | ✅ 已完成 | `ImpactContext` + `freezeImpact` |
 | Guard 动画帧数不足 | guard 仅 2 帧，无法覆盖长 active 帧攻击 | ✅ 已完成 | `guardFrame === 0` 无条件预判 |
 | Just Guard 时机判定 | guard 任意帧都可以 parry，不合理 | ✅ 已完成 | `tickDiff` + `isPreemptiveGuard` |
+
+> 以下事项在 [TIMED_TAGS_MECHANIC_PLAN.md](TIMED_TAGS_MECHANIC_PLAN.md) 中完成。
+
+| 事项 | 描述 | 状态 | 备注 |
+|------|------|------|------|
+| Timed Tags 机制 | 带有效期的状态标记，冻结期间暂停倒计时 | ✅ 已完成 | `timedTags` + `addTimedTag` |
+| parryBonus 派生修复 | Just Guard 后无法派生 zornhut/quart | ✅ 已修复 | 指令生命周期解耦 |
+| 全局冷却误触发 | 移动后回 idle 也触发 CD | ✅ 已修复 | 只检测 `attackActive` 状态 |
