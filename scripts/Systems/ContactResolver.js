@@ -59,9 +59,6 @@ export class ContactResolver {
                     invalidatedAttacks.add(offenseAttackId);
                     const offensePos = snapshotById.get(offenseCharacterId)?.rootPositionX ?? 0;
                     const guardPos = snapshotById.get(guardCharacterId)?.rootPositionX ?? 0;
-                    effects.push(
-                        this.#buildClashEffect(offenseCharacterId, guardCharacterId, "clash_lose", offensePos, guardPos)
-                    );
 
                     // Just Guard 时机判定
                     const offenseSnapshot = snapshotById.get(offenseCharacterId);
@@ -69,9 +66,11 @@ export class ContactResolver {
                     const offenseEnterTick = offenseSnapshot?.stateEnterTick ?? 0;
                     const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
                     const tickDiff = guardEnterTick - offenseEnterTick;
-                    const canParry = guardBox.canParry && tickDiff <= 2;
+                    // 预判 guard：guard 第一帧或比攻击早进入
+                    const isPreemptiveGuard = guardSnapshot?.frameIndex === 0 || tickDiff <= 7;
+                    const canParry = guardBox.canParry && isPreemptiveGuard;
 
-                    console.log(`[GUARD] guardBox.canParry=${guardBox.canParry}, tickDiff=${tickDiff}, canParry=${canParry}`);
+                    console.log(`[GUARD] ${guardCharacterId} guardBox.canParry=${guardBox.canParry}, tickDiff=${tickDiff}, guardFrame=${guardSnapshot?.frameIndex}, isPreemptive=${isPreemptiveGuard}, canParry=${canParry}, guardState=${guardSnapshot?.stateName}, offenseState=${offenseSnapshot?.stateName}`);
                     if (canParry) {
                         console.log(`[PARRY] Adding parryBonus to ${guardCharacterId}`);
                         effects.push({
@@ -79,6 +78,15 @@ export class ContactResolver {
                             targetId: guardCharacterId
                         });
                         effects.push({ type: "clash", targetId: guardCharacterId });
+                        // 攻击方也被弹开，进入硬直
+                        effects.push({
+                            type: "clash",
+                            targetId: offenseCharacterId,
+                            context: {
+                                hitState: "hit",
+                                knockbackX: this.#signedKnockback(offensePos, guardPos, this.clashKnockback)
+                            }
+                        });
                         effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 8 });
                         effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 8 });
                     } else {

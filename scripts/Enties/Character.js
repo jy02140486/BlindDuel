@@ -1,6 +1,15 @@
 import { FrameAnimationComponent } from "../Components/FrameAnimationComponent.js";
 import { CollisionComponent } from "../Components/CollisionComponent.js";
 
+class ImpactContext {
+    constructor(options = {}) {
+        this.frames = options.frames ?? 0;
+        this.nextState = options.nextState ?? null;
+        this.knockbackX = options.knockbackX ?? 0;
+        this.preTimeScale = options.preTimeScale ?? 1.0;
+    }
+}
+
 export class Character {
     constructor(scene, config) {
         this.scene = scene;
@@ -107,6 +116,9 @@ export class Character {
         // Blockstun / Hitstun（硬直）
         this.blockstunFrames = 0;
         this.hitstunFrames = 0;
+
+        // Impactstop（冲击暂停）
+        this.impactContext = null;
     }
 
     addTag(tag) {
@@ -571,7 +583,39 @@ export class Character {
         this.blockstunFrames = frames;
     }
 
+    freezeImpact(durationFrames, options = {}) {
+        if (this.impactContext) {
+            console.log(`[freezeImpact] ${this.id}: already has impactContext, skip`);
+            return;
+        }
+        console.log(`[freezeImpact] ${this.id}: start freeze, frames=${durationFrames}, nextState=${options.nextState}, currentState=${this.currentStateName}`);
+        this.impactContext = new ImpactContext({
+            frames: durationFrames,
+            nextState: options.nextState ?? null,
+            knockbackX: options.knockbackX ?? 0,
+            preTimeScale: this.animation.timeScale
+        });
+        this.animation.setTimeScale(0);
+    }
+
     fixedUpdate(dtMs, tickCount) {
+        if (this.impactContext) {
+            this.impactContext.frames--;
+            if (this.impactContext.frames <= 0) {
+                const ctx = this.impactContext;
+                console.log(`[fixedUpdate] ${this.id}: impactContext end, nextState=${ctx.nextState}, currentState=${this.currentStateName}`);
+                this.impactContext = null;
+                this.animation.setTimeScale(ctx.preTimeScale);
+                if (ctx.knockbackX !== 0) {
+                    this.root.position.x += ctx.knockbackX;
+                }
+                if (ctx.nextState) {
+                    this.enterState(ctx.nextState, tickCount);
+                }
+            }
+            return;
+        }
+
         if (this.hitstopFrames > 0) {
             this.hitstopFrames--;
             if (this.hitstopFrames <= 0) {

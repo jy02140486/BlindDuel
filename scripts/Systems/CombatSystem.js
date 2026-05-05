@@ -22,17 +22,23 @@ export class CombatSystem {
                 continue;
             }
 
-            if (effect.type === "hitstop") {
-                if (typeof target.applyHitstop === "function") {
-                    target.applyHitstop(effect.durationFrames);
+            if (effect.type === "clash") {
+                const hitState = effect.context?.hitState ?? "clash";
+                const knockbackX = effect.context?.knockbackX ?? 0;
+                console.log(`[CombatSystem] clash effect on ${target.id}, hitState=${hitState}, hasState=${target.hasState(hitState)}, hasFreezeImpact=${typeof target.freezeImpact === "function"}`);
+                if (typeof target.freezeImpact === "function") {
+                    target.freezeImpact(24, {
+                        nextState: target.hasState(hitState) ? hitState : null,
+                        knockbackX: knockbackX
+                    });
+                    console.log(`[CombatSystem] freezeImpact called on ${target.id}, impactContext=${target.impactContext ? 'yes' : 'no'}`);
                 }
                 continue;
             }
 
-            if (effect.type === "clash") {
-                const hitState = effect.context?.hitState ?? "clash";
-                if (typeof target.enterState === "function" && target.hasState(hitState)) {
-                    target.enterState(hitState);
+            if (effect.type === "hitstop") {
+                if (typeof target.applyHitstop === "function" && !target.impactContext) {
+                    target.applyHitstop(effect.durationFrames);
                 }
                 continue;
             }

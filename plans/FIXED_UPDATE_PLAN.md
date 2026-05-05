@@ -421,25 +421,35 @@ fixedUpdate(dtMs, tickCount) {
 
 ### 问题 2：按不出 clash（Just Guard 窗口太窄）
 - **现象**：用户几乎无法触发 Just Guard / clash 状态
-- **根因**：`tickDiff` 基于状态进入 tick，而非攻击 active 帧开始 tick
+- **根因**：`tickDiff` 基于状态进入 tick，而非攻击 active 帧开始 tick；rabble 提前很多帧进入 swing
 - **日志**：`tickDiff=27~54`，远大于阈值 2
 - **方案**：
   - A: `offenseEnterTick` 改为 `attackActiveStartTick`
   - B: 放宽 `tickDiff <= 2` 窗口
   - C: 用当前 tick 作为参考（反应时间）
-- **状态**：待修复
+  - D: guard 第一帧无条件预判（`guardFrame === 0`）
+- **状态**：已修复（采用方案 D + B）
+- **实现**：`isPreemptiveGuard = guardFrame === 0 || tickDiff <= 7`
 
 ### 问题 3：swing2 被弹开时看不见
 - **现象**：swing 第二帧（active 帧）被弹开时，玩家看不到 swing2
 - **根因**：`CombatSystem` 在同一帧内判定攻击失效 + 切到 hit 状态
 - **关联**：hitstop 只暂停动画，不阻止状态切换
 - **方案**：引入 `ImpactContext` 机制，冻结当前动画帧，延迟状态切换
-- **状态**：已实现 `ImpactContext` 类 + `freezeImpact` 方法，待验证
+- **状态**：已修复
 
 ### 问题 4：武器相碰两边都 hit
 - **现象**：两个武器相碰，双方都进入 hit 状态
 - **根因**：拼刀结果用 `clash_lose` / `clash_tie` effect → `takeDamage` → `hit`
 - **方案**：`#buildClashEffect` 增加 `type: "clash"`，`hitState` 改为 `"clash"`
+- **状态**：已修复
+
+### 问题 5：clash 结束后被 hit
+- **现象**：hero 进入 clash 后，rabble 的 swing 还在，clash 结束马上被 hit
+- **根因**：`freezeImpact` 只冻结 hero，rabble 的 swing 继续播放；`#buildClashEffect` 预生成给 rabble 的 `clash` effect 导致 `nextState=null`
+- **方案**：
+  1. 删除预生成的 `clash` effect
+  2. `canParry` 分支给双方各发一个 `clash` effect（hero → `clash`，rabble → `hit`）
 - **状态**：已修复
 
 ---
@@ -528,7 +538,7 @@ if (effect.type === "hitstop") {
 | 角色 | 冻结前 | 冻结后 | 解冻后 |
 |------|--------|--------|--------|
 | 防守方 (guard) | guard 动画 | 暂停在 guard 帧 | 进入 clash |
-| 攻击方 (swing) | swing2 动画 | 暂停在 swing2 帧 | 继续 swing |
+| 攻击方 (swing) | swing2 动画 | 暂停在 swing2 帧 | 进入 hit |
 
 ### 文件改动
 
@@ -536,6 +546,7 @@ if (effect.type === "hitstop") {
 |------|------|
 | `scripts/Enties/Character.js` | 新增 `ImpactContext` 类，`freezeImpact`，`fixedUpdate` 优先处理 |
 | `scripts/Systems/CombatSystem.js` | `clash` → `freezeImpact`，`hitstop` 检查 `impactContext` |
+| `scripts/Systems/ContactResolver.js` | 删除预生成 `clash` effect，`canParry` 时双方各发 `clash` effect |
 
 ---
 
@@ -544,13 +555,13 @@ if (effect.type === "hitstop") {
 | 文件 | 改动内容 |
 |------|---------|
 | `scripts/Scene.js` | 加 `accumulator`，拆分 `update` / `fixedUpdate`，传递 `tickCount` |
-| `scripts/Enties/Character.js` | `update` → `fixedUpdate(dtMs, tickCount)`，加 `stateEnterTick`，加 `hitstopFrames` / `blockstunFrames` |
+| `scripts/Enties/Character.js` | `update` → `fixedUpdate(dtMs, tickCount)`，加 `stateEnterTick`，加 `hitstopFrames` / `blockstunFrames` / `impactContext` / `freezeImpact` |
 | `scripts/Components/FrameAnimationComponent.js` | `update` → `fixedUpdate` |
-| `scripts/Systems/CombatSystem.js` | `update` → `fixedUpdate`，处理 `hitstop` 效果 |
-| `scripts/Systems/ContactResolver.js` | 加 `tickDiff` 判定，`canParry` 依赖时机 |
+| `scripts/Systems/CombatSystem.js` | `update` → `fixedUpdate`，`clash` effect → `freezeImpact`，`hitstop` 检查 `impactContext` |
+| `scripts/Systems/ContactResolver.js` | 加 `tickDiff` 判定，`canParry` 依赖时机；`guardFrame === 0` 无条件预判；`canParry` 时双方各发 `clash` effect |
 | `scripts/Systems/InputSystem.js` | 加输入缓冲：`bufferedInputs`、`BUFFER_WINDOW`、`consumeInput` |
 | `scripts/Systems/PlayerController.js` | 从 `InputSystem` 消费缓冲输入 |
-| `Data/StateGraphDef/LongSwordMan.json` | 可能加 `blockstunFrames` / `hitstunFrames` 字段 |
+| `Data/StateGraphDef/LongSwordMan.json` | 增加 `clash` 状态定义 |
 
 ---
 
