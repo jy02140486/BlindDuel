@@ -6,9 +6,7 @@
 
 ## 进行中
 
-| 计划 | 目标 | 创建日期 |
-|------|------|----------|
-| [FIXED_UPDATE_PLAN.md](FIXED_UPDATE_PLAN.md) | 逻辑帧固定 60fps + 输入缓冲 + Just Guard 时机判定 | 2026-05-04 |
+> 当前无进行中的计划，见 [BACKLOG.md](BACKLOG.md)。
 
 ---
 
@@ -24,11 +22,12 @@
 
 | 计划 | 目标 | 归档日期 |
 |------|------|----------|
+| [archived/FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md) | 逻辑帧固定 60fps + 输入缓冲 + Just Guard + Hitstop + ImpactContext | 2026-05-05 |
 | [archived/COMBAT_RULES_REFINEMENT_PLAN.md](archived/COMBAT_RULES_REFINEMENT_PLAN.md) | thrust 帧级判定 + dodge 无敌 + 格挡/重击 | 2026-05-04 |
 
 ---
 
-## 最近归档
+## 更早归档
 
 | 计划 | 目标 | 归档日期 |
 |------|------|----------|
