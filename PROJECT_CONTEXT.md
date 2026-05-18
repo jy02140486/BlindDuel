@@ -24,10 +24,12 @@ py -m http.server 9000 --bind 127.0.0.1
 - 角色类：`scripts/Enties/Character.js`
 - 动画组件：`scripts/Components/FrameAnimationComponent.js`
 - 碰撞组件：`scripts/Components/CollisionComponent.js`
+- 时间控制组件：`scripts/Components/TimeControlComponent.js`
 - 状态图定义：`Data/StateGraphDef/LongSwordMan.json`
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`
+- 时间控制系统：`scripts/Systems/TimeControlSystem.js`
 - 计划文档：`plans/` 目录（当前进行中的计划）
 - 归档文档：`plans/archived/` 目录（已完成计划）
 - 角色/碰撞实现方案说明：`CHARACTER_COLLISION_PLAN.md`（已归档）
@@ -77,6 +79,19 @@ py -m http.server 9000 --bind 127.0.0.1
 8. 当前项目尚未在 sprite 资源中增加额外“方向数据”字段；阶段性约定建议以运行时 `facing` 为主，默认资源原始朝向视为“面向右”，左向优先通过镜像获得。
 9. `ContactResolver` 当前碰撞判定使用 AABB 简化（忽略 OBB 旋转角），属于原型阶段实现。
 10. 攻击结束当前按“当前帧是否仍存在 `attackInstanceId`”隐式判断；若后续出现“中间空帧再出刀”动作，需要改为更显式的生命周期机制。
+11. `ImpactContext` 已增加生命周期守卫（`expectedStateAtResolve` + `stateEntrySerialAtCreate`），用于避免过期 `nextState` 在 `impact` 结束时误跳转。
+12. `ContactResolver` 当前采用“同一攻击实例对同一目标只取首次结果”的规则：若该 `attackInstanceId|targetId` 已产生 `hit`，后续 guard/parry 不再覆盖该结果。
+
+## 6.1 本轮状态（TimeControl 重构）
+1. 已完成步骤 1：新增 `TimeControlComponent`、`TimeControlSystem`，并迁移 hitstop/impact/blockstun/hitstun 的数据与结算。
+2. 已完成步骤 2：统一 `Character.fixedUpdate` 通过 `TimeControlSystem.tick()` 提供的 `effectiveDeltaMs` 与帧控制结果推进。
+3. 已完成步骤 3：`CombatSystem` 不再直读 `impactContext`，仅通过接口请求时间控制。
+4. 已完成修复：`guard -> hit -> clash` 的“过期 impact 跳转”已由生命周期守卫拦截（会记录 `skip stale impact transition`）。
+5. 当前新增排查日志（可按需关闭）：
+   - `SequenceStart`（测试序列循环起点）
+   - `CombatEffect`（战斗效果下发）
+   - `CharTrace`（角色时序快照）
+   - `ResolverEvent`（接触解析关键决策）
 
 
 
@@ -107,13 +122,16 @@ GemeniPrototype-BlindBattle/
 │   ├── Components/               # 组件类
 │   │   ├── CollisionComponent.js
 │   │   └── FrameAnimationComponent.js
+│   │   └── TimeControlComponent.js
 │   ├── Enties/                   # 实体类
 │   │   └── Character.js
 │   ├── Systems/                  # 系统类
 │   │   ├── CombatSystem.js
 │   │   ├── ContactResolver.js
 │   │   ├── InputSystem.js
-│   │   └── PlayerController.js
+│   │   ├── PlayerController.js
+│   │   ├── TestController.js
+│   │   └── TimeControlSystem.js
 │   └── tools/                    # 工具脚本
 │       └── extract_collision_boxes.ps1
 ├── plans/                        # 计划文档（当前进行中）

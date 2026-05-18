@@ -8,9 +8,11 @@ export class ContactResolver {
         this.guardDedupe = new Set();
         this.hitKnockback = options.hitKnockback ?? 0.12;
         this.clashKnockback = options.clashKnockback ?? 0.2;
+        this.debugTrace = options.debugTrace ?? false;
     }
 
-    resolve(characters = []) {
+    resolve(characters = [], context = {}) {
+        const tickCount = context.tickCount ?? "?";
         const snapshots = [];
         const snapshotById = new Map();
         for (const character of characters) {
@@ -47,6 +49,16 @@ export class ContactResolver {
                 const guardCharacterId = aOffense ? contact.characterB : contact.characterA;
                 const offenseBox = aOffense ? contact.boxA : contact.boxB;
                 const guardBox = aOffense ? contact.boxB : contact.boxA;
+                // Rule: for one attack instance against one target, resolve only the first result.
+                // If a hit was already resolved for this pair, do not allow later guard/parry to overwrite it.
+                const hitKey = `${offenseAttackId}|${guardCharacterId}`;
+                if (this.hitDedupe.has(hitKey)) {
+                    this.#trace(
+                        `[ResolverEvent] guard-skip offense=${offenseCharacterId} guard=${guardCharacterId}` +
+                        ` reason=hit_already_resolved attackId=${offenseAttackId}`
+                    );
+                    continue;
+                }
                 const guardKey = `${offenseAttackId}|${guardCharacterId}`;
                 if (this.guardDedupe.has(guardKey)) {
                     continue;
@@ -55,6 +67,11 @@ export class ContactResolver {
 
                 const offenseLevel = this.#toWeaponLevel(offenseBox.subtype);
                 const guardLevel = this.#toWeaponLevel(guardBox.subtype);
+                this.#trace(
+                    `[ResolverPhase1] guard-check offense=${offenseCharacterId} guard=${guardCharacterId}` +
+                    ` offenseRole=${offenseBox.weaponRole} guardRole=${guardBox.weaponRole}` +
+                    ` offenseLevel=${offenseLevel} guardLevel=${guardLevel}`
+                );
                 if (this.#weaponLevelRank(guardLevel) >= this.#weaponLevelRank(offenseLevel)) {
                     invalidatedAttacks.add(offenseAttackId);
                     const offensePos = snapshotById.get(offenseCharacterId)?.rootPositionX ?? 0;
@@ -67,8 +84,13 @@ export class ContactResolver {
                     const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
                     const tickDiff = guardEnterTick - offenseEnterTick;
                     // 预判 guard：guard 第一帧或比攻击早进入
-                    const isPreemptiveGuard = guardSnapshot?.frameIndex === 0 || tickDiff <= 7;
+                    const isPreemptiveGuard = guardSnapshot?.frameIndex === 0 || tickDiff <= 16;
                     const canParry = guardBox.canParry && isPreemptiveGuard;
+                    this.#trace(
+                        `[ResolverEvent] guard-result tick=${tickCount} offense=${offenseCharacterId} guard=${guardCharacterId}` +
+                        ` canParry=${canParry} guardCanParry=${guardBox.canParry}` +
+                        ` guardFrame=${guardSnapshot?.frameIndex ?? "?"} tickDiff=${tickDiff}`
+                    );
 
                     if (canParry) {
                         effects.push({
@@ -93,6 +115,11 @@ export class ContactResolver {
                         effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 4 });
                         effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 4 });
                     }
+                } else {
+                    this.#trace(
+                        `[ResolverPhase1] guard-fail offense=${offenseCharacterId} guard=${guardCharacterId}` +
+                        ` reason=guard_level_lower offenseLevel=${offenseLevel} guardLevel=${guardLevel}`
+                    );
                 }
                 continue;
             }
@@ -105,10 +132,15 @@ export class ContactResolver {
             this.clashDedupe.add(clashKey);
             const levelA = this.#toWeaponLevel(contact.boxA.subtype);
             const levelB = this.#toWeaponLevel(contact.boxB.subtype);
+            this.#trace(
+                `[ResolverPhase1] clash-check A=${contact.characterA} B=${contact.characterB}` +
+                ` attackA=${attackA} attackB=${attackB} levelA=${levelA} levelB=${levelB}`
+            );
             const posA = snapshotById.get(contact.characterA)?.rootPositionX ?? 0;
             const posB = snapshotById.get(contact.characterB)?.rootPositionX ?? 0;
 
             if (levelA === levelB) {
+                this.#trace(`[ResolverPhase1] clash-tie A=${contact.characterA} B=${contact.characterB}`);
                 // 同级拼刀：双方攻击都失效，双方都进入弹刀/受击反馈。
                 invalidatedAttacks.add(attackA);
                 invalidatedAttacks.add(attackB);
@@ -131,6 +163,10 @@ export class ContactResolver {
 
             // 强压弱：仅弱方攻击失效并触发弹刀/受击反馈。
             invalidatedAttacks.add(loserAttack);
+            this.#trace(
+                `[ResolverPhase1] clash-lose winner=${winnerId} loser=${loserId}` +
+                ` winnerLevel=${strongIsA ? levelA : levelB} loserLevel=${strongIsA ? levelB : levelA}`
+            );
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
             effects.push({ type: "hitstop", targetId: loserId, durationFrames: 6 });
             effects.push({ type: "hitstop", targetId: winnerId, durationFrames: 4 });
@@ -141,12 +177,6 @@ export class ContactResolver {
             const attackId = contact.weapon.attackInstanceId;
             const attackerSnap = snapshotById.get(contact.attackerId);
             const targetSnap = snapshotById.get(contact.targetId);
-            console.log(
-                `[Phase2] ${contact.attackerId} -> ${contact.targetId} | ` +
-                `weaponRole=${contact.weapon.weaponRole} attackId=${attackId ?? 'null'} | ` +
-                `attackerState=${attackerSnap?.stateName} frame=${attackerSnap?.frameIndex} | ` +
-                `targetState=${targetSnap?.stateName} frame=${targetSnap?.frameIndex}`
-            );
             if (!attackId || contact.weapon.weaponRole !== "offense" || invalidatedAttacks.has(attackId)) {
                 continue;
             }
@@ -157,6 +187,11 @@ export class ContactResolver {
             }
 
             this.hitDedupe.add(hitKey);
+            this.#trace(
+                `[ResolverEvent] hit-first attacker=${contact.attackerId} target=${contact.targetId}` +
+                ` attackId=${attackId} attacker=${attackerSnap?.stateName}@${attackerSnap?.frameIndex}` +
+                ` target=${targetSnap?.stateName}@${targetSnap?.frameIndex}`
+            );
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
             const knockback = this.#signedKnockback(targetPos, attackerPos, this.hitKnockback);
@@ -191,6 +226,12 @@ export class ContactResolver {
         }
 
         return { frameContacts, effects };
+    }
+
+    #trace(message) {
+        if (this.debugTrace) {
+            console.log(message);
+        }
     }
 
     #collectActiveAttackIds(snapshots) {

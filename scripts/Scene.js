@@ -1,7 +1,7 @@
 import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
 import { DummyController } from "./Systems/DummyController.js";
-import { AIController } from "./Systems/AIController.js";
+import { TestController } from "./Systems/TestController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
@@ -53,18 +53,31 @@ export class Scene {
         this.character = createHeroCharacter(this.scene, assets);
         this.character.root.position.y = 0;
         this.character.root.position.x = -3.2;
+        this.character.debugTrace = true;
 
         this.rabbleStick = createRabbleStickCharacter(this.scene, assets);
         this.rabbleStick.root.position.y = 0;
         this.rabbleStick.root.position.x = 3.2;
+        this.rabbleStick.debugTrace = true;
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new AIController(this.rabbleStick, {
-            opponent: this.character,
-            debugVisible: true
+        this.rabbleController = new TestController(this.rabbleStick, {
+            loop: true,
+            debugTrace: true,
+            sequenceLabel: "rabble_swing_backstep_loop",
+            steps: [
+                // swing 一次
+                { command: "swing", waitMs: 380 },
+                // 后退
+                { moveIntent: { x: 1, y: 0 }, waitMs: 500 },
+                // 回到原位
+                { moveIntent: { x: -1, y: 0 }, waitMs: 500 },
+                // 站定一小段时间再循环
+                { moveIntent: { x: 0, y: 0 }, waitMs: 220 }
+            ]
         });
-        this.combatSystem = new CombatSystem();
+        this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
@@ -122,13 +135,13 @@ export class Scene {
 
         this.inputSystem.fixedUpdate(tickCount);
         this.playerController.fixedUpdate(dtMs, tickCount);
-        this.rabbleController.fixedUpdate(dtMs);
+        this.rabbleController.fixedUpdate(dtMs, tickCount);
         this.character.fixedUpdate(dtMs, tickCount);
         this.rabbleStick.fixedUpdate(dtMs, tickCount);
         this.pushboxResolver.resolve([this.character, this.rabbleStick]);
         this.stageBoundary.clampCharacter(this.character);
         this.stageBoundary.clampCharacter(this.rabbleStick);
-        this.combatSystem.fixedUpdate([this.character, this.rabbleStick]);
+        this.combatSystem.fixedUpdate([this.character, this.rabbleStick], tickCount);
     }
 
     updateRender(dtMs) {

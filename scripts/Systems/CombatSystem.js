@@ -3,19 +3,24 @@ import { ContactResolver } from "./ContactResolver.js";
 export class CombatSystem {
     constructor(options = {}) {
         this.resolver = options.resolver ?? new ContactResolver(options);
+        this.debugTrace = options.debugTrace ?? false;
     }
 
-    fixedUpdate(characters = []) {
-        const result = this.resolver.resolve(characters);
+    fixedUpdate(characters = [], tickCount = null) {
+        const result = this.resolver.resolve(characters, { tickCount });
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
             if (!target) {
                 continue;
             }
+            if (this.debugTrace) {
+                console.log(
+                    `[CombatEffect] tick=${tickCount ?? "?"} type=${effect.type} target=${effect.targetId} context=${JSON.stringify(effect.context ?? {})}`
+                );
+            }
 
             if (effect.type === "parryBonus") {
                 const durationFrames = effect.context?.durationFrames ?? 15;
-                console.log(`[CombatSystem] parryBonus -> ${target.id}, duration=${durationFrames}`);
                 if (typeof target.addTimedTag === "function") {
                     target.addTimedTag("parryBonus", durationFrames);
                 }
@@ -35,7 +40,7 @@ export class CombatSystem {
             }
 
             if (effect.type === "hitstop") {
-                if (typeof target.applyHitstop === "function" && !target.impactContext) {
+                if (typeof target.applyHitstop === "function") {
                     target.applyHitstop(effect.durationFrames);
                 }
                 continue;

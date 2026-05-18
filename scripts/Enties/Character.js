@@ -1,14 +1,7 @@
-import { FrameAnimationComponent } from "../Components/FrameAnimationComponent.js";
+﻿import { FrameAnimationComponent } from "../Components/FrameAnimationComponent.js";
 import { CollisionComponent } from "../Components/CollisionComponent.js";
-
-class ImpactContext {
-    constructor(options = {}) {
-        this.frames = options.frames ?? 0;
-        this.nextState = options.nextState ?? null;
-        this.knockbackX = options.knockbackX ?? 0;
-        this.preTimeScale = options.preTimeScale ?? 1.0;
-    }
-}
+import { TimeControlComponent } from "../Components/TimeControlComponent.js";
+import { TimeControlSystem } from "../Systems/TimeControlSystem.js";
 
 export class Character {
     constructor(scene, config) {
@@ -32,6 +25,7 @@ export class Character {
         this.stateEntrySerial = 0;
         this.stateTags = new Set();
         this.stateEnterTick = 0;
+        this.debugTrace = config.debugTrace ?? false;
 
         this.animation = new FrameAnimationComponent(config.clips);
 
@@ -105,22 +99,14 @@ export class Character {
 
         this.currentSpd=0;
 
-        // 全局冷却（Global Cooldown）
+        // 鍏ㄥ眬鍐峰嵈锛圙lobal Cooldown锛?
         this.globalCooldownMs = config.globalCooldownMs ?? 700;
         this.lastActionTime = -Infinity;
 
-        // Hitstop（卡帧）
-        this.hitstopFrames = 0;
-        this.preHitstopTimeScale = 1.0;
+        this.timeControl = new TimeControlComponent();
+        this.timeControlSystem = new TimeControlSystem();
 
-        // Blockstun / Hitstun（硬直）
-        this.blockstunFrames = 0;
-        this.hitstunFrames = 0;
-
-        // Impactstop（冲击暂停）
-        this.impactContext = null;
-
-        // Timed Tags（带有效期的状态标记）
+        // Timed Tags锛堝甫鏈夋晥鏈熺殑鐘舵€佹爣璁帮級
         this.timedTags = new Map();
     }
 
@@ -143,7 +129,7 @@ export class Character {
     }
 
     clearTags() {
-        // 只清除不在 timedTags 中的普通标记
+        // 鍙竻闄や笉鍦?timedTags 涓殑鏅€氭爣璁?
         for (const tag of this.stateTags) {
             if (!this.timedTags.has(tag)) {
                 this.stateTags.delete(tag);
@@ -311,11 +297,11 @@ export class Character {
     }
 
     #applyMovement(dtMs) {
-        // 获取当前状态的速度设置
+        // 鑾峰彇褰撳墠鐘舵€佺殑閫熷害璁剧疆
         const stateSpeed = this.currentStateDef?.speed;
         const frameSpeeds = this.currentStateDef?.frameSpeeds;
 
-        // 优先使用每帧速度数组（动画根运动，不受 allowMoveInput 影响）
+        // 浼樺厛浣跨敤姣忓抚閫熷害鏁扮粍锛堝姩鐢绘牴杩愬姩锛屼笉鍙?allowMoveInput 褰卞搷锛?
         if (frameSpeeds && frameSpeeds.length > 0) {
             const frameIndex = this.animation.currentFrameIndex;
             const frameSpeed = frameSpeeds[frameIndex % frameSpeeds.length];
@@ -323,30 +309,30 @@ export class Character {
             if (frameSpeed !== undefined) {
                 const dtSec = dtMs / 1000;
 
-                // 每帧速度：符号代表方向，数值代表速度
+                // 姣忓抚閫熷害锛氱鍙蜂唬琛ㄦ柟鍚戯紝鏁板€间唬琛ㄩ€熷害
                 this.root.position.x += frameSpeed * dtSec;
                 this.currentSpd = Math.abs(frameSpeed);
                 return;
             }
         }
 
-        // 如果没有每帧速度，检查状态速度
+        // 濡傛灉娌℃湁姣忓抚閫熷害锛屾鏌ョ姸鎬侀€熷害
         if (stateSpeed !== undefined) {
             const dtSec = dtMs / 1000;
 
-            // 状态速度：符号代表方向，数值代表速度
+            // 鐘舵€侀€熷害锛氱鍙蜂唬琛ㄦ柟鍚戯紝鏁板€间唬琛ㄩ€熷害
             this.root.position.x += stateSpeed * dtSec;
             this.currentSpd = Math.abs(stateSpeed);
             return;
         }
 
-        // 状态显式禁止玩家移动输入
+        // 鐘舵€佹樉寮忕姝㈢帺瀹剁Щ鍔ㄨ緭鍏?
         if (this.currentStateDef?.allowMoveInput === false) {
             this.currentSpd = 0;
             return;
         }
 
-        // 如果都没有定义，使用玩家输入控制移动
+        // 濡傛灉閮芥病鏈夊畾涔夛紝浣跨敤鐜╁杈撳叆鎺у埗绉诲姩
         const x = Number(this.moveIntent?.x ?? 0);
         const y = Number(this.moveIntent?.y ?? 0);
         const magnitude = Math.hypot(x, y);
@@ -367,10 +353,9 @@ export class Character {
 
     #matchesTransitionCondition(condition) {
         if (condition.command) {
-            // 全局冷却期间不响应攻击指令
+            // 鍏ㄥ眬鍐峰嵈鏈熼棿涓嶅搷搴旀敾鍑绘寚浠?
             const canAct = this.canAct();
             const hasCmd = this.pendingCommands.includes(condition.command);
-            console.log(`[matchCmd] ${this.id}: cmd=${condition.command}, canAct=${canAct}, hasCmd=${hasCmd}, pending=${JSON.stringify(this.pendingCommands)}, cdRemaining=${this.getCooldownRemaining()}`);
             if (!canAct) {
                 return false;
             }
@@ -391,7 +376,6 @@ export class Character {
 
         if (condition.hasTag) {
             const hasIt = this.stateTags.has(condition.hasTag);
-            console.log(`[hasTag] checking ${condition.hasTag} = ${hasIt}, tags=[${[...this.stateTags].join(",")}]`);
             return hasIt;
         }
 
@@ -425,21 +409,17 @@ export class Character {
             throw new Error(`Unknown character state: ${stateName}`);
         }
 
-        console.log(`[enterState] ${this.id}: ${this.currentStateName} -> ${stateName}, tags before clear=[${[...this.stateTags].join(",")}]`);
-
         this.stateEntrySerial += 1;
         this.currentStateName = stateName;
         this.currentStateDef = stateDef;
         this.stateEnterTick = tickCount ?? this.stateEnterTick;
 
-        // 设置动画速度：有 parryBonus 时用 parryTimeScale，否则用 timeScale
-        // 注意：先计算 timeScale，再清除 tags
+        // 璁剧疆鍔ㄧ敾閫熷害锛氭湁 parryBonus 鏃剁敤 parryTimeScale锛屽惁鍒欑敤 timeScale
+        // 娉ㄦ剰锛氬厛璁＄畻 timeScale锛屽啀娓呴櫎 tags
         const timeScale = this.hasTag("parryBonus")
             ? (stateDef.parryTimeScale ?? stateDef.timeScale ?? 1.0)
             : (stateDef.timeScale ?? 1.0);
-        console.log(`[enterState] ${this.id}: timeScale=${timeScale}, has parryBonus=${this.hasTag("parryBonus")}`);
-
-        // 进入新状态时清除普通标记，保留未到期的 Timed Tags
+        // 杩涘叆鏂扮姸鎬佹椂娓呴櫎鏅€氭爣璁帮紝淇濈暀鏈埌鏈熺殑 Timed Tags
         this.clearTags();
 
         this.animation.setTimeScale(timeScale);
@@ -457,13 +437,11 @@ export class Character {
     }
 
     pushCommand(command) {
-        console.log(`[pushCommand] ${this.id}: command=${command}, state=${this.currentStateName}, canAccept=${this.#canAcceptCommand(command)}`);
         if (!this.#canAcceptCommand(command)) {
             return false;
         }
         this.pendingCommands.length = 0;
         this.pendingCommands.push(command);
-        console.log(`[pushCommand] ${this.id}: pushed, pending=${JSON.stringify(this.pendingCommands)}`);
         return true;
     }
 
@@ -492,8 +470,8 @@ export class Character {
     }
 
     /**
-     * 触发全局冷却
-     * 应在动画/硬直结束后调用
+     * 瑙﹀彂鍏ㄥ眬鍐峰嵈
+     * 搴斿湪鍔ㄧ敾/纭洿缁撴潫鍚庤皟鐢?
      */
     triggerCooldown() {
         this.lastActionTime = performance.now();
@@ -597,37 +575,37 @@ export class Character {
     }
 
     applyHitstop(frames) {
-        if (this.hitstopFrames > 0) return;
-        this.hitstopFrames = frames;
-        this.preHitstopTimeScale = this.animation.timeScale;
-        this.animation.setTimeScale(0);
+        this.timeControlSystem.applyHitstop(this, frames);
     }
 
     applyBlockstun(frames) {
-        this.blockstunFrames = frames;
+        this.timeControlSystem.applyBlockstun(this, frames);
     }
 
     freezeImpact(durationFrames, options = {}) {
-        if (this.impactContext) {
-            console.log(`[freezeImpact] ${this.id}: already has impactContext, skip`);
-            return;
-        }
-        console.log(`[freezeImpact] ${this.id}: start freeze, frames=${durationFrames}, nextState=${options.nextState}, currentState=${this.currentStateName}`);
-        this.impactContext = new ImpactContext({
-            frames: durationFrames,
-            nextState: options.nextState ?? null,
-            knockbackX: options.knockbackX ?? 0,
-            preTimeScale: this.animation.timeScale
+        this.timeControlSystem.freezeImpact(this, durationFrames, {
+            ...options,
+            startTick: this.tickCount
         });
-        this.animation.setTimeScale(0);
     }
-
     fixedUpdate(dtMs, tickCount) {
         this.tickCount = tickCount;
 
+        const timeControlFrame = this.timeControlSystem.tick(this, dtMs, tickCount);
+        const effectiveDeltaMs = timeControlFrame.effectiveDeltaMs;
+        if (this.debugTrace) {
+            const impact = this.timeControl.impactContext;
+            const impactNextState = impact?.nextState ?? null;
+            const impactFrames = impact?.frames ?? 0;
+            console.log(
+                `[CharTrace] tick=${tickCount} id=${this.id} state=${this.currentStateName} entry=${this.stateEntrySerial} mode=${timeControlFrame.mode}` +
+                ` hs=${this.timeControl.hitstopFrames} bs=${this.timeControl.blockstunFrames} hts=${this.timeControl.hitstunFrames}` +
+                ` impactFrames=${impactFrames} impactNext=${impactNextState} effectiveDt=${effectiveDeltaMs}`
+            );
+        }
+
         // impact / hitstop / blockstun / hitstun 期间暂停 Timed Tags 倒计时
-        const isFrozen = this.impactContext || this.hitstopFrames > 0 || this.blockstunFrames > 0 || this.hitstunFrames > 0;
-        if (!isFrozen) {
+        if (timeControlFrame.shouldAdvanceTimedTags) {
             for (const [tag, expireTick] of this.timedTags) {
                 if (tickCount >= expireTick) {
                     this.stateTags.delete(tag);
@@ -637,40 +615,23 @@ export class Character {
             }
         }
 
-        if (this.impactContext) {
-            this.impactContext.frames--;
-            if (this.impactContext.frames <= 0) {
-                const ctx = this.impactContext;
-                console.log(`[fixedUpdate] ${this.id}: impactContext end, nextState=${ctx.nextState}, currentState=${this.currentStateName}`);
-                this.impactContext = null;
-                this.animation.setTimeScale(ctx.preTimeScale);
-                if (ctx.knockbackX !== 0) {
-                    this.root.position.x += ctx.knockbackX;
-                }
-                if (ctx.nextState) {
-                    this.enterState(ctx.nextState, tickCount);
-                }
+        if (timeControlFrame.shouldAdvanceAnimation && !timeControlFrame.shouldRunStateLogic) {
+            const oldFrameWhenFrozen = this.animation.currentFrameIndex;
+            this.animation.fixedUpdate(effectiveDeltaMs);
+            const newFrameWhenFrozen = this.animation.currentFrameIndex;
+            if (newFrameWhenFrozen !== oldFrameWhenFrozen) {
+                this.#applyFrame(newFrameWhenFrozen);
             }
+            const currentWhenFrozen = this.animation.currentFrame;
+            const anchorWhenFrozen = this.#getCurrentRootAnchor(newFrameWhenFrozen);
+            this.#applyRootAlignment(currentWhenFrozen.w, currentWhenFrozen.h, anchorWhenFrozen);
+            this.#syncRootDebug(anchorWhenFrozen);
+            this.collision.syncToFrame(newFrameWhenFrozen, currentWhenFrozen.w, currentWhenFrozen.h, anchorWhenFrozen);
+            this.#updateDebugPanel();
             return;
         }
 
-        if (this.hitstopFrames > 0) {
-            this.hitstopFrames--;
-            if (this.hitstopFrames <= 0) {
-                this.animation.setTimeScale(this.preHitstopTimeScale);
-            }
-            return;
-        }
-
-        if (this.blockstunFrames > 0) {
-            this.blockstunFrames--;
-            this.animation.fixedUpdate(dtMs);
-            return;
-        }
-
-        if (this.hitstunFrames > 0) {
-            this.hitstunFrames--;
-            this.animation.fixedUpdate(dtMs);
+        if (!timeControlFrame.shouldRunStateLogic) {
             return;
         }
 
@@ -682,7 +643,7 @@ export class Character {
         }
 
         const oldFrame = this.animation.currentFrameIndex;
-        this.animation.fixedUpdate(dtMs);
+        this.animation.fixedUpdate(effectiveDeltaMs);
         const newFrame = this.animation.currentFrameIndex;
 
         if (newFrame !== oldFrame) {
@@ -695,9 +656,7 @@ export class Character {
         this.#syncRootDebug(anchor);
         this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
 
-        const preMoveX = this.root.position.x;
-        this.#applyMovement(dtMs);
-        const moved = this.root.position.x !== preMoveX;
+        this.#applyMovement(effectiveDeltaMs);
 
         // 检测状态变化：从攻击状态回到 idle 时才触发全局冷却
         const newState = this.currentStateName;
@@ -709,6 +668,21 @@ export class Character {
 
         this.#updateDebugPanel();
     }
+    get impactContext() {
+        return this.timeControl.impactContext;
+    }
+
+    get hitstopFrames() {
+        return this.timeControl.hitstopFrames;
+    }
+
+    get blockstunFrames() {
+        return this.timeControl.blockstunFrames;
+    }
+
+    get hitstunFrames() {
+        return this.timeControl.hitstunFrames;
+    }
 
     setCollisionVisible(value) {
         this.rootDebugVisible = value;
@@ -716,3 +690,4 @@ export class Character {
         this.collision.setVisible(value);
     }
 }
+

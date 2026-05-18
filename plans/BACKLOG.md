@@ -28,3 +28,9 @@
 | Timed Tags 机制 | 带有效期的状态标记，冻结期间暂停倒计时 | ✅ 已完成 | `timedTags` + `addTimedTag` |
 | parryBonus 派生修复 | Just Guard 后无法派生 zornhut/quart | ✅ 已修复 | 指令生命周期解耦 |
 | 全局冷却误触发 | 移动后回 idle 也触发 CD | ✅ 已修复 | 只检测 `attackActive` 状态 |
+
+## 规则配置化
+
+| 事项 | 描述 | 优先级 | 备注 |
+|------|------|--------|------|
+| `tickDiff` 外部配置化 | 将 `ContactResolver` 中 Just Guard/预判 guard 使用的 `tickDiff` 阈值（当前硬编码 `<= 7`）提取为外部可配置项（建议进 StateGraph 或 Combat 配置）。 | 中 | 需要同步默认值与回归测试，避免改变现有手感 |

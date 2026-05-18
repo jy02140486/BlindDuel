@@ -8,12 +8,17 @@ export class TestController extends BaseController {
         this.currentStepIndex = 0;
         this.currentStepElapsedMs = 0;
         this.currentStepEntered = false;
+        this.debugTrace = false;
+        this.sequenceLabel = "test-sequence";
+        this.loopCycle = 0;
 
         this.setScript(scriptConfig);
     }
 
     setScript(scriptConfig = {}) {
         this.loop = scriptConfig.loop === true;
+        this.debugTrace = scriptConfig.debugTrace === true;
+        this.sequenceLabel = scriptConfig.sequenceLabel || "test-sequence";
         this.steps = this.#normalizeSteps(scriptConfig.steps);
         this.reset();
     }
@@ -22,12 +27,13 @@ export class TestController extends BaseController {
         this.currentStepIndex = 0;
         this.currentStepElapsedMs = 0;
         this.currentStepEntered = false;
+        this.loopCycle = 0;
         this.setMoveIntent({ x: 0, y: 0 });
     }
 
-    fixedUpdate(dtMs = 0) {
+    fixedUpdate(dtMs = 0, tickCount = null) {
         const delta = Math.max(0, Number(dtMs) || 0);
-        this.#advance(delta);
+        this.#advance(delta, tickCount);
         this.applyToCharacter();
     }
 
@@ -76,7 +82,7 @@ export class TestController extends BaseController {
         return commands;
     }
 
-    #advance(dtMs) {
+    #advance(dtMs, tickCount = null) {
         if (this.steps.length === 0) {
             return;
         }
@@ -93,6 +99,10 @@ export class TestController extends BaseController {
                 this.currentStepIndex = 0;
                 this.currentStepElapsedMs = 0;
                 this.currentStepEntered = false;
+                this.loopCycle += 1;
+                if (this.debugTrace) {
+                    console.log(`[SequenceStart] label=${this.sequenceLabel} cycle=${this.loopCycle} tick=${tickCount ?? "?"}`);
+                }
             }
 
             const step = this.steps[this.currentStepIndex];
@@ -101,6 +111,9 @@ export class TestController extends BaseController {
             }
 
             if (!this.currentStepEntered) {
+                if (this.debugTrace && this.currentStepIndex === 0 && this.loopCycle === 0) {
+                    console.log(`[SequenceStart] label=${this.sequenceLabel} cycle=0 tick=${tickCount ?? "?"}`);
+                }
                 if (step.moveIntent) {
                     this.setMoveIntent(step.moveIntent);
                 }
