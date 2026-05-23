@@ -4,6 +4,7 @@ export class PlayerController extends BaseController {
     constructor(inputSystem, character = null) {
         super(character);
         this.inputSystem = inputSystem;
+        this.enabled = true;
     }
 
     #combineMoveIntent() {
@@ -25,6 +26,11 @@ export class PlayerController extends BaseController {
     }
 
     fixedUpdate(dtMs, tickCount) {
+        if (!this.enabled) {
+            this.setMoveIntent({ x: 0, y: 0 });
+            return;
+        }
+
         this.setMoveIntent(this.#combineMoveIntent());
 
         if (this.inputSystem.consumeAction("thrust", tickCount)) {

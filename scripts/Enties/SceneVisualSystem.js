@@ -363,7 +363,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     texture: "Art/Environment/House1.png",
                     kind: "single",
                     x: -5,
-                    y: 3,
+                    y: 2.7,
                     width: 6,
                     height: 6,
                     alphaIndex: 2
@@ -377,6 +377,16 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     width: 16,
                     height: 8,
                     alphaIndex: 3
+                },
+                {
+                    id: "tavern",
+                    texture: "Art/Environment/Tavern.png",
+                    kind: "single",
+                    x: -12,
+                    y: 5,
+                    width: 16,
+                    height: 10,
+                    alphaIndex: 2
                 }/*,
                 {
                     id: "building_3",

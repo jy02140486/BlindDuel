@@ -7,9 +7,15 @@ import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
 import { createHeroCharacter, createRabbleStickCharacter } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
+import { ExploreCameraRig } from "./ExploreCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
+import { AABBTrigger } from "./Enties/AABBTrigger.js";
 import { StageBoundary } from "./Systems/StageBoundary.js";
 import { PushboxResolver } from "./Systems/PushboxResolver.js";
+import { GameModeManager } from "./Systems/GameModeManager.js";
+import { BattleMode } from "./Systems/Modes/BattleMode.js";
+import { ExploreMode } from "./Systems/Modes/ExploreMode.js";
+import { SceneSequencer } from "./Systems/SceneSequencer.js";
 
 const FIXED_DT = 1000 / 60;
 
@@ -25,7 +31,12 @@ export class Scene {
         this.rabbleController = null;
         this.combatSystem = null;
         this.cameraRig = null;
+        this.exploreCameraRig = null;
         this.sceneVisualSystem = null;
+        this.gameModeManager = null;
+        this.battleMode = null;
+        this.exploreMode = null;
+        this.sceneSequencer = null;
         this._onKeyDown = null;
         this.paused = false;
         this.tickCount = 0;
@@ -35,7 +46,7 @@ export class Scene {
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
 
-        // 添加调试层（按Ctrl+Shift+I打开）
+        // 添加调试层（按Ctrl+Shift+I打开�?
         await this.scene.debugLayer.show({
             overlay: true,
             globalRoot: document.getElementById("canvas") || undefined
@@ -52,51 +63,77 @@ export class Scene {
 
         this.character = createHeroCharacter(this.scene, assets);
         this.character.root.position.y = 0;
-        this.character.root.position.x = -3.2;
-        this.character.debugTrace = true;
+        this.character.root.position.x = -16;
+        this.character.debugTrace = false;
+
+        // 战斗触发器（左边界）
+        this.battleTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-6, 0, 0), {
+            width: 4, height: 8, depth: 4
+        }, {
+            debugColor: new BABYLON.Color3(0, 1, 0),
+            debugVisible: false
+        });
 
         this.rabbleStick = createRabbleStickCharacter(this.scene, assets);
         this.rabbleStick.root.position.y = 0;
         this.rabbleStick.root.position.x = 3.2;
-        this.rabbleStick.debugTrace = true;
+        this.rabbleStick.debugTrace = false;
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new TestController(this.rabbleStick, {
-            loop: true,
-            debugTrace: true,
-            sequenceLabel: "rabble_swing_backstep_loop",
-            steps: [
-                // swing 一次
-                { command: "swing", waitMs: 380 },
-                // 后退
-                { moveIntent: { x: 1, y: 0 }, waitMs: 500 },
-                // 回到原位
-                { moveIntent: { x: -1, y: 0 }, waitMs: 500 },
-                // 站定一小段时间再循环
-                { moveIntent: { x: 0, y: 0 }, waitMs: 220 }
-            ]
-        });
+        this.rabbleController = new DummyController(this.rabbleStick);
         this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
-            zoomMinDistance: 3.2,      // 角色间距最小时（贴脸）
-            zoomMaxDistance: 6.4,      // 角色间距最大时（最远）
-            orthoMinWidth: 16,         // 间距最小时的 ortho width（最大 zoom in）
-            orthoMaxWidth: 46,         // 间距最大时的 ortho width（最大 zoom out）
-            perspMinDistance: 15,      // 间距最小时的 camera distance（最近）
-            perspMaxDistance: 35,      // 间距最大时的 camera distance（最远）
-            minCameraHeight: 4,        // 间距最小时的高度（最低）
-            maxCameraHeight: 10,        // 间距最大时的高度（最高）
+            zoomMinDistance: 3.2,
+            zoomMaxDistance: 6.4,
+            orthoMinWidth: 16,
+            orthoMaxWidth: 46,
+            perspMinDistance: 15,
+            perspMaxDistance: 35,
+            minCameraHeight: 3.2,
+            maxCameraHeight: 10,
             targetAspect: 16 / 9
         });
         this.cameraRig.init(this.scene, this.canvas);
+
+        this.exploreCameraRig = new ExploreCameraRig();
+        this.exploreCameraRig.init(this.scene, this.canvas);
 
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
         this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
         this._smoothedFighterDistance = Math.abs(this.rabbleStick.root.position.x - this.character.root.position.x);
+
+        const sharedContext = {
+            scene: this,
+            inputSystem: this.inputSystem,
+            playerController: this.playerController,
+            rabbleController: this.rabbleController,
+            character: this.character,
+            rabbleStick: this.rabbleStick,
+            pushboxResolver: this.pushboxResolver,
+            stageBoundary: this.stageBoundary,
+            combatSystem: this.combatSystem,
+            cameraRig: this.cameraRig,
+            exploreCameraRig: this.exploreCameraRig,
+            sceneVisualSystem: this.sceneVisualSystem,
+            cameraBasePosition: this._cameraBasePosition,
+            cameraTarget: this._cameraTarget,
+            smoothedFighterDistance: this._smoothedFighterDistance
+        };
+
+        this.sceneSequencer = new SceneSequencer(sharedContext);
+        sharedContext.sceneSequencer = this.sceneSequencer;
+
+        this.gameModeManager = new GameModeManager();
+        this.battleMode = new BattleMode(sharedContext);
+        this.exploreMode = new ExploreMode(sharedContext);
+
+        this.gameModeManager.registerMode(this.battleMode);
+        this.gameModeManager.registerMode(this.exploreMode);
+        this.gameModeManager.start("explore");
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "c") {
@@ -104,6 +141,9 @@ export class Scene {
                 this.character.setCollisionVisible(nextVisible);
                 this.rabbleStick.setCollisionVisible(nextVisible);
                 this.stageBoundary.setVisible(nextVisible);
+                if (this.battleTrigger) {
+                    this.battleTrigger.setDebugVisible(nextVisible);
+                }
             }
         };
         window.addEventListener("keydown", this._onKeyDown);
@@ -115,7 +155,10 @@ export class Scene {
     }
 
     toggleCameraProjection() {
-        if (this.cameraRig) {
+        const mode = this.gameModeManager?.currentMode;
+        if (mode?.id === "explore" && this.exploreCameraRig) {
+            this.exploreCameraRig.toggleProjection();
+        } else if (this.cameraRig) {
             this.cameraRig.toggleProjection();
         }
     }
@@ -133,53 +176,14 @@ export class Scene {
             return;
         }
 
-        this.inputSystem.fixedUpdate(tickCount);
-        this.playerController.fixedUpdate(dtMs, tickCount);
-        this.rabbleController.fixedUpdate(dtMs, tickCount);
-        this.character.fixedUpdate(dtMs, tickCount);
-        this.rabbleStick.fixedUpdate(dtMs, tickCount);
-        this.pushboxResolver.resolve([this.character, this.rabbleStick]);
-        this.stageBoundary.clampCharacter(this.character);
-        this.stageBoundary.clampCharacter(this.rabbleStick);
-        this.combatSystem.fixedUpdate([this.character, this.rabbleStick], tickCount);
+        this.sceneSequencer.fixedUpdate(dtMs, tickCount);
+        this.gameModeManager.fixedUpdate(dtMs, tickCount);
     }
 
     updateRender(dtMs) {
-        // 计算相机参数（无论是否暂停都需要）
-        const heroPos = this.character.root.position;
-        const opponentPos = this.rabbleStick.root.position;
-        const centerX = (heroPos.x + opponentPos.x) * 0.5;
-        const centerZ = (heroPos.z + opponentPos.z) * 0.5;
-        const targetHeight = 0;
-
-        // 平滑角色间距，避免出招时的 root 位移导致 zoom 抖动
-        const rawDistance = Math.abs(opponentPos.x - heroPos.x);
-        const distanceBlend = 1 - Math.exp((-this.cameraRig.smoothing * dtMs) / 1000);
-        // Smoothstep 让 blend 曲线更缓和，减少抖动
-        const smoothBlend = distanceBlend * distanceBlend * (3 - 2 * distanceBlend);
-        this._smoothedFighterDistance += (rawDistance - this._smoothedFighterDistance) * smoothBlend;
-
-        // 复用 Vector3 避免 GC 压力
-        this._cameraBasePosition.x = centerX;
-        this._cameraBasePosition.y = targetHeight + 8;
-        this._cameraBasePosition.z = centerZ - 25;
-        this._cameraTarget.x = centerX;
-        this._cameraTarget.y = targetHeight;
-        this._cameraTarget.z = centerZ;
-
-        // 先更新相机，再更新视觉系统（按文档要求的顺序）
-        this.cameraRig.update(dtMs, {
-            basePosition: this._cameraBasePosition,
-            target: this._cameraTarget,
-            fighterDistance: this._smoothedFighterDistance
-        });
-
-        // 更新视觉系统，传递相机信息
-        if (this.sceneVisualSystem) {
-            this.sceneVisualSystem.update(dtMs, {
-                camera: this.cameraRig.camera
-            });
-        }
+        this.gameModeManager.updateRender(dtMs);
+        this.sceneSequencer.updateRender(dtMs);
+        this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
     }
 
     render() {
@@ -201,6 +205,10 @@ export class Scene {
             this.cameraRig.dispose();
             this.cameraRig = null;
         }
+        if (this.exploreCameraRig) {
+            this.exploreCameraRig.dispose();
+            this.exploreCameraRig = null;
+        }
         if (this.sceneVisualSystem) {
             this.sceneVisualSystem.dispose();
             this.sceneVisualSystem = null;
@@ -208,6 +216,10 @@ export class Scene {
         if (this.stageBoundary) {
             this.stageBoundary.dispose();
             this.stageBoundary = null;
+        }
+        if (this.battleTrigger) {
+            this.battleTrigger.dispose();
+            this.battleTrigger = null;
         }
     }
 }

@@ -1,8 +1,8 @@
 {
   "machine": "longswordman",
-  "initialState": "idle",
+  "initialState": "standing",
   "inputs": {
-    "commands": ["thrust", "quart", "zornhut", "guard"],
+    "commands": ["enterBattle", "exitBattle", "thrust", "quart", "zornhut", "guard"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -10,6 +10,57 @@
     }
   },
   "states": {
+    "standing": {
+      "clip": "standing",
+      "allowMoveInput": true,
+      "loop": true,
+      "transitions": [
+        {
+          "to": "draw",
+          "when": [
+            { "command": "enterBattle" }
+          ]
+        },
+        {
+          "to": "walk",
+          "when": [
+            { "parameter": "moveMagnitude", "op": ">", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "walk": {
+      "clip": "walk",
+      "allowMoveInput": true,
+      "loop": true,
+      "transitions": [
+        {
+          "to": "draw",
+          "when": [
+            { "command": "enterBattle" }
+          ]
+        },
+        {
+          "to": "standing",
+          "when": [
+            { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "draw": {
+      "clip": "draw",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
     "idle": {
       "clip": "idle",
       "allowMoveInput": true,
@@ -37,6 +88,12 @@
           "to": "guard",
           "when": [
             { "command": "guard" }
+          ]
+        },
+        {
+          "to": "sheath",
+          "when": [
+            { "command": "exitBattle" }
           ]
         },
         {
@@ -80,6 +137,19 @@
           "to": "idle",
           "when": [
             { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "sheath": {
+      "clip": "sheath",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
           ]
         }
       ]

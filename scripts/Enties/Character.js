@@ -656,6 +656,12 @@ export class Character {
         this.#syncRootDebug(anchor);
         this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
 
+        // walk debug log disabled
+        // if (this.animation.currentClipName === "walk" && newFrame !== oldFrame) {
+        //     const aox = anchor ? ((anchor.cx - current.w / 2) * this.pxToWorld) : 0;
+        //     console.log(`[walk] frame=${newFrame} w=${current.w} h=${current.h} anchor=(${anchor?.cx},${anchor?.cy}) aox=${aox.toFixed(3)} spX=${this.spritePlane.position.x.toFixed(3)} spScaleX=${this.spritePlane.scaling.x.toFixed(3)}`);
+        // }
+
         this.#applyMovement(effectiveDeltaMs);
 
         // 检测状态变化：从攻击状态回到 idle 时才触发全局冷却

@@ -14,6 +14,30 @@ export function createHeroCharacter(scene, assets) {
         name: "hero",
         stateGraph: assets.stateGraphs.hero,
         clips: {
+            standing: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_standing.png",
+                atlasData: assets.atlas.hero.standing,
+                colliderData: assets.colliders.hero.standing,
+                loop: true
+            },
+            draw: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_draw.png",
+                atlasData: assets.atlas.hero.draw,
+                colliderData: assets.colliders.hero.draw,
+                loop: false
+            },
+            sheath: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_sheath.png",
+                atlasData: assets.atlas.hero.sheath,
+                colliderData: assets.colliders.hero.sheath,
+                loop: false
+            },
+            walk: {
+                spriteSheetUrl: "./Art/Sprite/longswordman_walk.png",
+                atlasData: assets.atlas.hero.walk,
+                colliderData: assets.colliders.hero.walk,
+                loop: true
+            },
             idle: {
                 spriteSheetUrl: "./Art/Sprite/longswordman_idle.png",
                 atlasData: assets.atlas.hero.idle,

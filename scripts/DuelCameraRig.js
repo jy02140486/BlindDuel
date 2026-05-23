@@ -51,6 +51,7 @@ export class DuelCameraRig {
 
     init(scene, canvas) {
         this.canvas = canvas;
+        this.scene = scene;
 
         this.camera = new BABYLON.UniversalCamera(
             "duel_camera",
@@ -72,6 +73,21 @@ export class DuelCameraRig {
         // this.camera.lockedTarget = new BABYLON.Vector3(0, this.targetHeight, -1);
 
         console.info("[CameraRig] mode=duel (UniversalCamera, perspective, rotation-free)");
+    }
+
+    enable() {
+        if (this.camera) {
+            this.camera.setEnabled(true);
+            if (this.scene) {
+                this.scene.activeCamera = this.camera;
+            }
+        }
+    }
+
+    disable() {
+        if (this.camera) {
+            this.camera.setEnabled(false);
+        }
     }
 
     #createDebugPanel() {

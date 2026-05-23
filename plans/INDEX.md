@@ -1,20 +1,23 @@
 # 计划索引（Plan Index）
 
-> 本文件跟踪所有进行中的计划。项目概况、技术栈、协作约定见 `PROJECT_CONTEXT.md`。
+> 本文件跟踪当前进行中的计划、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 
 ---
 
 ## 进行中
 
-> 当前无进行中的计划，见 [BACKLOG.md](BACKLOG.md)。
+| 计划 | 目标 | 备注 |
+|------|------|------|
+| [GAMEMODE_SCENE_SPLIT_PROPOSAL.md](GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | 推进 `Scene / GameMode` 拆分，落地 `ExploreMode` / `BattleMode` 双模式结构 | Phase 1 已完成，Phase 2 已细化到 `SceneSequencer` |
+| [GAMEMODE_OVERVIEW_DESIGN.md](GAMEMODE_OVERVIEW_DESIGN.md) | 汇总 `GameMode`、`CameraRig`、`SceneSequencer`、状态切换等概要设计 | 作为后续实现基准文档 |
 
 ---
 
-## 待开始
+## 待办入口
 
-| 计划 | 目标 | 备注 |
+| 文档 | 目标 | 备注 |
 |------|------|------|
-| 见 [BACKLOG.md](BACKLOG.md) | 资源工具链优化等 | 不阻塞主线 |
+| [BACKLOG.md](BACKLOG.md) | 记录不阻塞主线的战斗问题、资源工具优化与探索扩展项 | 包含最新的“防御按晚时双受击异常”记录 |
 
 ---
 
@@ -22,9 +25,9 @@
 
 | 计划 | 目标 | 归档日期 |
 |------|------|----------|
-| [archived/TIMECONTROL_REFACTOR_GUIDE.md](archived/TIMECONTROL_REFACTOR_GUIDE.md) | TimeControl 三步重构 + 生命周期守卫（过期 impact 跳转拦截）+ Combat 规则收敛 | 2026-05-18 |
-| [archived/FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md) | 逻辑帧固定 60fps + 输入缓冲 + Just Guard + Hitstop + ImpactContext | 2026-05-05 |
-| [archived/COMBAT_RULES_REFINEMENT_PLAN.md](archived/COMBAT_RULES_REFINEMENT_PLAN.md) | thrust 帧级判定 + dodge 无敌 + 格挡/重击 | 2026-05-04 |
+| [archived/TIMECONTROL_REFACTOR_GUIDE.md](archived/TIMECONTROL_REFACTOR_GUIDE.md) | TimeControl 三步重构 + 生命周期守卫 + Combat 规则收敛 | 2026-05-18 |
+| [archived/FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md) | 固定帧 60fps、输入缓冲、Just Guard、Hitstop、ImpactContext | 2026-05-05 |
+| [archived/COMBAT_RULES_REFINEMENT_PLAN.md](archived/COMBAT_RULES_REFINEMENT_PLAN.md) | thrust 帧级判定、dodge 无敌、格挡/重击规则修正 | 2026-05-04 |
 
 ---
 
@@ -32,17 +35,27 @@
 
 | 计划 | 目标 | 归档日期 |
 |------|------|----------|
-| 见 `archived/` 目录 | — | — |
+| `plans/archived/` 目录 | 更早阶段的角色碰撞、移动、场景视觉、AI 等历史方案 | 见各文件头部 |
 
 ---
 
 ## 快速参考：当前开发状态
 
-- **最新完成**: TimeControl 三步重构（组件/系统拆分 + `effectiveDeltaMs` 统一入口 + Combat 规则收敛）与 impactContext 生命周期守卫修复
-- **当前重点**: 验证并收敛 `ContactResolver` 的“同一攻击实例对同一目标只取首次结果”规则，继续观察 clash/guard/hit 先后关系
-- **下一步**: 见 [BACKLOG.md](BACKLOG.md)
-- **已知问题**: 
-  - guard 动画仅 2 帧，parry 窗口依赖 `guardFrame === 0` 预判
-  - 无连击系统
-  - AI 行为单一（当前为 TestController 脚本回放）
-  - `tickDiff` 阈值仍为硬编码（已记录到 backlog，后续配置化）
+- **Phase 1 已完成**：`GameModeManager + BattleMode + ExploreMode` 已接入，`Scene` 通过 mode 层驱动战斗/探索链路。
+- **Phase 2 已完成**：
+  - `ExploreCameraRig` 已实现（跟随主角、透视/正交切换、高度 4、0° 仰角）。
+  - `AABBTrigger` 已创建，触发器逻辑从硬编码改为类封装（位置 `-6,0,0`，大小 `4x8x4`）。
+  - `PlayerController.enabled` 已添加，支持输入禁用/恢复。
+  - 新动画（standing/walk/draw/sheath）的独立碰撞盒数据已生成，解决精灵切换抖动问题。
+  - Babylon.js 已从 CDN 改为本地部署。
+  - 触发器流程已通：进入触发器 → 自动移动到 `x=-3.2` → draw 动画 → 相机 blend → 切 battle 模式。
+  - `SceneSequencer` 已实现：通用编排 system，支持 `wait`、`waitUntil`、`moveActorTo`、`sendCommand`、`switchCamera`、`switchMode`、`lockInput`、`unlockInput`、`startCameraBlend`、`callback` 等 step。
+  - 相机 blend 支持位置、高度、正交参数的平滑插值，切换后无画面跳变。
+- **当前问题**：
+  - [x] 相机 blend 与 draw 动画时序不同步 — 已修复。
+  - [x] blend 结束后 `exploreCameraRig.enable()` 抢回 activeCamera — 已修复。
+  - [ ] 触发器 debug 体积按 C 键不显示（待排查）。
+- **状态机准备**：`LongSwordMan` 已新增 `standing / walk / draw / sheath` 定义，当前默认起始状态仍是 `idle`。
+- **资源现状**：`longswordman` 新增动画与 `RootMotion` 已接入资源清单；碰撞盒数据已独立生成。
+- **已知问题**：战斗中"防御按晚后 longswordman 进 hit，rabble 打完后也进 hit"的异常已记录到 [BACKLOG.md](BACKLOG.md)。
+- **下一步**：Phase 3 探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。

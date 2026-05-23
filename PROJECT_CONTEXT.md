@@ -156,3 +156,4 @@ GemeniPrototype-BlindBattle/
 3. 计划文档统一组织在 `plans/` 目录，已完成文档归档到 `plans/archived/`。
 3. 涉及大改（状态机/架构）先出方案再改代码。
 4. 与用户沟通默认使用中文。
+5. 如果本次会话开始编码前还没读过andrej-karpathy-skills-CLAUDE.MD，要先读一下

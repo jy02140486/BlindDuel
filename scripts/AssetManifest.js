@@ -8,6 +8,10 @@ export const ASSET_MANIFEST = {
     },
     atlas: {
         hero: {
+            standing: "./Art/Sprite/longswordman_standing.json",
+            draw: "./Art/Sprite/longswordman_draw.json",
+            sheath: "./Art/Sprite/longswordman_sheath.json",
+            walk: "./Art/Sprite/longswordman_walk.json",
             idle: "./Art/Sprite/longswordman_idle.json",
             move: "./Art/Sprite/longswordman_move.json",
             thrust: "./Art/Sprite/longswordman_thrust.json",
@@ -28,6 +32,10 @@ export const ASSET_MANIFEST = {
     },
     colliders: {
         hero: {
+            standing: "./Data/CollisionMask/longswordman_standing.collider.json",
+            draw: "./Data/CollisionMask/longswordman_draw.collider.json",
+            sheath: "./Data/CollisionMask/longswordman_sheath.collider.json",
+            walk: "./Data/CollisionMask/longswordman_walk.collider.json",
             idle: "./Data/CollisionMask/longswordman_idle.collider.json",
             move: "./Data/CollisionMask/longswordman_move.collider.json",
             thrust: "./Data/CollisionMask/longswordman_thrust.collider.json",
