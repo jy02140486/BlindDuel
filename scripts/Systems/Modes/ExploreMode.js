@@ -52,9 +52,19 @@ export class ExploreMode extends BaseMode {
     }
 
     enter(_payload) {
-        const { exploreCameraRig, cameraRig, scene } = this.context;
+        const { exploreCameraRig, cameraRig, character } = this.context;
         cameraRig?.disable();
         exploreCameraRig?.enable();
+        if (character) {
+            character.allowFacing = true;
+        }
+    }
+
+    exit() {
+        const { character } = this.context;
+        if (character) {
+            character.allowFacing = false;
+        }
     }
 
     updateRender(dtMs) {

@@ -22,6 +22,8 @@ export class Character {
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
         this.currentSpeed = 0;
+        this.facing = 1;
+        this.allowFacing = false;
         this.stateEntrySerial = 0;
         this.stateTags = new Set();
         this.stateEnterTick = 0;
@@ -187,7 +189,8 @@ export class Character {
         this.texture.vScale = -(frame.h / atlasH);
         this.texture.vOffset = 1 - (frame.y / atlasH);
 
-        this.spritePlane.scaling.x = frame.w / this.baseFrameWidthPx;
+        const baseScaleX = frame.w / this.baseFrameWidthPx;
+        this.spritePlane.scaling.x = baseScaleX * this.facing;
         this.spritePlane.scaling.y = frame.h / this.baseFrameHeightPx;
     }
 
@@ -204,9 +207,19 @@ export class Character {
         const anchorOffsetX = anchor ? (anchor.cx - frameWidth / 2) * this.pxToWorld : 0;
         const anchorOffsetY = anchor ? (frameHeight / 2 - anchor.cy) * this.pxToWorld : 0;
 
-        this.spritePlane.position.x = -anchorOffsetX;
+        this.spritePlane.position.x = -anchorOffsetX * this.facing;
         this.spritePlane.position.y = -anchorOffsetY;
         this.spritePlane.position.z = -0.02;
+    }
+
+    #updateSpriteFacing() {
+        if (!this.spritePlane) {
+            return;
+        }
+        const currentScaleX = Math.abs(this.spritePlane.scaling.x);
+        this.spritePlane.scaling.x = currentScaleX * this.facing;
+        // 锚点偏移也需要同步翻转
+        this.spritePlane.position.x = -this.spritePlane.position.x;
     }
 
     #syncRootDebug(anchor) {
@@ -345,6 +358,14 @@ export class Character {
         const dtSec = dtMs / 1000;
         const nx = x / magnitude;
         const ny = y / magnitude;
+
+        if (this.allowFacing && Math.abs(nx) > 0.1) {
+            const newFacing = nx > 0 ? 1 : -1;
+            if (newFacing !== this.facing) {
+                this.facing = newFacing;
+                this.#updateSpriteFacing();
+            }
+        }
 
         this.root.position.x += nx * this.baseWalkSpeed * dtSec;
         this.root.position.z += ny * this.baseWalkSpeed * dtSec;
