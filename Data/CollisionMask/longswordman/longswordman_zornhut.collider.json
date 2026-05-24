@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/longswordman_zornhut.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/longswordman_zornhut.png",
-                   "rootAtlasJson":  "Data/RootMotion/longswordman_zornhut.json",
-                   "rootAtlasPng":  "Data/RootMotion/longswordman_zornhut.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman_zornhut.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman_zornhut.png",
+                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_zornhut.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_zornhut.png",
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_zornhut.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_zornhut.png",
+                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_zornhut.json",
+                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_zornhut.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -36,7 +36,7 @@
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_zornhut (CollisionMask) 0.ase",
+                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -87,7 +87,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_zornhut (CollisionMask) 1.ase",
+                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  256,
                                          "y":  0,
@@ -149,7 +149,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman_zornhut (CollisionMask) 2.ase",
+                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 2.ase",
                        "frameRect":  {
                                          "x":  512,
                                          "y":  0,
@@ -200,7 +200,7 @@
                    },
                    {
                        "frameIndex":  3,
-                       "frameName":  "longswordman_zornhut (CollisionMask) 3.ase",
+                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 3.ase",
                        "frameRect":  {
                                          "x":  768,
                                          "y":  0,
@@ -284,7 +284,7 @@
                    },
                    {
                        "frameIndex":  4,
-                       "frameName":  "longswordman_zornhut (CollisionMask) 4.ase",
+                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 4.ase",
                        "frameRect":  {
                                          "x":  1024,
                                          "y":  0,

@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_idle.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_idle.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_idle.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_idle.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_idle.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_idle.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman/longswordman_hit.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman/longswordman_hit.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\longswordman/longswordman_hit.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\longswordman/longswordman_hit.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman/longswordman_hit.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman/longswordman_hit.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-26T13:30:22.2140163Z"
+                   "generatedAtUtc":  "2026-04-26T13:31:18.7096168Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_idle 0.ase",
+                       "frameName":  "longswordman/longswordman_hit (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -48,7 +48,7 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  50.5,
+                                         "cx":  34.5,
                                          "cy":  80,
                                          "w":  93,
                                          "h":  38,
@@ -59,24 +59,24 @@
                                          "id":  "pushbox_0",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  40.5,
-                                         "cy":  111,
-                                         "w":  42,
-                                         "h":  25,
+                                         "cx":  35.5,
+                                         "cy":  113,
+                                         "w":  46,
+                                         "h":  27,
                                          "angle":  0,
-                                         "pixelCount":  1050
+                                         "pixelCount":  1242
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  38.5,
+                                                    "cx":  31.5,
                                                     "cy":  118.5
                                                 }
                                    }
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_idle 1.ase",
+                       "frameName":  "longswordman/longswordman_hit (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,
@@ -99,12 +99,12 @@
                                          "id":  "pushbox_1",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  40.5,
-                                         "cy":  111,
-                                         "w":  42,
-                                         "h":  25,
+                                         "cx":  37.5,
+                                         "cy":  113,
+                                         "w":  46,
+                                         "h":  27,
                                          "angle":  0,
-                                         "pixelCount":  1050
+                                         "pixelCount":  1242
                                      }
                                  ],
                        "anchors":  {

@@ -1,4 +1,4 @@
-﻿# 项目上下文（Project Context）
+# 项目上下文（Project Context）
 
 ## 1. 项目概况
 - 项目名：`GemeniPrototype-BlindBattle`
@@ -36,14 +36,14 @@ py -m http.server 9000 --bind 127.0.0.1
 
 资源：
 - 动画图集：
-  - `Art/Sprite/longswordman_idle.png` + `Art/Sprite/longswordman_idle.json`
-  - `Art/Sprite/longswordman_thrust.png` + `Art/Sprite/longswordman_thrust.json`
+  - `Art/Sprite/longswordman/longswordman_idle.png` + `Art/Sprite/longswordman/longswordman_idle.json`
+  - `Art/Sprite/longswordman/longswordman_thrust.png` + `Art/Sprite/longswordman/longswordman_thrust.json`
 - 碰撞蒙版图集：
-  - `Data/CollisionMask/longswordman_idle.png` + `Data/CollisionMask/longswordman_idle.json`
-  - `Data/CollisionMask/longswordman_thrust.png` + `Data/CollisionMask/longswordman_thrust.json`
+  - `Data/CollisionMask/longswordman/longswordman_idle.png` + `Data/CollisionMask/longswordman/longswordman_idle.json`
+  - `Data/CollisionMask/longswordman/longswordman_thrust.png` + `Data/CollisionMask/longswordman/longswordman_thrust.json`
 - 碰撞扫描输出：
-  - `Data/CollisionMask/longswordman_idle.collider.json`
-  - `Data/CollisionMask/longswordman_thrust.collider.json`
+  - `Data/CollisionMask/longswordman/longswordman_idle.collider.json`
+  - `Data/CollisionMask/longswordman/longswordman_thrust.collider.json`
 
 离线工具：
 - 碰撞扫描脚本（离线）：`scripts/tools/extract_collision_boxes.ps1`

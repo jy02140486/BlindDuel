@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick_thrust.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick_thrust.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick_thrust.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick_thrust.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick_thrust.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick_thrust.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick/rabble_stick_thrust.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick/rabble_stick_thrust.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick/rabble_stick_thrust.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick/rabble_stick_thrust.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick/rabble_stick_thrust.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick/rabble_stick_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -36,7 +36,7 @@
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "rabble_stick_thrust (Collision) 0.ase",
+                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -76,7 +76,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "rabble_stick_thrust (Collision) 1.ase",
+                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 1.ase",
                        "frameRect":  {
                                          "x":  160,
                                          "y":  0,
@@ -116,7 +116,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "rabble_stick_thrust (Collision) 2.ase",
+                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 2.ase",
                        "frameRect":  {
                                          "x":  320,
                                          "y":  0,

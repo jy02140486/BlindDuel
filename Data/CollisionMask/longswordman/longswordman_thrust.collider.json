@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_thrust.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_thrust.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_thrust.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_thrust.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_thrust.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_thrust.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman/longswordman_thrust.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman/longswordman_thrust.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\longswordman/longswordman_thrust.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\longswordman/longswordman_thrust.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman/longswordman_thrust.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman/longswordman_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -36,7 +36,7 @@
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_thrust 0.ase",
+                       "frameName":  "longswordman/longswordman_thrust 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -120,7 +120,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_thrust 1.ase",
+                       "frameName":  "longswordman/longswordman_thrust 1.ase",
                        "frameRect":  {
                                          "x":  192,
                                          "y":  0,
@@ -193,7 +193,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman_thrust 2.ase",
+                       "frameName":  "longswordman/longswordman_thrust 2.ase",
                        "frameRect":  {
                                          "x":  384,
                                          "y":  0,

@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman_quart.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman_quart.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman_quart.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman_quart.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman_quart.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman_quart.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman/longswordman_quart.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman/longswordman_quart.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\longswordman/longswordman_quart.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\longswordman/longswordman_quart.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman/longswordman_quart.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman/longswordman_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -36,7 +36,7 @@
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_quart (CollisionMask) 0.ase",
+                       "frameName":  "longswordman/longswordman_quart (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -87,7 +87,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_quart (CollisionMask) 1.ase",
+                       "frameName":  "longswordman/longswordman_quart (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  192,
                                          "y":  0,
@@ -138,7 +138,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman_quart (CollisionMask) 2.ase",
+                       "frameName":  "longswordman/longswordman_quart (CollisionMask) 2.ase",
                        "frameRect":  {
                                          "x":  384,
                                          "y":  0,
@@ -200,7 +200,7 @@
                    },
                    {
                        "frameIndex":  3,
-                       "frameName":  "longswordman_quart (CollisionMask) 3.ase",
+                       "frameName":  "longswordman/longswordman_quart (CollisionMask) 3.ase",
                        "frameRect":  {
                                          "x":  576,
                                          "y":  0,

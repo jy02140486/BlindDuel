@@ -1,11 +1,11 @@
-﻿{
+{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/longswordman_clash.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/longswordman_clash.png",
-                   "rootAtlasJson":  "Data/RootMotion/longswordman_clash.json",
-                   "rootAtlasPng":  "Data/RootMotion/longswordman_clash.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman_clash.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman_clash.png",
+                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick/rabble_stick_Dodge.json",
+                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick/rabble_stick_Dodge.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick/rabble_stick_Dodge.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick/rabble_stick_Dodge.png",
+                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick/rabble_stick_Dodge.json",
+                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick/rabble_stick_Dodge.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,16 +31,16 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-04T16:30:00.1823028Z"
+                   "generatedAtUtc":  "2026-04-30T15:09:26.8979539Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_clash (CollisionMask) 0.ase",
+                       "frameName":  "Dodge (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
-                                         "w":  160,
+                                         "w":  128,
                                          "h":  128
                                      },
                        "boxes":  [
@@ -48,28 +48,39 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  29,
-                                         "cy":  64,
-                                         "w":  61,
-                                         "h":  39,
+                                         "cx":  84.5,
+                                         "cy":  62.5,
+                                         "w":  82,
+                                         "h":  36,
                                          "angle":  90,
-                                         "pixelCount":  2379
+                                         "pixelCount":  2952
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  73.5,
+                                         "cy":  107,
+                                         "w":  48,
+                                         "h":  29,
+                                         "angle":  0,
+                                         "pixelCount":  1392
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  31,
-                                                    "cy":  118
+                                                    "cx":  78,
+                                                    "cy":  119.5
                                                 }
                                    }
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_clash (CollisionMask) 1.ase",
+                       "frameName":  "Dodge (CollisionMask) 1.ase",
                        "frameRect":  {
-                                         "x":  160,
+                                         "x":  128,
                                          "y":  0,
-                                         "w":  160,
+                                         "w":  128,
                                          "h":  128
                                      },
                        "boxes":  [
@@ -77,18 +88,29 @@
                                          "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  29,
-                                         "cy":  64,
-                                         "w":  61,
-                                         "h":  39,
+                                         "cx":  80.5,
+                                         "cy":  71.5,
+                                         "w":  82,
+                                         "h":  36,
                                          "angle":  90,
-                                         "pixelCount":  2379
+                                         "pixelCount":  2952
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  107,
+                                         "w":  48,
+                                         "h":  29,
+                                         "angle":  0,
+                                         "pixelCount":  1392
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  35,
-                                                    "cy":  118
+                                                    "cx":  83,
+                                                    "cy":  114.5
                                                 }
                                    }
                    }
