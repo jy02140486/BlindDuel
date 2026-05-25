@@ -160,10 +160,32 @@
 ### 4.2 DuelCameraRig
 - 继续沿用现有逻辑。
 
-### 4.3 切换约定
-- mode `enter` 里激活本 mode 相机更新逻辑。
-- mode `exit` 里停止本 mode 相机更新逻辑。
-- 切换瞬间做一次相机位置对齐或短时插值，避免跳变。
+### 4.3 CameraManager（建议新增）
+建议路径：`scripts/Systems/CameraManager.js`
+
+职责：
+- 统一管理 `ExploreCameraRig` 与 `DuelCameraRig` 的生命周期（注册、切换、激活/停用）。
+- 接管 `SceneSequencer` 中的相机 blend 逻辑（`startCameraBlend` 改为调用 `cameraManager.startBlend`）。
+- 提供屏幕级镜头特效：震动（shake）、闪光（flash）、上下黑边（letterbox）。
+- 每帧统一更新当前 active rig 与特效状态。
+
+为什么需要：
+- 当前 blend 逻辑分散在 `SceneSequencer`（直接操作 camera）、`BattleMode.enter`（`cameraRig.enable()`）、`ExploreMode.enter`（`exploreCameraRig.enable()`），容易出现 `activeCamera` 被抢回的问题。
+- 特效（shake/flash）与相机位置同生命周期，放在同一 manager 内更内聚。
+- 后续新增 rig（如对话特写、Boss 登场镜头）只需注册，无需改动 mode 代码。
+
+建议接口：
+- `registerRig(id, rig)` — 注册 explore / duel rig。
+- `switchRig(id, options?)` — 切换 rig，可选 blend 过渡。
+- `startBlend(fromRig, toRig, durationMs)` — 平滑过渡。
+- `shake(intensity, durationMs)` / `flash(color, durationMs)` / `letterbox(ratio, durationMs)` — 屏幕特效。
+- `update(dtMs, context)` — 每帧更新。
+
+### 4.4 切换约定（更新）
+- `CameraManager` 统一持有单一 Babylon Camera 实例，rig 只负责计算与写入变换。
+- mode `enter` 通过 `CameraManager.switchRig(id)` 请求切换，不再直接操作 rig。
+- `SceneSequencer` 的 `startCameraBlend` step 改为向 `CameraManager` 发指令，不直接操作 camera。
+- 切换瞬间由 `CameraManager` 执行位置对齐或短时插值，避免跳变。
 
 ## 5. 状态与数据约定
 
@@ -258,9 +280,11 @@
 - [x] blend 结束后 `exploreCameraRig.enable()` 会把 `activeCamera` 抢回 explore 相机 — 已修复：blend 逻辑下沉到 `SceneSequencer`，不再错误 enable explore rig。
 - [ ] 触发器 debug 体积按 C 键不显示（待排查）。
 
-### 8.3 待实现（Phase 3）
-- [ ] 探索内容扩展：NPC 对话气泡、buff 拾取、任务触发。
-- [ ] `Battle -> Explore` 退出战斗 sequence（`sheath` 动画、切回 explore 相机等）。
+### 8.3 待实现（Phase 3/4/5）
+- [ ] `Phase 3` 收尾：统一探索/战斗基准俯角，补齐探索态 `walkArea` 可行走范围限制。
+- [ ] `Phase 3` 收尾：`Battle -> Explore` 退出战斗 sequence（`sheath` 动画、切回 explore 相机等）。
+- [ ] `Phase 4`：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
+- [ ] `Phase 5`：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
 
 ## 9. 验收标准
 - 结构上完成 Scene 与 mode 解耦。
@@ -274,5 +298,9 @@
 1. ✅ 先做 `GameModeManager + BattleMode`，仅结构迁移，不改行为。
 2. ✅ 加 `ExploreCameraRig` 与 `ExploreMode`，打通切换。
 3. ✅ 接入 trigger 进入战斗（当前硬编码流程）。
-4. ⏳ 引入 `SceneSequencer` 最小实现，将硬编码流程改为 sequence 编排。
-5. ⏳ 补主角转向、角色走位 step 与探索输入筛选。
+4. ✅ 引入 `SceneSequencer` 最小实现，将硬编码流程改为 sequence 编排。
+5. ✅ 补主角转向、角色走位 step 与探索输入筛选。
+6. ✅ 引入 `CameraManager`：相机切换与 blend 入口已收口到 manager。
+7. ⏳ `Phase 3` 收尾：统一探索/战斗基准俯角 + 探索态 `walkArea` 可行走范围限制。
+8. ⏳ `Phase 4`：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
+9. ⏳ `Phase 5`：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。

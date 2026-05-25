@@ -7,127 +7,110 @@ export class ExploreCameraRig {
             orthoWidth: 20,
             ...config
         };
-        
-        this.scene = null;
-        this.canvas = null;
-        this.camera = null;
-        this.enabled = false;
+
         this.projection = "perspective";
         this._targetPosition = new BABYLON.Vector3(0, 0, 0);
         this._cameraPosition = new BABYLON.Vector3(0, 0, 0);
     }
 
-    init(scene, canvas) {
-        this.scene = scene;
-        this.canvas = canvas;
-        
-        this.camera = new BABYLON.UniversalCamera(
-            "exploreCamera",
-            new BABYLON.Vector3(0, this.config.followHeight, -this.config.followDistance),
-            scene
-        );
-        
-        this.camera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
-        scene.activeCamera = this.camera;
-        
-        this.camera.inputs.clear();
-        
-        this.enabled = true;
-    }
-
-    enable() {
-        this.enabled = true;
-        if (this.camera) {
-            this.camera.setEnabled(true);
-            if (this.scene) {
-                this.scene.activeCamera = this.camera;
+    enter(ctx) {
+        const state = ctx?.cameraManager?.state;
+        if (state) {
+            this._cameraPosition.copyFrom(state.pos);
+            this._targetPosition.copyFrom(state.target);
+        } else {
+            const pos = ctx?.character?.root?.position;
+            if (pos) {
+                this._cameraPosition.set(pos.x, pos.y + this.config.followHeight, pos.z - this.config.followDistance);
+                this._targetPosition.copyFrom(pos);
             }
         }
     }
 
-    disable() {
-        this.enabled = false;
-        if (this.camera) {
-            this.camera.setEnabled(false);
-        }
+    exit(ctx) {
     }
 
     toggleProjection() {
-        if (!this.camera) return;
-
         if (this.projection === "perspective") {
             this.projection = "orthographic";
-            this.camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-
-            const windowAspect = this.canvas.width / this.canvas.height;
-            const halfWidth = this.config.orthoWidth / 2;
-            const halfHeight = (this.config.orthoWidth / windowAspect) / 2;
-            this.camera.orthoLeft = -halfWidth;
-            this.camera.orthoRight = halfWidth;
-            this.camera.orthoTop = halfHeight;
-            this.camera.orthoBottom = -halfHeight;
-
             console.info("[ExploreCameraRig] switched to orthographic");
         } else {
             this.projection = "perspective";
-            this.camera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
-
             console.info("[ExploreCameraRig] switched to perspective");
         }
     }
 
-    update(dtMs, { basePosition, target }) {
-        if (!this.enabled || !this.camera || !target) {
-            return;
+    compute(dtMs, context, prevState) {
+        const target = context?.target;
+        if (!target) {
+            return prevState ? this.#stateFromPrev(prevState) : this.#defaultState();
         }
-        
+
         const dt = dtMs / 1000;
         const blend = Math.min(this.config.smoothing * dt * 60, 1);
-        
+
         this._targetPosition.copyFrom(target);
-        
+
         const desiredCameraPos = new BABYLON.Vector3(
             this._targetPosition.x,
             this._targetPosition.y + this.config.followHeight,
             this._targetPosition.z - this.config.followDistance
         );
-        
+
         this._cameraPosition.x += (desiredCameraPos.x - this._cameraPosition.x) * blend;
         this._cameraPosition.y += (desiredCameraPos.y - this._cameraPosition.y) * blend;
         this._cameraPosition.z += (desiredCameraPos.z - this._cameraPosition.z) * blend;
-        
-        this.camera.position.copyFrom(this._cameraPosition);
+
+        const state = this.#defaultState();
+        state.pos.copyFrom(this._cameraPosition);
+        state.target = this._targetPosition.clone();
+        state.projection = this.projection;
 
         if (this.projection === "orthographic") {
-            const windowAspect = this.canvas.width / this.canvas.height;
+            const windowAspect = window.innerWidth / window.innerHeight;
             const halfWidth = this.config.orthoWidth / 2;
             const halfHeight = (this.config.orthoWidth / windowAspect) / 2;
-
-            this.camera.orthoLeft += (-halfWidth - this.camera.orthoLeft) * blend;
-            this.camera.orthoRight += (halfWidth - this.camera.orthoRight) * blend;
-            this.camera.orthoTop += (halfHeight - this.camera.orthoTop) * blend;
-            this.camera.orthoBottom += (-halfHeight - this.camera.orthoBottom) * blend;
+            state.orthoLeft = -halfWidth;
+            state.orthoRight = halfWidth;
+            state.orthoTop = halfHeight;
+            state.orthoBottom = -halfHeight;
         }
+
+        return state;
     }
 
-    onResize() {
-        if (this.camera && this.canvas) {
-            if (this.projection === "orthographic") {
-                const windowAspect = this.canvas.width / this.canvas.height;
-                const currentWidth = this.camera.orthoRight - this.camera.orthoLeft;
-                const halfHeight = (currentWidth / windowAspect) / 2;
-                this.camera.orthoTop = halfHeight;
-                this.camera.orthoBottom = -halfHeight;
-            }
-            this.camera.aspectRatio = this.canvas.width / this.canvas.height;
-            this.camera.updateProjectionMatrix();
-        }
+    onResize(ctx) {
+        // 正交比例由 CameraManager 统一维护
+    }
+
+    #defaultState() {
+        return {
+            pos: new BABYLON.Vector3(0, this.config.followHeight, -this.config.followDistance),
+            target: new BABYLON.Vector3(0, 0, 0),
+            projection: this.projection,
+            orthoLeft: -10,
+            orthoRight: 10,
+            orthoTop: 5.6,
+            orthoBottom: -5.6,
+            fov: 0.8,
+            aspect: 16 / 9
+        };
+    }
+
+    #stateFromPrev(prevState) {
+        return {
+            pos: prevState.pos.clone(),
+            target: prevState.target.clone(),
+            projection: prevState.projection,
+            orthoLeft: prevState.orthoLeft,
+            orthoRight: prevState.orthoRight,
+            orthoTop: prevState.orthoTop,
+            orthoBottom: prevState.orthoBottom,
+            fov: prevState.fov,
+            aspect: prevState.aspect
+        };
     }
 
     dispose() {
-        if (this.camera) {
-            this.camera.dispose();
-            this.camera = null;
-        }
     }
 }

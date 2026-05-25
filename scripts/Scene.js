@@ -16,6 +16,7 @@ import { GameModeManager } from "./Systems/GameModeManager.js";
 import { BattleMode } from "./Systems/Modes/BattleMode.js";
 import { ExploreMode } from "./Systems/Modes/ExploreMode.js";
 import { SceneSequencer } from "./Systems/SceneSequencer.js";
+import { CameraManager } from "./Systems/CameraManager.js";
 
 const FIXED_DT = 1000 / 60;
 
@@ -37,6 +38,7 @@ export class Scene {
         this.battleMode = null;
         this.exploreMode = null;
         this.sceneSequencer = null;
+        this.cameraManager = null;
         this._onKeyDown = null;
         this.paused = false;
         this.tickCount = 0;
@@ -96,10 +98,8 @@ export class Scene {
             maxCameraHeight: 10,
             targetAspect: 16 / 9
         });
-        this.cameraRig.init(this.scene, this.canvas);
 
         this.exploreCameraRig = new ExploreCameraRig();
-        this.exploreCameraRig.init(this.scene, this.canvas);
 
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
@@ -118,11 +118,18 @@ export class Scene {
             combatSystem: this.combatSystem,
             cameraRig: this.cameraRig,
             exploreCameraRig: this.exploreCameraRig,
+            cameraManager: null,
             sceneVisualSystem: this.sceneVisualSystem,
             cameraBasePosition: this._cameraBasePosition,
             cameraTarget: this._cameraTarget,
             smoothedFighterDistance: this._smoothedFighterDistance
         };
+        this.cameraManager = new CameraManager(sharedContext);
+        this.cameraManager.init(this.scene, this.canvas, { fov: 0.8, minZ: 0.1, maxZ: 1000 });
+        this.cameraManager.registerRig("duel", this.cameraRig);
+        this.cameraManager.registerRig("explore", this.exploreCameraRig);
+        sharedContext.cameraManager = this.cameraManager;
+        this.sharedContext = sharedContext;
 
         this.sceneSequencer = new SceneSequencer(sharedContext);
         sharedContext.sceneSequencer = this.sceneSequencer;
@@ -155,18 +162,11 @@ export class Scene {
     }
 
     toggleCameraProjection() {
-        const mode = this.gameModeManager?.currentMode;
-        if (mode?.id === "explore" && this.exploreCameraRig) {
-            this.exploreCameraRig.toggleProjection();
-        } else if (this.cameraRig) {
-            this.cameraRig.toggleProjection();
-        }
+        this.cameraManager?.toggleProjection();
     }
 
     onResize() {
-        if (this.cameraRig) {
-            this.cameraRig.onResize();
-        }
+        this.cameraManager?.onResize();
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -183,6 +183,7 @@ export class Scene {
     updateRender(dtMs) {
         this.gameModeManager.updateRender(dtMs);
         this.sceneSequencer.updateRender(dtMs);
+        this.cameraManager.update(dtMs, this.sharedContext);
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
     }
 
@@ -209,6 +210,7 @@ export class Scene {
             this.exploreCameraRig.dispose();
             this.exploreCameraRig = null;
         }
+        this.cameraManager = null;
         if (this.sceneVisualSystem) {
             this.sceneVisualSystem.dispose();
             this.sceneVisualSystem = null;

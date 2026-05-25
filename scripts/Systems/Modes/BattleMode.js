@@ -6,15 +6,11 @@ export class BattleMode extends BaseMode {
     }
 
     enter(_payload) {
-        const { cameraRig, exploreCameraRig, scene } = this.context;
-        exploreCameraRig?.disable();
-        cameraRig?.enable();
+        const { cameraManager } = this.context;
+        cameraManager?.switchRig("duel");
     }
 
-    exit() {
-        const { cameraRig } = this.context;
-        cameraRig?.disable();
-    }
+    exit() {}
 
     fixedUpdate(dtMs, tickCount) {
         const {
@@ -43,11 +39,15 @@ export class BattleMode extends BaseMode {
         const {
             character,
             rabbleStick,
-            cameraRig,
+            cameraManager,
             sceneVisualSystem,
             cameraBasePosition,
             cameraTarget
         } = this.context;
+        const cameraRig = cameraManager?.activeRig;
+        if (!cameraRig) {
+            return;
+        }
 
         const heroPos = character.root.position;
         const opponentPos = rabbleStick.root.position;
@@ -68,19 +68,18 @@ export class BattleMode extends BaseMode {
         cameraTarget.y = targetHeight;
         cameraTarget.z = centerZ;
 
-        cameraRig.update(dtMs, {
-            basePosition: cameraBasePosition,
-            target: cameraTarget,
-            fighterDistance: this.context.smoothedFighterDistance
-        });
+        this.context.basePosition = cameraBasePosition;
+        this.context.target = cameraTarget;
+        this.context.fighterDistance = this.context.smoothedFighterDistance;
 
-        const cam = cameraRig.camera;
+        const cam = cameraManager?.getCamera();
+        if (!cam) {
+            return;
+        }
         console.log(`[BattleMode] cam pos=(${cam.position.x.toFixed(2)}, ${cam.position.y.toFixed(2)}, ${cam.position.z.toFixed(2)}) orthoL=${cam.orthoLeft?.toFixed(2)}`);
 
         if (sceneVisualSystem) {
-            sceneVisualSystem.update(dtMs, {
-                camera: cameraRig.camera
-            });
+            sceneVisualSystem.update(dtMs, { camera: cam });
         }
     }
 }

@@ -52,9 +52,8 @@ export class ExploreMode extends BaseMode {
     }
 
     enter(_payload) {
-        const { exploreCameraRig, cameraRig, character } = this.context;
-        cameraRig?.disable();
-        exploreCameraRig?.enable();
+        const { cameraManager, character } = this.context;
+        cameraManager?.switchRig("explore");
         if (character) {
             character.allowFacing = true;
         }
@@ -68,15 +67,15 @@ export class ExploreMode extends BaseMode {
     }
 
     updateRender(dtMs) {
-        const { character, exploreCameraRig, sceneVisualSystem } = this.context;
+        const { character, cameraManager, sceneVisualSystem } = this.context;
         const pos = character.root.position;
 
         this._cameraTarget.set(pos.x, pos.y, pos.z);
+        this.context.target = this._cameraTarget;
 
-        exploreCameraRig.update(dtMs, { target: this._cameraTarget });
-
-        if (sceneVisualSystem && exploreCameraRig.camera) {
-            sceneVisualSystem.update(dtMs, { camera: exploreCameraRig.camera });
+        const activeCamera = cameraManager?.getCamera();
+        if (sceneVisualSystem && activeCamera) {
+            sceneVisualSystem.update(dtMs, { camera: activeCamera });
         }
     }
 }

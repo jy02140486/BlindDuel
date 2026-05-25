@@ -44,17 +44,21 @@
 - 专用于探索态，逻辑为“跟随主角”。
 - 目标永远锁定主角 root，不依赖敌我双方距离。
 - 使用固定偏移 + 平滑跟随（位置插值），避免镜头抖动。
+- 探索/战斗共用统一的“全局基准俯角”（建议 10°~20°），保证 `z` 轴移动在屏幕上有可感知位移，并避免 mode 切换时场景透视关系跳变。
 
 ### DuelCameraRig（保留）
 - 继续专用于战斗态，保持现有“双角色居中 + 距离驱动缩放”逻辑。
 
-### 切换职责
-- `GameModeManager` 或 mode 生命周期负责启用当前 rig 并停用另一套 rig 更新。
-- 推荐保留单一 Babylon Camera 实例，两个 rig 只负责计算与写入相机变换（避免频繁创建/销毁相机对象）。
+### 切换职责（更新）
+- 推荐引入 `CameraManager` 统一接管 rig 注册、切换、blend 与屏幕特效。
+- `CameraManager` 持有单一 Babylon Camera 实例，rig 只负责计算与写入变换。
+- mode 通过 `CameraManager.switchRig(id)` 请求切换，不再直接 `rig.enable()`，避免 `activeCamera` 被抢回。
+- `SceneSequencer` 的 `startCameraBlend` step 向 `CameraManager` 发指令，不直接操作 camera。
 
 ## 最小类结构（建议）
 - `scripts/Systems/GameModeManager.js`
 - `scripts/Systems/SceneSequencer.js`
+- `scripts/Systems/CameraManager.js`（新增，统一 rig 管理 + 屏幕特效）
 - `scripts/Systems/Modes/BaseMode.js`
 - `scripts/Systems/Modes/ExploreMode.js`
 - `scripts/Systems/Modes/BattleMode.js`
@@ -133,13 +137,43 @@
 - [x] `ExploreCameraRig -> DuelCameraRig` 切换已纳入 `startCameraBlend` step，支持位置、高度、正交参数的平滑插值。
 - 仍不做复杂对话与任务分支。
 
-### Phase 3
+### Phase 3（CameraManager 收口）
+- 新增 `scripts/Systems/CameraManager.js`，统一管理 rig 注册、切换、blend、镜头特效入口。
+- `Scene` 持有并初始化 `CameraManager`，对外仅暴露管理器，不再让 mode/sequencer 直接持有并操作多个 rig。
+- `ExploreMode/BattleMode` 改为声明式调用：
+  - `cameraManager.switchRig("explore" | "duel")`
+  - `cameraManager.updateRig(dtMs, context)`（由当前 rig 执行 update）
+- `SceneSequencer.startCameraBlend` 改为委托 `cameraManager.startBlend(...)`，不再直接插值 `activeCamera`。
+- rig 责任收敛为“计算目标镜头参数”，不再负责抢占 `scene.activeCamera`。
+- 为后续镜头特效预留统一入口（如 `enqueueEffect("shake", config)`、`clearEffects()`），首版可先空实现。
+- 探索/战斗镜头基准参数定稿纳入本阶段：
+  - `ExploreCameraRig` 与 `DuelCameraRig` 统一全局基准俯角（建议初始值 12°，可配置）。
+  - mode 间允许差异化调整距离/高度/缩放参数，但不改变该基准俯角。
+- 探索态可行走范围首版纳入本阶段：
+  - 先实现 `walkArea(minX, maxX, minZ, maxZ)` 的边界 clamp。
+  - 暂不在本阶段引入“坡道/高度差/贴地法线”逻辑。
+  - `obstacles[]`（AABB 障碍）可在本阶段后半或 Phase 5 补齐。
+
+### Phase 4（Sequencer 收敛，依赖 Phase 3 完成）
+- 前置条件：`CameraManager` 已成为唯一镜头切换与 blend 入口。
+- 将 `SceneSequencer` 从“流程 + 相机 + 控制器锁定”的重职责，收敛为“纯流程编排器”。
+- 从 `SceneSequencer` 移除相机参数直接插值与 `activeCamera` 直接读写，改为调用 `cameraManager.startBlend(...)`。
+- 保留 step 编排模型，但补齐工程化能力：
+  - step 级 `timeoutMs` 与 `onTimeout`（避免 `waitUntil` 或移动步骤卡死）。
+  - sequence 级取消与失败回调（可观测、可恢复）。
+  - 预留可中断能力（为对话/UI/战斗事件抢占做准备）。
+- `waitUntil(fn)` 逐步替换为可数据化条件（如 `stateEquals`、`distanceBelow`），减少闭包耦合，提升复用与可配置性。
+
+### Phase 5
 - 探索内容扩展：NPC 对话气泡、buff 拾取、任务触发。
 
 ## 当前已知风险
 - [x] 探索/战斗两套 rig 的参数体系不同，切换瞬间可能出现镜头跳变；已通过 `SceneSequencer` 的 `startCameraBlend` step 实现位置、高度、正交参数的平滑插值过渡。
 - 当前玩家控制器默认会处理攻击指令；探索态需屏蔽或替换为探索控制器。
 - 战斗进入前若不重置 TimeControl/状态标签，可能带入异常状态。
+- `SceneSequencer` 当前职责偏重（流程编排 + 输入锁 + 镜头插值 + 模式切换），后续功能增多时维护成本会上升；计划在 `CameraManager` 稳定后进入 Phase 4 收敛。
+- 若模式间俯角不统一，`SceneVisualSystem` 在切换时可能出现透视与层次跳变；已决定在 Phase 3 采用探索/战斗统一基准俯角。
+- 坡道/上下坡移动暂不纳入当前迭代；在缺少地形约束与法线投影前实现真坡道风险高、返工成本大。
 
 ## 角色转向约定（先行记录）
 - 转向能力数据放在 `Character`：`facing`（`1 | -1`）与 `allowFacing`（默认 `false`）。
@@ -155,3 +189,19 @@
 - [x] 切换过程中无明显状态污染（输入、冻结状态、碰撞显示）。
 - [x] 探索态镜头能稳定跟随主角，战斗态镜头仍保持现有决斗取景效果。
 - [x] 相机 blend 支持正交/透视投影模式的平滑过渡，切换后无画面跳变。
+
+## 验收标准（CameraManager 阶段）
+- [ ] `ExploreMode/BattleMode` 不再直接调用 `rig.enable()/disable()` 或直接写 `scene.activeCamera`。
+- [ ] `SceneSequencer` 不再直接读写 `activeCamera.position/ortho*`，改为调用 `CameraManager` 提供的 blend 接口。
+- [ ] `CameraManager` 成为唯一镜头切换入口：rig 切换与 blend 行为在探索/战斗流程中表现与现状一致。
+- [ ] 保持透视/正交切换能力，且 `Explore -> Battle -> Explore` 往返无明显镜头跳变。
+- [ ] 为镜头特效保留统一 API（可空实现），不影响现有流程稳定性。
+- [ ] 探索/战斗共用统一基准俯角后，主角 `z` 向移动在屏幕上具备可见位移，且 mode 切换无透视跳变感。
+- [ ] 探索态至少具备 `walkArea` 边界限制，角色不会走出定义范围。
+
+## 验收标准（Sequencer 阶段）
+- [ ] `SceneSequencer` 仅负责流程推进，不再承担镜头插值细节。
+- [ ] `waitUntil` / `moveActorTo` 等阻塞步骤具备 `timeout` 保护，超时后可恢复或失败退出。
+- [ ] 支持 sequence 级取消与失败回调，失败原因可观测（日志或事件）。
+- [ ] 新增至少一类数据化条件 step，减少对闭包函数条件的依赖。
+- [ ] `Explore -> Battle` 主流程行为不回归（输入锁、角色对齐、状态切换仍稳定）。

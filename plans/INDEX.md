@@ -8,7 +8,7 @@
 
 | 计划 | 目标 | 备注 |
 |------|------|------|
-| [GAMEMODE_SCENE_SPLIT_PROPOSAL.md](GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | 推进 `Scene / GameMode` 拆分，落地 `ExploreMode` / `BattleMode` 双模式结构 | Phase 1 已完成，Phase 2 已细化到 `SceneSequencer` |
+| [GAMEMODE_SCENE_SPLIT_PROPOSAL.md](GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | 推进 `Scene / GameMode` 拆分，落地 `ExploreMode` / `BattleMode` 双模式结构 | Phase 1/2 已完成；Phase 3（CameraManager 收口）进行中 |
 | [GAMEMODE_OVERVIEW_DESIGN.md](GAMEMODE_OVERVIEW_DESIGN.md) | 汇总 `GameMode`、`CameraRig`、`SceneSequencer`、状态切换等概要设计 | 作为后续实现基准文档 |
 
 ---
@@ -58,4 +58,7 @@
 - **状态机准备**：`LongSwordMan` 已新增 `standing / walk / draw / sheath` 定义，当前默认起始状态仍是 `idle`。
 - **资源现状**：`longswordman` 新增动画与 `RootMotion` 已接入资源清单；碰撞盒数据已独立生成。
 - **已知问题**：战斗中"防御按晚后 longswordman 进 hit，rabble 打完后也进 hit"的异常已记录到 [BACKLOG.md](BACKLOG.md)。
-- **下一步**：Phase 3 探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
+- **下一步**：
+  - Phase 3：完成 `CameraManager` 收口收尾（统一基准俯角、探索 `walkArea` 可行走范围限制）。
+  - Phase 4：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
+  - Phase 5：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。

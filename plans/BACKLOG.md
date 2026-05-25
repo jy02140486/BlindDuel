@@ -34,6 +34,7 @@
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
 | `tickDiff` 外部配置化 | 将 `ContactResolver` 中 Just Guard/预判 guard 使用的 `tickDiff` 阈值（当前硬编码 `<= 7`）提取为外部可配置项（建议进 StateGraph 或 Combat 配置）。 | 中 | 需要同步默认值与回归测试，避免改变现有手感 |
+| **hitstop 时长外部配置化** | `ContactResolver` 中各场景的 hitstop 时长目前全部硬编码：parry（双方 8 帧）、block（双方 4 帧）、clash tie（双方 8 帧）、clash lose（弱方 6 帧 / 强方 4 帧）、命中（双方 8 帧）。应提取为外部配置（建议按场景/攻击类型/武器等级分表）。 | 中 | 需同步默认值与手感测试 |
 
 ## 探索系统
 
@@ -58,3 +59,9 @@
 | ✅ blend 后 activeCamera 被抢回 | `Scene._updateCameraBlend` 结束时调用 `exploreCameraRig.enable()` 导致相机被抢回。已将 blend 逻辑下沉到 `SceneSequencer`，移除 Scene 中的硬编码 blend，不再错误 enable explore rig。 | 高 | 已完成 |
 | 触发器 debug 体积不显示 | 按 C 键切换碰撞显示时，触发器的绿色半透明体积未出现。 | 中 | 待排查 `AABBTrigger.debugMesh` 的 `setEnabled` 是否生效，或 mesh 被遮挡 |
 | ✅ 硬编码流程需迁移到 SceneSequencer | 当前触发器后的自动移动、draw 动画、相机 blend、模式切换全部硬编码在 ExploreMode / Scene 中。已实现 `SceneSequencer`，流程改为 sequence 编排。 | 高 | 已完成 |
+
+## 相机管理重构（后续优化）
+
+| 事项 | 描述 | 优先级 | 备注 |
+|------|------|--------|------|
+| 完善 `CameraManager` 特效管线 | `CameraManager` 已接管 rig 切换与 blend 入口；后续补齐屏幕特效实现（shake/flash/letterbox）与参数调优。 | 中 | 与 `Phase 3` 收尾/后续 polish 同步推进 |
