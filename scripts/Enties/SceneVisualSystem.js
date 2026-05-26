@@ -386,7 +386,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     y: 5,
                     width: 16,
                     height: 10,
-                    alphaIndex: 2
+                    alphaIndex: 4
                 }/*,
                 {
                     id: "building_3",

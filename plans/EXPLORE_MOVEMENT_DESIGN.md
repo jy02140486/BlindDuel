@@ -1,0 +1,102 @@
+# 探索阶段移动与相机设计文档
+
+## 1. 设计决策
+
+### 1.1 坐标系约定
+- **x 轴**：水平左右方向
+- **y 轴**：垂直上下方向（画面深度/远近）
+- **z 轴**：固定为 0，不参与角色移动
+
+> 原因：SceneVisualSystem 使用 z 轴做层级排序（BG_FAR z=40, BG_MID z=30, STAGE z=10）。角色 z 保持 0 可避免与背景层冲突。
+
+### 1.2 俯角方案
+- **全局 base pitch 已放弃**
+- 原因：俯角影响 SceneVisualSystem 的垂直构图，且清版游戏通常使用水平相机
+- 相机在探索阶段保持水平看向目标点
+
+### 1.3 StageBoundary 职责
+- **仅用于战斗模式**
+- 限制角色在战斗场景中的 x 方向移动范围
+- 不涉及障碍物检测
+- 不限制 y/z 方向
+
+## 2. 探索阶段移动系统
+
+### 2.1 可行走区域（walkArea）
+```
+walkArea: {
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+}
+```
+
+- 角色在探索阶段的移动被限制在 walkArea 内
+- 超出边界时位置被 clamp 到边界内
+- 第一版不包含障碍物 AABB
+
+### 2.2 输入映射
+- 键盘/手柄的 x 输入 → 角色 x 方向移动
+- 键盘/手柄的 y 输入 → 角色 y 方向移动（映射到 world y）
+- z 方向无输入响应，保持 0
+
+### 2.3 移动速度
+- 探索阶段基础移动速度需要调快
+- 战斗阶段移动速度保持当前 tuning 不变
+
+## 3. 探索阶段相机
+
+### 3.1 相机行为
+- 水平相机（无俯角）
+- 跟随角色 x 和 y 位置
+- 保持 z 方向固定距离
+
+### 3.2 相机位置计算
+```
+camera.x = target.x
+camera.y = target.y + followHeight
+camera.z = target.z - followDistance
+```
+
+其中：
+- `followHeight`：相机高于目标的高度（旧逻辑，恢复）
+- `followDistance`：相机与目标的水平距离
+
+### 3.3 与 SceneVisualSystem 的关系
+- SceneVisualSystem 根据相机 x 位置做水平视差
+- 相机 y 变化不影响背景层位置（背景层 y 固定）
+- 角色在画面中上下移动，背景保持不动
+
+## 4. 后续扩展
+
+### 4.1 障碍物系统
+- 在 walkArea 内增加 AABB 障碍物
+- 角色移动时与障碍物做碰撞检测
+- 第一版可跳过
+
+### 4.2 战斗 -> 探索过渡
+- 保持现有序列设计
+- 相机 blend 从 duel rig 回到 explore rig
+- 角色状态从战斗恢复到探索
+
+## 5. 需要修改的文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `scripts/Systems/CameraManager.js` | 移除 basePitch 相关代码，恢复水平相机 |
+| `scripts/ExploreCameraRig.js` | 恢复旧 compute 逻辑（followHeight） |
+| `scripts/DuelCameraRig.js` | 恢复旧 compute 逻辑（min/maxCameraHeight） |
+| `scripts/Systems/Modes/ExploreMode.js` | 加 walkArea 限制，调快速度 |
+| `scripts/Enties/Character.js` | 确认 y 轴移动映射正确 |
+| `scripts/Scene.js` | 初始化 walkArea，配置 explore 速度 |
+
+## 6. 验收标准
+
+- [ ] 角色 z 始终为 0，不被相机/移动逻辑修改
+- [ ] 角色可在 walkArea 内自由移动（x 和 y 方向）
+- [ ] 角色不能走出 walkArea 边界
+- [ ] 探索移动速度明显快于当前
+- [ ] 相机水平跟随角色，无俯角
+- [ ] SceneVisualSystem 背景层不受角色 y 移动影响
+- [ ] 战斗 -> 探索过渡正常

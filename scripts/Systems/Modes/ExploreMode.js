@@ -21,6 +21,11 @@ export class ExploreMode extends BaseMode {
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
+
+        const { walkArea } = this.context;
+        if (walkArea && character?.root) {
+            walkArea.clampPosition(character.root.position);
+        }
     }
 
     #checkBattleTrigger(character, sceneSequencer) {

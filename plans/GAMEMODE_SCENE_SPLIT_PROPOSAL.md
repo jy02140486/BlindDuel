@@ -205,3 +205,9 @@
 - [ ] 支持 sequence 级取消与失败回调，失败原因可观测（日志或事件）。
 - [ ] 新增至少一类数据化条件 step，减少对闭包函数条件的依赖。
 - [ ] `Explore -> Battle` 主流程行为不回归（输入锁、角色对齐、状态切换仍稳定）。
+
+## Decision Update (2026-05-26)
+- The global base pitch approach is dropped.
+- Do not use pitch adjustment as a fix for vertical framing.
+- Reason: side effects on `SceneVisualSystem`.
+- Keep character world `z` fixed by gameplay rule.

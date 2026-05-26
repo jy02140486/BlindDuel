@@ -62,3 +62,10 @@
   - Phase 3：完成 `CameraManager` 收口收尾（统一基准俯角、探索 `walkArea` 可行走范围限制）。
   - Phase 4：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
   - Phase 5：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
+
+## Update Log (2026-05-26)
+- Archived: `archived/CAMERAMANAGER_PHASE3_PITCH_PSEUDOCODE_ARCHIVED_2026-05-26.md`.
+- Active TODO updated in `CAMERAMANAGER_PHASE3_FINISHING_TODO.md`:
+  - character world `z` should not be moved by camera/transition logic
+  - explore movement speed baseline should be increased
+- Decision update: global base pitch approach dropped because of `SceneVisualSystem` side effects.

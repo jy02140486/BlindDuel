@@ -304,3 +304,9 @@
 7. ⏳ `Phase 3` 收尾：统一探索/战斗基准俯角 + 探索态 `walkArea` 可行走范围限制。
 8. ⏳ `Phase 4`：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
 9. ⏳ `Phase 5`：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
+
+## Decision Update (2026-05-26)
+- The global base pitch approach is dropped.
+- Do not use pitch adjustment as a fix for vertical framing.
+- Reason: side effects on `SceneVisualSystem`.
+- Keep character world `z` fixed by gameplay rule.

@@ -1,3 +1,7 @@
+## Archive Note
+- Archived on 2026-05-26.
+- This handoff doc is considered completed for its original purpose (guiding Phase 3 implementation).
+- Remaining follow-up items were split into `plans/CAMERAMANAGER_PHASE3_FINISHING_TODO.md`.
 # CameraManager Phase 3 Remaining - Pseudocode Handoff
 
 ## Goal
@@ -254,3 +258,4 @@ if (effect.type === "shake") {
 6. Keep sequencer interface stable (`startCameraBlend`).
 7. Add minimal shake effect.
 8. Run manual regression on Explore/Battle transition.
+

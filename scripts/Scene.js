@@ -10,6 +10,7 @@ import { DuelCameraRig } from "./DuelCameraRig.js";
 import { ExploreCameraRig } from "./ExploreCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 import { AABBTrigger } from "./Enties/AABBTrigger.js";
+import { WalkArea } from "./Enties/WalkArea.js";
 import { StageBoundary } from "./Systems/StageBoundary.js";
 import { PushboxResolver } from "./Systems/PushboxResolver.js";
 import { GameModeManager } from "./Systems/GameModeManager.js";
@@ -86,6 +87,7 @@ export class Scene {
         this.rabbleController = new DummyController(this.rabbleStick);
         this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
+        this.walkArea = new WalkArea(this.scene, { minX: -24, maxX: -7, minY: -1, maxY: 0.7, visible: true });
         this.pushboxResolver = new PushboxResolver();
         this.cameraRig = new DuelCameraRig({
             zoomMinDistance: 3.2,
@@ -115,6 +117,7 @@ export class Scene {
             rabbleStick: this.rabbleStick,
             pushboxResolver: this.pushboxResolver,
             stageBoundary: this.stageBoundary,
+            walkArea: this.walkArea,
             combatSystem: this.combatSystem,
             cameraRig: this.cameraRig,
             exploreCameraRig: this.exploreCameraRig,
@@ -148,6 +151,9 @@ export class Scene {
                 this.character.setCollisionVisible(nextVisible);
                 this.rabbleStick.setCollisionVisible(nextVisible);
                 this.stageBoundary.setVisible(nextVisible);
+                if (this.walkArea) {
+                    this.walkArea.setVisible(nextVisible);
+                }
                 if (this.battleTrigger) {
                     this.battleTrigger.setDebugVisible(nextVisible);
                 }

@@ -368,7 +368,7 @@ export class Character {
         }
 
         this.root.position.x += nx * this.baseWalkSpeed * dtSec;
-        this.root.position.z += ny * this.baseWalkSpeed * dtSec;
+        this.root.position.y += ny * this.baseWalkSpeed * dtSec;
         this.currentSpd = Math.hypot(nx * this.baseWalkSpeed, ny * this.baseWalkSpeed);
     }
 
