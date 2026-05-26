@@ -2,7 +2,7 @@ export class ExploreCameraRig {
     constructor(config = {}) {
         this.config = {
             followDistance: 15,
-            followHeight: 4,
+            followHeight: 3.2,
             smoothing: 0.15,
             orthoWidth: 20,
             ...config

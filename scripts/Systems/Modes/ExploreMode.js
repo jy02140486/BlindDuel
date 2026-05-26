@@ -44,7 +44,7 @@ export class ExploreMode extends BaseMode {
             id: "enter_battle",
             steps: [
                 { type: "lockInput", actorId: "hero" },
-                { type: "moveActorTo", actorId: "hero", x: -3.2, z: 0, tolerance: 0.1 },
+                { type: "moveActorTo", actorId: "hero", x: -3.2, y: 0, tolerance: 0.1 },
                 { type: "sendCommand", actorId: "hero", command: "draw" },
                 { type: "waitUntil", condition: (ctx) => ctx.character.currentStateName === "idle" },
                 { type: "startCameraBlend", to: "duel", durationMs: 3500 },

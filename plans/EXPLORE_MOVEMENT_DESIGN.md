@@ -22,24 +22,30 @@
 
 ## 2. 探索阶段移动系统
 
-### 2.1 可行走区域（walkArea）
-```
-walkArea: {
-    minX: number,
-    maxX: number,
-    minY: number,
-    maxY: number
+### 2.1 可行走区域（WalkArea Entity）
+```js
+// scripts/Enties/WalkArea.js
+class WalkArea {
+    constructor(scene, options)
+    clampPosition(position)  // 原地修改位置到边界内
+    containsPoint(x, y)
+    setVisible(value)        // 切换调试可视化
+    dispose()
 }
 ```
 
 - 角色在探索阶段的移动被限制在 walkArea 内
 - 超出边界时位置被 clamp 到边界内
 - 第一版不包含障碍物 AABB
+- 调试可视化：半透明绿色矩形平面，`C` 键切换显示
+- `renderingGroupId = 3` 确保在所有背景层之上渲染
 
 ### 2.2 输入映射
 - 键盘/手柄的 x 输入 → 角色 x 方向移动
-- 键盘/手柄的 y 输入 → 角色 y 方向移动（映射到 world y）
+- 键盘/手柄的 y 输入 → 角色 **y** 方向移动（映射到 world y）
 - z 方向无输入响应，保持 0
+
+> 注意：`SceneSequencer._updateMoveActorTo` 已同步改为操作 y 坐标（原先是 z）
 
 ### 2.3 移动速度
 - 探索阶段基础移动速度需要调快
@@ -84,19 +90,23 @@ camera.z = target.z - followDistance
 
 | 文件 | 修改内容 |
 |------|----------|
-| `scripts/Systems/CameraManager.js` | 移除 basePitch 相关代码，恢复水平相机 |
-| `scripts/ExploreCameraRig.js` | 恢复旧 compute 逻辑（followHeight） |
-| `scripts/DuelCameraRig.js` | 恢复旧 compute 逻辑（min/maxCameraHeight） |
-| `scripts/Systems/Modes/ExploreMode.js` | 加 walkArea 限制，调快速度 |
-| `scripts/Enties/Character.js` | 确认 y 轴移动映射正确 |
-| `scripts/Scene.js` | 初始化 walkArea，配置 explore 速度 |
+| 文件 | 修改内容 | 状态 |
+|------|----------|------|
+| `scripts/Enties/WalkArea.js` | 新建 Entity，含边界限制+调试可视化 | ✅ |
+| `scripts/Systems/CameraManager.js` | 移除 basePitch 相关代码，恢复水平相机 | ✅ |
+| `scripts/ExploreCameraRig.js` | 恢复旧 compute 逻辑（followHeight） | ✅ |
+| `scripts/DuelCameraRig.js` | 恢复旧 compute 逻辑（min/maxCameraHeight） | ✅ |
+| `scripts/Systems/Modes/ExploreMode.js` | 加 walkArea 限制，调快速度 | ✅ |
+| `scripts/Systems/SceneSequencer.js` | `moveActorTo` 改操作 y 坐标 | ✅ |
+| `scripts/Enties/Character.js` | y 输入映射到 y 坐标 | ✅ |
+| `scripts/Scene.js` | 初始化 walkArea，接入 C 键切换 | ✅ |
 
 ## 6. 验收标准
 
-- [ ] 角色 z 始终为 0，不被相机/移动逻辑修改
-- [ ] 角色可在 walkArea 内自由移动（x 和 y 方向）
-- [ ] 角色不能走出 walkArea 边界
+- [x] 角色 z 始终为 0，不被相机/移动逻辑修改
+- [x] 角色可在 walkArea 内自由移动（x 和 y 方向）
+- [x] 角色不能走出 walkArea 边界
 - [ ] 探索移动速度明显快于当前
-- [ ] 相机水平跟随角色，无俯角
-- [ ] SceneVisualSystem 背景层不受角色 y 移动影响
+- [x] 相机水平跟随角色，无俯角
+- [x] SceneVisualSystem 背景层不受角色 y 移动影响
 - [ ] 战斗 -> 探索过渡正常

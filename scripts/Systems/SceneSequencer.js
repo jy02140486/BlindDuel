@@ -189,14 +189,14 @@ export class SceneSequencer {
 
         const speed = (step.speed || 4.0) * dtMs / 1000;
         const targetX = step.x ?? actor.root.position.x;
-        const targetZ = step.z ?? actor.root.position.z;
+        const targetY = step.y ?? actor.root.position.y;
         const dx = targetX - actor.root.position.x;
-        const dz = targetZ - actor.root.position.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
+        const dy = targetY - actor.root.position.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist <= speed || dist <= (step.tolerance || 0.1)) {
             actor.root.position.x = targetX;
-            actor.root.position.z = targetZ;
+            actor.root.position.y = targetY;
             if (typeof actor.setMoveIntent === "function") {
                 actor.setMoveIntent({ x: 0, y: 0 });
             }
@@ -204,11 +204,11 @@ export class SceneSequencer {
         }
 
         const moveX = (dx / dist) * speed;
-        const moveZ = (dz / dist) * speed;
+        const moveY = (dy / dist) * speed;
         actor.root.position.x += moveX;
-        actor.root.position.z += moveZ;
+        actor.root.position.y += moveY;
         if (typeof actor.setMoveIntent === "function") {
-            actor.setMoveIntent({ x: dx / dist, y: dz / dist });
+            actor.setMoveIntent({ x: dx / dist, y: dy / dist });
         }
         return false;
     }
