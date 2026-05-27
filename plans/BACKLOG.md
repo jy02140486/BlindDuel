@@ -43,7 +43,7 @@
 | 可拾取小物件增益（食物/饮料） | 在探索模式中加入可拾取物件（如食物、饮料）；拾取后提供临时增益，例如减少招式 CD、提升移动速度。 | 中 | 需定义增益类型、持续时间、叠加规则与 UI 提示 |
 | 投掷物与暗器玩法（含 Projectile） | 在探索模式可获得投掷物/暗器资源，并在战斗中释放；同时补齐 projectile 基础能力（生成、飞行、命中、销毁、与现有 Combat 规则衔接）。 | 中 | 建议先做单一 projectile 类型验证战斗闭环 |
 | NPC 物物交换玩法（以物换物） | 探索模式中允许用小物件与 NPC 交易，换取 buff、投掷物或其他战斗资源。 | 中 | 需定义交易条件、库存/消耗规则、NPC 交互反馈与失败提示 |
-| 角色基类解耦（面向无战斗 NPC） | 将当前“以战斗为中心”的角色结构拆为通用 Actor 能力（移动/朝向/动画）+ 可选战斗能力挂载；支持无战斗 NPC 仅具备移动与简单动画。 | 中 | 做 NPC 前评估是否先重构 `Character` 语义与能力边界 |
+| ✅ 角色基类解耦（面向无战斗 NPC） | 将当前"以战斗为中心"的角色结构拆为 `CharacterBase` / `CombatCharacter` / `NpcCharacter`，支持无战斗 NPC 仅具备移动与简单动画。 | 高 | Phase 1-6 已完成（2026-05-27），Interaction 能力预留（Phase 7）与直连逻辑清理（Phase 8）待推进 |
 
 ## ս��������٣�������
 
@@ -59,6 +59,14 @@
 | ✅ blend 后 activeCamera 被抢回 | `Scene._updateCameraBlend` 结束时调用 `exploreCameraRig.enable()` 导致相机被抢回。已将 blend 逻辑下沉到 `SceneSequencer`，移除 Scene 中的硬编码 blend，不再错误 enable explore rig。 | 高 | 已完成 |
 | 触发器 debug 体积不显示 | 按 C 键切换碰撞显示时，触发器的绿色半透明体积未出现。 | 中 | 待排查 `AABBTrigger.debugMesh` 的 `setEnabled` 是否生效，或 mesh 被遮挡 |
 | ✅ 硬编码流程需迁移到 SceneSequencer | 当前触发器后的自动移动、draw 动画、相机 blend、模式切换全部硬编码在 ExploreMode / Scene 中。已实现 `SceneSequencer`，流程改为 sequence 编排。 | 高 | 已完成 |
+
+## GameMode 未完成事项（2026-05-27）
+
+| 事项 | 描述 | 优先级 | 备注 |
+|------|------|--------|------|
+| CameraManager Phase 3 收口 | 统一基准俯角、探索 `walkArea` 可行走范围限制。 | 高 | 当前进行中，进度见 `CAMERAMANAGER_PHASE3_FINISHING_TODO.md` |
+| SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
+| Phase 5：探索内容扩展 | NPC 对话气泡、buff 拾取、任务触发。 | 中 | 由 Interaction 能力预留后推进 |
 
 ## 相机管理重构（后续优化）
 

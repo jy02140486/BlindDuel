@@ -1,18 +1,14 @@
 # 计划索引（Plan Index）
 
 > 本文件跟踪当前进行中的计划、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
+>
+> **当前无进行中的专项计划。剩余事项全部进入 `BACKLOG.md`。**
 
 ---
 
 ## 进行中
 
-| 计划 | 目标 | 备注 |
-|------|------|------|
-| [GAMEMODE_SCENE_SPLIT_PROPOSAL.md](GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | 推进 `Scene / GameMode` 拆分，落地 `ExploreMode` / `BattleMode` 双模式结构 | Phase 1/2 已完成；Phase 3（CameraManager 收口）进行中 |
-| [GAMEMODE_OVERVIEW_DESIGN.md](GAMEMODE_OVERVIEW_DESIGN.md) | 汇总 `GameMode`、`CameraRig`、`SceneSequencer`、状态切换等概要设计 | 作为后续实现基准文档 |
-| [CHARACTER_NPC_DECOUPLE_TASKLIST.md](CHARACTER_NPC_DECOUPLE_TASKLIST.md) | Character 解耦为 `CharacterBase` / `CombatCharacter` / `NpcCharacter`，NPC 轻量化 | Phase 1-3、5-6 已完成；NPC 最小验证通过 |
-| [NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md](NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md) | NPC 控制器最小设计（idle + greeting 两态 + 玩家接近触发） | 已实现，纳入 CHARACTER_NPC_DECOUPLE Phase 6 |
-| [NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md](NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md) | NPC RootMotion Occupancy 导出脚本设计 | 脚本已实现：`scripts/tools/extract_rootmotion_occupancy.ps1` |
+*（无）*
 
 ---
 
@@ -20,17 +16,20 @@
 
 | 文档 | 目标 | 备注 |
 |------|------|------|
-| [BACKLOG.md](BACKLOG.md) | 记录不阻塞主线的战斗问题、资源工具优化与探索扩展项 | 包含最新的“防御按晚时双受击异常”记录 |
+| [BACKLOG.md](BACKLOG.md) | 所有未完成事项的主 tracking 入口 | 涵盖战斗、探索、GameMode、相机、资源工具链等 |
 
 ---
 
-## 最近归档
+## 最近归档（2026-05-27）
 
-| 计划 | 目标 | 归档日期 |
+| 计划 | 目标 | 完成内容 |
 |------|------|----------|
-| [archived/TIMECONTROL_REFACTOR_GUIDE.md](archived/TIMECONTROL_REFACTOR_GUIDE.md) | TimeControl 三步重构 + 生命周期守卫 + Combat 规则收敛 | 2026-05-18 |
-| [archived/FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md) | 固定帧 60fps、输入缓冲、Just Guard、Hitstop、ImpactContext | 2026-05-05 |
-| [archived/COMBAT_RULES_REFINEMENT_PLAN.md](archived/COMBAT_RULES_REFINEMENT_PLAN.md) | thrust 帧级判定、dodge 无敌、格挡/重击规则修正 | 2026-05-04 |
+| [archived/CHARACTER_NPC_DECOUPLE_OVERVIEW.md](archived/CHARACTER_NPC_DECOUPLE_OVERVIEW.md) | Character 解耦概要设计 | Phase A-D 设计框架，Phase A-C 实现完毕 |
+| [archived/CHARACTER_NPC_DECOUPLE_TASKLIST.md](archived/CHARACTER_NPC_DECOUPLE_TASKLIST.md) | Character 解耦任务清单 | Phase 1-6 完成：CharacterBase/CombatCharacter/NpcCharacter 拆分，NpcFrameComponent + NpcController，occupancy 锚点修复 |
+| [archived/NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md](archived/NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md) | NPC idle/greeting 控制器设计 | 已实现并接入 Scene/ExploreMode |
+| [archived/NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md](archived/NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md) | NPC RootMotion Occupancy 脚本设计 | `scripts/tools/extract_rootmotion_occupancy.ps1` 已实现并运行 |
+| [archived/GAMEMODE_SCENE_SPLIT_PROPOSAL.md](archived/GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | Scene/GameMode 拆分提案 | Phase 1-2 完成；Phase 3-5 入 BACKLOG |
+| [archived/GAMEMODE_OVERVIEW_DESIGN.md](archived/GAMEMODE_OVERVIEW_DESIGN.md) | GameMode、CameraRig、SceneSequencer 概要设计 | 设计已落地为代码，作为基准文档归档 |
 
 ---
 
@@ -38,44 +37,24 @@
 
 | 计划 | 目标 | 归档日期 |
 |------|------|----------|
+| [archived/TIMECONTROL_REFACTOR_GUIDE.md](archived/TIMECONTROL_REFACTOR_GUIDE.md) | TimeControl 三步重构 + 生命周期守卫 + Combat 规则收敛 | 2026-05-18 |
+| [archived/FIXED_UPDATE_PLAN.md](archived/FIXED_UPDATE_PLAN.md) | 固定帧 60fps、输入缓冲、Just Guard、Hitstop、ImpactContext | 2026-05-05 |
+| [archived/COMBAT_RULES_REFINEMENT_PLAN.md](archived/COMBAT_RULES_REFINEMENT_PLAN.md) | thrust 帧级判定、dodge 无敌、格挡/重击规则修正 | 2026-05-04 |
 | `plans/archived/` 目录 | 更早阶段的角色碰撞、移动、场景视觉、AI 等历史方案 | 见各文件头部 |
 
 ---
 
 ## 快速参考：当前开发状态
 
-- **Phase 1 已完成**：`GameModeManager + BattleMode + ExploreMode` 已接入，`Scene` 通过 mode 层驱动战斗/探索链路。
-- **Phase 2 已完成**：
-  - `ExploreCameraRig` 已实现（跟随主角、透视/正交切换、高度 4、0° 仰角）。
-  - `AABBTrigger` 已创建，触发器逻辑从硬编码改为类封装（位置 `-6,0,0`，大小 `4x8x4`）。
-  - `PlayerController.enabled` 已添加，支持输入禁用/恢复。
-  - 新动画（standing/walk/draw/sheath）的独立碰撞盒数据已生成，解决精灵切换抖动问题。
-  - Babylon.js 已从 CDN 改为本地部署。
-  - 触发器流程已通：进入触发器 → 自动移动到 `x=-3.2` → draw 动画 → 相机 blend → 切 battle 模式。
-  - `SceneSequencer` 已实现：通用编排 system，支持 `wait`、`waitUntil`、`moveActorTo`、`sendCommand`、`switchCamera`、`switchMode`、`lockInput`、`unlockInput`、`startCameraBlend`、`callback` 等 step。
-  - 相机 blend 支持位置、高度、正交参数的平滑插值，切换后无画面跳变。
-- **当前问题**：
-  - [x] 相机 blend 与 draw 动画时序不同步 — 已修复。
-  - [x] blend 结束后 `exploreCameraRig.enable()` 抢回 activeCamera — 已修复。
-  - [ ] 触发器 debug 体积按 C 键不显示（待排查）。
-- **状态机准备**：`LongSwordMan` 已新增 `standing / walk / draw / sheath` 定义，当前默认起始状态仍是 `idle`。
-- **资源现状**：`longswordman` 新增动画与 `RootMotion` 已接入资源清单；碰撞盒数据已独立生成。
-- **已知问题**：战斗中"防御按晚后 longswordman 进 hit，rabble 打完后也进 hit"的异常已记录到 [BACKLOG.md](BACKLOG.md)。
-- **下一步**：
-  - Phase 3：完成 `CameraManager` 收口收尾（统一基准俯角、探索 `walkArea` 可行走范围限制）。
-  - Phase 4：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
-  - Phase 5：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
+- **GameMode 拆分**：`GameModeManager + BattleMode + ExploreMode` 已接入，`Scene` 通过 mode 层驱动。
+- **SceneSequencer**：已实现基础 step（wait / moveActorTo / switchMode / startCameraBlend 等）。
+- **Explore-Battle 流程**：触发器进入 → SceneSequencer 编排 → draw 动画 → 相机 blend → 切模式，链路已通。
+- **Character 解耦**：`CharacterBase` / `CombatCharacter` / `NpcCharacter` 拆分完成，NPC 最小验证通过。
+- **NPC 系统**：`NpcFrameComponent`（单帧动画）+ `NpcController`（idle/greeting）+ occupancy 锚点，已接入 ExploreMode。
+- **NPC 工具链**：`extract_rootmotion_occupancy.ps1` 可独立生成 occupancy 数据。
+- **当前**：无进行中的专项计划，剩余事项见 [BACKLOG.md](BACKLOG.md)。
 
 ## Update Log (2026-05-27)
-- [CHARACTER_NPC_DECOUPLE_TASKLIST.md](CHARACTER_NPC_DECOUPLE_TASKLIST.md) Phase 1-3/5-6 完成：
-  - `Character` → `CharacterBase` + `CombatCharacter` + `NpcCharacter` 拆分完成
-  - `NpcFrameComponent`（单帧状态动画）、`NpcController`（idle/greeting）就位
-  - NPC 已接入 `Scene` / `ExploreMode`，最小验证通过
-  - 已知问题：NPC root 锚点默认为帧中心，与 hero 锚点约定不一致
-
-## Update Log (2026-05-26)
-- Archived: `archived/CAMERAMANAGER_PHASE3_PITCH_PSEUDOCODE_ARCHIVED_2026-05-26.md`.
-- Active TODO updated in `CAMERAMANAGER_PHASE3_FINISHING_TODO.md`:
-  - character world `z` should not be moved by camera/transition logic
-  - explore movement speed baseline should be increased
-- Decision update: global base pitch approach dropped because of `SceneVisualSystem` side effects.
+- 6 个计划文档归档：CHARACTER_NPC_DECOUPLE x2、NPC_CONTROLLER、NPC_ROOTMOTION_OCCUPANCY、GAMEMODE x2
+- BACKLOG.md 补充 GameMode 未完成事项（CameraManager Phase 3、SceneSequencer 收敛、Phase 5 内容扩展）
+- 剩余 Phase 全部移入 BACKLOG，INDEX"进行中"清空
