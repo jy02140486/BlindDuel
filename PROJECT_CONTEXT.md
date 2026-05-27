@@ -21,15 +21,20 @@ py -m http.server 9000 --bind 127.0.0.1
 ## 3. 当前目录与关键文件
 - 演示入口：`babylon_demo.html`
 - 角色演示主逻辑：`character_demo.js`
-- 角色类：`scripts/Enties/Character.js`
+- 基础实体类：`scripts/Enties/CharacterBase.js`
+- 战斗角色类：`scripts/Enties/CombatCharacter.js`
+- NPC 实体类：`scripts/Enties/NpcCharacter.js`
 - 动画组件：`scripts/Components/FrameAnimationComponent.js`
+- NPC 帧动画组件：`scripts/Components/NpcFrameComponent.js`
 - 碰撞组件：`scripts/Components/CollisionComponent.js`
 - 时间控制组件：`scripts/Components/TimeControlComponent.js`
 - 状态图定义：`Data/StateGraphDef/LongSwordMan.json`
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`
+- NPC 控制器：`scripts/Systems/NpcController.js`
 - 时间控制系统：`scripts/Systems/TimeControlSystem.js`
+- 角色工厂：`scripts/CharacterFactory.js`
 - 计划文档：`plans/` 目录（当前进行中的计划）
 - 归档文档：`plans/archived/` 目录（已完成计划）
 - 角色/碰撞实现方案说明：`CHARACTER_COLLISION_PLAN.md`（已归档）
@@ -67,6 +72,7 @@ py -m http.server 9000 --bind 127.0.0.1
    - `frames[].anchors.root`：root 锚点
 7. 当前 `pushbox` 概念仍保留，但本轮尚未新增其扫描颜色与运行时逻辑。
 8. 当前 `weaponbox` 采用 `type = weaponbox` + `subtype = strong_blade / weak_blade`，不新增独立顶层 type。
+9. NPC 使用独立的轻量碰撞数据格式（`rootMotionOccupancyData`），由 `scripts/tools/extract_rootmotion_occupancy.ps1` 生成，仅含每帧 `anchors.root` + 固定尺寸 `occupancy.aabb`，不依赖 `.collider.json`。
 
 ## 6. 当前已知限制与注意点
 1. LibreSprite 1.1-dev 不便直接写文本标签，当前主要走“颜色 + 几何扫描 + 外置 JSON”方案。
@@ -82,16 +88,13 @@ py -m http.server 9000 --bind 127.0.0.1
 11. `ImpactContext` 已增加生命周期守卫（`expectedStateAtResolve` + `stateEntrySerialAtCreate`），用于避免过期 `nextState` 在 `impact` 结束时误跳转。
 12. `ContactResolver` 当前采用“同一攻击实例对同一目标只取首次结果”的规则：若该 `attackInstanceId|targetId` 已产生 `hit`，后续 guard/parry 不再覆盖该结果。
 
-## 6.1 本轮状态（TimeControl 重构）
-1. 已完成步骤 1：新增 `TimeControlComponent`、`TimeControlSystem`，并迁移 hitstop/impact/blockstun/hitstun 的数据与结算。
-2. 已完成步骤 2：统一 `Character.fixedUpdate` 通过 `TimeControlSystem.tick()` 提供的 `effectiveDeltaMs` 与帧控制结果推进。
-3. 已完成步骤 3：`CombatSystem` 不再直读 `impactContext`，仅通过接口请求时间控制。
-4. 已完成修复：`guard -> hit -> clash` 的“过期 impact 跳转”已由生命周期守卫拦截（会记录 `skip stale impact transition`）。
-5. 当前新增排查日志（可按需关闭）：
-   - `SequenceStart`（测试序列循环起点）
-   - `CombatEffect`（战斗效果下发）
-   - `CharTrace`（角色时序快照）
-   - `ResolverEvent`（接触解析关键决策）
+## 6.1 本轮状态（Character 解耦 + NPC 轻量化）
+1. 已完成 `Character` → `CharacterBase` + `CombatCharacter` + `NpcCharacter` 拆分。
+2. 已完成 `CombatSystem` 按 `capabilities.combat` 过滤，NPC 不进入战斗更新。
+3. 已完成 `CharacterFactory` 三条装配路径：`createHeroCharacter` / `createRabbleStickCharacter` / `createNpcCharacter`。
+4. 已完成最小 NPC 验证：`NpcFrameComponent`（单帧状态动画）+ `NpcController`（idle/greeting 状态切换），已接入 `Scene` / `ExploreMode`。
+5. 已知问题：NPC root 锚点默认使用帧中心，与 hero 锚点（collider 定义 near-bottom）不在同一约定，Y-sort 通过 `getVisualBottomY()` 统一计算。
+6. NPC 碰撞数据采用独立脚本 `scripts/tools/extract_rootmotion_occupancy.ps1`，输出轻量 `occupancy.aabb`，不依赖战斗 `.collider.json`。
 
 
 
@@ -100,48 +103,52 @@ py -m http.server 9000 --bind 127.0.0.1
 GemeniPrototype-BlindBattle/
 ├── Art/                          # 动画资源
 │   └── Sprite/                   # 精灵图集
-│       ├── longswordman_idle.json
-│       ├── longswordman_idle.png
-│       ├── longswordman_move.json
-│       ├── longswordman_move.png
-│       ├── longswordman_quart.json
-│       ├── longswordman_quart.png
-│       ├── longswordman_thrust.json
-│       └── longswordman_thrust.png
+│       ├── longswordman_*.json
+│       ├── longswordman_*.png
+│       ├── rabblestick_*.json
+│       └── rabblestick_*.png
 ├── Data/                         # 数据资源
-│   ├── CollisionMask/            # 碰撞遮罩
+│   ├── CollisionMask/            # 碰撞遮罩（战斗用）
 │   │   ├── longswordman_*.collider.json
 │   │   ├── longswordman_*.json
 │   │   └── longswordman_*.png
 │   ├── RootMotion/               # 根运动数据
-│   │   └── longswordman_*.json
+│   │   ├── longswordman_*.json
+│   │   └── rabblestick_*.json
 │   └── StateGraphDef/            # 状态图定义
 │       ├── LongSwordMan.json
 │       └── RabbleStick.json
 ├── scripts/                      # 脚本代码
 │   ├── Components/               # 组件类
 │   │   ├── CollisionComponent.js
-│   │   └── FrameAnimationComponent.js
+│   │   ├── FrameAnimationComponent.js
+│   │   ├── NpcFrameComponent.js
 │   │   └── TimeControlComponent.js
 │   ├── Enties/                   # 实体类
-│   │   └── Character.js
+│   │   ├── CharacterBase.js
+│   │   ├── CombatCharacter.js
+│   │   └── NpcCharacter.js
 │   ├── Systems/                  # 系统类
 │   │   ├── CombatSystem.js
 │   │   ├── ContactResolver.js
 │   │   ├── InputSystem.js
+│   │   ├── NpcController.js
 │   │   ├── PlayerController.js
 │   │   ├── TestController.js
 │   │   └── TimeControlSystem.js
+│   ├── CharacterFactory.js
 │   └── tools/                    # 工具脚本
-│       └── extract_collision_boxes.ps1
+│       ├── extract_collision_boxes.ps1
+│       └── extract_rootmotion_occupancy.ps1
 ├── plans/                        # 计划文档（当前进行中）
-│   ├── COMBAT_RULES_REFINEMENT_PLAN.md
+│   ├── INDEX.md
+│   ├── CHARACTER_NPC_DECOUPLE_OVERVIEW.md
+│   ├── CHARACTER_NPC_DECOUPLE_TASKLIST.md
+│   ├── NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md
+│   ├── NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md
+│   ├── GAMEMODE_SCENE_SPLIT_PROPOSAL.md
+│   ├── GAMEMODE_OVERVIEW_DESIGN.md
 │   └── archived/                 # 归档计划（已完成）
-│       ├── CHARACTER_COLLISION_PLAN.md
-│       ├── MOVEMENT_IMPLEMENTATION_PLAN.md
-│       ├── ODINLIKE_2D3D_PARALLAX_SCENE_VISUAL_PLAN.md
-│       ├── PROJECT_CONTEXT.md
-│       └── QUART_IMPLEMENTATION_PLAN.md
 ├── babylon_demo.html             # Babylon演示入口
 ├── character_demo.js             # 角色演示逻辑
 ├── index.html                    # 主入口

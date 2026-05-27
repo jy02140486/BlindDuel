@@ -19,19 +19,19 @@
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "G:\\SpriteOutput\\rabble_stick_idle.png",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\rabble_stick_idle.png",
   "format": "RGBA8888",
   "size": { "w": 256, "h": 128 },
   "scale": "1",
   "frameTags": [
   ],
   "layers": [
-   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
-   { "name": "Collision", "opacity": 255, "blendMode": "normal" },
-   { "name": "mainvisual", "opacity": 255, "blendMode": "normal" },
+   { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
+   { "name": "Collisoin", "opacity": 255, "blendMode": "normal" },
    { "name": "lowerbody", "opacity": 255, "blendMode": "normal" },
    { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
    { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "mainvisual", "opacity": 255, "blendMode": "normal" },
    { "name": "leftarm", "opacity": 255, "blendMode": "normal" }
   ]
  }

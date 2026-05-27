@@ -1,0 +1,81 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/NPCs/traveller.json",
+                   "rootAtlasPng":  "Data/RootMotion/NPCs/traveller.png",
+                   "rootColor":  "#7082C1",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  24,
+                   "generatedAtUtc":  "2026-05-27T14:05:20.2841183Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "traveller (RootMotion) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  64,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  25,
+                                                    "cy":  117
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  25,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "traveller (RootMotion) 1.ase",
+                       "frameRect":  {
+                                         "x":  64,
+                                         "y":  0,
+                                         "w":  64,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  25,
+                                                    "cy":  117
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  25,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "traveller (RootMotion) 2.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  64,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  25,
+                                                    "cy":  117
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  25,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   }
+               ]
+}

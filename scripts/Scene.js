@@ -2,10 +2,11 @@ import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
 import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
+import { NpcController } from "./Systems/NpcController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
-import { createHeroCharacter, createRabbleStickCharacter } from "./CharacterFactory.js";
+import { createHeroCharacter, createRabbleStickCharacter, createNpcCharacter } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
 import { ExploreCameraRig } from "./ExploreCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
@@ -28,6 +29,8 @@ export class Scene {
         this.scene = null;
         this.character = null;
         this.rabbleStick = null;
+        this.npc = null;
+        this.npcController = null;
         this.inputSystem = null;
         this.playerController = null;
         this.rabbleController = null;
@@ -66,7 +69,7 @@ export class Scene {
 
         this.character = createHeroCharacter(this.scene, assets);
         this.character.root.position.y = 0;
-        this.character.root.position.x = -16;
+        this.character.root.position.x = -12;
         this.character.debugTrace = false;
 
         // 战斗触发器（左边界）
@@ -82,9 +85,15 @@ export class Scene {
         this.rabbleStick.root.position.x = 3.2;
         this.rabbleStick.debugTrace = false;
 
+        this.npc = createNpcCharacter(this.scene, assets);
+        this.npc.root.position.y = -1;
+        this.npc.root.position.x = -13;
+
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
         this.rabbleController = new DummyController(this.rabbleStick);
+        this.npcController = new NpcController();
+        this.npcController.setupDebugVisual(this.scene, this.npc.root);
         this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.walkArea = new WalkArea(this.scene, { minX: -24, maxX: -7, minY: -1, maxY: 0.7, visible: true });
@@ -115,6 +124,8 @@ export class Scene {
             rabbleController: this.rabbleController,
             character: this.character,
             rabbleStick: this.rabbleStick,
+            npc: this.npc,
+            npcController: this.npcController,
             pushboxResolver: this.pushboxResolver,
             stageBoundary: this.stageBoundary,
             walkArea: this.walkArea,
@@ -157,6 +168,9 @@ export class Scene {
                 if (this.battleTrigger) {
                     this.battleTrigger.setDebugVisible(nextVisible);
                 }
+                if (this.npcController) {
+                    this.npcController.setDebugVisible(nextVisible);
+                }
             }
         };
         window.addEventListener("keydown", this._onKeyDown);
@@ -191,6 +205,11 @@ export class Scene {
         this.sceneSequencer.updateRender(dtMs);
         this.cameraManager.update(dtMs, this.sharedContext);
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
+
+        // Y-sort: y 小的在前（离玩家近），y 大的在后（远处）
+        if (this.character) this.character.spritePlane.alphaIndex = 100 - this.character.root.position.y;
+        if (this.rabbleStick) this.rabbleStick.spritePlane.alphaIndex = 100 - this.rabbleStick.root.position.y;
+        if (this.npc) this.npc.spritePlane.alphaIndex = 100 - this.npc.root.position.y;
     }
 
     render() {

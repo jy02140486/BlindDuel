@@ -28,6 +28,9 @@ export const ASSET_MANIFEST = {
             thrust: "./Art/Sprite/rabble_stick/rabble_stick_thrust.json",
             hit: "./Art/Sprite/rabble_stick/rabble_stick_hit.json",
             dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json"
+        },
+        npc: {
+            traveller: "./Art/Sprite/NPCs/traveller.json"
         }
     },
     colliders: {
@@ -51,6 +54,16 @@ export const ASSET_MANIFEST = {
             swing: "./Data/CollisionMask/rabble_stick/rabble_stick_swing.collider.json",
             thrust: "./Data/CollisionMask/rabble_stick/rabble_stick_thrust.collider.json",
             dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json"
+        }
+    },
+    rootMotion: {
+        npc: {
+            traveller: "./Data/RootMotion/NPCs/traveller.json"
+        }
+    },
+    occupancy: {
+        npc: {
+            traveller: "./Data/RootMotion/NPCs/traveller.occupancy.json"
         }
     }
 };

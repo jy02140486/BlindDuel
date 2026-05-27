@@ -7,7 +7,8 @@ export class CombatSystem {
     }
 
     fixedUpdate(characters = [], tickCount = null) {
-        const result = this.resolver.resolve(characters, { tickCount });
+        const combatants = characters.filter((c) => c?.has?.("combat"));
+        const result = this.resolver.resolve(combatants, { tickCount });
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
             if (!target) {

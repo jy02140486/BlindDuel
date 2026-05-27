@@ -1,4 +1,5 @@
-import { Character } from "./Enties/Character.js";
+import { CombatCharacter } from "./Enties/CombatCharacter.js";
+import { NpcCharacter } from "./Enties/NpcCharacter.js";
 
 const DEFAULT_CHARACTER_OPTIONS = {
     pxToWorld: 0.03,
@@ -9,7 +10,7 @@ const DEFAULT_CHARACTER_OPTIONS = {
 };
 
 export function createHeroCharacter(scene, assets) {
-    return new Character(scene, {
+    return new CombatCharacter(scene, {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "hero",
         stateGraph: assets.stateGraphs.hero,
@@ -91,7 +92,7 @@ export function createHeroCharacter(scene, assets) {
 }
 
 export function createRabbleStickCharacter(scene, assets) {
-    return new Character(scene, {
+    return new CombatCharacter(scene, {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "rabble_stick",
         stateGraph: assets.stateGraphs.rabble,
@@ -134,5 +135,44 @@ export function createRabbleStickCharacter(scene, assets) {
                 loop: false
             }
         }
+    });
+}
+
+export function createNpcCharacter(scene, assets) {
+    const npcAtlas = assets.atlas.npc.traveller;
+    const spriteUrl = "./Art/Sprite/NPCs/traveller.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "npc",
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "idle", loop: true },
+                greeting: { clip: "greeting", loop: true },
+                ask: { clip: "ask", loop: true }
+            }
+        },
+        clips: {
+            idle: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: npcAtlas,
+                loop: true
+            },
+            greeting: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: npcAtlas,
+                loop: true
+            },
+            ask: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: npcAtlas,
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.traveller ?? null,
+        occupancy: assets.occupancy?.npc?.traveller ?? null
     });
 }

@@ -10,6 +10,9 @@
 |------|------|------|
 | [GAMEMODE_SCENE_SPLIT_PROPOSAL.md](GAMEMODE_SCENE_SPLIT_PROPOSAL.md) | 推进 `Scene / GameMode` 拆分，落地 `ExploreMode` / `BattleMode` 双模式结构 | Phase 1/2 已完成；Phase 3（CameraManager 收口）进行中 |
 | [GAMEMODE_OVERVIEW_DESIGN.md](GAMEMODE_OVERVIEW_DESIGN.md) | 汇总 `GameMode`、`CameraRig`、`SceneSequencer`、状态切换等概要设计 | 作为后续实现基准文档 |
+| [CHARACTER_NPC_DECOUPLE_TASKLIST.md](CHARACTER_NPC_DECOUPLE_TASKLIST.md) | Character 解耦为 `CharacterBase` / `CombatCharacter` / `NpcCharacter`，NPC 轻量化 | Phase 1-3、5-6 已完成；NPC 最小验证通过 |
+| [NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md](NPC_CONTROLLER_MINIMAL_GREETING_DESIGN.md) | NPC 控制器最小设计（idle + greeting 两态 + 玩家接近触发） | 已实现，纳入 CHARACTER_NPC_DECOUPLE Phase 6 |
+| [NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md](NPC_ROOTMOTION_OCCUPANCY_PIPELINE.md) | NPC RootMotion Occupancy 导出脚本设计 | 脚本已实现：`scripts/tools/extract_rootmotion_occupancy.ps1` |
 
 ---
 
@@ -62,6 +65,13 @@
   - Phase 3：完成 `CameraManager` 收口收尾（统一基准俯角、探索 `walkArea` 可行走范围限制）。
   - Phase 4：`SceneSequencer` 收敛（timeout/cancel/fail 回调、条件 step 数据化）。
   - Phase 5：探索内容扩展（NPC 对话气泡、buff 拾取、任务触发）。
+
+## Update Log (2026-05-27)
+- [CHARACTER_NPC_DECOUPLE_TASKLIST.md](CHARACTER_NPC_DECOUPLE_TASKLIST.md) Phase 1-3/5-6 完成：
+  - `Character` → `CharacterBase` + `CombatCharacter` + `NpcCharacter` 拆分完成
+  - `NpcFrameComponent`（单帧状态动画）、`NpcController`（idle/greeting）就位
+  - NPC 已接入 `Scene` / `ExploreMode`，最小验证通过
+  - 已知问题：NPC root 锚点默认为帧中心，与 hero 锚点约定不一致
 
 ## Update Log (2026-05-26)
 - Archived: `archived/CAMERAMANAGER_PHASE3_PITCH_PSEUDOCODE_ARCHIVED_2026-05-26.md`.

@@ -1,0 +1,44 @@
+{ "frames": {
+   "traveller (RootMotion) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 64, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 128 },
+    "sourceSize": { "w": 64, "h": 128 },
+    "duration": 100
+   },
+   "traveller (RootMotion) 1.ase": {
+    "frame": { "x": 64, "y": 0, "w": 64, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 128 },
+    "sourceSize": { "w": 64, "h": 128 },
+    "duration": 100
+   },
+   "traveller (RootMotion) 2.ase": {
+    "frame": { "x": 128, "y": 0, "w": 64, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 128 },
+    "sourceSize": { "w": 64, "h": 128 },
+    "duration": 1
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\traveller.png",
+  "format": "RGBA8888",
+  "size": { "w": 192, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "idle", "from": 0, "to": 0, "direction": "forward" },
+   { "name": "greeting", "from": 1, "to": 1, "direction": "forward" },
+   { "name": "ask", "from": 2, "to": 2, "direction": "forward" }
+  ],
+  "layers": [
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

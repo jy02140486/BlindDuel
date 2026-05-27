@@ -387,17 +387,18 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     width: 16,
                     height: 10,
                     alphaIndex: 4
-                }/*,
+                },
                 {
-                    id: "building_3",
-                    texture: "Art/Environment/FG_Fence.png",
+                    id: "treeline",
+                    texture: "Art/Environment/treeline.png",
                     kind: "single",
                     x: 0,
-                    y: 0,
-                    width: 16,
-                    height: 6,
-                    alphaIndex: 2
-                }*/
+                    y: 3.2,
+                    width: 48,
+                    height: 4.8,
+                    alphaIndex: 1,
+                    parallaxFactor: 0.4,
+                }
             ]
         },
         {

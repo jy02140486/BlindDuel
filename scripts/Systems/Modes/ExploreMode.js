@@ -8,7 +8,7 @@ export class ExploreMode extends BaseMode {
     }
 
     fixedUpdate(dtMs, tickCount) {
-        const { inputSystem, playerController, character, sceneSequencer } = this.context;
+        const { inputSystem, playerController, character, npc, npcController, sceneSequencer } = this.context;
 
         this.#checkBattleTrigger(character, sceneSequencer);
 
@@ -21,6 +21,11 @@ export class ExploreMode extends BaseMode {
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
+
+        if (npc && npcController) {
+            npc.fixedUpdate(dtMs, tickCount);
+            npcController.update(dtMs, npc, { player: character });
+        }
 
         const { walkArea } = this.context;
         if (walkArea && character?.root) {
