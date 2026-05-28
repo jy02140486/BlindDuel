@@ -1,5 +1,5 @@
 { "frames": {
-   "rabble_stick_hit (RootMotion) 0.ase": {
+   "rabble_stick_hit 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 128, "h": 128 },
     "duration": 400
    },
-   "rabble_stick_hit (RootMotion) 1.ase": {
+   "rabble_stick_hit 1.ase": {
     "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
     "rotated": false,
     "trimmed": false,
