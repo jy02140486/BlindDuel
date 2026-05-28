@@ -41,6 +41,17 @@ export class CombatCharacter extends CharacterBase {
         };
     }
 
+    getBlockerAabb() {
+        const halfW = 20 * this.pxToWorld;
+        const halfH = 12 * this.pxToWorld;
+        return {
+            minX: this.root.position.x - halfW,
+            maxX: this.root.position.x + halfW,
+            minY: this.root.position.y - halfH,
+            maxY: this.root.position.y + halfH,
+        };
+    }
+
     _getCurrentRootAnchor(frameIndex) {
         const colliderClip = this.config.clips?.[this.animation.currentClipName]?.colliderData;
         return colliderClip?.frames?.[frameIndex]?.anchors?.root ?? null;

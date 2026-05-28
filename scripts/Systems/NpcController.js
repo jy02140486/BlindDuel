@@ -4,12 +4,14 @@ export class NpcController {
         this.stateElapsedMs = 0;
         this.greetingRadius = options.greetingRadius ?? 1.6;
         this.greetingDurationMs = options.greetingDurationMs ?? 2000;
+        this.askDurationMs = options.askDurationMs ?? 3000;
         this.hasGreetedInRange = false;
     }
 
     update(dtMs, npc, context) {
         const player = context.player;
         if (!player) {
+            console.warn("[NpcController] update skipped: player is null");
             return;
         }
 
@@ -27,6 +29,15 @@ export class NpcController {
         if (this.state === "greeting") {
             this.stateElapsedMs += dtMs;
             if (this.stateElapsedMs >= this.greetingDurationMs) {
+                console.log(`[NpcController] greeting timeout (${this.stateElapsedMs.toFixed(0)}ms >= ${this.greetingDurationMs}ms), entering idle`);
+                this.enterIdle(npc);
+            }
+        }
+
+        if (this.state === "ask") {
+            this.stateElapsedMs += dtMs;
+            if (this.stateElapsedMs >= this.askDurationMs) {
+                console.log(`[NpcController] ask timeout (${this.stateElapsedMs.toFixed(0)}ms >= ${this.askDurationMs}ms), entering idle`);
                 this.enterIdle(npc);
             }
         }
@@ -42,18 +53,32 @@ export class NpcController {
     }
 
     enterGreeting(npc) {
+        console.log("[NpcController] enterGreeting called, prevState=" + this.state);
         this.state = "greeting";
         this.stateElapsedMs = 0;
         if (npc.hasState("greeting")) {
             npc.enterState("greeting");
+        } else {
+            console.warn("[NpcController] NPC has no 'greeting' state!");
         }
     }
 
     enterIdle(npc) {
+        console.log("[NpcController] enterIdle called, prevState=" + this.state);
         this.state = "idle";
         this.stateElapsedMs = 0;
         if (npc.hasState("idle")) {
             npc.enterState("idle");
+        } else {
+            console.warn("[NpcController] NPC has no 'idle' state!");
+        }
+    }
+
+    enterAsk(npc) {
+        this.state = "ask";
+        this.stateElapsedMs = 0;
+        if (npc.hasState("ask")) {
+            npc.enterState("ask");
         }
     }
 

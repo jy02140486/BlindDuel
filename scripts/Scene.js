@@ -46,6 +46,7 @@ export class Scene {
         this._onKeyDown = null;
         this.paused = false;
         this.tickCount = 0;
+        this.entityPool = [];
     }
 
     async init() {
@@ -71,6 +72,7 @@ export class Scene {
         this.character.root.position.y = 0;
         this.character.root.position.x = -12;
         this.character.debugTrace = false;
+        this.entityPool.push(this.character);
 
         // 战斗触发器（左边界）
         this.battleTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-6, 0, 0), {
@@ -84,10 +86,12 @@ export class Scene {
         this.rabbleStick.root.position.y = 0;
         this.rabbleStick.root.position.x = 3.2;
         this.rabbleStick.debugTrace = false;
+        this.entityPool.push(this.rabbleStick);
 
         this.npc = createNpcCharacter(this.scene, assets);
         this.npc.root.position.y = -1;
-        this.npc.root.position.x = -13;
+        this.npc.root.position.x = -14;
+        this.entityPool.push(this.npc);
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, this.character);
@@ -119,6 +123,7 @@ export class Scene {
 
         const sharedContext = {
             scene: this,
+            babylonScene: this.scene,
             inputSystem: this.inputSystem,
             playerController: this.playerController,
             rabbleController: this.rabbleController,
@@ -134,6 +139,7 @@ export class Scene {
             exploreCameraRig: this.exploreCameraRig,
             cameraManager: null,
             sceneVisualSystem: this.sceneVisualSystem,
+            entityPool: this.entityPool,
             cameraBasePosition: this._cameraBasePosition,
             cameraTarget: this._cameraTarget,
             smoothedFighterDistance: this._smoothedFighterDistance
@@ -248,5 +254,6 @@ export class Scene {
             this.battleTrigger.dispose();
             this.battleTrigger = null;
         }
+        this.entityPool = null;
     }
 }

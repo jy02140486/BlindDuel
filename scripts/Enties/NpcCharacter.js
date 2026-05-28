@@ -46,4 +46,25 @@ export class NpcCharacter extends CharacterBase {
             cy: frame.h
         };
     }
+
+    getBlockerAabb() {
+        const occ = this.occupancy;
+        if (!occ || !occ.frames) return null;
+
+        const frameIndex = this.animation?.currentFrameIndex ?? 0;
+        if (frameIndex < 0 || frameIndex >= occ.frames.length) return null;
+
+        const occFrame = occ.frames[frameIndex]?.occupancy;
+        if (!occFrame) return null;
+
+        const halfW = (occFrame.w / 2) * this.pxToWorld;
+        const halfH = (occFrame.h / 2) * this.pxToWorld;
+
+        return {
+            minX: this.root.position.x - halfW,
+            maxX: this.root.position.x + halfW,
+            minY: this.root.position.y - halfH,
+            maxY: this.root.position.y + halfH
+        };
+    }
 }

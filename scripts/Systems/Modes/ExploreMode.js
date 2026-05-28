@@ -1,10 +1,16 @@
 import { BaseMode } from "./BaseMode.js";
+import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 
 export class ExploreMode extends BaseMode {
     constructor(context) {
         super("explore", context);
         this._cameraTarget = new BABYLON.Vector3();
         this._battleTriggerFired = false;
+        this.dynamicActors = [];
+        this.staticBlockers = [];
+        this.interactables = [];
+        this.renderables = [];
+        this._collisionSystem = new ExploreCollisionSystem();
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -27,9 +33,25 @@ export class ExploreMode extends BaseMode {
             npcController.update(dtMs, npc, { player: character });
         }
 
-        const { walkArea } = this.context;
-        if (walkArea && character?.root) {
-            walkArea.clampPosition(character.root.position);
+        this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
+
+        this.#checkInteraction(character, tickCount);
+    }
+
+    #checkInteraction(character, tickCount) {
+        const { inputSystem, npcController, npc } = this.context;
+        if (!npc || !npcController) return;
+
+        if (npcController.state === "ask") return;
+
+        if (!inputSystem.consumeAction("interact", tickCount)) return;
+
+        const dx = character.root.position.x - npc.root.position.x;
+        const dy = character.root.position.y - npc.root.position.y;
+        const distSq = dx * dx + dy * dy;
+        const interactRadius = npcController.greetingRadius ?? 1.6;
+        if (distSq <= interactRadius * interactRadius) {
+            npcController.enterAsk(npc);
         }
     }
 
@@ -67,12 +89,40 @@ export class ExploreMode extends BaseMode {
         if (character) {
             character.allowFacing = true;
         }
+        this._buildIndices();
+        this._collisionSystem.createDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
     }
 
     exit() {
         const { character } = this.context;
         if (character) {
             character.allowFacing = false;
+        }
+        this._collisionSystem.disposeDebugMeshes();
+    }
+
+    _buildIndices() {
+        const { entityPool } = this.context;
+        if (!entityPool) return;
+
+        this.dynamicActors.length = 0;
+        this.staticBlockers.length = 0;
+        this.interactables.length = 0;
+        this.renderables.length = 0;
+
+        for (const entity of entityPool) {
+            if (entity.kind === "player") {
+                this.dynamicActors.push(entity);
+            }
+            if (entity.kind === "npc" && entity.blocksMovement) {
+                this.staticBlockers.push(entity);
+            }
+            if (entity.kind === "npc" && entity.interactable) {
+                this.interactables.push(entity);
+            }
+            if (entity.spritePlane) {
+                this.renderables.push(entity);
+            }
         }
     }
 
@@ -87,5 +137,7 @@ export class ExploreMode extends BaseMode {
         if (sceneVisualSystem && activeCamera) {
             sceneVisualSystem.update(dtMs, { camera: activeCamera });
         }
+
+        this._collisionSystem.updateDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
     }
 }

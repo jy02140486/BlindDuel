@@ -14,7 +14,8 @@ export class InputSystem {
             l: false,
             i: false,
             k: false,
-            j: false
+            j: false,
+            e: false
         };
 
         this.gamepad = {
@@ -24,7 +25,8 @@ export class InputSystem {
             leftStickX: 0,
             leftStickY: 0,
             b: false,
-            y: false
+            y: false,
+            x: false
         };
 
         this.bufferedInputs = [];
@@ -70,6 +72,10 @@ export class InputSystem {
             }
             if (!wasDown && isDown && key === "j") {
                 this.#bufferAction("guard", { source: "keyboard", key: "j" });
+                this.#bufferAction("interact", { source: "keyboard", key: "j" });
+            }
+            if (!wasDown && isDown && key === "e") {
+                this.#bufferAction("interact", { source: "keyboard", key: "e" });
             }
         }
     }
@@ -138,6 +144,7 @@ export class InputSystem {
         this.gamepad.leftStickY = 0;
         this.gamepad.b = false;
         this.gamepad.y = false;
+        this.gamepad.x = false;
     }
 
     #applyDeadzone(value) {
@@ -173,6 +180,13 @@ export class InputSystem {
             this.#bufferAction("quart", { source: "gamepad", button: "y" });
         }
         this.gamepad.y = nextY;
+
+        const nextX = Boolean(connectedPad.buttons?.[2]?.pressed);
+        if (!this.gamepad.x && nextX) {
+            this.#bufferAction("guard", { source: "gamepad", button: "x" });
+            this.#bufferAction("interact", { source: "gamepad", button: "x" });
+        }
+        this.gamepad.x = nextX;
 
         this.#cleanupBufferedInputs();
         this.#renderDebugPanel();
@@ -245,7 +259,8 @@ export class InputSystem {
                 index: this.gamepad.index,
                 leftStickX: this.gamepad.leftStickX,
                 leftStickY: this.gamepad.leftStickY,
-                b: this.gamepad.b
+                b: this.gamepad.b,
+                x: this.gamepad.x
             },
             move: {
                 keyboard: this.getKeyboardMoveVector(),

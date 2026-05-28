@@ -13,6 +13,9 @@ export function createHeroCharacter(scene, assets) {
     return new CombatCharacter(scene, {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "hero",
+        kind: "player",
+        blocksMovement: false,
+        interactable: false,
         stateGraph: assets.stateGraphs.hero,
         clips: {
             standing: {
@@ -95,6 +98,9 @@ export function createRabbleStickCharacter(scene, assets) {
     return new CombatCharacter(scene, {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "rabble_stick",
+        kind: "enemy",
+        blocksMovement: false,
+        interactable: false,
         stateGraph: assets.stateGraphs.rabble,
         clips: {
             idle: {
@@ -145,6 +151,9 @@ export function createNpcCharacter(scene, assets) {
     return new NpcCharacter(scene, {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "npc",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
         capabilities: { combat: false, interaction: true },
         showCollision: false,
         stateGraph: {

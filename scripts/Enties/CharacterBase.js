@@ -3,6 +3,9 @@ export class CharacterBase {
         this.scene = scene;
         this.config = config;
         this.id = config.id || config.name || `character_${Date.now()}`;
+        this.kind = config.kind ?? "unknown";
+        this.blocksMovement = config.blocksMovement ?? false;
+        this.interactable = config.interactable ?? false;
         this.root = new BABYLON.TransformNode(config.name || "character_root", scene);
 
         this.pxToWorld = config.pxToWorld ?? 0.02;
@@ -98,6 +101,10 @@ export class CharacterBase {
 
     get(capabilityName) {
         return this.capabilities?.[capabilityName];
+    }
+
+    getBlockerAabb() {
+        return null;
     }
 
     addTag(tag) {
