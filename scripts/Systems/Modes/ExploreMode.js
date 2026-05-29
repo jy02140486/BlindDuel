@@ -133,6 +133,12 @@ export class ExploreMode extends BaseMode {
         this._cameraTarget.set(pos.x, pos.y, pos.z);
         this.context.target = this._cameraTarget;
 
+        for (const entity of this.renderables) {
+            if (entity.spritePlane) {
+                entity.spritePlane.alphaIndex = 100 - entity.root.position.y;
+            }
+        }
+
         const activeCamera = cameraManager?.getCamera();
         if (sceneVisualSystem && activeCamera) {
             sceneVisualSystem.update(dtMs, { camera: activeCamera });

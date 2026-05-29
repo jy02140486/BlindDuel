@@ -14,9 +14,16 @@
 | 文档 | 目标 | 备注 |
 |------|------|------|
 | [BACKLOG.md](BACKLOG.md) | 所有未完成事项的主 tracking 入口 | 涵盖战斗、探索、GameMode、相机、资源工具链等 |
-| [EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md](EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md) | ExploreMode 两阶段实施：先数据索引，再碰撞/交互/排序 | 当前探索模式后续实现入口 |
-| [EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md](EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md) | 6 Phase 分步实施：实体池 → 索引 → AABB → 碰撞 → 交互 → y-sort | 具体改动方案，Phase 1 待启动 |
 | [plans/backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md](backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md) | 2.5D 坡道与屏幕平行壁面方案 | 已转入详细 backlog，当前不优先实现 |
+
+---
+
+## 最近归档（2026-05-28）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md](archived/EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md) | ExploreMode 数据索引与碰撞交互计划 | Phase 1-7 全部完成：实体池、索引、AABB、碰撞、交互、y-sort、Scene 清理 |
+| [archived/EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md](archived/EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md) | 7 Phase 分步实施文档 | 已全部落地，ExploreMode 碰撞/交互/渲染体系就绪 |
 
 ---
 
@@ -51,12 +58,17 @@
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
 - NPC 工具链已补齐：`extract_rootmotion_occupancy.ps1` 可独立生成 occupancy 数据
-- 当前下一阶段重点：ExploreMode 的数据索引、AABB 阻挡、交互查询与 y 排序
+- 当前下一阶段重点：待从 BACKLOG 中选取
 
 ## Update Log (2026-05-27)
 - 6 个计划文档归档：`CHARACTER_NPC_DECOUPLE` x2、`NPC_CONTROLLER`、`NPC_ROOTMOTION_OCCUPANCY`、`GAMEMODE` x2
 - `BACKLOG.md` 补充 GameMode 未完成事项：`CameraManager Phase 3`、`SceneSequencer` 收尾、Phase 5 内容扩展
 - 剩余 Phase 全部移入 `BACKLOG`，`INDEX` 的“进行中”清空
+
+## Update Log (2026-05-28)
+- 探索模式实施完成并归档：`EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md`、`EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md`
+- Phase 1-7 全部落地：实体池 → 索引 → AABB → 碰撞 → 交互(J/X) → y-sort → Scene 清理
+- `INDEX.md` 进行中/待办已清空，下一重点待从 `BACKLOG.md` 选取
 
 ## Update Log (2026-05-28)
 - 新增探索模式实现入口：[EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md](EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md)

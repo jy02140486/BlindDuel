@@ -27,9 +27,6 @@ export class Scene {
         this.engine = engine;
         this.canvas = canvas;
         this.scene = null;
-        this.character = null;
-        this.rabbleStick = null;
-        this.npc = null;
         this.npcController = null;
         this.inputSystem = null;
         this.playerController = null;
@@ -68,11 +65,11 @@ export class Scene {
 
         const assets = await loadDataAssets(ASSET_MANIFEST);
 
-        this.character = createHeroCharacter(this.scene, assets);
-        this.character.root.position.y = 0;
-        this.character.root.position.x = -12;
-        this.character.debugTrace = false;
-        this.entityPool.push(this.character);
+        const character = createHeroCharacter(this.scene, assets);
+        character.root.position.y = 0;
+        character.root.position.x = -12;
+        character.debugTrace = false;
+        this.entityPool.push(character);
 
         // 战斗触发器（左边界）
         this.battleTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-6, 0, 0), {
@@ -82,22 +79,22 @@ export class Scene {
             debugVisible: false
         });
 
-        this.rabbleStick = createRabbleStickCharacter(this.scene, assets);
-        this.rabbleStick.root.position.y = 0;
-        this.rabbleStick.root.position.x = 3.2;
-        this.rabbleStick.debugTrace = false;
-        this.entityPool.push(this.rabbleStick);
+        const rabbleStick = createRabbleStickCharacter(this.scene, assets);
+        rabbleStick.root.position.y = 0;
+        rabbleStick.root.position.x = 3.2;
+        rabbleStick.debugTrace = false;
+        this.entityPool.push(rabbleStick);
 
-        this.npc = createNpcCharacter(this.scene, assets);
-        this.npc.root.position.y = -1;
-        this.npc.root.position.x = -14;
-        this.entityPool.push(this.npc);
+        const npc = createNpcCharacter(this.scene, assets);
+        npc.root.position.y = -1;
+        npc.root.position.x = -14;
+        this.entityPool.push(npc);
 
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
-        this.playerController = new PlayerController(this.inputSystem, this.character);
-        this.rabbleController = new DummyController(this.rabbleStick);
+        this.playerController = new PlayerController(this.inputSystem, character);
+        this.rabbleController = new DummyController(rabbleStick);
         this.npcController = new NpcController();
-        this.npcController.setupDebugVisual(this.scene, this.npc.root);
+        this.npcController.setupDebugVisual(this.scene, npc.root);
         this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.walkArea = new WalkArea(this.scene, { minX: -24, maxX: -7, minY: -1, maxY: 0.7, visible: true });
@@ -119,7 +116,7 @@ export class Scene {
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
         this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
-        this._smoothedFighterDistance = Math.abs(this.rabbleStick.root.position.x - this.character.root.position.x);
+        this._smoothedFighterDistance = Math.abs(rabbleStick.root.position.x - character.root.position.x);
 
         const sharedContext = {
             scene: this,
@@ -127,9 +124,9 @@ export class Scene {
             inputSystem: this.inputSystem,
             playerController: this.playerController,
             rabbleController: this.rabbleController,
-            character: this.character,
-            rabbleStick: this.rabbleStick,
-            npc: this.npc,
+            character: character,
+            rabbleStick: rabbleStick,
+            npc: npc,
             npcController: this.npcController,
             pushboxResolver: this.pushboxResolver,
             stageBoundary: this.stageBoundary,
@@ -164,9 +161,13 @@ export class Scene {
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "c") {
-                const nextVisible = !this.character.collision.visible;
-                this.character.setCollisionVisible(nextVisible);
-                this.rabbleStick.setCollisionVisible(nextVisible);
+                const first = this.entityPool[0];
+                const nextVisible = !first?.collision?.visible;
+                for (const entity of this.entityPool) {
+                    if (typeof entity.setCollisionVisible === "function") {
+                        entity.setCollisionVisible(nextVisible);
+                    }
+                }
                 this.stageBoundary.setVisible(nextVisible);
                 if (this.walkArea) {
                     this.walkArea.setVisible(nextVisible);
@@ -211,11 +212,6 @@ export class Scene {
         this.sceneSequencer.updateRender(dtMs);
         this.cameraManager.update(dtMs, this.sharedContext);
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
-
-        // Y-sort: y 小的在前（离玩家近），y 大的在后（远处）
-        if (this.character) this.character.spritePlane.alphaIndex = 100 - this.character.root.position.y;
-        if (this.rabbleStick) this.rabbleStick.spritePlane.alphaIndex = 100 - this.rabbleStick.root.position.y;
-        if (this.npc) this.npc.spritePlane.alphaIndex = 100 - this.npc.root.position.y;
     }
 
     render() {
