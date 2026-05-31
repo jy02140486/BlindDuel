@@ -1,0 +1,104 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/NPCs/merchant.json",
+                   "rootAtlasPng":  "Data/RootMotion/NPCs/merchant.png",
+                   "rootColor":  "#7082C1",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  24,
+                   "generatedAtUtc":  "2026-05-31T17:01:20.6994559Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "merchant (RootMotion) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  63.5,
+                                                    "cy":  114.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  63.5,
+                                         "cy":  114.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "merchant (RootMotion) 1.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  63.5,
+                                                    "cy":  114.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  63.5,
+                                         "cy":  114.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "merchant (RootMotion) 2.ase",
+                       "frameRect":  {
+                                         "x":  256,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  63.5,
+                                                    "cy":  114.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  63.5,
+                                         "cy":  114.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "merchant (RootMotion) 3.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  63.5,
+                                                    "cy":  114.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  63.5,
+                                         "cy":  114.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   }
+               ]
+}

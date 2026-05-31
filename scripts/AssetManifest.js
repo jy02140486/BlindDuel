@@ -32,7 +32,8 @@ export const ASSET_MANIFEST = {
             die: "./Art/Sprite/rabble_stick/rabble_stick_die.json"
         },
         npc: {
-            traveller: "./Art/Sprite/NPCs/traveller.json"
+            traveller: "./Art/Sprite/NPCs/traveller.json",
+            merchant: "./Art/Sprite/NPCs/merchant.json"
         }
     },
     colliders: {
@@ -62,12 +63,14 @@ export const ASSET_MANIFEST = {
     },
     rootMotion: {
         npc: {
-            traveller: "./Data/RootMotion/NPCs/traveller.json"
+            traveller: "./Data/RootMotion/NPCs/traveller.json",
+            merchant: "./Data/RootMotion/NPCs/merchant.json"
         }
     },
     occupancy: {
         npc: {
-            traveller: "./Data/RootMotion/NPCs/traveller.occupancy.json"
+            traveller: "./Data/RootMotion/NPCs/traveller.occupancy.json",
+            merchant: "./Data/RootMotion/NPCs/merchant.occupancy.json"
         }
     }
 };

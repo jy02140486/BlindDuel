@@ -5,6 +5,7 @@ export class NpcFrameComponent {
         this.currentClip = null;
         this.frames = [];
         this.currentFrameIndex = 0;
+        this.timeInFrameMs = 0;
         this.timeScale = 1.0;
         this.loop = true;
         this.finished = false;
@@ -68,6 +69,7 @@ export class NpcFrameComponent {
 
         if (restart) {
             this.currentFrameIndex = clip.frameTag.from;
+            this.timeInFrameMs = 0;
             this.finished = false;
         }
     }
@@ -88,7 +90,35 @@ export class NpcFrameComponent {
         return this.finished;
     }
 
-    fixedUpdate(_dtMs) {
-        // NPC 单帧状态动画，不推进帧
+    fixedUpdate(dtMs) {
+        if (!this.currentClip) {
+            return;
+        }
+
+        const tag = this.currentClip.frameTag;
+        const tagFrameCount = tag.to - tag.from + 1;
+
+        if (tagFrameCount <= 1) {
+            if (!this.loop) {
+                this.finished = true;
+            }
+            return;
+        }
+
+        const scaledDt = dtMs * this.timeScale;
+        this.timeInFrameMs += scaledDt;
+        while (this.timeInFrameMs >= this.currentFrame.durationMs) {
+            this.timeInFrameMs -= this.currentFrame.durationMs;
+            if (this.currentFrameIndex + 1 <= tag.to) {
+                this.currentFrameIndex += 1;
+            } else if (this.loop) {
+                this.currentFrameIndex = tag.from;
+            } else {
+                this.currentFrameIndex = tag.to;
+                this.timeInFrameMs = 0;
+                this.finished = true;
+                break;
+            }
+        }
     }
 }

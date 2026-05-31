@@ -6,7 +6,7 @@ import { NpcController } from "./Systems/NpcController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
-import { createHeroCharacter, createRabbleStickCharacter, createNpcCharacter } from "./CharacterFactory.js";
+import { createHeroCharacter, createRabbleStickCharacter, createNpcCharacter, createMerchantNpc } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
 import { ExploreCameraRig } from "./ExploreCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
@@ -89,6 +89,11 @@ export class Scene {
         npc.root.position.x = -14;
         this.entityPool.push(npc);
 
+        const merchant = createMerchantNpc(this.scene, assets);
+        merchant.root.position.y = -0.9;
+        merchant.root.position.x = -11;
+        this.entityPool.push(merchant);
+
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, character);
         this.rabbleController = new DummyController(rabbleStick);
@@ -102,11 +107,11 @@ export class Scene {
             zoomMinDistance: 3.2,
             zoomMaxDistance: 6.4,
             orthoMinWidth: 16,
-            orthoMaxWidth: 46,
+            orthoMaxWidth: 32,
             perspMinDistance: 15,
             perspMaxDistance: 35,
             minCameraHeight: 3.2,
-            maxCameraHeight: 10,
+            maxCameraHeight: 5.2,
             targetAspect: 16 / 9
         });
 

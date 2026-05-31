@@ -198,3 +198,33 @@ export function createNpcCharacter(scene, assets) {
         occupancy: assets.occupancy?.npc?.traveller ?? null
     });
 }
+
+export function createMerchantNpc(scene, assets) {
+    const merchantAtlas = assets.atlas.npc.merchant;
+    const spriteUrl = "./Art/Sprite/NPCs/merchant.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "merchant",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "Talking", loop: true }
+            }
+        },
+        clips: {
+            Talking: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: merchantAtlas,
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.merchant ?? null,
+        occupancy: assets.occupancy?.npc?.merchant ?? null
+    });
+}

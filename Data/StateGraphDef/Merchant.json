@@ -1,0 +1,9 @@
+{
+    "initialState": "idle",
+    "states": {
+        "idle": {
+            "clip": "Talking",
+            "loop": true
+        }
+    }
+}
