@@ -272,6 +272,12 @@
         }
       ],
       "frameSpeeds": [-0.4,0.1]
+    },
+    "defeated": {
+      "clip": "defeated",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
     }
   }
 }

@@ -89,6 +89,12 @@ export function createHeroCharacter(scene, assets) {
                 atlasData: assets.atlas.hero.hit,
                 colliderData: assets.colliders.hero.hit,
                 loop: false
+            },
+            defeated: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_defeated.png",
+                atlasData: assets.atlas.hero.defeated,
+                colliderData: assets.colliders.hero.defeated,
+                loop: false
             }
         }
     });
@@ -99,6 +105,7 @@ export function createRabbleStickCharacter(scene, assets) {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "rabble_stick",
         kind: "enemy",
+        deathState: "die",
         blocksMovement: false,
         interactable: false,
         stateGraph: assets.stateGraphs.rabble,
@@ -138,6 +145,12 @@ export function createRabbleStickCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_dodge.png",
                 atlasData: assets.atlas.rabble.dodge,
                 colliderData: assets.colliders.rabble.dodge,
+                loop: false
+            },
+            die: {
+                spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_die.png",
+                atlasData: assets.atlas.rabble.die,
+                colliderData: assets.colliders.rabble.die,
                 loop: false
             }
         }

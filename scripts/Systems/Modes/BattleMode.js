@@ -21,7 +21,8 @@ export class BattleMode extends BaseMode {
             rabbleStick,
             pushboxResolver,
             stageBoundary,
-            combatSystem
+            combatSystem,
+            sceneSequencer
         } = this.context;
 
         inputSystem.fixedUpdate(tickCount);
@@ -33,6 +34,33 @@ export class BattleMode extends BaseMode {
         stageBoundary.clampCharacter(character);
         stageBoundary.clampCharacter(rabbleStick);
         combatSystem.fixedUpdate([character, rabbleStick], tickCount);
+
+        this.#checkBattleEnd(sceneSequencer);
+    }
+
+    #checkBattleEnd(sceneSequencer) {
+        if (!sceneSequencer || sceneSequencer.isBusy()) return;
+
+        const { character, rabbleStick } = this.context;
+
+        if (!character.isDead && !rabbleStick.isDead) return;
+
+        const exitBattleSequence = {
+            id: "exit_battle",
+            steps: [
+                { type: "lockInput", actorId: "hero" },
+                 { type: "wait", durationMs: 1500 },
+                { type: "sendCommand", actorId: "hero", command: "sheath" },
+                { type: "wait", durationMs: 1500 },
+                { type: "moveActorTo", actorId: "hero", x: -6.4, y: 0, tolerance: 0.1 },
+                { type: "wait", durationMs: 1500 },
+                { type: "startCameraBlend", to: "explore", durationMs: 2000 },
+                { type: "switchMode", modeId: "explore" },
+                { type: "unlockInput", actorId: "hero" }
+            ]
+        };
+
+        sceneSequencer.play(exitBattleSequence);
     }
 
     updateRender(dtMs) {

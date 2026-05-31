@@ -35,6 +35,11 @@
 |------|------|--------|------|
 | `tickDiff` 外部配置化 | 将 `ContactResolver` 中 Just Guard/预判 guard 使用的 `tickDiff` 阈值（当前硬编码 `<= 7`）提取为外部可配置项（建议进 StateGraph 或 Combat 配置）。 | 中 | 需要同步默认值与回归测试，避免改变现有手感 |
 | **hitstop 时长外部配置化** | `ContactResolver` 中各场景的 hitstop 时长目前全部硬编码：parry（双方 8 帧）、block（双方 4 帧）、clash tie（双方 8 帧）、clash lose（弱方 6 帧 / 强方 4 帧）、命中（双方 8 帧）。应提取为外部配置（建议按场景/攻击类型/武器等级分表）。 | 中 | 需同步默认值与手感测试 |
+| Scene 角色与战斗区域外部配置化 | 当前 `Scene.js` 中硬编码了角色创建（hero、rabbleStick）和战斗触发器位置。应改为从外部 JSON/数据文件读取场景中需要创建的角色定义、战斗区域定义。 | 高 | 影响场景编辑工作流，是后续加入更多角色/场景的前置条件 |
+| 标志点外部配置化（出生点/触发器等） | 出生点、触发器位置、NPC 站位等关键坐标当前分散硬编码在各处。应统一收敛为外部场景数据文件中的标志点定义。 | 高 | 与「角色与战斗区域」条目强关联，可合并实施 |
+| SceneVisual 外部数据化 | `SceneVisualSystem` 中的背景层（BG_FAR/BG_MID/STAGE 等）定义、元素坐标、parallax 参数当前硬编码在代码中。应改为从外部 JSON 读取场景视觉配置。 | 中 | 影响场景美术迭代效率 |
+| Sequence 外部 JSON 化 | `ExploreMode` 和 `BattleMode` 中的 `enter_battle` / `exit_battle` 序列目前硬编码为 JS 对象。应改为从外部 JSON 文件读取，支持策划直接编辑序列步骤。 | 中 | 需定义 step type schema 与校验 |
+| 击退距离外部配置化 | `ContactResolver` 中击退距离（knockbackX）当前硬编码，与武器等级和命中场景绑定。应提取为外部可配置项（建议按武器/攻击类型分表）。 | 低 | 与 hitstop 配置化可同步推进 |
 
 ## 探索系统
 
@@ -59,13 +64,16 @@
 | ✅ blend 后 activeCamera 被抢回 | `Scene._updateCameraBlend` 结束时调用 `exploreCameraRig.enable()` 导致相机被抢回。已将 blend 逻辑下沉到 `SceneSequencer`，移除 Scene 中的硬编码 blend，不再错误 enable explore rig。 | 高 | 已完成 |
 | 触发器 debug 体积不显示 | 按 C 键切换碰撞显示时，触发器的绿色半透明体积未出现。 | 中 | 待排查 `AABBTrigger.debugMesh` 的 `setEnabled` 是否生效，或 mesh 被遮挡 |
 | ✅ 硬编码流程需迁移到 SceneSequencer | 当前触发器后的自动移动、draw 动画、相机 blend、模式切换全部硬编码在 ExploreMode / Scene 中。已实现 `SceneSequencer`，流程改为 sequence 编排。 | 高 | 已完成 |
+| Sequence 中角色朝 -x 移动时不镜像 | `SceneSequencer._updateMoveActorTo` 设 `moveIntent` 触发 `_applyMovement`，但 `allowFacing` 在序列执行期间为 `false`，sprite 不翻转。 | 中 | 影响 battle→explore 退出序列的 `moveActorTo` 步骤；需解耦序列移动与 `allowFacing` 守卫 |
 
 ## GameMode 未完成事项（2026-05-27）
 
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
-| CameraManager Phase 3 收口 | 统一基准俯角、探索 `walkArea` 可行走范围限制。 | 高 | 当前进行中，进度见 `CAMERAMANAGER_PHASE3_FINISHING_TODO.md` |
-| SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
+| ✅ CameraManager Phase 3 收口 | 统一基准俯角、探索 `walkArea` 可行走范围限制。 | 高 | 已完成，见 `archived/CAMERAMANAGER_PHASE3_FINISHING_TODO.md` |
+| ✅ 探索阶段移动与相机设计 | `EXPLORE_MOVEMENT_DESIGN.md` 中定义的 walkArea、移动映射、相机行为。 | 高 | 已完成，见 `archived/EXPLORE_MOVEMENT_DESIGN.md` |
+| ✅ Combat HP 与死亡 → 探索过渡 | CombatCharacter 血量、死亡状态、战斗结束切回探索模式。 | 高 | 已完成，见 `archived/COMBAT_HP_AND_DEATH_STATE.md` |
+| SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。修复序列中角色朝 -x 移动时不镜像问题。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
 | Phase 5：探索内容扩展 | NPC 对话气泡、buff 拾取、任务触发。 | 中 | 由 Interaction 能力预留后推进 |
 
 ## 相机管理重构（后续优化）

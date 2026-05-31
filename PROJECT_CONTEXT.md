@@ -1,5 +1,6 @@
 ﻿# 项目上下文（Project Context）
-
+## 0. 前置工作
+- 读andrej-karpathy-skills-CLAUDE.MD，所有的工作都要遵守里面的规则
 ## 1. 项目概况
 - 项目名：`GemeniPrototype-BlindBattle`
 - 当前目标：先跑通 2D 角色在 Babylon 中的最小战斗原型流程（动画播放 + 碰撞盒可视化 + 帧同步）
@@ -163,4 +164,3 @@ GemeniPrototype-BlindBattle/
 3. 计划文档统一组织在 `plans/` 目录，已完成文档归档到 `plans/archived/`。
 3. 涉及大改（状态机/架构）先出方案再改代码。
 4. 与用户沟通默认使用中文，给其它ai的交接文档也用中文，编码统一utf8
-5. 如果本次会话开始编码前还没读过andrej-karpathy-skills-CLAUDE.MD，要先读一下

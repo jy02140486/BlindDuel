@@ -5,7 +5,8 @@
 ---
 
 ## 进行中
-- （无）
+
+（无进行中计划，待从 BACKLOG 选取）
 
 ---
 
@@ -15,6 +16,16 @@
 |------|------|------|
 | [BACKLOG.md](BACKLOG.md) | 所有未完成事项的主 tracking 入口 | 涵盖战斗、探索、GameMode、相机、资源工具链等 |
 | [plans/backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md](backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md) | 2.5D 坡道与屏幕平行壁面方案 | 已转入详细 backlog，当前不优先实现 |
+
+---
+
+## 最近归档（2026-05-30）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/COMBAT_HP_AND_DEATH_STATE.md](archived/COMBAT_HP_AND_DEATH_STATE.md) | CombatCharacter HP + 死亡状态 + 战斗切回探索 | Step 0-4 全部实施：collider 提取、资源接线、状态图、HP 核心、退出序列 |
+| [archived/EXPLORE_MOVEMENT_DESIGN.md](archived/EXPLORE_MOVEMENT_DESIGN.md) | 探索阶段移动与相机设计 | walkArea、输入映射、ExploreCameraRig、SceneSequencer 适配 |
+| [archived/CAMERAMANAGER_PHASE3_FINISHING_TODO.md](archived/CAMERAMANAGER_PHASE3_FINISHING_TODO.md) | CameraManager Phase 3 收尾 | 探索 walkArea、速度基线、Battle→Explore 过渡序列、CameraShake |
 
 ---
 
@@ -58,7 +69,15 @@
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
 - NPC 工具链已补齐：`extract_rootmotion_occupancy.ps1` 可独立生成 occupancy 数据
+- `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
+- 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-05-30)
+- 3 个计划文档完成并归档：`COMBAT_HP_AND_DEATH_STATE`、`EXPLORE_MOVEMENT_DESIGN`、`CAMERAMANAGER_PHASE3_FINISHING_TODO`
+- HP 系统 5 步实施全部落地：collider 提取 → 资源接线 → 状态图 → HP 核心 → 退出序列
+- `BACKLOG.md` 新增：序列中角色朝 -x 移动时不镜像问题；CameraManager Phase 3 / 探索移动 / HP 标记完成
+- `INDEX.md` 进行中清空
 
 ## Update Log (2026-05-27)
 - 6 个计划文档归档：`CHARACTER_NPC_DECOUPLE` x2、`NPC_CONTROLLER`、`NPC_ROOTMOTION_OCCUPANCY`、`GAMEMODE` x2

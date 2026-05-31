@@ -19,7 +19,8 @@ export const ASSET_MANIFEST = {
             zornhut: "./Art/Sprite/longswordman/longswordman_zornhut.json",
             guard: "./Art/Sprite/longswordman/longswordman_Guard.json",
             clash: "./Art/Sprite/longswordman/longswordman_clash.json",
-            hit: "./Art/Sprite/longswordman/longswordman_hit.json"
+            hit: "./Art/Sprite/longswordman/longswordman_hit.json",
+            defeated: "./Art/Sprite/longswordman/longswordman_defeated.json"
         },
         rabble: {
             idle: "./Art/Sprite/rabble_stick/rabble_stick_idle.json",
@@ -27,7 +28,8 @@ export const ASSET_MANIFEST = {
             swing: "./Art/Sprite/rabble_stick/rabble_stick_swing.json",
             thrust: "./Art/Sprite/rabble_stick/rabble_stick_thrust.json",
             hit: "./Art/Sprite/rabble_stick/rabble_stick_hit.json",
-            dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json"
+            dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json",
+            die: "./Art/Sprite/rabble_stick/rabble_stick_die.json"
         },
         npc: {
             traveller: "./Art/Sprite/NPCs/traveller.json"
@@ -46,14 +48,16 @@ export const ASSET_MANIFEST = {
             zornhut: "./Data/CollisionMask/longswordman/longswordman_zornhut.collider.json",
             guard: "./Data/CollisionMask/longswordman/longswordman_Guard.collider.json",
             clash: "./Data/CollisionMask/longswordman/longswordman_clash.collider.json",
-            hit: "./Data/CollisionMask/longswordman/longswordman_hit.collider.json"
+            hit: "./Data/CollisionMask/longswordman/longswordman_hit.collider.json",
+            defeated: "./Data/CollisionMask/longswordman/longswordman_defeated.collider.json"
         },
         rabble: {
             idle: "./Data/CollisionMask/rabble_stick/rabble_stick_idle.collider.json",
             move: "./Data/CollisionMask/rabble_stick/rabble_stick_move.collider.json",
             swing: "./Data/CollisionMask/rabble_stick/rabble_stick_swing.collider.json",
             thrust: "./Data/CollisionMask/rabble_stick/rabble_stick_thrust.collider.json",
-            dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json"
+            dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json",
+            die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json"
         }
     },
     rootMotion: {

@@ -27,7 +27,6 @@ export class Scene {
         this.engine = engine;
         this.canvas = canvas;
         this.scene = null;
-        this.npcController = null;
         this.inputSystem = null;
         this.playerController = null;
         this.rabbleController = null;
@@ -93,8 +92,8 @@ export class Scene {
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, character);
         this.rabbleController = new DummyController(rabbleStick);
-        this.npcController = new NpcController();
-        this.npcController.setupDebugVisual(this.scene, npc.root);
+        npc.npcController = new NpcController();
+        npc.npcController.setupDebugVisual(this.scene, npc.root);
         this.combatSystem = new CombatSystem({ debugTrace: true });
         this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
         this.walkArea = new WalkArea(this.scene, { minX: -24, maxX: -7, minY: -1, maxY: 0.7, visible: true });
@@ -126,8 +125,6 @@ export class Scene {
             rabbleController: this.rabbleController,
             character: character,
             rabbleStick: rabbleStick,
-            npc: npc,
-            npcController: this.npcController,
             pushboxResolver: this.pushboxResolver,
             stageBoundary: this.stageBoundary,
             walkArea: this.walkArea,
@@ -175,8 +172,10 @@ export class Scene {
                 if (this.battleTrigger) {
                     this.battleTrigger.setDebugVisible(nextVisible);
                 }
-                if (this.npcController) {
-                    this.npcController.setDebugVisible(nextVisible);
+                for (const entity of this.entityPool) {
+                    if (entity.npcController) {
+                        entity.npcController.setDebugVisible(nextVisible);
+                    }
                 }
             }
         };

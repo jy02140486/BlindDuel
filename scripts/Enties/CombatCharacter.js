@@ -37,7 +37,11 @@ export class CombatCharacter extends CharacterBase {
             globalCooldownMs: config.globalCooldownMs ?? 700,
             lastActionTime: -Infinity,
             timeControl: new TimeControlComponent(),
-            timeControlSystem: new TimeControlSystem()
+            timeControlSystem: new TimeControlSystem(),
+            hp: config.maxHp ?? 3,
+            maxHp: config.maxHp ?? 3,
+            isDead: false,
+            deathState: config.deathState ?? "defeated"
         };
     }
 
@@ -105,7 +109,7 @@ export class CombatCharacter extends CharacterBase {
         const currentClip = this.animation.currentClipName || "none";
         const cdRemaining = this.getCooldownRemaining().toFixed(0);
 
-        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms`;
+        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms | HP: ${this.combat.hp}/${this.combat.maxHp}`;
     }
 
     get globalCooldownMs() { return this.combat.globalCooldownMs; }
@@ -116,8 +120,12 @@ export class CombatCharacter extends CharacterBase {
     set timeControl(v) { this.combat.timeControl = v; }
     get timeControlSystem() { return this.combat.timeControlSystem; }
     set timeControlSystem(v) { this.combat.timeControlSystem = v; }
+    get hp() { return this.combat.hp; }
+    get maxHp() { return this.combat.maxHp; }
+    get isDead() { return this.combat.isDead; }
 
     canAct() {
+        if (this.combat.isDead) return false;
         const now = performance.now();
         return now - this.lastActionTime >= this.globalCooldownMs;
     }
@@ -133,8 +141,20 @@ export class CombatCharacter extends CharacterBase {
     }
 
     takeDamage(ctx = {}) {
-        if (this.currentStateDef?.invincible) {
+        if (this.currentStateDef?.invincible || this.combat.isDead) {
             return false;
+        }
+
+        const damage = Number(ctx.damage ?? 1);
+        this.combat.hp = Math.max(0, this.combat.hp - damage);
+
+        if (this.combat.hp <= 0) {
+            this.combat.isDead = true;
+            const deathState = ctx.deathState || this.combat.deathState;
+            if (this.hasState(deathState)) {
+                this.enterState(deathState);
+            }
+            return true;
         }
 
         const knockbackX = Number(ctx.knockbackX ?? 0);
@@ -258,6 +278,19 @@ export class CombatCharacter extends CharacterBase {
 
     fixedUpdate(dtMs, tickCount) {
         this.tickCount = tickCount;
+
+        if (this.combat.isDead) {
+            this.animation.fixedUpdate(dtMs);
+            const newFrame = this.animation.currentFrameIndex;
+            this._applyFrame(newFrame);
+            const current = this.animation.currentFrame;
+            const anchor = this._getCurrentRootAnchor(newFrame);
+            this._applyRootAlignment(current.w, current.h, anchor);
+            this._syncRootDebug(anchor);
+            this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
+            this._updateDebugPanel();
+            return;
+        }
 
         const timeControlFrame = this.timeControlSystem.tick(this, dtMs, tickCount);
         const effectiveDeltaMs = timeControlFrame.effectiveDeltaMs;

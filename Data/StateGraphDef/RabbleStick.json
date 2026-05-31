@@ -130,6 +130,12 @@
         }
       ],
       "frameSpeeds": [0.4,-0.1]
+    },
+    "die": {
+      "clip": "die",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
     }
   }
 }

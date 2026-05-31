@@ -14,7 +14,7 @@ export class ExploreMode extends BaseMode {
     }
 
     fixedUpdate(dtMs, tickCount) {
-        const { inputSystem, playerController, character, npc, npcController, sceneSequencer } = this.context;
+        const { inputSystem, playerController, character, sceneSequencer } = this.context;
 
         this.#checkBattleTrigger(character, sceneSequencer);
 
@@ -28,9 +28,12 @@ export class ExploreMode extends BaseMode {
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
 
-        if (npc && npcController) {
+        for (const npc of this.interactables) {
             npc.fixedUpdate(dtMs, tickCount);
-            npcController.update(dtMs, npc, { player: character });
+            const controller = npc.npcController;
+            if (controller) {
+                controller.update(dtMs, npc, { player: character });
+            }
         }
 
         this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
@@ -39,19 +42,21 @@ export class ExploreMode extends BaseMode {
     }
 
     #checkInteraction(character, tickCount) {
-        const { inputSystem, npcController, npc } = this.context;
-        if (!npc || !npcController) return;
-
-        if (npcController.state === "ask") return;
+        const { inputSystem } = this.context;
 
         if (!inputSystem.consumeAction("interact", tickCount)) return;
 
-        const dx = character.root.position.x - npc.root.position.x;
-        const dy = character.root.position.y - npc.root.position.y;
-        const distSq = dx * dx + dy * dy;
-        const interactRadius = npcController.greetingRadius ?? 1.6;
-        if (distSq <= interactRadius * interactRadius) {
-            npcController.enterAsk(npc);
+        for (const npc of this.interactables) {
+            const controller = npc.npcController;
+            if (!controller || controller.state === "ask") continue;
+
+            const dx = character.root.position.x - npc.root.position.x;
+            const dy = character.root.position.y - npc.root.position.y;
+            const distSq = dx * dx + dy * dy;
+            const interactRadius = controller.greetingRadius ?? 1.6;
+            if (distSq <= interactRadius * interactRadius) {
+                controller.enterAsk(npc);
+            }
         }
     }
 
