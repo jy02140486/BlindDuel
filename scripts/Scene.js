@@ -9,6 +9,7 @@ import { loadDataAssets } from "./DataLoader.js";
 import { createHeroCharacter, createRabbleStickCharacter, createNpcCharacter, createMerchantNpc } from "./CharacterFactory.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
 import { ExploreCameraRig } from "./ExploreCameraRig.js";
+import { ScriptedCameraRig } from "./ScriptedCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 import { AABBTrigger } from "./Enties/AABBTrigger.js";
 import { WalkArea } from "./Enties/WalkArea.js";
@@ -78,6 +79,14 @@ export class Scene {
             debugVisible: false
         });
 
+        // ScriptedCamera 测试触发器（已注释，需要时恢复）
+        // this.scriptedCameraTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-15, 1, 0), {
+        //     width: 4, height: 8, depth: 4
+        // }, {
+        //     debugColor: new BABYLON.Color3(0, 0, 1),
+        //     debugVisible: false
+        // });
+
         const rabbleStick = createRabbleStickCharacter(this.scene, assets);
         rabbleStick.root.position.y = 0;
         rabbleStick.root.position.x = 3.2;
@@ -116,6 +125,7 @@ export class Scene {
         });
 
         this.exploreCameraRig = new ExploreCameraRig();
+        this.scriptedCameraRig = new ScriptedCameraRig();
 
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
@@ -136,6 +146,7 @@ export class Scene {
             combatSystem: this.combatSystem,
             cameraRig: this.cameraRig,
             exploreCameraRig: this.exploreCameraRig,
+            scriptedCameraRig: this.scriptedCameraRig,
             cameraManager: null,
             sceneVisualSystem: this.sceneVisualSystem,
             entityPool: this.entityPool,
@@ -147,6 +158,7 @@ export class Scene {
         this.cameraManager.init(this.scene, this.canvas, { fov: 0.8, minZ: 0.1, maxZ: 1000 });
         this.cameraManager.registerRig("duel", this.cameraRig);
         this.cameraManager.registerRig("explore", this.exploreCameraRig);
+        this.cameraManager.registerRig("scripted", this.scriptedCameraRig);
         sharedContext.cameraManager = this.cameraManager;
         this.sharedContext = sharedContext;
 
@@ -176,6 +188,9 @@ export class Scene {
                 }
                 if (this.battleTrigger) {
                     this.battleTrigger.setDebugVisible(nextVisible);
+                }
+                if (this.scriptedCameraTrigger) {
+                    this.scriptedCameraTrigger.setDebugVisible(nextVisible);
                 }
                 for (const entity of this.entityPool) {
                     if (entity.npcController) {

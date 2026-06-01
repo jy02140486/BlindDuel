@@ -1,11 +1,14 @@
 import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
+import { FACING_MODE } from "../../Enties/CharacterBase.js";
+import { STEP_TYPE } from "../SceneSequencer.js";
 
 export class ExploreMode extends BaseMode {
     constructor(context) {
         super("explore", context);
         this._cameraTarget = new BABYLON.Vector3();
         this._battleTriggerFired = false;
+        this._scriptedCameraTriggerFired = false;
         this.dynamicActors = [];
         this.staticBlockers = [];
         this.interactables = [];
@@ -17,6 +20,7 @@ export class ExploreMode extends BaseMode {
         const { inputSystem, playerController, character, sceneSequencer } = this.context;
 
         this.#checkBattleTrigger(character, sceneSequencer);
+        this.#checkScriptedCameraTrigger(character, sceneSequencer);
 
         if (sceneSequencer?.isBusy()) {
             inputSystem.fixedUpdate(tickCount);
@@ -75,24 +79,56 @@ export class ExploreMode extends BaseMode {
         const enterBattleSequence = {
             id: "enter_battle",
             steps: [
-                { type: "lockInput", actorId: "hero" },
-                { type: "moveActorTo", actorId: "hero", x: -3.2, y: 0, tolerance: 0.1 },
-                { type: "sendCommand", actorId: "hero", command: "draw" },
-                { type: "waitUntil", condition: (ctx) => ctx.character.currentStateName === "idle" },
-                { type: "startCameraBlend", to: "duel", durationMs: 3500 },
-                { type: "switchMode", modeId: "battle" },
-                { type: "unlockInput", actorId: "hero" }
+                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
+                { type: STEP_TYPE.MOVE_ACTOR_TO, actorId: "hero", x: -3.2, y: 0, tolerance: 0.1 },
+                { type: STEP_TYPE.SEND_COMMAND, actorId: "hero", command: "draw" },
+                { type: STEP_TYPE.WAIT_UNTIL, condition: (ctx) => ctx.character.currentStateName === "idle" },
+                { type: STEP_TYPE.START_CAMERA_BLEND, to: "duel", durationMs: 3500 },
+                { type: STEP_TYPE.SWITCH_MODE, modeId: "battle" },
+                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
             ]
         };
 
         sceneSequencer.play(enterBattleSequence);
     }
 
+    #checkScriptedCameraTrigger(character, sceneSequencer) {
+        if (this._scriptedCameraTriggerFired) {
+            return;
+        }
+
+        const trigger = this.context.scene.scriptedCameraTrigger;
+        if (!trigger) {
+            return;
+        }
+
+        const triggered = trigger.check(character);
+        if (!triggered) {
+            return;
+        }
+
+        this._scriptedCameraTriggerFired = true;
+
+        const testSequence = {
+            id: "test_scripted_camera",
+            steps: [
+                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
+                { type: STEP_TYPE.SET_CAMERA_FRAME, center: [1, 0, 0], height: 4.2, orthoWidth: 18 },
+                { type: STEP_TYPE.START_CAMERA_BLEND, to: "scripted", durationMs: 1200 },
+                { type: STEP_TYPE.WAIT, durationMs: 2000 },
+                { type: STEP_TYPE.START_CAMERA_BLEND, to: "explore", durationMs: 1200 },
+                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
+            ]
+        };
+
+        sceneSequencer.play(testSequence);
+    }
+
     enter(_payload) {
         const { cameraManager, character } = this.context;
         cameraManager?.switchRig("explore");
         if (character) {
-            character.allowFacing = true;
+            character.setFacingMode(FACING_MODE.AUTO_FROM_MOVE);
         }
         this._buildIndices();
         this._collisionSystem.createDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
@@ -101,7 +137,7 @@ export class ExploreMode extends BaseMode {
     exit() {
         const { character } = this.context;
         if (character) {
-            character.allowFacing = false;
+            character.setFacingMode(FACING_MODE.LOCKED);
         }
         this._collisionSystem.disposeDebugMeshes();
     }

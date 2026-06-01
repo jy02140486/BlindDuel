@@ -1,3 +1,9 @@
+export const FACING_MODE = Object.freeze({
+    AUTO_FROM_MOVE: "autoFromMove",
+    LOCKED: "locked",
+    SCRIPTED: "scripted"
+});
+
 export class CharacterBase {
     constructor(scene, config) {
         this.scene = scene;
@@ -21,7 +27,7 @@ export class CharacterBase {
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
         this.currentSpeed = 0;
         this.facing = 1;
-        this.allowFacing = false;
+        this.facingMode = FACING_MODE.LOCKED;
         this.stateEntrySerial = 0;
         this.stateTags = new Set();
         this.stateEnterTick = 0;
@@ -197,13 +203,28 @@ export class CharacterBase {
         this.spritePlane.position.z = -0.02;
     }
 
-    #updateSpriteFacing() {
+    _syncSpriteFacing() {
         if (!this.spritePlane) {
             return;
         }
         const currentScaleX = Math.abs(this.spritePlane.scaling.x);
         this.spritePlane.scaling.x = currentScaleX * this.facing;
         this.spritePlane.position.x = -this.spritePlane.position.x;
+    }
+
+    setFacingMode(mode) {
+        if (!Object.values(FACING_MODE).includes(mode)) {
+            console.warn(`[CharacterBase] unknown facing mode: ${mode}`);
+            return;
+        }
+        this.facingMode = mode;
+    }
+
+    setFacing(facing) {
+        const nextFacing = facing >= 0 ? 1 : -1;
+        if (nextFacing === this.facing) return;
+        this.facing = nextFacing;
+        this._syncSpriteFacing();
     }
 
     _syncRootDebug(anchor) {
@@ -335,12 +356,8 @@ export class CharacterBase {
         const nx = x / magnitude;
         const ny = y / magnitude;
 
-        if (this.allowFacing && Math.abs(nx) > 0.1) {
-            const newFacing = nx > 0 ? 1 : -1;
-            if (newFacing !== this.facing) {
-                this.facing = newFacing;
-                this.#updateSpriteFacing();
-            }
+        if (this.facingMode === FACING_MODE.AUTO_FROM_MOVE && Math.abs(nx) > 0.1) {
+            this.setFacing(nx > 0 ? 1 : -1);
         }
 
         this.root.position.x += nx * this.baseWalkSpeed * dtSec;

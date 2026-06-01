@@ -30,14 +30,13 @@ function _lerpState(a, b, t) {
     return {
         pos: BABYLON.Vector3.Lerp(a.pos, b.pos, t),
         target: BABYLON.Vector3.Lerp(a.target, b.target, t),
-        // blend 过程中：如果 from 和 to 的 projection 不同，优先使用 to 的 projection
-        // 避免透视+正交参数混合导致畸变
-        projection: b.projection,
+        // 游戏默认始终正交，blend 只处理正交参数，不处理 projection 切换
+        projection: "orthographic",
         orthoLeft: a.orthoLeft + (b.orthoLeft - a.orthoLeft) * t,
         orthoRight: a.orthoRight + (b.orthoRight - a.orthoRight) * t,
         orthoTop: a.orthoTop + (b.orthoTop - a.orthoTop) * t,
         orthoBottom: a.orthoBottom + (b.orthoBottom - a.orthoBottom) * t,
-        fov: a.fov + (b.fov - a.fov) * t,
+        fov: b.fov,
         aspect: a.aspect + (b.aspect - a.aspect) * t
     };
 }

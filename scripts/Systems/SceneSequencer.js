@@ -1,3 +1,19 @@
+export const STEP_TYPE = Object.freeze({
+    WAIT: 0,
+    MOVE_ACTOR_TO: 1,
+    START_CAMERA_BLEND: 2,
+    SWITCH_CAMERA: 3,
+    SWITCH_MODE: 4,
+    LOCK_INPUT: 5,
+    UNLOCK_INPUT: 6,
+    SEND_COMMAND: 7,
+    SET_ACTOR_FACING: 8,
+    SET_ACTOR_FACING_MODE: 9,
+    WAIT_UNTIL: 10,
+    SET_CAMERA_FRAME: 11,
+    CALLBACK: 12
+});
+
 export class SceneSequencer {
     constructor(context) {
         this.context = context;
@@ -68,47 +84,55 @@ export class SceneSequencer {
         this._stepState = {};
 
         switch (step.type) {
-            case "wait": {
+            case STEP_TYPE.WAIT: {
                 this._stepState.elapsedMs = 0;
                 break;
             }
-            case "moveActorTo": {
+            case STEP_TYPE.MOVE_ACTOR_TO: {
                 this._stepState.started = true;
                 break;
             }
-            case "startCameraBlend": {
+            case STEP_TYPE.START_CAMERA_BLEND: {
                 this._startCameraBlend(step);
                 break;
             }
-            case "switchCamera": {
+            case STEP_TYPE.SWITCH_CAMERA: {
                 this._switchCamera(step);
                 break;
             }
-            case "switchMode": {
+            case STEP_TYPE.SWITCH_MODE: {
                 this._switchMode(step, payload);
                 break;
             }
-            case "lockInput": {
+            case STEP_TYPE.LOCK_INPUT: {
                 this._setInputLock(step, true);
                 break;
             }
-            case "unlockInput": {
+            case STEP_TYPE.UNLOCK_INPUT: {
                 this._setInputLock(step, false);
                 break;
             }
-            case "sendCommand": {
+            case STEP_TYPE.SEND_COMMAND: {
                 this._sendCommand(step);
                 break;
             }
-            case "setActorFacing": {
+            case STEP_TYPE.SET_ACTOR_FACING: {
                 this._setActorFacing(step);
                 break;
             }
-            case "waitUntil": {
+            case STEP_TYPE.SET_ACTOR_FACING_MODE: {
+                this._setActorFacingMode(step);
+                break;
+            }
+            case STEP_TYPE.WAIT_UNTIL: {
                 this._stepState.started = true;
                 break;
             }
-            case "callback": {
+            case STEP_TYPE.SET_CAMERA_FRAME: {
+                this._setCameraFrame(step);
+                break;
+            }
+            case STEP_TYPE.CALLBACK: {
                 if (typeof step.fn === "function") {
                     step.fn(this.context, payload);
                 }
@@ -122,26 +146,28 @@ export class SceneSequencer {
 
     _updateStep(step, dtMs, tickCount) {
         switch (step.type) {
-            case "wait": {
+            case STEP_TYPE.WAIT: {
                 this._stepState.elapsedMs += dtMs;
                 return this._stepState.elapsedMs >= (step.durationMs || 0);
             }
-            case "moveActorTo": {
+            case STEP_TYPE.MOVE_ACTOR_TO: {
                 return this._updateMoveActorTo(step, dtMs);
             }
-            case "startCameraBlend": {
-                return !this.context.cameraManager?.isBlending();
+            case STEP_TYPE.START_CAMERA_BLEND: {
+                return this._stepState.failed || !this.context.cameraManager?.isBlending();
             }
-            case "waitUntil": {
+            case STEP_TYPE.WAIT_UNTIL: {
                 return typeof step.condition === "function" && step.condition(this.context);
             }
-            case "switchCamera":
-            case "switchMode":
-            case "lockInput":
-            case "unlockInput":
-            case "sendCommand":
-            case "setActorFacing":
-            case "callback": {
+            case STEP_TYPE.SET_CAMERA_FRAME:
+            case STEP_TYPE.SWITCH_CAMERA:
+            case STEP_TYPE.SWITCH_MODE:
+            case STEP_TYPE.LOCK_INPUT:
+            case STEP_TYPE.UNLOCK_INPUT:
+            case STEP_TYPE.SEND_COMMAND:
+            case STEP_TYPE.SET_ACTOR_FACING:
+            case STEP_TYPE.SET_ACTOR_FACING_MODE:
+            case STEP_TYPE.CALLBACK: {
                 return true;
             }
             default:
@@ -178,9 +204,14 @@ export class SceneSequencer {
 
     _setActorFacing(step) {
         const actor = this._getActor(step.actorId);
-        if (!actor || !actor.root) return;
-        const scaleX = step.facing >= 0 ? 1 : -1;
-        actor.root.scaling.x = Math.abs(actor.root.scaling.x) * scaleX;
+        if (!actor || typeof actor.setFacing !== "function") return;
+        actor.setFacing(step.facing);
+    }
+
+    _setActorFacingMode(step) {
+        const actor = this._getActor(step.actorId);
+        if (!actor || typeof actor.setFacingMode !== "function") return;
+        actor.setFacingMode(step.mode);
     }
 
     _updateMoveActorTo(step, dtMs) {
@@ -221,11 +252,40 @@ export class SceneSequencer {
         this.context.scene.gameModeManager.switchMode(step.modeId, payload);
     }
 
+    _setCameraFrame(step) {
+        const rig = this.context.scriptedCameraRig;
+        if (!rig) {
+            console.warn("[SceneSequencer] setCameraFrame: scriptedCameraRig not available");
+            return;
+        }
+        rig.setFrame({
+            center: step.center,
+            height: step.height,
+            orthoWidth: step.orthoWidth,
+            zOffset: step.zOffset
+        });
+    }
+
     _startCameraBlend(step) {
+        const cameraManager = this.context.cameraManager;
+        const toRigId = step.to;
+
+        if (!toRigId) {
+            console.warn("[SceneSequencer] startCameraBlend missing target rig");
+            this._stepState.failed = true;
+            return;
+        }
+
+        if (!cameraManager?.rigs?.has(toRigId)) {
+            console.warn(`[SceneSequencer] startCameraBlend unknown rig: ${toRigId}`);
+            this._stepState.failed = true;
+            return;
+        }
+
         const { character, rabbleStick } = this.context;
         let frameCtx = null;
 
-        if (step.to === "duel" && character && rabbleStick) {
+        if (toRigId === "duel" && character && rabbleStick) {
             const heroPos = character.root.position;
             const opponentPos = rabbleStick.root.position;
             const centerX = (heroPos.x + opponentPos.x) * 0.5;
@@ -236,17 +296,19 @@ export class SceneSequencer {
                 target: new BABYLON.Vector3(centerX, 0, centerZ),
                 fighterDistance
             };
-        } else if (step.to === "explore" && character) {
+        } else if (toRigId === "explore" && character) {
             const pos = character.root.position;
             frameCtx = {
                 target: new BABYLON.Vector3(pos.x, pos.y, pos.z)
             };
         }
 
-        this.context.cameraManager?.startBlend({
-            toRigId: step.to,
+        const ok = cameraManager.startBlend({
+            toRigId,
             durationMs: step.durationMs,
             frameCtx
         });
+
+        this._stepState.failed = !ok;
     }
 }

@@ -15,9 +15,17 @@
 | 文档 | 目标 | 备注 |
 |------|------|------|
 | [BACKLOG.md](BACKLOG.md) | 所有未完成事项的主 tracking 入口 | 涵盖战斗、探索、GameMode、相机、资源工具链等 |
+| [TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md](TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md) | Timeline Sequencer 并发 action 重构方案 | 待评审，尚未实施 |
 | [plans/backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md](backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md) | 2.5D 坡道与屏幕平行壁面方案 | 已转入详细 backlog，当前不优先实现 |
 
 ---
+
+## 最近归档（2026-06-01）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/SEQUENCE_CAMERA_AND_FACING_POLICY_PROPOSAL.md](archived/SEQUENCE_CAMERA_AND_FACING_POLICY_PROPOSAL.md) | Sequence 相机独立控制 + 角色 FacingPolicy 解耦方案 | Phase 1-2 全部实施：`ScriptedCameraRig`（正交固定画幅）、`FACING_MODE` 枚举、`SceneSequencer` step 类型枚举化、退出战斗 sequence 朝向控制 |
+| [archived/FACING_POLICY_IMPLEMENTATION_STEPS.md](archived/FACING_POLICY_IMPLEMENTATION_STEPS.md) | FacingPolicy 实施步骤 | 三步全部落地：CharacterBase 改造、Mode 切换更新、SceneSequencer 支持 facing step |
 
 ## 最近归档（2026-05-30）
 
@@ -72,6 +80,13 @@
 - `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-06-01)
+- 2 个计划文档完成并归档：`SEQUENCE_CAMERA_AND_FACING_POLICY_PROPOSAL`、`FACING_POLICY_IMPLEMENTATION_STEPS`
+- `ScriptedCameraRig` 已落地：正交固定画幅、aspect 统一用 `window.innerWidth / window.innerHeight`、blend 固定正交
+- `FACING_MODE` 已落地：CharacterBase 枚举、`ExploreMode`/`BattleMode` 切换设置、`SceneSequencer` 支持 `setActorFacingMode`/`setActorFacing`
+- `STEP_TYPE` 已落地：SceneSequencer step 类型整数枚举化，BattleMode/ExploreMode sequence 定义全部改用常量
+- 新增待办入口：[TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md](TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md) — Timeline Sequencer 并发 action 重构方案，待评审
 
 ## Update Log (2026-05-30)
 - 3 个计划文档完成并归档：`COMBAT_HP_AND_DEATH_STATE`、`EXPLORE_MOVEMENT_DESIGN`、`CAMERAMANAGER_PHASE3_FINISHING_TODO`

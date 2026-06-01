@@ -1,4 +1,6 @@
 import { BaseMode } from "./BaseMode.js";
+import { FACING_MODE } from "../../Enties/CharacterBase.js";
+import { STEP_TYPE } from "../SceneSequencer.js";
 
 export class BattleMode extends BaseMode {
     constructor(context) {
@@ -6,8 +8,10 @@ export class BattleMode extends BaseMode {
     }
 
     enter(_payload) {
-        const { cameraManager } = this.context;
+        const { cameraManager, character, rabbleStick } = this.context;
         cameraManager?.switchRig("duel");
+        if (character) character.setFacingMode(FACING_MODE.LOCKED);
+        if (rabbleStick) rabbleStick.setFacingMode(FACING_MODE.LOCKED);
     }
 
     exit() {}
@@ -48,15 +52,18 @@ export class BattleMode extends BaseMode {
         const exitBattleSequence = {
             id: "exit_battle",
             steps: [
-                { type: "lockInput", actorId: "hero" },
-                 { type: "wait", durationMs: 1500 },
-                { type: "sendCommand", actorId: "hero", command: "sheath" },
-                { type: "wait", durationMs: 1500 },
-                { type: "moveActorTo", actorId: "hero", x: -6.4, y: 0, tolerance: 0.1 },
-                { type: "wait", durationMs: 1500 },
-                { type: "startCameraBlend", to: "explore", durationMs: 2000 },
-                { type: "switchMode", modeId: "explore" },
-                { type: "unlockInput", actorId: "hero" }
+                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
+                { type: STEP_TYPE.WAIT, durationMs: 1500 },
+                { type: STEP_TYPE.SEND_COMMAND, actorId: "hero", command: "sheath" },
+                { type: STEP_TYPE.WAIT, durationMs: 1500 },
+                { type: STEP_TYPE.SET_ACTOR_FACING_MODE, actorId: "hero", mode: FACING_MODE.SCRIPTED },
+                { type: STEP_TYPE.SET_ACTOR_FACING, actorId: "hero", facing: -1 },
+                { type: STEP_TYPE.MOVE_ACTOR_TO, actorId: "hero", x: -6.4, y: 0, tolerance: 0.1 },
+                { type: STEP_TYPE.WAIT, durationMs: 1500 },
+                { type: STEP_TYPE.START_CAMERA_BLEND, to: "explore", durationMs: 2000 },
+                { type: STEP_TYPE.SWITCH_MODE, modeId: "explore" },
+                { type: STEP_TYPE.SET_ACTOR_FACING_MODE, actorId: "hero", mode: FACING_MODE.AUTO_FROM_MOVE },
+                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
             ]
         };
 
