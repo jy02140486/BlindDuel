@@ -1,4 +1,4 @@
-{
+﻿{
     "source":  {
                    "collisionAtlasJson":  "Data/RootMotion/longswordman/longswordman_sheath.json",
                    "collisionAtlasPng":  "Data/RootMotion/longswordman/longswordman_sheath.png",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-22T05:40:24.2722575Z"
+                   "generatedAtUtc":  "2026-06-01T18:06:08.3259946Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 0.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -55,7 +55,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 1.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 1.ase",
                        "frameRect":  {
                                          "x":  224,
                                          "y":  0,
@@ -74,7 +74,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 2.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 2.ase",
                        "frameRect":  {
                                          "x":  448,
                                          "y":  0,
@@ -93,7 +93,7 @@
                    },
                    {
                        "frameIndex":  3,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 3.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 3.ase",
                        "frameRect":  {
                                          "x":  672,
                                          "y":  0,
@@ -112,7 +112,7 @@
                    },
                    {
                        "frameIndex":  4,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 4.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 4.ase",
                        "frameRect":  {
                                          "x":  896,
                                          "y":  0,
@@ -131,7 +131,7 @@
                    },
                    {
                        "frameIndex":  5,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 5.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 5.ase",
                        "frameRect":  {
                                          "x":  1120,
                                          "y":  0,
@@ -150,9 +150,161 @@
                    },
                    {
                        "frameIndex":  6,
-                       "frameName":  "longswordman/longswordman_sheath (RootMotion) 6.ase",
+                       "frameName":  "longswordman_sheath (RootMotion) 6.ase",
                        "frameRect":  {
                                          "x":  1344,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  7,
+                       "frameName":  "longswordman_sheath (RootMotion) 7.ase",
+                       "frameRect":  {
+                                         "x":  1568,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  8,
+                       "frameName":  "longswordman_sheath (RootMotion) 8.ase",
+                       "frameRect":  {
+                                         "x":  1792,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  9,
+                       "frameName":  "longswordman_sheath (RootMotion) 9.ase",
+                       "frameRect":  {
+                                         "x":  2016,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  10,
+                       "frameName":  "longswordman_sheath (RootMotion) 10.ase",
+                       "frameRect":  {
+                                         "x":  2240,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  11,
+                       "frameName":  "longswordman_sheath (RootMotion) 11.ase",
+                       "frameRect":  {
+                                         "x":  2464,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  12,
+                       "frameName":  "longswordman_sheath (RootMotion) 12.ase",
+                       "frameRect":  {
+                                         "x":  2688,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  13,
+                       "frameName":  "longswordman_sheath (RootMotion) 13.ase",
+                       "frameRect":  {
+                                         "x":  2912,
+                                         "y":  0,
+                                         "w":  224,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103,
+                                                    "cy":  135
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  14,
+                       "frameName":  "longswordman_sheath (RootMotion) 14.ase",
+                       "frameRect":  {
+                                         "x":  3136,
                                          "y":  0,
                                          "w":  224,
                                          "h":  160

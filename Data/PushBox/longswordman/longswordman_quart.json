@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 192 },
     "sourceSize": { "w": 192, "h": 192 },
-    "duration": 300
+    "duration": 250
    },
    "longswordman_quart (PushBox) 2.ase": {
     "frame": { "x": 384, "y": 0, "w": 192, "h": 192 },
@@ -21,7 +21,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 192 },
     "sourceSize": { "w": 192, "h": 192 },
-    "duration": 300
+    "duration": 200
    },
    "longswordman_quart (PushBox) 3.ase": {
     "frame": { "x": 576, "y": 0, "w": 192, "h": 192 },
@@ -29,13 +29,12 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 192 },
     "sourceSize": { "w": 192, "h": 192 },
-    "duration": 400
+    "duration": 300
    }
  },
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_quart.png",
   "format": "RGBA8888",
   "size": { "w": 768, "h": 192 },
   "scale": "1",

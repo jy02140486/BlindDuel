@@ -32,7 +32,8 @@
    { "name": "body", "opacity": 255, "blendMode": "normal" },
    { "name": "weapon", "opacity": 255, "blendMode": "normal" },
    { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
-   { "name": "leftarm", "opacity": 255, "blendMode": "normal" }
+   { "name": "leftarm", "opacity": 255, "blendMode": "normal" },
+   { "name": "cloak", "opacity": 255, "blendMode": "normal" }
   ]
  }
 }

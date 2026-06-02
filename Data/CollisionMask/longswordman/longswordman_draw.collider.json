@@ -1,4 +1,4 @@
-{
+﻿{
     "source":  {
                    "collisionAtlasJson":  "Data/RootMotion/longswordman/longswordman_draw.json",
                    "collisionAtlasPng":  "Data/RootMotion/longswordman/longswordman_draw.png",
@@ -31,16 +31,16 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-22T05:40:16.2473683Z"
+                   "generatedAtUtc":  "2026-06-01T18:01:29.3364477Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 0.ase",
+                       "frameName":  "longswordman_draw (RootMotion) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [
@@ -55,11 +55,68 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 1.ase",
+                       "frameName":  "longswordman_draw (RootMotion) 1.ase",
                        "frameRect":  {
-                                         "x":  256,
+                                         "x":  320,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  176,
+                                                    "cy":  150
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_draw (RootMotion) 2.ase",
+                       "frameRect":  {
+                                         "x":  640,
+                                         "y":  0,
+                                         "w":  320,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  176,
+                                                    "cy":  150
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_draw (RootMotion) 3.ase",
+                       "frameRect":  {
+                                         "x":  960,
+                                         "y":  0,
+                                         "w":  320,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  176,
+                                                    "cy":  150
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "longswordman_draw (RootMotion) 4.ase",
+                       "frameRect":  {
+                                         "x":  1280,
+                                         "y":  0,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [
@@ -73,12 +130,12 @@
                                    }
                    },
                    {
-                       "frameIndex":  2,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 2.ase",
+                       "frameIndex":  5,
+                       "frameName":  "longswordman_draw (RootMotion) 5.ase",
                        "frameRect":  {
-                                         "x":  512,
+                                         "x":  1600,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [
@@ -92,12 +149,12 @@
                                    }
                    },
                    {
-                       "frameIndex":  3,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 3.ase",
+                       "frameIndex":  6,
+                       "frameName":  "longswordman_draw (RootMotion) 6.ase",
                        "frameRect":  {
-                                         "x":  768,
+                                         "x":  1920,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [
@@ -111,12 +168,12 @@
                                    }
                    },
                    {
-                       "frameIndex":  4,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 4.ase",
+                       "frameIndex":  7,
+                       "frameName":  "longswordman_draw (RootMotion) 7.ase",
                        "frameRect":  {
-                                         "x":  1024,
+                                         "x":  2240,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [
@@ -130,12 +187,12 @@
                                    }
                    },
                    {
-                       "frameIndex":  5,
-                       "frameName":  "longswordman/longswordman_draw (RootMotion) 5.ase",
+                       "frameIndex":  8,
+                       "frameName":  "longswordman_draw (RootMotion) 8.ase",
                        "frameRect":  {
-                                         "x":  1280,
+                                         "x":  2560,
                                          "y":  0,
-                                         "w":  256,
+                                         "w":  320,
                                          "h":  160
                                      },
                        "boxes":  [

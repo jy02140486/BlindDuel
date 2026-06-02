@@ -1,11 +1,11 @@
-{
+﻿{
     "source":  {
                    "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_zornhut.json",
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_zornhut.png",
                    "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_zornhut.json",
                    "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_zornhut.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_zornhut.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_zornhut.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-02T09:13:21.7454976Z"
+                   "generatedAtUtc":  "2026-06-02T04:31:20.6767730Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 0.ase",
+                       "frameName":  "longswordman_zornhut (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -65,17 +65,6 @@
                                          "h":  23,
                                          "angle":  90,
                                          "pixelCount":  759
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  35.5,
-                                         "cy":  141.5,
-                                         "w":  42,
-                                         "h":  26,
-                                         "angle":  0,
-                                         "pixelCount":  1092
                                      }
                                  ],
                        "anchors":  {
@@ -87,7 +76,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 1.ase",
+                       "frameName":  "longswordman_zornhut (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  256,
                                          "y":  0,
@@ -127,17 +116,6 @@
                                          "h":  48,
                                          "angle":  0,
                                          "pixelCount":  2448
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  50,
-                                         "cy":  141.5,
-                                         "w":  26,
-                                         "h":  25,
-                                         "angle":  90,
-                                         "pixelCount":  650
                                      }
                                  ],
                        "anchors":  {
@@ -149,7 +127,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 2.ase",
+                       "frameName":  "longswordman_zornhut (CollisionMask) 2.ase",
                        "frameRect":  {
                                          "x":  512,
                                          "y":  0,
@@ -178,17 +156,6 @@
                                          "h":  17.993,
                                          "angle":  60.257,
                                          "pixelCount":  586
-                                     },
-                                     {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  77,
-                                         "cy":  141.5,
-                                         "w":  26,
-                                         "h":  25,
-                                         "angle":  90,
-                                         "pixelCount":  650
                                      }
                                  ],
                        "anchors":  {
@@ -200,7 +167,7 @@
                    },
                    {
                        "frameIndex":  3,
-                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 3.ase",
+                       "frameName":  "longswordman_zornhut (CollisionMask) 3.ase",
                        "frameRect":  {
                                          "x":  768,
                                          "y":  0,
@@ -245,34 +212,12 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  180.5,
-                                         "cy":  66.5,
+                                         "cx":  178.5,
+                                         "cy":  43.5,
                                          "w":  38,
                                          "h":  36,
                                          "angle":  90,
                                          "pixelCount":  1368
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_1",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  216,
-                                         "cy":  83.5,
-                                         "w":  33,
-                                         "h":  28,
-                                         "angle":  0,
-                                         "pixelCount":  924
-                                     },
-                                     {
-                                         "id":  "pushbox_3",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  111,
-                                         "cy":  139.5,
-                                         "w":  26,
-                                         "h":  25,
-                                         "angle":  90,
-                                         "pixelCount":  650
                                      }
                                  ],
                        "anchors":  {
@@ -284,7 +229,7 @@
                    },
                    {
                        "frameIndex":  4,
-                       "frameName":  "longswordman/longswordman_zornhut (CollisionMask) 4.ase",
+                       "frameName":  "longswordman_zornhut (CollisionMask) 4.ase",
                        "frameRect":  {
                                          "x":  1024,
                                          "y":  0,
@@ -304,26 +249,15 @@
                                          "pixelCount":  1920
                                      },
                                      {
-                                         "id":  "weaponbox_strong_blade_1",
+                                         "id":  "weaponbox_weak_blade_1",
                                          "type":  "weaponbox",
-                                         "subtype":  "strong_blade",
-                                         "cx":  199,
-                                         "cy":  130,
-                                         "w":  55,
-                                         "h":  49,
-                                         "angle":  0,
-                                         "pixelCount":  2695
-                                     },
-                                     {
-                                         "id":  "pushbox_4",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  143,
-                                         "cy":  143.5,
-                                         "w":  26,
-                                         "h":  25,
-                                         "angle":  90,
-                                         "pixelCount":  650
+                                         "subtype":  "weak_blade",
+                                         "cx":  207.77,
+                                         "cy":  128.087,
+                                         "w":  59.192,
+                                         "h":  35.586,
+                                         "angle":  21.353,
+                                         "pixelCount":  2010
                                      }
                                  ],
                        "anchors":  {
