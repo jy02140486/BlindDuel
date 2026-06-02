@@ -95,8 +95,11 @@ export class CameraManager {
             return false;
         }
         if (this.activeRigId === nextRigId) {
+            console.log(`[CameraManager] switchRig "${nextRigId}" — already active, skip`);
             return true;
         }
+
+        console.log(`[CameraManager] switchRig "${this.activeRigId}" → "${nextRigId}"`);
 
         if (this.activeRig && typeof this.activeRig.exit === "function") {
             this.activeRig.exit(this.context);
@@ -136,15 +139,25 @@ export class CameraManager {
             return false;
         }
 
+        if (durationMs != null && durationMs <= 0) {
+            console.log(`[CameraManager] startBlend to="${toRigId}" durationMs=${durationMs} → instant switchRig`);
+            this.switchRig(toRigId);
+            return true;
+        }
+
         const fromState = _cloneState(this.state);
+
+        console.log(`[CameraManager] startBlend to="${toRigId}" durationMs=${durationMs} fromPos=(${fromState.pos.x.toFixed(2)},${fromState.pos.y.toFixed(2)},${fromState.pos.z.toFixed(2)}) fromTarget=(${fromState.target.x.toFixed(2)},${fromState.target.y.toFixed(2)},${fromState.target.z.toFixed(2)})`);
 
         const computeCtx = frameCtx || this.context;
         let toState;
         if (typeof targetRig.compute === "function") {
-            toState = targetRig.compute(0, computeCtx, fromState);
+            toState = targetRig.compute(1000, computeCtx, fromState);
         } else {
             toState = _cloneState(fromState);
         }
+
+        console.log(`[CameraManager] startBlend toPos=(${toState.pos.x.toFixed(2)},${toState.pos.y.toFixed(2)},${toState.pos.z.toFixed(2)}) toTarget=(${toState.target.x.toFixed(2)},${toState.target.y.toFixed(2)},${toState.target.z.toFixed(2)})`);
 
         const blend = this._blend;
         blend.active = true;
@@ -213,6 +226,7 @@ export class CameraManager {
         const blended = _lerpState(blend.fromState, blend.toState, s);
 
         if (t >= 1) {
+            console.log(`[CameraManager] blend COMPLETE elapsed=${blend.elapsedMs.toFixed(1)}ms → switchRig "${blend.toRigId}"`);
             blend.active = false;
             if (blend.toRigId) {
                 this.switchRig(blend.toRigId);

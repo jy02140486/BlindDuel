@@ -79,13 +79,12 @@ export class Scene {
             debugVisible: false
         });
 
-        // ScriptedCamera 测试触发器（已注释，需要时恢复）
-        // this.scriptedCameraTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-15, 1, 0), {
-        //     width: 4, height: 8, depth: 4
-        // }, {
-        //     debugColor: new BABYLON.Color3(0, 0, 1),
-        //     debugVisible: false
-        // });
+        this.scriptedCameraTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-15, 1, 0), {
+            width: 4, height: 8, depth: 4
+        }, {
+            debugColor: new BABYLON.Color3(0, 0, 1),
+            debugVisible: false
+        });
 
         const rabbleStick = createRabbleStickCharacter(this.scene, assets);
         rabbleStick.root.position.y = 0;
@@ -132,6 +131,16 @@ export class Scene {
         this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
         this._smoothedFighterDistance = Math.abs(rabbleStick.root.position.x - character.root.position.x);
 
+        const actorRegistry = new Map();
+        const controllerRegistry = new Map();
+        for (const entity of this.entityPool) {
+            if (entity.id) actorRegistry.set(entity.id, entity);
+            if (entity.name) actorRegistry.set(entity.name, entity);
+        }
+        actorRegistry.set("hero", character);
+        actorRegistry.set("enemy", rabbleStick);
+        controllerRegistry.set("hero", this.playerController);
+
         const sharedContext = {
             scene: this,
             babylonScene: this.scene,
@@ -150,6 +159,8 @@ export class Scene {
             cameraManager: null,
             sceneVisualSystem: this.sceneVisualSystem,
             entityPool: this.entityPool,
+            actorRegistry,
+            controllerRegistry,
             cameraBasePosition: this._cameraBasePosition,
             cameraTarget: this._cameraTarget,
             smoothedFighterDistance: this._smoothedFighterDistance

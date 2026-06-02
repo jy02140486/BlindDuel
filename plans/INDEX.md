@@ -15,10 +15,15 @@
 | 文档 | 目标 | 备注 |
 |------|------|------|
 | [BACKLOG.md](BACKLOG.md) | 所有未完成事项的主 tracking 入口 | 涵盖战斗、探索、GameMode、相机、资源工具链等 |
-| [TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md](TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md) | Timeline Sequencer 并发 action 重构方案 | 待评审，尚未实施 |
 | [plans/backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md](backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md) | 2.5D 坡道与屏幕平行壁面方案 | 已转入详细 backlog，当前不优先实现 |
 
 ---
+
+## 最近归档（2026-06-02）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md](archived/TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN.md) | Timeline Sequencer 并发 action 重构 | Phase 1-2 全部实施：TimelineSequencer 类、6 种 action handler、enter/exit battle 迁移为 timeline、命令名统一、状态图修复 |
 
 ## 最近归档（2026-06-01）
 
@@ -73,6 +78,7 @@
 ## 快速参考：当前开发状态
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
 - `SceneSequencer` 已具备基础 step：`wait / moveActorTo / switchMode / startCameraBlend` 等
+- `TimelineSequencer` 已落地：`tracks + clips` 时间轴模型，6 种 action handler，enter/exit battle 已迁移为 timeline
 - `Explore -> Battle` 主流程已通：触发器进入 -> `SceneSequencer` 编排 -> `draw` 动画 -> 相机 blend -> 切模式
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
@@ -80,6 +86,13 @@
 - `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-06-02)
+- 计划完成并归档：`TIMELINE_SEQUENCER_CONCURRENT_ACTION_PLAN`
+- Phase 1-2 全部实施：`TimelineSequencer` 类、6 种 action handler、enter/exit battle 迁移为 timeline tracks
+- `LongSwordMan.json` 命令名统一：`enterBattle`→`draw`、`exitBattle`→`sheath`，与其他命令命名一致
+- `LongSwordMan.json` move 状态补上 `sheath` transition，解决按住移动时 sequencer 命令不响应
+- `TimelineSequencer.js` command handler 增加 `pushCommand` 被拒时的 `console.error`
 
 ## Update Log (2026-06-01)
 - 2 个计划文档完成并归档：`SEQUENCE_CAMERA_AND_FACING_POLICY_PROPOSAL`、`FACING_POLICY_IMPLEMENTATION_STEPS`

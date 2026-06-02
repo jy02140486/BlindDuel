@@ -12,9 +12,12 @@ export class ScriptedCameraRig {
             this._center.copyFrom(state.target);
             this._height = state.pos.y;
         }
+        console.log(`[ScriptedCameraRig] enter center=(${this._center.x.toFixed(2)},${this._center.y.toFixed(2)},${this._center.z.toFixed(2)}) height=${this._height.toFixed(2)}`);
     }
 
-    exit(_ctx) {}
+    exit(_ctx) {
+        console.log(`[ScriptedCameraRig] exit`);
+    }
 
     setFrame({ center, height, orthoWidth, zOffset }) {
         if (center) {
@@ -23,12 +26,15 @@ export class ScriptedCameraRig {
         if (height !== undefined) this._height = height;
         if (orthoWidth !== undefined) this._orthoWidth = orthoWidth;
         if (zOffset !== undefined) this._zOffset = zOffset;
+        console.log(`[ScriptedCameraRig] setFrame center=(${this._center.x.toFixed(2)},${this._center.y.toFixed(2)},${this._center.z.toFixed(2)}) height=${this._height.toFixed(2)} orthoWidth=${this._orthoWidth}`);
     }
 
     compute(_dtMs, _frameCtx, prevState) {
         const aspect = window.innerWidth / window.innerHeight;
         const halfWidth = this._orthoWidth / 2;
         const halfHeight = (this._orthoWidth / aspect) / 2;
+
+        console.log(`[ScriptedCameraRig] compute center=(${this._center.x.toFixed(2)},${this._center.y.toFixed(2)},${this._center.z.toFixed(2)}) height=${this._height.toFixed(2)}`);
 
         return {
             pos: new BABYLON.Vector3(

@@ -2,7 +2,7 @@
   "machine": "longswordman",
   "initialState": "standing",
   "inputs": {
-    "commands": ["enterBattle", "exitBattle", "thrust", "quart", "zornhut", "guard"],
+    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "guard"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -18,7 +18,7 @@
         {
           "to": "draw",
           "when": [
-            { "command": "enterBattle" }
+            { "command": "draw" }
           ]
         },
         {
@@ -37,7 +37,7 @@
         {
           "to": "draw",
           "when": [
-            { "command": "enterBattle" }
+            { "command": "draw" }
           ]
         },
         {
@@ -93,7 +93,7 @@
         {
           "to": "sheath",
           "when": [
-            { "command": "exitBattle" }
+            { "command": "sheath" }
           ]
         },
         {
@@ -138,6 +138,12 @@
           "when": [
             { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
           ]
+        },
+        {
+          "to": "sheath",
+          "when": [
+            { "command": "sheath" }
+          ]
         }
       ]
     },
@@ -168,7 +174,7 @@
           ]
         }
       ],
-      "frameSpeeds": [-0.2, 0, 0.2]
+      "frameSpeeds": [-0.1, 0, 0.2]
     },
     "quart": {
       "clip": "quart",
@@ -190,7 +196,7 @@
       "clip": "zornhut",
       "allowMoveInput": false,
       "attackActive": true,
-      "attackActiveFrames": [3],
+      "attackActiveFrames": [3,4],
       "loop": false,
       "timeScale": 1.0,
       "parryTimeScale": 1.75,

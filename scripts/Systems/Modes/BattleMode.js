@@ -1,6 +1,6 @@
 import { BaseMode } from "./BaseMode.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
-import { STEP_TYPE } from "../SceneSequencer.js";
+
 
 export class BattleMode extends BaseMode {
     constructor(context) {
@@ -51,19 +51,61 @@ export class BattleMode extends BaseMode {
 
         const exitBattleSequence = {
             id: "exit_battle",
-            steps: [
-                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
-                { type: STEP_TYPE.WAIT, durationMs: 1500 },
-                { type: STEP_TYPE.SEND_COMMAND, actorId: "hero", command: "sheath" },
-                { type: STEP_TYPE.WAIT, durationMs: 1500 },
-                { type: STEP_TYPE.SET_ACTOR_FACING_MODE, actorId: "hero", mode: FACING_MODE.SCRIPTED },
-                { type: STEP_TYPE.SET_ACTOR_FACING, actorId: "hero", facing: -1 },
-                { type: STEP_TYPE.MOVE_ACTOR_TO, actorId: "hero", x: -6.4, y: 0, tolerance: 0.1 },
-                { type: STEP_TYPE.WAIT, durationMs: 1500 },
-                { type: STEP_TYPE.START_CAMERA_BLEND, to: "explore", durationMs: 2000 },
-                { type: STEP_TYPE.SWITCH_MODE, modeId: "explore" },
-                { type: STEP_TYPE.SET_ACTOR_FACING_MODE, actorId: "hero", mode: FACING_MODE.AUTO_FROM_MOVE },
-                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
+            durationMs: 8000,
+            tracks: [
+                {
+                    id: "hero.input",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "input",
+                    clips: [
+                        { type: "inputLock", atMs: 0, locked: true },
+                        { type: "inputLock", atMs: 6100, locked: false }
+                    ]
+                },
+                {
+                    id: "hero.command",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "command",
+                    clips: [
+                        { type: "command", atMs: 2500, command: "sheath" }
+                    ]
+                },
+                {
+                    id: "hero.facing",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "facing",
+                    clips: [
+                        { type: "faceWorldX", atMs: 5000, direction: -1 }
+                    ]
+                },
+                {
+                    id: "hero.movement",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "movement",
+                    clips: [
+                        { type: "moveActorTo", startMs: 5500, durationMs: 2000, x: -7.2, y: 0 }
+                    ]
+                },
+                {
+                    id: "camera",
+                    kind: "camera",
+                    binding: { cameraId: "explore" },
+                    channel: "blend",
+                    clips: [
+                        { type: "cameraBlend", startMs: 1000, durationMs: 5400, to: "explore" }
+                    ]
+                },
+                {
+                    id: "mode",
+                    kind: "mode",
+                    clips: [
+                        { type: "switchMode", atMs: 6500, modeId: "explore" }
+                    ]
+                }
             ]
         };
 

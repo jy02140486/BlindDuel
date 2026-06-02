@@ -1,7 +1,7 @@
 import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
-import { STEP_TYPE } from "../SceneSequencer.js";
+
 
 export class ExploreMode extends BaseMode {
     constructor(context) {
@@ -78,14 +78,52 @@ export class ExploreMode extends BaseMode {
 
         const enterBattleSequence = {
             id: "enter_battle",
-            steps: [
-                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
-                { type: STEP_TYPE.MOVE_ACTOR_TO, actorId: "hero", x: -3.2, y: 0, tolerance: 0.1 },
-                { type: STEP_TYPE.SEND_COMMAND, actorId: "hero", command: "draw" },
-                { type: STEP_TYPE.WAIT_UNTIL, condition: (ctx) => ctx.character.currentStateName === "idle" },
-                { type: STEP_TYPE.START_CAMERA_BLEND, to: "duel", durationMs: 3500 },
-                { type: STEP_TYPE.SWITCH_MODE, modeId: "battle" },
-                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
+            durationMs: 6400,
+            tracks: [
+                {
+                    id: "hero.input",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "input",
+                    clips: [
+                        { type: "inputLock", atMs: 0, locked: true },
+                        { type: "inputLock", atMs: 6400, locked: false }
+                    ]
+                },
+                {
+                    id: "hero.movement",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "movement",
+                    clips: [
+                        { type: "moveActorTo", startMs: 0, durationMs: 3000, x: -3.2, y: 0 }
+                    ]
+                },
+                {
+                    id: "hero.command",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "command",
+                    clips: [
+                        { type: "command", atMs: 3500, command: "draw" }
+                    ]
+                },
+                {
+                    id: "camera",
+                    kind: "camera",
+                    binding: { cameraId: "duel" },
+                    channel: "blend",
+                    clips: [
+                        { type: "cameraBlend", startMs: 2900, durationMs: 3500, to: "duel" }
+                    ]
+                },
+                {
+                    id: "mode",
+                    kind: "mode",
+                    clips: [
+                        { type: "switchMode", atMs: 6400, modeId: "battle" }
+                    ]
+                }
             ]
         };
 
@@ -110,14 +148,47 @@ export class ExploreMode extends BaseMode {
         this._scriptedCameraTriggerFired = true;
 
         const testSequence = {
-            id: "test_scripted_camera",
-            steps: [
-                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
-                { type: STEP_TYPE.SET_CAMERA_FRAME, center: [1, 0, 0], height: 4.2, orthoWidth: 18 },
-                { type: STEP_TYPE.START_CAMERA_BLEND, to: "scripted", durationMs: 1200 },
-                { type: STEP_TYPE.WAIT, durationMs: 2000 },
-                { type: STEP_TYPE.START_CAMERA_BLEND, to: "explore", durationMs: 1200 },
-                { type: STEP_TYPE.UNLOCK_INPUT, actorId: "hero" }
+            id: "test_timeline_scripted_camera",
+            durationMs: 6000,
+            tracks: [
+                {
+                    id: "hero.input",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "input",
+                    clips: [
+                        { type: "inputLock", atMs: 0, locked: true },
+                        { type: "inputLock", atMs: 5500, locked: false }
+                    ]
+                },
+                {
+                    id: "hero.movement",
+                    kind: "actor",
+                    binding: { actorId: "hero" },
+                    channel: "movement",
+                    clips: [
+                        { type: "moveActorTo", startMs: 0, durationMs: 2000, x: -16, y: 0.6 }
+                    ]
+                },
+                {
+                    id: "camera.frame",
+                    kind: "camera",
+                    binding: { cameraId: "scripted" },
+                    channel: "frame",
+                    clips: [
+                        { type: "setCameraFrame", atMs: 0, center: [-16, -1.5, 0], height: 4.2, orthoWidth: 18 }
+                    ]
+                },
+                {
+                    id: "camera.blend",
+                    kind: "camera",
+                    binding: { cameraId: "scripted" },
+                    channel: "blend",
+                    clips: [
+                        { type: "cameraBlend", startMs: 0, durationMs: 0, to: "scripted" },
+                        { type: "cameraBlend", startMs: 4000, durationMs: 1200, to: "explore" }
+                    ]
+                }
             ]
         };
 
@@ -168,11 +239,15 @@ export class ExploreMode extends BaseMode {
     }
 
     updateRender(dtMs) {
-        const { character, cameraManager, sceneVisualSystem } = this.context;
+        const { character, cameraManager, sceneVisualSystem, sceneSequencer } = this.context;
         const pos = character.root.position;
 
         this._cameraTarget.set(pos.x, pos.y, pos.z);
         this.context.target = this._cameraTarget;
+
+        if (sceneSequencer?.isBusy()) {
+            console.log(`[ExploreMode] updateRender during sequence — context.target set to char pos=(${pos.x.toFixed(2)},${pos.y.toFixed(2)},${pos.z.toFixed(2)}) activeRig=${cameraManager?.activeRigId}`);
+        }
 
         for (const entity of this.renderables) {
             if (entity.spritePlane) {

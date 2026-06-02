@@ -1,3 +1,5 @@
+import { TimelineSequencer } from "./TimelineSequencer.js";
+
 export const STEP_TYPE = Object.freeze({
     WAIT: 0,
     MOVE_ACTOR_TO: 1,
@@ -21,17 +23,29 @@ export class SceneSequencer {
         this._stepIndex = 0;
         this._stepState = null;
         this._busy = false;
+        this._timelineSequencer = new TimelineSequencer(context);
     }
 
     isBusy() {
-        return this._busy;
+        return this._busy || this._timelineSequencer.isBusy();
     }
 
     play(sequence, payload) {
-        if (!sequence || !Array.isArray(sequence.steps)) {
+        if (!sequence) {
             console.warn("[SceneSequencer] play called with invalid sequence");
             return;
         }
+
+        if (Array.isArray(sequence.tracks)) {
+            this._timelineSequencer.play(sequence, payload);
+            return;
+        }
+
+        if (!Array.isArray(sequence.steps)) {
+            console.warn("[SceneSequencer] play called with invalid sequence");
+            return;
+        }
+
         this._sequence = sequence;
         this._stepIndex = 0;
         this._stepState = {};
@@ -41,6 +55,9 @@ export class SceneSequencer {
     }
 
     stop() {
+        if (this._timelineSequencer.isBusy()) {
+            this._timelineSequencer.stop();
+        }
         if (!this._busy) return;
         console.log("[SceneSequencer] stop");
         this._busy = false;
@@ -51,9 +68,15 @@ export class SceneSequencer {
 
     clear() {
         this.stop();
+        this._timelineSequencer.clear();
     }
 
     fixedUpdate(dtMs, tickCount) {
+        if (this._timelineSequencer.isBusy()) {
+            this._timelineSequencer.fixedUpdate(dtMs, tickCount);
+            return;
+        }
+
         if (!this._busy) return;
 
         const step = this._sequence.steps[this._stepIndex];
