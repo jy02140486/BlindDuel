@@ -4,6 +4,7 @@ export class CombatSystem {
     constructor(options = {}) {
         this.resolver = options.resolver ?? new ContactResolver(options);
         this.debugTrace = options.debugTrace ?? false;
+        this.cameraManager = options.cameraManager ?? null;
     }
 
     fixedUpdate(characters = [], tickCount = null) {
@@ -25,6 +26,8 @@ export class CombatSystem {
                 if (typeof target.addTimedTag === "function") {
                     target.addTimedTag("parryBonus", durationFrames);
                 }
+                this._fxShake(0.35, 250);
+                this._fxFlash(100);
                 continue;
             }
 
@@ -37,6 +40,7 @@ export class CombatSystem {
                         knockbackX: knockbackX
                     });
                 }
+                this._fxShake(0.18, 120);
                 continue;
             }
 
@@ -51,13 +55,32 @@ export class CombatSystem {
                 if (typeof target.applyBlockstun === "function") {
                     target.applyBlockstun(effect.durationFrames);
                 }
+                this._fxShake(0.12, 100);
                 continue;
             }
 
             if (typeof target.takeDamage === "function") {
                 target.takeDamage(effect.context);
             }
+            this._fxShake(0.25, 180);
+            this._fxFlash(80);
         }
         return result;
+    }
+
+    _fxShake(amplitude, durationMs) {
+        this.cameraManager?.enqueueEffect({
+            type: "shake",
+            durationMs,
+            params: { amplitude, frequency: 35 }
+        });
+    }
+
+    _fxFlash(durationMs) {
+        this.cameraManager?.enqueueEffect({
+            type: "flash",
+            durationMs,
+            params: { color: "white", maxAlpha: 1.0 }
+        });
     }
 }

@@ -477,5 +477,54 @@ const ACTION_HANDLERS = {
                 zOffset: clip.zOffset
             });
         }
+    },
+
+    cameraEffect: {
+        start(ctx, clip, state) {
+            const cm = ctx.cameraManager;
+            if (!cm) {
+                console.warn("[TimelineSequencer] cameraEffect: cameraManager not found");
+                return;
+            }
+            const effectType = clip.effect;
+            const params = { ...clip.params };
+
+            if (effectType === "shake" && clip.amplitude !== undefined) {
+                params.amplitude = clip.amplitude;
+                params.frequency = clip.frequency ?? 35;
+            }
+            if (effectType === "flash" && clip.color !== undefined) {
+                params.color = clip.color;
+            }
+            if (effectType === "letterbox") {
+                params.height = clip.height ?? params.height ?? 72;
+                params.speed = clip.speed ?? params.speed ?? 240;
+            }
+            if (effectType === "fade") {
+                params.color = clip.color ?? params.color ?? "black";
+                params.from = clip.from ?? params.from ?? 0;
+                params.to = clip.to ?? params.to ?? 1;
+            }
+
+            cm.enqueueEffect({
+                type: effectType,
+                durationMs: clip.durationMs,
+                params
+            });
+
+            state.cm = cm;
+            state.effectType = effectType;
+
+            console.log(`[TimelineSeq] cameraEffect START type=${effectType} durationMs=${clip.durationMs}`);
+        },
+        end(ctx, clip, state) {
+            if (state.effectType === "letterbox") {
+                state.cm?.clearEffects(fx => fx.type === "letterbox");
+            }
+            if (state.effectType === "fade") {
+                state.cm?.clearEffects(fx => fx.type === "fade");
+            }
+            console.log(`[TimelineSeq] cameraEffect END type=${state.effectType}`);
+        }
     }
 };

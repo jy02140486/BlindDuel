@@ -13,7 +13,8 @@ export const STEP_TYPE = Object.freeze({
     SET_ACTOR_FACING_MODE: 9,
     WAIT_UNTIL: 10,
     SET_CAMERA_FRAME: 11,
-    CALLBACK: 12
+    CALLBACK: 12,
+    CAMERA_EFFECT: 13
 });
 
 export class SceneSequencer {
@@ -161,6 +162,34 @@ export class SceneSequencer {
                 }
                 break;
             }
+            case STEP_TYPE.CAMERA_EFFECT: {
+                const effectType = step.effect;
+                const params = { ...step.params };
+
+                if (effectType === "shake" && step.amplitude !== undefined) {
+                    params.amplitude = step.amplitude;
+                    params.frequency = step.frequency ?? 35;
+                }
+                if (effectType === "flash" && step.color !== undefined) {
+                    params.color = step.color;
+                }
+                if (effectType === "letterbox") {
+                    params.height = step.height ?? params.height ?? 72;
+                    params.speed = step.speed ?? params.speed ?? 240;
+                }
+                if (effectType === "fade") {
+                    params.color = step.color ?? params.color ?? "black";
+                    params.from = step.from ?? params.from ?? 0;
+                    params.to = step.to ?? params.to ?? 1;
+                }
+
+                this.context.cameraManager?.enqueueEffect({
+                    type: effectType,
+                    durationMs: step.durationMs,
+                    params
+                });
+                break;
+            }
             default:
                 console.warn(`[SceneSequencer] unknown step type: ${step.type}`);
                 break;
@@ -183,6 +212,7 @@ export class SceneSequencer {
                 return typeof step.condition === "function" && step.condition(this.context);
             }
             case STEP_TYPE.SET_CAMERA_FRAME:
+            case STEP_TYPE.CAMERA_EFFECT:
             case STEP_TYPE.SWITCH_CAMERA:
             case STEP_TYPE.SWITCH_MODE:
             case STEP_TYPE.LOCK_INPUT:

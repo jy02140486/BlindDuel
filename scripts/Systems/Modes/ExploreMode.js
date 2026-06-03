@@ -188,6 +188,17 @@ export class ExploreMode extends BaseMode {
                         { type: "cameraBlend", startMs: 0, durationMs: 0, to: "scripted" },
                         { type: "cameraBlend", startMs: 4000, durationMs: 1200, to: "explore" }
                     ]
+                },
+                {
+                    id: "camera.fx",
+                    kind: "camera",
+                    channel: "fx",
+                    clips: [
+                        { type: "cameraEffect", atMs: 0, effect: "letterbox", durationMs: 5000, height: 72, speed: 240 },
+                        { type: "cameraEffect", atMs: 200, effect: "fade", durationMs: 300, color: "black", from: 1, to: 0 },
+                        { type: "cameraEffect", atMs: 800, effect: "shake", durationMs: 220, amplitude: 0.22 },
+                        { type: "cameraEffect", atMs: 800, effect: "flash", durationMs: 120, color: "white" }
+                    ]
                 }
             ]
         };

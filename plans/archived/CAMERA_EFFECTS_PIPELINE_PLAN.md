@@ -1,6 +1,6 @@
 # Camera Effects Pipeline Plan
 
-> **Status**: 待实施
+> **Status**: 已完成 ✅
 
 ## 目标
 
@@ -52,7 +52,7 @@ cameraManager.enqueueEffect({
 
 ## 实施步骤
 
-### Step 0：修复 `this.state` 污染（baseState / finalState 分离）
+### Step 0：修复 `this.state` 污染（baseState / finalState 分离） ✅
 
 **改动范围**：仅 `CameraManager.update()`，约 3 行
 
@@ -69,7 +69,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 1：创建 DOM overlay + flash 效果
+### Step 1：创建 DOM overlay + flash 效果 ✅
 
 **改动范围**：`CameraManager.init()` / `CameraManager._applyEffects()` / 新增 overlay 驱动逻辑
 
@@ -99,7 +99,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 2：实现 shake 效果
+### Step 2：实现 shake 效果 ✅
 
 **改动范围**：`CameraManager._applyEffects()`
 
@@ -118,7 +118,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 3：实现 fade 效果
+### Step 3：实现 fade 效果 ✅
 
 **改动范围**：`CameraManager.enqueueEffect()` / overlay CSS 驱动
 
@@ -138,7 +138,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 4：实现 letterbox 效果
+### Step 4：实现 letterbox 效果 ✅
 
 **改动范围**：`CameraManager.enqueueEffect()` / overlay CSS 驱动 / `clearEffects()` 清理
 
@@ -161,7 +161,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 5：接入战斗反馈（shake + flash on hit/guard/clash）
+### Step 5：接入战斗反馈（shake + flash on hit/guard/clash） ✅
 
 **改动范围**：`CombatSystem.js`（加 `cameraManager` 引用）、`character_demo.js`（传参）
 
@@ -186,7 +186,7 @@ cameraManager.enqueueEffect({
 
 ---
 
-### Step 6：接入 Timeline Sequence（cameraEffect clip handler）
+### Step 6：接入 Timeline Sequence（cameraEffect clip handler） ✅
 
 **改动范围**：`TimelineSequencer.js`（ACTION_HANDLERS）、`SceneSequencer.js`（STEP_TYPE）
 

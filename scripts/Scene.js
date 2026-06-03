@@ -171,6 +171,7 @@ export class Scene {
         this.cameraManager.registerRig("explore", this.exploreCameraRig);
         this.cameraManager.registerRig("scripted", this.scriptedCameraRig);
         sharedContext.cameraManager = this.cameraManager;
+        this.combatSystem.cameraManager = this.cameraManager;
         this.sharedContext = sharedContext;
 
         this.sceneSequencer = new SceneSequencer(sharedContext);
