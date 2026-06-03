@@ -81,6 +81,8 @@ export class CameraManager {
 
         this.state.aspect = canvas.width / canvas.height;
         this._applyToBabylonCamera(this.state);
+
+        this._createOverlay(canvas);
     }
 
     registerRig(id, rigAdapter) {
@@ -129,7 +131,7 @@ export class CameraManager {
 
         const finalState = this._applyEffects(baseState, dtMs, frameCtx);
         this._applyToBabylonCamera(finalState);
-        this.state = finalState;
+        this.state = baseState;
     }
 
     startBlend({ toRigId, durationMs, easing, frameCtx }) {
@@ -195,15 +197,26 @@ export class CameraManager {
 
     enqueueEffect(effect) {
         if (!effect) return;
-        this._effects.push({
+        const fx = {
             id: effect.id || `fx_${Date.now()}`,
             type: effect.type,
             durationMs: effect.durationMs || 0,
             elapsedMs: 0,
             params: effect.params || {},
             priority: effect.priority ?? 0
-        });
+        };
+        this._effects.push(fx);
         this._effects.sort((a, b) => a.priority - b.priority);
+
+        if (fx.type === "flash") {
+            this._triggerFlash(fx);
+        }
+        if (fx.type === "fade") {
+            this._triggerFade(fx);
+        }
+        if (fx.type === "letterbox") {
+            this._triggerLetterbox(fx);
+        }
     }
 
     clearEffects(filterFn) {
@@ -215,6 +228,9 @@ export class CameraManager {
             }
         } else {
             this._effects.length = 0;
+            this._clearFlash();
+            this._clearFade();
+            this._clearLetterbox();
         }
     }
 
@@ -238,18 +254,57 @@ export class CameraManager {
 
     _applyEffects(baseState, dtMs, frameCtx) {
         const expired = [];
+        let maxShakeX = 0;
+        let maxShakeZ = 0;
+
         for (let i = 0; i < this._effects.length; i++) {
             const fx = this._effects[i];
             fx.elapsedMs += dtMs;
+
+            if (fx.type === "letterbox") {
+                if (this._updateLetterbox(fx, dtMs)) {
+                    expired.push(i);
+                }
+                continue;
+            }
+
             if (fx.elapsedMs >= fx.durationMs) {
+                if (fx.type === "flash") {
+                    this._clearFlash();
+                }
                 expired.push(i);
                 continue;
+            }
+            if (fx.type === "shake") {
+                const offset = this._computeShakeOffset(fx);
+                if (Math.abs(offset.x) > Math.abs(maxShakeX)) maxShakeX = offset.x;
+                if (Math.abs(offset.z) > Math.abs(maxShakeZ)) maxShakeZ = offset.z;
             }
         }
         for (let i = expired.length - 1; i >= 0; i--) {
             this._effects.splice(expired[i], 1);
         }
-        return baseState;
+
+        if (maxShakeX === 0 && maxShakeZ === 0) return baseState;
+
+        const shaken = _cloneState(baseState);
+        shaken.pos.x += maxShakeX;
+        shaken.pos.z += maxShakeZ;
+        shaken.target.x += maxShakeX;
+        shaken.target.z += maxShakeZ;
+        return shaken;
+    }
+
+    _computeShakeOffset(fx) {
+        const params = fx.params || {};
+        const amplitude = params.amplitude ?? 0.2;
+        const frequency = params.frequency ?? 30;
+        const phase = params.phase ?? 0;
+        const t = fx.elapsedMs / fx.durationMs;
+        const decay = 1 - t;
+        const angle = (fx.elapsedMs * frequency * 2 * Math.PI / 1000) + phase;
+        const raw = amplitude * Math.sin(angle) * decay;
+        return { x: raw, z: raw * 0.7 };
     }
 
     _applyToBabylonCamera(state) {
@@ -266,6 +321,165 @@ export class CameraManager {
             this.camera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
             this.camera.fov = state.fov;
         }
+    }
+
+    _createOverlay(canvas) {
+        const container = document.createElement("div");
+        container.id = "camera-overlay";
+        container.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;";
+
+        const flash = document.createElement("div");
+        flash.id = "fx-flash";
+        flash.style.cssText = "position:absolute;inset:0;opacity:0;";
+
+        const fade = document.createElement("div");
+        fade.id = "fx-fade";
+        fade.style.cssText = "position:absolute;inset:0;opacity:0;";
+
+        const letterTop = document.createElement("div");
+        letterTop.id = "fx-letter-top";
+        letterTop.style.cssText = "position:absolute;left:0;right:0;top:0;background:black;transform:translateY(-100%);";
+
+        const letterBottom = document.createElement("div");
+        letterBottom.id = "fx-letter-bottom";
+        letterBottom.style.cssText = "position:absolute;left:0;right:0;bottom:0;background:black;transform:translateY(100%);";
+
+        container.appendChild(flash);
+        container.appendChild(fade);
+        container.appendChild(letterTop);
+        container.appendChild(letterBottom);
+
+        canvas.parentNode.insertBefore(container, canvas.nextSibling);
+
+        this._overlay = { container, flash, fade, letterTop, letterBottom };
+    }
+
+    _triggerFlash(fx) {
+        const el = this._overlay?.flash;
+        if (!el) return;
+        const params = fx.params || {};
+        el.style.background = params.color || "white";
+        el.style.transition = `opacity ${fx.durationMs}ms ease-out`;
+        el.style.opacity = "0";
+        el.offsetHeight;
+        el.style.opacity = String(params.maxAlpha ?? 1.0);
+    }
+
+    _clearFlash() {
+        const el = this._overlay?.flash;
+        if (!el) return;
+        el.style.transition = "none";
+        el.style.opacity = "0";
+    }
+
+    _triggerFade(fx) {
+        const el = this._overlay?.fade;
+        if (!el) return;
+        const params = fx.params || {};
+        el.style.background = params.color || "black";
+        el.style.transition = "none";
+        el.style.opacity = String(params.from ?? 0);
+        el.offsetHeight;
+        el.style.transition = `opacity ${fx.durationMs}ms linear`;
+        el.style.opacity = String(params.to ?? 1);
+    }
+
+    _clearFade() {
+        const el = this._overlay?.fade;
+        if (!el) return;
+        el.style.transition = "none";
+        el.style.opacity = "0";
+    }
+
+    _triggerLetterbox(fx) {
+        const params = fx.params || {};
+        const height = params.height ?? 72;
+        const speed = params.speed ?? 240;
+        const enterMs = (height / speed) * 1000;
+        const totalMs = fx.durationMs || Infinity;
+
+        fx._lb = {
+            phase: "entering",
+            elapsedMs: 0,
+            enterMs,
+            height,
+            totalMs
+        };
+
+        const topEl = this._overlay?.letterTop;
+        const bottomEl = this._overlay?.letterBottom;
+        if (!topEl || !bottomEl) return;
+
+        topEl.style.height = `${height}px`;
+        bottomEl.style.height = `${height}px`;
+        topEl.style.transition = "none";
+        bottomEl.style.transition = "none";
+        topEl.style.transform = "translateY(-100%)";
+        bottomEl.style.transform = "translateY(100%)";
+        topEl.offsetHeight;
+        bottomEl.offsetHeight;
+        topEl.style.transition = `transform ${enterMs}ms linear`;
+        bottomEl.style.transition = `transform ${enterMs}ms linear`;
+        topEl.style.transform = "translateY(0)";
+        bottomEl.style.transform = "translateY(0)";
+    }
+
+    _updateLetterbox(fx, dtMs) {
+        const lb = fx._lb;
+        if (!lb) return true;
+
+        lb.elapsedMs += dtMs;
+
+        if (lb.phase === "entering" && lb.elapsedMs >= lb.enterMs) {
+            lb.phase = "staying";
+            lb.elapsedMs = 0;
+        }
+
+        if (lb.phase === "staying" && lb.totalMs !== Infinity) {
+            const stayMs = lb.totalMs - lb.enterMs * 2;
+            if (stayMs <= 0 || lb.elapsedMs >= stayMs) {
+                lb.phase = "exiting";
+                lb.elapsedMs = 0;
+                this._startLetterboxExit(fx);
+            }
+        }
+
+        if (lb.phase === "exiting" && lb.elapsedMs >= lb.enterMs) {
+            return true;
+        }
+
+        return false;
+    }
+
+    _startLetterboxExit(fx) {
+        const lb = fx._lb;
+        const topEl = this._overlay?.letterTop;
+        const bottomEl = this._overlay?.letterBottom;
+        if (!topEl || !bottomEl || !lb) return;
+        topEl.style.transition = `transform ${lb.enterMs}ms linear`;
+        bottomEl.style.transition = `transform ${lb.enterMs}ms linear`;
+        topEl.style.transform = "translateY(-100%)";
+        bottomEl.style.transform = "translateY(100%)";
+    }
+
+    _clearLetterbox() {
+        const topEl = this._overlay?.letterTop;
+        const bottomEl = this._overlay?.letterBottom;
+        if (!topEl || !bottomEl) return;
+        topEl.style.transition = "none";
+        bottomEl.style.transition = "none";
+        topEl.style.transform = "translateY(-100%)";
+        bottomEl.style.transform = "translateY(100%)";
+        topEl.style.height = "0";
+        bottomEl.style.height = "0";
+    }
+
+    dispose() {
+        if (this._overlay?.container) {
+            this._overlay.container.remove();
+            this._overlay = null;
+        }
+        this._effects.length = 0;
     }
 
     getCamera() {
