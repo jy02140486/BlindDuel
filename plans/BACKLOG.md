@@ -9,6 +9,7 @@
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
 | 合并冗余 atlas JSON | `Data/CollisionMask/`、`Data/PushBox/`、`Data/RootMotion/` 三个目录下的 `.json` 文件内容相同（帧布局、duration 一致），仅 `.png` 像素内容不同。可优化为只保留一份 `.json` 作为帧索引，减少维护成本。 | 低 | 需改 `extract_collision_boxes.ps1` 脚本 |
+| 旧脚本文件占用锁清理 | 旧路径 `scripts/extract_collision_boxes.ps1` 因文件锁无法删除，仍残留在仓库中。 | 低 | 不影响主流程，后续找机会清理 |
 
 ## 战斗系统
 
@@ -49,6 +50,8 @@
 | 投掷物与暗器玩法（含 Projectile） | 在探索模式可获得投掷物/暗器资源，并在战斗中释放；同时补齐 projectile 基础能力（生成、飞行、命中、销毁、与现有 Combat 规则衔接）。 | 中 | 建议先做单一 projectile 类型验证战斗闭环 |
 | NPC 物物交换玩法（以物换物） | 探索模式中允许用小物件与 NPC 交易，换取 buff、投掷物或其他战斗资源。 | 中 | 需定义交易条件、库存/消耗规则、NPC 交互反馈与失败提示 |
 | ✅ 角色基类解耦（面向无战斗 NPC） | 将当前"以战斗为中心"的角色结构拆为 `CharacterBase` / `CombatCharacter` / `NpcCharacter`，支持无战斗 NPC 仅具备移动与简单动画。 | 高 | Phase 1-6 已完成（2026-05-27），Interaction 能力预留（Phase 7）与直连逻辑清理（Phase 8）待推进 |
+| NPC root 锚点与 hero 锚点约定不一致 | NPC 默认使用帧中心作为 root 锚点，hero 使用 collider 定义的 near-bottom 锚点，两者不在同一约定。当前 Y-sort 通过 `getVisualBottomY()` 统一计算绕过。 | 中 | 长期应统一锚点约定，或显式区分两种锚点语义 |
+| 状态机事件回调与移动驱动未展开 | 当前 demo 最小状态机已接入输入链路，但事件回调、移动驱动和更多动作状态仍未展开。 | 中 | 原型阶段可接受，后续迭代需补齐 |
 
 ## ս��������٣�������
 
