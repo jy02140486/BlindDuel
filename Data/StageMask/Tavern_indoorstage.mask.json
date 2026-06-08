@@ -1,0 +1,75 @@
+﻿{
+    "source":  {
+                   "mode":  "separate",
+                   "walkImage":  "Data\\StageMask\\walkarea\\Tavern_indoorstage.png",
+                   "obstacleImage":  "Data\\StageMask\\obstacle\\Tavern_indoorstage.png",
+                   "depthImage":  "Data\\StageMask\\depth\\Tavern_indoorstage.png",
+                   "pxToWorld":  0.03,
+                   "imageWidth":  1024,
+                   "imageHeight":  320,
+                   "generatedAtUtc":  "2026-06-06T12:25:10.3984829Z"
+               },
+    "walkArea":  {
+                     "x":  -6.75,
+                     "y":  -4.77,
+                     "w":  20.73,
+                     "h":  3.12
+                 },
+    "masks":  [
+                  {
+                      "id":  "mask_0",
+                      "pushbox":  {
+                                      "x":  -0.63,
+                                      "y":  -2.61,
+                                      "w":  0.69,
+                                      "h":  0.36
+                                  },
+                      "depthMask":  null
+                  },
+                  {
+                      "id":  "mask_1",
+                      "pushbox":  {
+                                      "x":  8.04,
+                                      "y":  -2.67,
+                                      "w":  0.66,
+                                      "h":  0.36
+                                  },
+                      "depthMask":  null
+                  },
+                  {
+                      "id":  "mask_2",
+                      "pushbox":  {
+                                      "x":  0.69,
+                                      "y":  -4.29,
+                                      "w":  7.86,
+                                      "h":  1.23
+                                  },
+                      "depthMask":  {
+                                        "x":  0.36,
+                                        "y":  -4.38,
+                                        "w":  8.46,
+                                        "h":  2.76
+                                    }
+                  },
+                  {
+                      "id":  "mask_3",
+                      "pushbox":  null,
+                      "depthMask":  {
+                                        "x":  -0.6,
+                                        "y":  -2.22,
+                                        "w":  0.63,
+                                        "h":  6.96
+                                    }
+                  },
+                  {
+                      "id":  "mask_4",
+                      "pushbox":  null,
+                      "depthMask":  {
+                                        "x":  7.98,
+                                        "y":  -1.56,
+                                        "w":  0.75,
+                                        "h":  6.3
+                                    }
+                  }
+              ]
+}

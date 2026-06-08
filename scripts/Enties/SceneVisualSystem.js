@@ -9,6 +9,8 @@ export class SceneVisualSystem {
         this.scene = scene;
         this.layers = new Map();
         this.config = null;
+        this.maskRoot = null;
+        this._maskMeshes = [];
     }
 
     /**
@@ -17,13 +19,124 @@ export class SceneVisualSystem {
      */
     async init(config) {
         this.config = config;
-        
+
         // 创建各层根节点
         for (const layerConfig of config.layers) {
             await this._createLayer(layerConfig);
         }
-        
+
         console.log('SceneVisualSystem initialized with', this.layers.size, 'layers');
+    }
+
+    /**
+     * 从 StageMask 数据创建深度遮罩 mesh（stencil buffer 方案）
+     * @param {Object} maskData - .mask.json 解析后的数据
+     */
+    createDepthMasks(maskData) {
+        this.disposeDepthMasks();
+
+        if (!maskData || !maskData.masks) {
+            console.warn('[SceneVisualSystem] No mask data provided');
+            return;
+        }
+
+        // 获取 STAGE 层根节点用于视差同步
+        const stageLayer = this.layers.get('STAGE');
+        this.maskRoot = new BABYLON.TransformNode('maskRoot', this.scene);
+        this.maskRoot.parent = stageLayer ? stageLayer.root : null;
+        this.maskRoot.position.z = -0.03;
+
+        const gl = this.scene.getEngine()._gl;
+        if (!gl) {
+            console.error('[SceneVisualSystem] WebGL context not available');
+            return;
+        }
+
+        let createdCount = 0;
+        for (const mask of maskData.masks) {
+            const dm = mask.depthMask;
+            if (!dm) continue;
+
+            const plane = BABYLON.MeshBuilder.CreatePlane(
+                `depthMask_${mask.id}`,
+                { width: dm.w, height: dm.h },
+                this.scene
+            );
+            plane.position.x = dm.x + dm.w / 2;
+            plane.position.y = dm.y + dm.h / 2;
+            plane.position.z = 0;
+            plane.parent = this.maskRoot;
+
+            // 材质：必须有 material 才能触发 draw call，但用 colorMask 关闭颜色写入
+            const mat = new BABYLON.StandardMaterial(`mat_depthMask_${mask.id}`, this.scene);
+            mat.disableLighting = true;
+            mat.backFaceCulling = false;
+            mat.emissiveColor = new BABYLON.Color3(0, 0, 0);
+            mat.alpha = 1;
+            plane.material = mat;
+
+            // 与角色同 renderingGroup，alphaIndex 必须大于所有角色
+            // 确保在 group 1 的 transparent 队列中 depthMask 最先绘制
+            plane.renderingGroupId = 1;
+            plane.alphaIndex = 10000;
+
+            // stencil 三步法：只写 stencil，不写颜色
+            // 参考 occludingtest.js：mask 先渲染，设置 stencil 状态后，后续 mesh 自动受遮挡
+            plane.onBeforeRenderObservable.add(() => {
+                gl.colorMask(false, false, false, false);
+                gl.enable(gl.STENCIL_TEST);
+                gl.stencilFunc(gl.ALWAYS, 1, 0xFF);
+                gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+            });
+
+            plane.onAfterRenderObservable.add(() => {
+                gl.colorMask(true, true, true, true);
+                gl.stencilFunc(gl.NOTEQUAL, 1, 0xFF);
+            });
+
+            plane._maskAabb = { x: dm.x, y: dm.y, w: dm.w, h: dm.h };
+
+            this._maskMeshes.push(plane);
+            createdCount++;
+        }
+
+        console.log(`[SceneVisualSystem] Created ${createdCount} depth mask meshes (stencil mode)`);
+    }
+
+    _updateMaskVisibility(characterPositions) {
+        for (const mesh of this._maskMeshes) {
+            const aabb = mesh._maskAabb;
+            if (!aabb) continue;
+
+            const maskBottom = aabb.y;
+            const maskLeft = aabb.x;
+            const maskRight = aabb.x + aabb.w;
+
+            let shouldHide = false;
+            for (const pos of characterPositions) {
+                if (pos.x < maskLeft - 1.0 || pos.x > maskRight + 1.0) continue;
+                if (pos.y < maskBottom) {
+                    shouldHide = true;
+                    break;
+                }
+            }
+
+            mesh.isVisible = !shouldHide;
+        }
+    }
+
+    disposeDepthMasks() {
+        for (const mesh of this._maskMeshes) {
+            if (mesh.material) {
+                mesh.material.dispose();
+            }
+            mesh.dispose();
+        }
+        this._maskMeshes.length = 0;
+        if (this.maskRoot) {
+            this.maskRoot.dispose();
+            this.maskRoot = null;
+        }
     }
 
     /**
@@ -232,6 +345,10 @@ export class SceneVisualSystem {
             this._updateLayerParallax(layer, cameraAnchorX);
         }
 
+        if (context.characterPositions) {
+            this._updateMaskVisibility(context.characterPositions);
+        }
+
         // 更新动画 tile 的帧
         for (const [layerId, layer] of this.layers) {
             for (const element of layer.elements) {
@@ -397,7 +514,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     width: 48,
                     height: 4.8,
                     alphaIndex: 1,
-                    parallaxFactor: 0.4,
+                    parallaxFactor: 1.6,
                 }
             ]
         },

@@ -6,7 +6,7 @@ import { NpcController } from "./Systems/NpcController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
-import { createHeroCharacter, createRabbleStickCharacter, createNpcCharacter, createMerchantNpc } from "./CharacterFactory.js";
+import { createEntityFromDef } from "./SceneDefs.js";
 import { DuelCameraRig } from "./DuelCameraRig.js";
 import { ExploreCameraRig } from "./ExploreCameraRig.js";
 import { ScriptedCameraRig } from "./ScriptedCameraRig.js";
@@ -46,11 +46,11 @@ export class Scene {
         this.entityPool = [];
     }
 
-    async init() {
+    async init(sceneDef, battleDefs = {}) {
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
 
-        // 添加调试层（按Ctrl+Shift+I打开�?
+        // 添加调试层（按Ctrl+Shift+I打开）
         await this.scene.debugLayer.show({
             overlay: true,
             globalRoot: document.getElementById("canvas") || undefined
@@ -61,84 +61,104 @@ export class Scene {
 
         // 初始化视觉系统（替换原有的地面创建）
         this.sceneVisualSystem = new SceneVisualSystem(this.scene);
-        await this.sceneVisualSystem.init(DEFAULT_ENVIRONMENT_CONFIG);
+        await this.sceneVisualSystem.init(sceneDef.environment ?? DEFAULT_ENVIRONMENT_CONFIG);
 
         const assets = await loadDataAssets(ASSET_MANIFEST);
 
-        const character = createHeroCharacter(this.scene, assets);
-        character.root.position.y = 0;
-        character.root.position.x = -12;
-        character.debugTrace = false;
-        this.entityPool.push(character);
+        // --- 加载 StageMask 数据并创建深度遮罩 ---
+        let stageMaskData = null;
+        if (sceneDef.stageMask && assets.stageMasks?.[sceneDef.stageMask]) {
+            stageMaskData = assets.stageMasks[sceneDef.stageMask];
+            this.sceneVisualSystem.createDepthMasks(stageMaskData);
+        }
 
-        // 战斗触发器（左边界）
-        this.battleTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-6, 0, 0), {
-            width: 4, height: 8, depth: 4
-        }, {
-            debugColor: new BABYLON.Color3(0, 1, 0),
-            debugVisible: false
-        });
+        // --- 从 SceneDef 创建实体 ---
+        const entityById = new Map();
+        for (const entityDef of sceneDef.entities) {
+            const entity = createEntityFromDef(this.scene, assets, entityDef);
+            this.entityPool.push(entity);
+            entityById.set(entity.id, entity);
+            if (entity.name) entityById.set(entity.name, entity);
+        }
+        const character = entityById.get("hero");
+        const rabbleStick = entityById.get("enemy_1");
 
-        this.scriptedCameraTrigger = new AABBTrigger(this.scene, new BABYLON.Vector3(-15, 1, 0), {
-            width: 4, height: 8, depth: 4
-        }, {
-            debugColor: new BABYLON.Color3(0, 0, 1),
-            debugVisible: false
-        });
+        // --- 临时：只加载 hero 时，rabbleStick 可能不存在 ---
+        // TODO: 恢复多实体后删除这行
+        if (!rabbleStick) {
+            console.warn("[Scene] rabbleStick not found — running in single-entity debug mode");
+        }
 
-        const rabbleStick = createRabbleStickCharacter(this.scene, assets);
-        rabbleStick.root.position.y = 0;
-        rabbleStick.root.position.x = 3.2;
-        rabbleStick.debugTrace = false;
-        this.entityPool.push(rabbleStick);
+        // --- 从 SceneDef 创建触发器 ---
+        this.triggers = new Map();
+        for (const triggerDef of sceneDef.triggers) {
+            const trigger = new AABBTrigger(
+                this.scene,
+                new BABYLON.Vector3(triggerDef.pos[0], triggerDef.pos[1], triggerDef.pos[2] ?? 0),
+                { width: triggerDef.size[0], height: triggerDef.size[1], depth: triggerDef.size[2] },
+                {
+                    debugColor: new BABYLON.Color3(...(triggerDef.debugColor ?? [0, 1, 0])),
+                    debugVisible: triggerDef.debugVisible ?? false,
+                }
+            );
+            this.triggers.set(triggerDef.id, trigger);
+        }
+        // 向后兼容：scriptedCameraTrigger 仍硬编码（后续可改为遍历）
+        this.scriptedCameraTrigger = this.triggers.get("sc_test_1");
 
-        const npc = createNpcCharacter(this.scene, assets);
-        npc.root.position.y = -1;
-        npc.root.position.x = -14;
-        this.entityPool.push(npc);
-
-        const merchant = createMerchantNpc(this.scene, assets);
-        merchant.root.position.y = -0.9;
-        merchant.root.position.x = -11;
-        this.entityPool.push(merchant);
-
+        // --- 控制器 ---
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, character);
-        this.rabbleController = new DummyController(rabbleStick);
-        npc.npcController = new NpcController();
-        npc.npcController.setupDebugVisual(this.scene, npc.root);
-        this.combatSystem = new CombatSystem({ debugTrace: true });
-        this.stageBoundary = new StageBoundary(this.scene, { minX: -8, maxX: 8 });
-        this.walkArea = new WalkArea(this.scene, { minX: -24, maxX: -7, minY: -1, maxY: 0.7, visible: true });
-        this.pushboxResolver = new PushboxResolver();
-        this.cameraRig = new DuelCameraRig({
-            zoomMinDistance: 3.2,
-            zoomMaxDistance: 6.4,
-            orthoMinWidth: 16,
-            orthoMaxWidth: 32,
-            perspMinDistance: 15,
-            perspMaxDistance: 35,
-            minCameraHeight: 3.2,
-            maxCameraHeight: 5.2,
-            targetAspect: 16 / 9
-        });
+        this.rabbleController = rabbleStick ? new DummyController(rabbleStick) : null;
 
+        // NPC 控制器
+        for (const entityDef of sceneDef.entities) {
+            if (entityDef.controller === "npc") {
+                const npc = entityById.get(entityDef.id);
+                if (npc) {
+                    npc.npcController = new NpcController();
+                    npc.npcController.setupDebugVisual(this.scene, npc.root);
+                }
+            }
+        }
+
+        // --- 战斗系统与边界 ---
+        this.combatSystem = new CombatSystem({ debugTrace: true });
+        const battleDef = battleDefs["battle_field_1"];
+        this.stageBoundary = new StageBoundary(this.scene, battleDef.stageBounds);
+        // WalkArea：若 StageMask JSON 中有 walkArea，优先使用；否则回退到 sceneDef.walkArea
+        const walkAreaDef = stageMaskData?.walkArea
+            ? {
+                  minX: stageMaskData.walkArea.x,
+                  maxX: stageMaskData.walkArea.x + stageMaskData.walkArea.w,
+                  minY: stageMaskData.walkArea.y,
+                  maxY: stageMaskData.walkArea.y + stageMaskData.walkArea.h,
+              }
+            : sceneDef.walkArea;
+        this.walkArea = new WalkArea(this.scene, { ...walkAreaDef, visible: true });
+        this.pushboxResolver = new PushboxResolver();
+
+        // --- 相机 ---
+        this.cameraRig = new DuelCameraRig(battleDef.duelCamera);
         this.exploreCameraRig = new ExploreCameraRig();
         this.scriptedCameraRig = new ScriptedCameraRig();
 
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
         this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
-        this._smoothedFighterDistance = Math.abs(rabbleStick.root.position.x - character.root.position.x);
+        this._smoothedFighterDistance = rabbleStick
+            ? Math.abs(rabbleStick.root.position.x - character.root.position.x)
+            : 0;
 
         const actorRegistry = new Map();
-        const controllerRegistry = new Map();
         for (const entity of this.entityPool) {
             if (entity.id) actorRegistry.set(entity.id, entity);
             if (entity.name) actorRegistry.set(entity.name, entity);
         }
         actorRegistry.set("hero", character);
-        actorRegistry.set("enemy", rabbleStick);
+        if (rabbleStick) actorRegistry.set("enemy", rabbleStick);
+
+        const controllerRegistry = new Map();
         controllerRegistry.set("hero", this.playerController);
 
         const sharedContext = {
@@ -148,7 +168,7 @@ export class Scene {
             playerController: this.playerController,
             rabbleController: this.rabbleController,
             character: character,
-            rabbleStick: rabbleStick,
+            rabbleStick: rabbleStick || null,
             pushboxResolver: this.pushboxResolver,
             stageBoundary: this.stageBoundary,
             walkArea: this.walkArea,
@@ -163,7 +183,10 @@ export class Scene {
             controllerRegistry,
             cameraBasePosition: this._cameraBasePosition,
             cameraTarget: this._cameraTarget,
-            smoothedFighterDistance: this._smoothedFighterDistance
+            smoothedFighterDistance: this._smoothedFighterDistance,
+            sceneDef: sceneDef,
+            battleDefs: battleDefs,
+            stageMaskData: stageMaskData,
         };
         this.cameraManager = new CameraManager(sharedContext);
         this.cameraManager.init(this.scene, this.canvas, { fov: 0.8, minZ: 0.1, maxZ: 1000 });
@@ -198,11 +221,10 @@ export class Scene {
                 if (this.walkArea) {
                     this.walkArea.setVisible(nextVisible);
                 }
-                if (this.battleTrigger) {
-                    this.battleTrigger.setDebugVisible(nextVisible);
-                }
-                if (this.scriptedCameraTrigger) {
-                    this.scriptedCameraTrigger.setDebugVisible(nextVisible);
+                if (this.triggers) {
+                    for (const trigger of this.triggers.values()) {
+                        trigger.setDebugVisible(nextVisible);
+                    }
                 }
                 for (const entity of this.entityPool) {
                     if (entity.npcController) {
@@ -277,10 +299,15 @@ export class Scene {
             this.stageBoundary.dispose();
             this.stageBoundary = null;
         }
-        if (this.battleTrigger) {
-            this.battleTrigger.dispose();
-            this.battleTrigger = null;
+        if (this.triggers) {
+            for (const trigger of this.triggers.values()) {
+                trigger.dispose();
+            }
+            this.triggers.clear();
+            this.triggers = null;
         }
+        this.battleTrigger = null;
+        this.scriptedCameraTrigger = null;
         this.entityPool = null;
     }
 }

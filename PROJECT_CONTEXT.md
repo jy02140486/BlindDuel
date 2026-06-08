@@ -53,6 +53,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - 推盒解析器：`scripts/Systems/PushboxResolver.js`
 - 探索碰撞系统：`scripts/Systems/ExploreCollisionSystem.js`
 - 角色工厂：`scripts/CharacterFactory.js`（四条装配路径：hero / rabble / traveller / merchant）
+- 场景/战斗定义：`scripts/SceneDefs.js`（SceneDef + BattleDef 硬编码数据 + `createEntityFromDef` 工厂）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
@@ -179,7 +180,8 @@ GemeniPrototype-BlindBattle/
 │   ├── DataLoader.js
 │   ├── DuelCameraRig.js
 │   ├── ExploreCameraRig.js
-│   └── Scene.js
+│   ├── Scene.js
+│   └── SceneDefs.js
 ├── plans/
 │   ├── archived/                 # 已完成计划
 │   ├── backlogs_detailed/
@@ -200,3 +202,147 @@ GemeniPrototype-BlindBattle/
 3. 计划文档统一组织在 `plans/` 目录，已完成文档归档到 `plans/archived/`。
 4. 涉及大改（状态机/架构）先出方案再改代码。
 5. 与用户沟通默认使用中文，给其它 AI 的交接文档也用中文，编码统一 UTF-8。
+
+## 9. 关键路径索引（调用链 → 源文件）
+
+### 9.1 顶层编排
+```
+Scene (scripts/Scene.js)
+  -> GameModeManager (scripts/Systems/GameModeManager.js)
+     -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
+     -> BattleMode (scripts/Systems/Modes/BattleMode.js)
+  -> SceneSequencer (scripts/Systems/SceneSequencer.js)
+     -> TimelineSequencer (scripts/Systems/TimelineSequencer.js)
+  -> CameraManager (scripts/Systems/CameraManager.js)
+     -> DuelCameraRig (scripts/DuelCameraRig.js)
+     -> ExploreCameraRig (scripts/ExploreCameraRig.js)
+     -> ScriptedCameraRig (scripts/ScriptedCameraRig.js)
+  -> CombatSystem (scripts/Systems/CombatSystem.js)
+     -> ContactResolver (scripts/Systems/ContactResolver.js)
+     -> PushboxResolver (scripts/Systems/PushboxResolver.js)
+     -> StageBoundary (scripts/Systems/StageBoundary.js)
+  -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+```
+
+### 9.2 主循环
+```
+character_demo.js
+  -> Scene.fixedUpdate()
+     -> SceneSequencer.fixedUpdate()
+     -> GameModeManager.fixedUpdate()
+        -> ExploreMode/BattleMode.fixedUpdate()
+           -> InputSystem (scripts/Systems/InputSystem.js)
+           -> PlayerController / AIController / NpcController
+           -> CombatSystem.fixedUpdate()
+  -> Scene.updateRender()
+     -> GameModeManager.updateRender()
+        -> ExploreMode/BattleMode.updateRender()
+           -> 写 context.target / basePosition
+           -> SceneVisualSystem.update()
+     -> CameraManager.update()
+        -> activeRig.compute()
+        -> _applyToBabylonCamera()
+```
+
+### 9.3 进入战斗
+```
+ExploreMode.#checkBattleTrigger()
+  -> sceneSequencer.play(enterBattleSequence)
+     -> TimelineSequencer 驱动 cameraBlend / waitUntil / moveActorTo 等 step
+  -> switchMode("battle")
+  -> BattleMode.enter()
+     -> CameraManager.switchRig("duel")
+     -> CombatSystem 激活
+```
+
+### 9.4 相机更新
+```
+BattleMode / ExploreMode.updateRender()
+  -> 写入 context.target / basePosition（角色连线中点 / 主角位置）
+  -> CameraManager.update()
+     -> activeRig.compute(context)
+     -> _applyToBabylonCamera()（平滑插值写入 Babylon Camera）
+```
+
+### 9.5 控制器链路
+```
+InputSystem (scripts/Systems/InputSystem.js)
+  -> PlayerController (scripts/Systems/PlayerController.js)
+  -> AIController (scripts/Systems/AIController.js)
+     -> AIKnowledgeRegistry (scripts/Systems/AIKnowledgeRegistry.js)
+  -> NpcController (scripts/Systems/NpcController.js)
+  -> TestController (scripts/Systems/TestController.js)
+  -> DummyController (scripts/Systems/DummyController.js)
+```
+
+## 9. 关键路径索引（调用链 → 源文件）
+
+### 9.1 顶层编排
+```
+Scene (scripts/Scene.js)
+  -> GameModeManager (scripts/Systems/GameModeManager.js)
+     -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
+     -> BattleMode (scripts/Systems/Modes/BattleMode.js)
+  -> SceneSequencer (scripts/Systems/SceneSequencer.js)
+     -> TimelineSequencer (scripts/Systems/TimelineSequencer.js)
+  -> CameraManager (scripts/Systems/CameraManager.js)
+     -> DuelCameraRig (scripts/DuelCameraRig.js)
+     -> ExploreCameraRig (scripts/ExploreCameraRig.js)
+     -> ScriptedCameraRig (scripts/ScriptedCameraRig.js)
+  -> CombatSystem (scripts/Systems/CombatSystem.js)
+     -> ContactResolver (scripts/Systems/ContactResolver.js)
+     -> PushboxResolver (scripts/Systems/PushboxResolver.js)
+     -> StageBoundary (scripts/Systems/StageBoundary.js)
+  -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+```
+
+### 9.2 主循环
+```
+character_demo.js
+  -> Scene.fixedUpdate()
+     -> SceneSequencer.fixedUpdate()
+     -> GameModeManager.fixedUpdate()
+        -> ExploreMode/BattleMode.fixedUpdate()
+           -> InputSystem (scripts/Systems/InputSystem.js)
+           -> PlayerController / AIController / NpcController
+           -> CombatSystem.fixedUpdate()
+  -> Scene.updateRender()
+     -> GameModeManager.updateRender()
+        -> ExploreMode/BattleMode.updateRender()
+           -> 写 context.target / basePosition
+           -> SceneVisualSystem.update()
+     -> CameraManager.update()
+        -> activeRig.compute()
+        -> _applyToBabylonCamera()
+```
+
+### 9.3 进入战斗
+```
+ExploreMode.#checkBattleTrigger()
+  -> sceneSequencer.play(enterBattleSequence)
+     -> TimelineSequencer 驱动 cameraBlend / waitUntil / moveActorTo 等 step
+  -> switchMode("battle")
+  -> BattleMode.enter()
+     -> CameraManager.switchRig("duel")
+     -> CombatSystem 激活
+```
+
+### 9.4 相机更新
+```
+BattleMode / ExploreMode.updateRender()
+  -> 写入 context.target / basePosition（角色连线中点 / 主角位置）
+  -> CameraManager.update()
+     -> activeRig.compute(context)
+     -> _applyToBabylonCamera()（平滑插值写入 Babylon Camera）
+```
+
+### 9.5 控制器链路
+```
+InputSystem (scripts/Systems/InputSystem.js)
+  -> PlayerController (scripts/Systems/PlayerController.js)
+  -> AIController (scripts/Systems/AIController.js)
+     -> AIKnowledgeRegistry (scripts/Systems/AIKnowledgeRegistry.js)
+  -> NpcController (scripts/Systems/NpcController.js)
+  -> TestController (scripts/Systems/TestController.js)
+  -> DummyController (scripts/Systems/DummyController.js)
+```

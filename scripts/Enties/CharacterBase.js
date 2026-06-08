@@ -63,6 +63,9 @@ export class CharacterBase {
         this.spritePlane.renderingGroupId = config.renderingGroupId ?? 1;
         this.spritePlane.alphaIndex = config.alphaIndex ?? 1;
 
+        // stencil 遮挡由 ExploreMode.updateRender() 统一在最后一帧角色绘制后关闭
+        // 不在此处关闭，避免多角色时第一个角色画完 stencil 就失效
+
         this.rootDebugNode = new BABYLON.TransformNode(`${config.name || "character"}_root_debug`, scene);
         this.rootDebugNode.parent = this.root;
         this.rootDebugMesh = BABYLON.MeshBuilder.CreateDisc(`${config.name || "character"}_root_disc`, {

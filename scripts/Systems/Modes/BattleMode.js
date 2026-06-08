@@ -7,11 +7,23 @@ export class BattleMode extends BaseMode {
         super("battle", context);
     }
 
-    enter(_payload) {
-        const { cameraManager, character, rabbleStick } = this.context;
+    enter(payload) {
+        const { cameraManager, actorRegistry } = this.context;
+        const battleDef = payload?.battleDef;
+
+        if (battleDef) {
+            this._battleDef = battleDef;
+            this._combatants = battleDef.combatants
+                .map(id => actorRegistry?.get(id))
+                .filter(Boolean);
+        }
+
         cameraManager?.switchRig("duel");
-        if (character) character.setFacingMode(FACING_MODE.LOCKED);
-        if (rabbleStick) rabbleStick.setFacingMode(FACING_MODE.LOCKED);
+        for (const combatant of this._combatants ?? []) {
+            if (combatant?.setFacingMode) {
+                combatant.setFacingMode(FACING_MODE.LOCKED);
+            }
+        }
     }
 
     exit() {}
@@ -21,23 +33,31 @@ export class BattleMode extends BaseMode {
             inputSystem,
             playerController,
             rabbleController,
-            character,
-            rabbleStick,
             pushboxResolver,
             stageBoundary,
             combatSystem,
             sceneSequencer
         } = this.context;
 
+        const combatants = this._combatants ?? [];
+        const character = combatants[0];
+        const opponent = combatants[1];
+
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
         rabbleController.fixedUpdate(dtMs, tickCount);
-        character.fixedUpdate(dtMs, tickCount);
-        rabbleStick.fixedUpdate(dtMs, tickCount);
-        pushboxResolver.resolve([character, rabbleStick]);
-        stageBoundary.clampCharacter(character);
-        stageBoundary.clampCharacter(rabbleStick);
-        combatSystem.fixedUpdate([character, rabbleStick], tickCount);
+
+        for (const c of combatants) {
+            c.fixedUpdate(dtMs, tickCount);
+        }
+
+        pushboxResolver.resolve(combatants);
+
+        for (const c of combatants) {
+            stageBoundary.clampCharacter(c);
+        }
+
+        combatSystem.fixedUpdate(combatants, tickCount);
 
         this.#checkBattleEnd(sceneSequencer);
     }
@@ -45,7 +65,10 @@ export class BattleMode extends BaseMode {
     #checkBattleEnd(sceneSequencer) {
         if (!sceneSequencer || sceneSequencer.isBusy()) return;
 
-        const { character, rabbleStick } = this.context;
+        const combatants = this._combatants ?? [];
+        if (combatants.length < 2) return;
+
+        const [character, rabbleStick] = combatants;
 
         if (!character.isDead && !rabbleStick.isDead) return;
 
@@ -114,8 +137,6 @@ export class BattleMode extends BaseMode {
 
     updateRender(dtMs) {
         const {
-            character,
-            rabbleStick,
             cameraManager,
             sceneVisualSystem,
             cameraBasePosition,
@@ -126,8 +147,11 @@ export class BattleMode extends BaseMode {
             return;
         }
 
-        const heroPos = character.root.position;
-        const opponentPos = rabbleStick.root.position;
+        const combatants = this._combatants ?? [];
+        if (combatants.length < 2) return;
+
+        const heroPos = combatants[0].root.position;
+        const opponentPos = combatants[1].root.position;
         const centerX = (heroPos.x + opponentPos.x) * 0.5;
         const centerZ = (heroPos.z + opponentPos.z) * 0.5;
         const targetHeight = 0;

@@ -1,11 +1,16 @@
 import { Scene } from "./scripts/Scene.js";
+import { OUTDOOR_VILLAGE, HOUSE_INTERIOR, BATTLE_DEFS } from "./scripts/SceneDefs.js";
 
 async function start() {
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true);
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true });
     const scene = new Scene(engine, canvas);
 
-    await scene.init();
+    // --- 临时：切换场景测试 ---
+    // 当前加载室内场景 HOUSE_INTERIOR，测试 Tavern 室内效果
+    // TODO: 场景切换触发器实现后，恢复为 OUTDOOR_VILLAGE
+    await scene.init(HOUSE_INTERIOR, BATTLE_DEFS);
+    // await scene.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
 
     // 暴露到全局，方便控制台调试
     window.gameScene = scene;

@@ -69,12 +69,17 @@ export class ExploreMode extends BaseMode {
             return;
         }
 
-        const triggered = this.context.scene.battleTrigger.check(character);
-        if (!triggered) {
-            return;
+        const battleTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "battle") ?? [];
+        let pendingBattleDef = null;
+        for (const triggerDef of battleTriggers) {
+            const trigger = this.context.scene.triggers.get(triggerDef.id);
+            if (trigger && trigger.check(character)) {
+                this._battleTriggerFired = true;
+                pendingBattleDef = this.context.battleDefs?.[triggerDef.battleId];
+                break;
+            }
         }
-
-        this._battleTriggerFired = true;
+        if (!this._battleTriggerFired || !pendingBattleDef) return;
 
         const enterBattleSequence = {
             id: "enter_battle",
@@ -121,7 +126,7 @@ export class ExploreMode extends BaseMode {
                     id: "mode",
                     kind: "mode",
                     clips: [
-                        { type: "switchMode", atMs: 6400, modeId: "battle" }
+                        { type: "switchMode", atMs: 6400, modeId: "battle", payload: { battleDef: pendingBattleDef } }
                     ]
                 }
             ]
@@ -225,7 +230,7 @@ export class ExploreMode extends BaseMode {
     }
 
     _buildIndices() {
-        const { entityPool } = this.context;
+        const { entityPool, stageMaskData } = this.context;
         if (!entityPool) return;
 
         this.dynamicActors.length = 0;
@@ -245,6 +250,23 @@ export class ExploreMode extends BaseMode {
             }
             if (entity.spritePlane) {
                 this.renderables.push(entity);
+            }
+        }
+
+        // --- StageMask pushbox 作为静态障碍物 ---
+        if (stageMaskData && stageMaskData.masks) {
+            for (const mask of stageMaskData.masks) {
+                const pb = mask.pushbox;
+                if (!pb) continue;
+                this.staticBlockers.push({
+                    _maskId: mask.id,
+                    getBlockerAabb: () => ({
+                        minX: pb.x,
+                        maxX: pb.x + pb.w,
+                        minY: pb.y,
+                        maxY: pb.y + pb.h,
+                    })
+                });
             }
         }
     }
@@ -268,9 +290,19 @@ export class ExploreMode extends BaseMode {
 
         const activeCamera = cameraManager?.getCamera();
         if (sceneVisualSystem && activeCamera) {
-            sceneVisualSystem.update(dtMs, { camera: activeCamera });
+            const characterPositions = this.renderables
+                .filter(e => e.root)
+                .map(e => ({ x: e.root.position.x, y: e.root.position.y }));
+            sceneVisualSystem.update(dtMs, { camera: activeCamera, characterPositions });
         }
 
         this._collisionSystem.updateDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
+
+        // 所有角色渲染完成后关闭 stencil，避免影响后续渲染组（前景、UI 等）
+        const engine = this.context.babylonScene?.getEngine();
+        const gl = engine?._gl;
+        if (gl) {
+            gl.disable(gl.STENCIL_TEST);
+        }
     }
 }

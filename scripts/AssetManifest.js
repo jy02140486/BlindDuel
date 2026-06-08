@@ -72,5 +72,8 @@ export const ASSET_MANIFEST = {
             traveller: "./Data/RootMotion/NPCs/traveller.occupancy.json",
             merchant: "./Data/RootMotion/NPCs/merchant.occupancy.json"
         }
+    },
+    stageMasks: {
+        tavern_indoor: "./Data/StageMask/Tavern_indoorstage.mask.json"
     }
 };

@@ -6,7 +6,9 @@
 
 ## 进行中
 
-（无进行中计划，待从 BACKLOG 选取）
+| 计划 | 目标 | 状态 |
+|------|------|------|
+| [SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md](SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md) | 场景切换 + 战斗外部化方案 | 方案评审中 |
 
 ---
 
@@ -19,6 +21,12 @@
 | [plans/backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md](backlogs_detailed/CLEANBEAT_2P5D_SLOPE_PLAN.md) | 2.5D 坡道与屏幕平行壁面方案 | 已转入详细 backlog，当前不优先实现 |
 
 ---
+
+## 最近归档（2026-06-08）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/STAGE_MASK_PIPELINE_PLAN.md](archived/STAGE_MASK_PIPELINE_PLAN.md) | 舞台遮罩管线 | Step 0-6 全部完成：扫描脚本、分图层导出、加载管线、Stencil 三步法、pushbox/walkArea 消费、端到端验证 + 动态 mask 可见性修复 |
 
 ## 最近归档（2026-06-03）
 
