@@ -11,7 +11,10 @@ import {
     createHeroCharacter,
     createRabbleStickCharacter,
     createNpcCharacter,
-    createMerchantNpc
+    createMerchantNpc,
+    createCustomerNpc,
+    createCustomer2Npc,
+    createBardNpc
 } from "./CharacterFactory.js";
 
 // ---------------------------------------------------------------------------
@@ -23,6 +26,9 @@ const ARCHETYPE_FACTORY = {
     rabble_stick: (scene, assets) => createRabbleStickCharacter(scene, assets),
     npc_traveller: (scene, assets) => createNpcCharacter(scene, assets),
     npc_merchant: (scene, assets) => createMerchantNpc(scene, assets),
+    npc_customer: (scene, assets) => createCustomerNpc(scene, assets),
+    npc_customer2: (scene, assets) => createCustomer2Npc(scene, assets),
+    npc_bard: (scene, assets) => createBardNpc(scene, assets),
 };
 
 /**
@@ -190,8 +196,8 @@ export const HOUSE_ENVIRONMENT_CONFIG = {
                     kind: "single",
                     x: 0,
                     y: 0,
-                    width: 30.72,
-                    height: 9.6,
+                    width: 32.4,
+                    height: 12.0,
                     alphaIndex: 1
                 }
             ]
@@ -220,6 +226,30 @@ export const HOUSE_INTERIOR = {
             kind: "player",
             pos: [0, 0],
             controller: "player",
+        },
+        {
+            archetype: "npc_customer",
+            id: "customer",
+            name: "customer",
+            kind: "npc",
+            pos: [2.8, -2.04],
+            controller: "npc",
+        },
+        {
+            archetype: "npc_customer2",
+            id: "customer2",
+            name: "customer2",
+            kind: "npc",
+            pos: [5.6, -3.54],
+            controller: "npc",
+        },
+        {
+            archetype: "npc_bard",
+            id: "bard",
+            name: "bard",
+            kind: "npc",
+            pos: [11.0, -3.2],
+            controller: "npc",
         },
         // {
         //     archetype: "rabble_stick",

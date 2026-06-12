@@ -58,10 +58,12 @@ export class CharacterBase {
         this.material.emissiveColor = new BABYLON.Color3(1, 1, 1);
         this.material.backFaceCulling = false;
         this.material.useAlphaFromDiffuseTexture = true;
+        this.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
         this.material.disableLighting = true;
+        this.material.disableDepthWrite = true;
         this.spritePlane.material = this.material;
         this.spritePlane.renderingGroupId = config.renderingGroupId ?? 1;
-        this.spritePlane.alphaIndex = config.alphaIndex ?? 1;
+        // alphaIndex 不显式设置，保持默认
 
         // stencil 遮挡由 ExploreMode.updateRender() 统一在最后一帧角色绘制后关闭
         // 不在此处关闭，避免多角色时第一个角色画完 stencil 就失效
@@ -283,10 +285,8 @@ export class CharacterBase {
         }
 
         const moveSpeed = this.currentSpd;
-        const currentState = this.currentStateName || "unknown";
-        const currentClip = this.animation.currentClipName || "none";
 
-        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)}`;
+        this.debugPanel.textContent = `y:${this.root.position.y.toFixed(2)} z:${this.root.position.z.toFixed(2)} alpha:${this.spritePlane.alphaIndex.toFixed(1)} | Speed: ${moveSpeed.toFixed(2)}`;
     }
 
     #compareValues(actualValue, op, expectedValue) {

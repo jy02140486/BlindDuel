@@ -228,3 +228,93 @@ export function createMerchantNpc(scene, assets) {
         occupancy: assets.occupancy?.npc?.merchant ?? null
     });
 }
+
+export function createCustomerNpc(scene, assets) {
+    const customerAtlas = assets.atlas.npc.customer;
+    const spriteUrl = "./Art/Sprite/NPCs/customer.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "customer",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "drink", loop: true }
+            }
+        },
+        clips: {
+            drink: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: customerAtlas,
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.customer ?? null,
+        occupancy: assets.occupancy?.npc?.customer ?? null
+    });
+}
+
+export function createCustomer2Npc(scene, assets) {
+    const customer2Atlas = assets.atlas.npc.customer2;
+    const spriteUrl = "./Art/Sprite/NPCs/customer2.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "customer2",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "drink", loop: true }
+            }
+        },
+        clips: {
+            drink: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: customer2Atlas,
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.customer2 ?? null,
+        occupancy: assets.occupancy?.npc?.customer2 ?? null
+    });
+}
+
+export function createBardNpc(scene, assets) {
+    const bardAtlas = assets.atlas.npc.bard;
+    const spriteUrl = "./Art/Sprite/NPCs/bard.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "bard",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "Play", loop: true }
+            }
+        },
+        clips: {
+            Play: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: bardAtlas,
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.bard ?? null,
+        occupancy: assets.occupancy?.npc?.bard ?? null
+    });
+}

@@ -1,0 +1,58 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/NPCs/customer2.json",
+                   "rootAtlasPng":  "Data/RootMotion/NPCs/customer2.png",
+                   "rootColor":  "#7082C1",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  24,
+                   "generatedAtUtc":  "2026-06-12T03:31:59.8384799Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "customer2 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  64,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  28.5,
+                                                    "cy":  117.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  28.5,
+                                         "cy":  117.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "customer2 1.ase",
+                       "frameRect":  {
+                                         "x":  64,
+                                         "y":  0,
+                                         "w":  64,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  28.5,
+                                                    "cy":  117.5
+                                                }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  28.5,
+                                         "cy":  117.5,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   }
+               ]
+}

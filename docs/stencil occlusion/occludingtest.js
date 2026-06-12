@@ -15,20 +15,57 @@ const createScene = function () {
     );
     camera.attachControl(canvas, true);
 
+    // ========== 正交/透视相机切换 ==========
+    let isOrtho = false;
+    let orthoCamera = null;
+
+    const switchToOrtho = () => {
+        if (orthoCamera) {
+            orthoCamera.dispose();
+        }
+        orthoCamera = new BABYLON.ArcRotateCamera(
+            "orthoCamera",
+            -Math.PI / 2,
+            Math.PI / 2.5,
+            300,
+            BABYLON.Vector3.Zero(),
+            scene
+        );
+        orthoCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        const aspect = engine.getAspectRatio(orthoCamera);
+        const orthoSize = 200;
+        orthoCamera.orthoLeft = -orthoSize * aspect;
+        orthoCamera.orthoRight = orthoSize * aspect;
+        orthoCamera.orthoTop = orthoSize;
+        orthoCamera.orthoBottom = -orthoSize;
+        orthoCamera.attachControl(canvas, true);
+        scene.activeCamera = orthoCamera;
+        isOrtho = true;
+    };
+
+    const switchToPerspective = () => {
+        scene.activeCamera = camera;
+        isOrtho = false;
+    };
+
     const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, -1), scene);
     light.intensity = 1.0;
 
-    const baseImagePath = "Art/Sprite/longswordman/longswordman_standing.png";
-    const bgImagePath = "Art/Environment/Tavern_indoorstage.png";
+    const baseImagePath = "../../Art/Sprite/longswordman/longswordman_standing.png";
+    const merchantImagePath = "../../Art/Sprite/NPCs/merchant.png";
+    const bgImagePath = "../../Art/Environment/Tavern_indoorstage.png";
     const BASE_WIDTH = 84;
     const BASE_HEIGHT = 128;
+    const MERCHANT_WIDTH = 128;
+    const MERCHANT_HEIGHT = 128;
     const OCCLUDER_SIZE = 48;
     const BG_WIDTH = 800;
     const BG_HEIGHT = 300;
 
-    let occluderX = 20;
-    let occluderY = 20;
+    let baseX = 0;
+    let baseY = 0;
     const MOVE_SPEED = 2;
+    const Z_FACTOR = 0.1;
 
     // ========== 背景图（Tavern_indoorstage.png）==========
     const bgPlane = BABYLON.MeshBuilder.CreatePlane("bgPlane", {
@@ -56,7 +93,7 @@ const createScene = function () {
         width: OCCLUDER_SIZE,
         height: OCCLUDER_SIZE
     }, scene);
-    stencilPlane.position = new BABYLON.Vector3(occluderX, occluderY, 0);
+    stencilPlane.position = new BABYLON.Vector3(20, 20, 20 * Z_FACTOR);
     stencilPlane.rotation.x = Math.PI;
     stencilPlane.renderingGroupId = 1;
 
@@ -86,7 +123,7 @@ const createScene = function () {
         width: OCCLUDER_SIZE + 2,
         height: OCCLUDER_SIZE + 2
     }, scene);
-    outlinePlane.position = new BABYLON.Vector3(occluderX, occluderY, 0.01);
+    outlinePlane.position = new BABYLON.Vector3(20, 20, 20 * Z_FACTOR + 0.01);
     outlinePlane.rotation.x = Math.PI;
     outlinePlane.renderingGroupId = 1;
 
@@ -102,7 +139,7 @@ const createScene = function () {
         width: BASE_WIDTH,
         height: BASE_HEIGHT
     }, scene);
-    basePlane.position = new BABYLON.Vector3(0, 0, 0);
+    basePlane.position = new BABYLON.Vector3(baseX, baseY, baseY * Z_FACTOR);
     basePlane.rotation.x = Math.PI;
     basePlane.renderingGroupId = 1;
 
@@ -115,10 +152,37 @@ const createScene = function () {
     tex.vOffset = 1;
     baseMat.diffuseTexture = tex;
     baseMat.useAlphaFromDiffuseTexture = true;
+    baseMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
+    baseMat.alphaCutOff = 0.4;
     baseMat.backFaceCulling = false;
     baseMat.disableLighting = true;
     baseMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
     basePlane.material = baseMat;
+
+    // ========== merchant 图 ==========
+    const merchantPlane = BABYLON.MeshBuilder.CreatePlane("merchantPlane", {
+        width: MERCHANT_WIDTH,
+        height: MERCHANT_HEIGHT
+    }, scene);
+    merchantPlane.position = new BABYLON.Vector3(60, 0, 0);
+    merchantPlane.rotation.x = Math.PI;
+    merchantPlane.renderingGroupId = 1;
+
+    const merchantMat = new BABYLON.StandardMaterial("merchantMat", scene);
+    const merchantTex = new BABYLON.Texture(merchantImagePath, scene);
+    merchantTex.hasAlpha = true;
+    merchantTex.uScale = 0.25; // 4 frames in a row, show first frame
+    merchantTex.uOffset = 0;
+    merchantTex.vScale = -1;
+    merchantTex.vOffset = 1;
+    merchantMat.diffuseTexture = merchantTex;
+    merchantMat.useAlphaFromDiffuseTexture = true;
+    merchantMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
+    merchantMat.alphaCutOff = 0.4;
+    merchantMat.backFaceCulling = false;
+    merchantMat.disableLighting = true;
+    merchantMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    merchantPlane.material = merchantMat;
 
     // basePlane 绘制后关闭 stencil
     basePlane.onAfterRenderObservable.add(() => {
@@ -134,7 +198,15 @@ const createScene = function () {
     // ========== WASD 控制 ==========
     const keys = {};
     window.addEventListener("keydown", (e) => {
-        keys[e.key.toLowerCase()] = true;
+        const key = e.key.toLowerCase();
+        keys[key] = true;
+        if (key === "o") {
+            if (isOrtho) {
+                switchToPerspective();
+            } else {
+                switchToOrtho();
+            }
+        }
     });
     window.addEventListener("keyup", (e) => {
         keys[e.key.toLowerCase()] = false;
@@ -149,12 +221,11 @@ const createScene = function () {
         if (keys["s"]) dy -= MOVE_SPEED;
 
         if (dx !== 0 || dy !== 0) {
-            occluderX += dx;
-            occluderY += dy;
-            stencilPlane.position.x = occluderX;
-            stencilPlane.position.y = occluderY;
-            outlinePlane.position.x = occluderX;
-            outlinePlane.position.y = occluderY;
+            baseX += dx;
+            baseY += dy;
+            basePlane.position.x = baseX;
+            basePlane.position.y = baseY;
+            basePlane.position.z = baseY * Z_FACTOR;
         }
     });
 

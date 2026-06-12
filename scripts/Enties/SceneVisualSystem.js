@@ -11,8 +11,7 @@ export class SceneVisualSystem {
         this.config = null;
         this.maskRoot = null;
         this._maskMeshes = [];
-    }
-
+}
     /**
      * 初始化视觉系统
      * @param {Object} config - 环境配置
@@ -85,6 +84,7 @@ export class SceneVisualSystem {
             plane.onBeforeRenderObservable.add(() => {
                 gl.colorMask(false, false, false, false);
                 gl.enable(gl.STENCIL_TEST);
+                gl.stencilMask(0xFF);
                 gl.stencilFunc(gl.ALWAYS, 1, 0xFF);
                 gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
             });
@@ -92,9 +92,14 @@ export class SceneVisualSystem {
             plane.onAfterRenderObservable.add(() => {
                 gl.colorMask(true, true, true, true);
                 gl.stencilFunc(gl.NOTEQUAL, 1, 0xFF);
+                gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+                gl.stencilMask(0x00);
             });
 
             plane._maskAabb = { x: dm.x, y: dm.y, w: dm.w, h: dm.h };
+
+            // debug panel（与角色同样的世界→屏幕投影方式）
+            plane._debugPanel = this.#createMaskDebugPanel(mask.id);
 
             this._maskMeshes.push(plane);
             createdCount++;
@@ -121,12 +126,17 @@ export class SceneVisualSystem {
                 }
             }
 
-            mesh.isVisible = !shouldHide;
+            // 不再隐藏 mask —— 每个角色自行判断是否参与 stencil 裁剪
+            mesh.isVisible = true;
         }
     }
 
     disposeDepthMasks() {
         for (const mesh of this._maskMeshes) {
+            if (mesh._debugPanel) {
+                mesh._debugPanel.remove();
+                mesh._debugPanel = null;
+            }
             if (mesh.material) {
                 mesh.material.dispose();
             }
@@ -136,6 +146,57 @@ export class SceneVisualSystem {
         if (this.maskRoot) {
             this.maskRoot.dispose();
             this.maskRoot = null;
+        }
+    }
+
+    #createMaskDebugPanel(maskId) {
+        const panel = document.createElement("div");
+        panel.style.position = "absolute";
+        panel.style.pointerEvents = "none";
+        panel.style.background = "rgba(128, 0, 0, 0.7)";
+        panel.style.color = "#ffcccc";
+        panel.style.font = "11px/1.2 Consolas, monospace";
+        panel.style.padding = "2px 6px";
+        panel.style.borderRadius = "3px";
+        panel.style.border = "1px solid rgba(255, 128, 128, 0.4)";
+        panel.style.whiteSpace = "nowrap";
+        panel.style.zIndex = "1000";
+        panel.style.display = "none";
+        document.body.appendChild(panel);
+        return panel;
+    }
+
+    _updateMaskDebugPanels() {
+        const canvas = this.scene.getEngine().getRenderingCanvas();
+        if (!canvas) return;
+
+        for (const mesh of this._maskMeshes) {
+            const panel = mesh._debugPanel;
+            if (!panel) continue;
+
+            if (!mesh.isVisible) {
+                panel.style.display = "none";
+                continue;
+            }
+
+            const wp = mesh.getAbsolutePosition();
+            const projected = BABYLON.Vector3.Project(
+                wp,
+                BABYLON.Matrix.Identity(),
+                this.scene.getTransformMatrix(),
+                this.scene.activeCamera.viewport.toGlobal(canvas.width, canvas.height)
+            );
+
+            const aabb = mesh._maskAabb;
+            const baseY = aabb ? wp.y - aabb.h / 2 : wp.y;
+            if (projected.z > 0 && projected.z < 1) {
+                panel.style.display = "block";
+                panel.style.left = `${projected.x - panel.offsetWidth / 2}px`;
+                panel.style.top = `${projected.y}px`;
+                panel.textContent = `${mesh.name} baseline:${baseY.toFixed(2)} center:${wp.y.toFixed(2)} z:${wp.z.toFixed(2)}`;
+            } else {
+                panel.style.display = "none";
+            }
         }
     }
 
@@ -348,6 +409,8 @@ export class SceneVisualSystem {
         if (context.characterPositions) {
             this._updateMaskVisibility(context.characterPositions);
         }
+
+        this._updateMaskDebugPanels();
 
         // 更新动画 tile 的帧
         for (const [layerId, layer] of this.layers) {

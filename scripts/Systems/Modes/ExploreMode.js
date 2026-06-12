@@ -218,6 +218,8 @@ export class ExploreMode extends BaseMode {
             character.setFacingMode(FACING_MODE.AUTO_FROM_MOVE);
         }
         this._buildIndices();
+        this._setupDrawOrderDebug();
+        this._setupPerCharacterStencil();
         this._collisionSystem.createDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
     }
 
@@ -271,10 +273,146 @@ export class ExploreMode extends BaseMode {
         }
     }
 
+    _setupDrawOrderDebug() {
+        const scene = this.context.babylonScene;
+        if (!scene) return;
+
+        const drawCounter = { value: 0 };
+        const drawnThisFrame = new Set();
+
+        // 每帧开始时重置计数器
+        scene.onBeforeRenderObservable.add(() => {
+            drawCounter.value = 0;
+            drawnThisFrame.clear();
+        });
+
+        const shouldLog = () => this.context.scene.tickCount % 60 === 0;
+
+        const hook = (mesh, label) => {
+            mesh.onBeforeRenderObservable.add(() => {
+                const order = ++drawCounter.value;
+                drawnThisFrame.add(mesh);
+                if (shouldLog()) {
+                    const m = mesh.material;
+                    // console.log(`[draw #${order}] ${label} | alpha:${mesh.alphaIndex} | group:${mesh.renderingGroupId} | depthWrite:${m?.disableDepthWrite} | depthPrePass:${m?.needDepthPrePass} | transp:${m?.transparencyMode}`);
+                }
+            });
+        };
+
+        // 角色 spritePlane
+        for (const entity of this.renderables) {
+            if (entity.spritePlane) {
+                const m = entity.spritePlane.material;
+                // console.log(`[mat] ${entity.id ?? entity.name} | depthWrite:${m?.disableDepthWrite} | depthPrePass:${m?.needDepthPrePass} | transp:${m?.transparencyMode} | alphaCutOff:${m?.alphaCutOff}`);
+                hook(entity.spritePlane, `${entity.id ?? entity.name}`);
+            }
+        }
+
+        // mask mesh
+        const masks = this.context.sceneVisualSystem?._maskMeshes;
+        if (masks) {
+            for (const mesh of masks) {
+                const m = mesh.material;
+                // console.log(`[mat] ${mesh.name} | depthWrite:${m?.disableDepthWrite} | depthPrePass:${m?.needDepthPrePass} | transp:${m?.transparencyMode} | alpha:${m?.alpha}`);
+                hook(mesh, mesh.name);
+            }
+        }
+
+        // 每帧结束后检查哪些 mask 没被绘制
+        scene.onAfterRenderObservable.add(() => {
+            if (!shouldLog() || !masks) return;
+            for (const mesh of masks) {
+                if (drawnThisFrame.has(mesh)) continue;
+                const wp = mesh.getAbsolutePosition();
+                const planes = scene.activeCamera?.frustumPlanes;
+                let inFrustum = '?';
+                if (planes && planes.length === 6 && planes.every(p => p != null)) {
+                    inFrustum = mesh.isInFrustum(planes);
+                }
+                // console.log(`[MISSING] ${mesh.name} | visible:${mesh.isVisible} | inFrustum:${inFrustum} | wp:(${wp.x.toFixed(2)},${wp.y.toFixed(2)},${wp.z.toFixed(2)})`);
+            }
+        });
+
+        // console.log(`[ExploreMode] draw order debug hooked: ${this.renderables.length} characters + ${masks?.length ?? 0} masks`);
+    }
+
+    _setupPerCharacterStencil() {
+        const scene = this.context.babylonScene;
+        if (!scene) return;
+        const engine = scene.getEngine();
+        const gl = engine._gl;
+        const masks = this.context.sceneVisualSystem?._maskMeshes;
+        if (!masks?.length) {
+            // console.log('[stencil] no masks, skip per-character stencil setup');
+            return;
+        }
+
+        const shouldLog = () => this.context.scene.tickCount % 60 === 0;
+
+        for (const entity of this.renderables) {
+            const plane = entity.spritePlane;
+            if (!plane) continue;
+
+            plane.onBeforeRenderObservable.add(() => {
+                // 角色之间纯 painter 排序，不参与 depth pipeline
+                plane._prevDepthTest = gl.getParameter(gl.DEPTH_TEST);
+                gl.disable(gl.DEPTH_TEST);
+
+                const pos = entity.root.position;
+                let needMask = false;
+                for (const mesh of masks) {
+                    const aabb = mesh._maskAabb;
+                    if (!aabb) continue;
+                    const wp = mesh.getAbsolutePosition();
+                    const worldLeft = wp.x - aabb.w / 2;
+                    const worldRight = wp.x + aabb.w / 2;
+                    const worldBottom = wp.y - aabb.h / 2;
+                    if (pos.x < worldLeft - 1.0 || pos.x > worldRight + 1.0) continue;
+                    if (pos.y >= worldBottom) {
+                        needMask = true;
+                        break;
+                    }
+                }
+
+                if (needMask) {
+                    gl.enable(gl.STENCIL_TEST);
+                    gl.stencilMask(0x00);
+                    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+                    gl.stencilFunc(gl.NOTEQUAL, 1, 0xFF);
+                    // if (shouldLog()) {
+                    //     console.log(`[stencil ON] ${entity.id ?? entity.name} y:${pos.y.toFixed(2)}`);
+                    // }
+                } else {
+                    gl.disable(gl.STENCIL_TEST);
+                }
+            });
+
+            plane.onAfterRenderObservable.add(() => {
+                gl.disable(gl.STENCIL_TEST);
+                if (plane._prevDepthTest) {
+                    gl.enable(gl.DEPTH_TEST);
+                } else {
+                    gl.disable(gl.DEPTH_TEST);
+                }
+            });
+        }
+
+        // console.log(`[ExploreMode] per-character stencil hooked for ${this.renderables.length} characters`);
+    }
+
     updateRender(dtMs) {
         const { character, cameraManager, sceneVisualSystem, sceneSequencer } = this.context;
-        const pos = character.root.position;
 
+        const Z_FACTOR = 0.1;
+        for (const entity of this.renderables) {
+            if (entity.spritePlane) {
+                entity.root.position.z = entity.root.position.y * Z_FACTOR;
+                // ALPHABLEND 队列按 alphaIndex 排序，y 越小越近，alphaIndex 越大越后画（在上面）
+                entity.spritePlane.alphaIndex = Math.round(-entity.root.position.y * 1000);
+            }
+        }
+
+        const pos = character.root.position;
         this._cameraTarget.set(pos.x, pos.y, pos.z);
         this.context.target = this._cameraTarget;
 
@@ -284,7 +422,7 @@ export class ExploreMode extends BaseMode {
 
         for (const entity of this.renderables) {
             if (entity.spritePlane) {
-                entity.spritePlane.alphaIndex = 100 - entity.root.position.y;
+                // alphaIndex 不再显式设置，保持默认
             }
         }
 
@@ -297,6 +435,9 @@ export class ExploreMode extends BaseMode {
         }
 
         this._collisionSystem.updateDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
+
+        // 使用 SceneVisualSystem 的 panel 方案进行调试
+        sceneVisualSystem?.updateDebugPanel?.();
 
         // 所有角色渲染完成后关闭 stencil，避免影响后续渲染组（前景、UI 等）
         const engine = this.context.babylonScene?.getEngine();

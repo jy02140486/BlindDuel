@@ -1,10 +1,10 @@
 { "frames": {
    "Tavern_indoorstage.ase": {
-    "frame": { "x": 0, "y": 0, "w": 1024, "h": 320 },
+    "frame": { "x": 0, "y": 0, "w": 1080, "h": 400 },
     "rotated": false,
     "trimmed": false,
-    "spriteSourceSize": { "x": 0, "y": 0, "w": 1024, "h": 320 },
-    "sourceSize": { "w": 1024, "h": 320 },
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 1080, "h": 400 },
+    "sourceSize": { "w": 1080, "h": 400 },
     "duration": 100
    }
  },
@@ -13,7 +13,7 @@
   "version": "1.1-dev",
   "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\Env\\Tavern_indoorstage.png",
   "format": "RGBA8888",
-  "size": { "w": 1024, "h": 320 },
+  "size": { "w": 1080, "h": 400 },
   "scale": "1",
   "frameTags": [
   ],
@@ -28,11 +28,15 @@
    { "name": "longtable_colour", "opacity": 255, "blendMode": "normal" },
    { "name": "longtable", "opacity": 255, "blendMode": "normal" },
    { "name": "longbench_colour", "opacity": 255, "blendMode": "normal" },
+   { "name": "longbench", "opacity": 255, "blendMode": "normal" },
    { "name": "baseshadow", "opacity": 255, "blendMode": "normal" },
+   { "name": "stock_colour", "opacity": 255, "blendMode": "normal" },
+   { "name": "stock", "opacity": 255, "blendMode": "normal" },
    { "name": "walkarea", "opacity": 255, "blendMode": "normal" },
    { "name": "depthmask", "opacity": 255, "blendMode": "normal" },
    { "name": "obstacle", "opacity": 255, "blendMode": "normal" },
-   { "name": "longbench", "opacity": 255, "blendMode": "normal" },
+   { "name": "folks_colour", "opacity": 255, "blendMode": "normal" },
+   { "name": "folks", "opacity": 255, "blendMode": "normal" },
    { "name": "char", "opacity": 255, "blendMode": "normal" }
   ]
  }

@@ -105,11 +105,9 @@ export class CombatCharacter extends CharacterBase {
         }
 
         const moveSpeed = this.currentSpd;
-        const currentState = this.currentStateName || "unknown";
-        const currentClip = this.animation.currentClipName || "none";
         const cdRemaining = this.getCooldownRemaining().toFixed(0);
 
-        this.debugPanel.textContent = `State: ${currentState} | Clip: ${currentClip} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms | HP: ${this.combat.hp}/${this.combat.maxHp}`;
+        this.debugPanel.textContent = `y:${this.root.position.y.toFixed(2)} z:${this.root.position.z.toFixed(2)} alpha:${this.spritePlane.alphaIndex.toFixed(1)} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms | HP: ${this.combat.hp}/${this.combat.maxHp}`;
     }
 
     get globalCooldownMs() { return this.combat.globalCooldownMs; }

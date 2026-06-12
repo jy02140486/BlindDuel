@@ -33,7 +33,10 @@ export const ASSET_MANIFEST = {
         },
         npc: {
             traveller: "./Art/Sprite/NPCs/traveller.json",
-            merchant: "./Art/Sprite/NPCs/merchant.json"
+            merchant: "./Art/Sprite/NPCs/merchant.json",
+            customer: "./Art/Sprite/NPCs/customer.json",
+            customer2: "./Art/Sprite/NPCs/customer2.json",
+            bard: "./Art/Sprite/NPCs/bard.json"
         }
     },
     colliders: {
@@ -64,13 +67,19 @@ export const ASSET_MANIFEST = {
     rootMotion: {
         npc: {
             traveller: "./Data/RootMotion/NPCs/traveller.json",
-            merchant: "./Data/RootMotion/NPCs/merchant.json"
+            merchant: "./Data/RootMotion/NPCs/merchant.json",
+            customer: "./Data/RootMotion/NPCs/customer.json",
+            customer2: "./Data/RootMotion/NPCs/customer2.json",
+            bard: "./Data/RootMotion/NPCs/bard.json"
         }
     },
     occupancy: {
         npc: {
             traveller: "./Data/RootMotion/NPCs/traveller.occupancy.json",
-            merchant: "./Data/RootMotion/NPCs/merchant.occupancy.json"
+            merchant: "./Data/RootMotion/NPCs/merchant.occupancy.json",
+            customer: "./Data/RootMotion/NPCs/customer.occupancy.json",
+            customer2: "./Data/RootMotion/NPCs/customer2.occupancy.json",
+            bard: "./Data/RootMotion/NPCs/bard.occupancy.json"
         }
     },
     stageMasks: {

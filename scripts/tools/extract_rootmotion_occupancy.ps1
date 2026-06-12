@@ -83,7 +83,7 @@ $OCCUPANCY_H = 24
 $rootAtlas = Get-Content -Raw $RootAtlasJson | ConvertFrom-Json
 $rootFrames = Get-OrderedFrames $rootAtlas
 
-if ($rootFrames.Count -eq 0) {
+if (@($rootFrames).Count -eq 0) {
   Write-Error "Root atlas contains no frames."
   exit 1
 }
@@ -95,7 +95,7 @@ try {
   $outFrames = @()
   $prevRoot = $null
 
-  for ($i=0; $i -lt $rootFrames.Count; $i++) {
+  for ($i=0; $i -lt @($rootFrames).Count; $i++) {
     $fr = $rootFrames[$i].data.frame
     $rootAnchor = Extract-Root $rootBmp $fr $rootTarget $prevRoot
     $prevRoot = $rootAnchor
