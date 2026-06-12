@@ -392,10 +392,11 @@ const ACTION_HANDLERS = {
                 const opponentPos = rabbleStick.root.position;
                 const centerX = (heroPos.x + opponentPos.x) * 0.5;
                 const centerZ = (heroPos.z + opponentPos.z) * 0.5;
+                const centerY = (heroPos.y + opponentPos.y) * 0.5;
                 const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
                 frameCtx = {
                     basePosition: new BABYLON.Vector3(centerX, 8, centerZ - 25),
-                    target: new BABYLON.Vector3(centerX, 0, centerZ),
+                    target: new BABYLON.Vector3(centerX, centerY, centerZ),
                     fighterDistance
                 };
             } else if (toRigId === "explore" && character) {

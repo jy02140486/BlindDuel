@@ -124,8 +124,11 @@ export class Scene {
 
         // --- 战斗系统与边界 ---
         this.combatSystem = new CombatSystem({ debugTrace: true });
-        const battleDef = battleDefs["battle_field_1"];
-        this.stageBoundary = new StageBoundary(this.scene, battleDef.stageBounds);
+        const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
+        const defaultBattleDef = firstBattleTrigger
+            ? battleDefs[firstBattleTrigger.battleId]
+            : battleDefs["battle_field_1"];
+        this.stageBoundary = new StageBoundary(this.scene, defaultBattleDef.stageBounds);
         // WalkArea：若 StageMask JSON 中有 walkArea，优先使用；否则回退到 sceneDef.walkArea
         const walkAreaDef = stageMaskData?.walkArea
             ? {
@@ -139,7 +142,7 @@ export class Scene {
         this.pushboxResolver = new PushboxResolver();
 
         // --- 相机 ---
-        this.cameraRig = new DuelCameraRig(battleDef.duelCamera);
+        this.cameraRig = new DuelCameraRig(defaultBattleDef.duelCamera);
         this.exploreCameraRig = new ExploreCameraRig();
         this.scriptedCameraRig = new ScriptedCameraRig();
 

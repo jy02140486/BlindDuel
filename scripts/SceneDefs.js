@@ -73,7 +73,8 @@ export function createEntityFromDef(scene, assets, entityDef) {
 export const BATTLE_FIELD_1 = {
     id: "battle_field_1",
     combatants: ["hero", "enemy_1"],
-    stageBounds: { minX: -8, maxX: 8 },
+    stageBounds: { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 },
+    battleYBaseline: 0,
     duelCamera: {
         zoomMinDistance: 3.2,
         zoomMaxDistance: 6.4,
@@ -251,14 +252,14 @@ export const HOUSE_INTERIOR = {
             pos: [11.0, -3.2],
             controller: "npc",
         },
-        // {
-        //     archetype: "rabble_stick",
-        //     id: "enemy_1",
-        //     name: "rabble_stick",
-        //     kind: "enemy",
-        //     pos: [2, -0.5],
-        //     controller: "dummy",
-        // },
+        {
+            archetype: "rabble_stick",
+            id: "enemy_1",
+            name: "rabble_stick",
+            kind: "enemy",
+            pos: [8.47, -4.92],
+            controller: "dummy",
+        },
     ],
     walkArea: {
         minX: -6.75, maxX: 13.98,
@@ -275,15 +276,15 @@ export const HOUSE_INTERIOR = {
             debugColor: [1, 0.5, 0],
             debugVisible: false,
         },
-        // {
-        //     type: "battle",
-        //     id: "bt_field_2",
-        //     pos: [2, 0, 0],
-        //     size: [3, 6, 3],
-        //     battleId: "battle_field_2",
-        //     debugColor: [0, 1, 0],
-        //     debugVisible: false,
-        // },
+        {
+            type: "battle",
+            id: "bt_field_2",
+            pos: [2.47, -4.90, 0],
+            size: [1,2, 3],
+            battleId: "battle_field_2",
+            debugColor: [0, 1, 0],
+            debugVisible: false,
+        },
     ],
 };
 
@@ -293,8 +294,9 @@ export const HOUSE_INTERIOR = {
 
 export const BATTLE_FIELD_2 = {
     id: "battle_field_2",
-    combatants: ["hero", "innkeeper"],
-    stageBounds: { minX: -5, maxX: 5 },
+    combatants: ["hero", "enemy_1"],
+    stageBounds: { minX: -0.5, maxX: 12, minY: -4.85, maxY: -4.75 },
+    battleYBaseline: -4.8,
     duelCamera: {
         zoomMinDistance: 2.4,
         zoomMaxDistance: 5.0,

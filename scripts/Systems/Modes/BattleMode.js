@@ -19,6 +19,12 @@ export class BattleMode extends BaseMode {
         }
 
         cameraManager?.switchRig("duel");
+
+        const { stageBoundary } = this.context;
+        if (stageBoundary && this._battleDef?.stageBounds) {
+            stageBoundary.setBounds(this._battleDef.stageBounds);
+        }
+
         for (const combatant of this._combatants ?? []) {
             if (combatant?.setFacingMode) {
                 combatant.setFacingMode(FACING_MODE.LOCKED);
@@ -54,7 +60,7 @@ export class BattleMode extends BaseMode {
         pushboxResolver.resolve(combatants);
 
         for (const c of combatants) {
-            stageBoundary.clampCharacter(c);
+            stageBoundary.clampCharacter(c, dtMs);
         }
 
         combatSystem.fixedUpdate(combatants, tickCount);
@@ -77,40 +83,12 @@ export class BattleMode extends BaseMode {
             durationMs: 8000,
             tracks: [
                 {
-                    id: "hero.input",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "input",
-                    clips: [
-                        { type: "inputLock", atMs: 0, locked: true },
-                        { type: "inputLock", atMs: 6100, locked: false }
-                    ]
-                },
-                {
                     id: "hero.command",
                     kind: "actor",
                     binding: { actorId: "hero" },
                     channel: "command",
                     clips: [
                         { type: "command", atMs: 2500, command: "sheath" }
-                    ]
-                },
-                {
-                    id: "hero.facing",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "facing",
-                    clips: [
-                        { type: "faceWorldX", atMs: 5000, direction: -1 }
-                    ]
-                },
-                {
-                    id: "hero.movement",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "movement",
-                    clips: [
-                        { type: "moveActorTo", startMs: 5500, durationMs: 2000, x: -7.2, y: 0 }
                     ]
                 },
                 {
@@ -154,7 +132,7 @@ export class BattleMode extends BaseMode {
         const opponentPos = combatants[1].root.position;
         const centerX = (heroPos.x + opponentPos.x) * 0.5;
         const centerZ = (heroPos.z + opponentPos.z) * 0.5;
-        const targetHeight = 0;
+        const targetHeight = this._battleDef?.battleYBaseline ?? 0;
 
         const rawDistance = Math.abs(opponentPos.x - heroPos.x);
         const distanceBlend = 1 - Math.exp((-cameraRig.smoothing * dtMs) / 1000);

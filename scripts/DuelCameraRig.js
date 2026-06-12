@@ -130,13 +130,15 @@ export class DuelCameraRig {
         state.target = this.currentTarget.clone();
         state.projection = this.projection;
 
+        const cameraY = this.currentTarget.y + desiredHeight;
+
         if (this.projection === "perspective") {
             const desiredDistance = BABYLON.Scalar.Lerp(this.perspMinDistance, this.perspMaxDistance, zoomT);
-            state.pos.set(this.currentBasePosition.x, desiredHeight, this.currentTarget.z - desiredDistance);
+            state.pos.set(this.currentBasePosition.x, cameraY, this.currentTarget.z - desiredDistance);
             this.#renderDebugPanel(fighterDistance, 0, desiredDistance, desiredHeight, zoomT);
         } else {
             const desiredWidth = BABYLON.Scalar.Lerp(this.orthoMinWidth, this.orthoMaxWidth, zoomT);
-            state.pos.set(this.currentBasePosition.x, desiredHeight, this.currentBasePosition.z);
+            state.pos.set(this.currentBasePosition.x, cameraY, this.currentBasePosition.z);
 
             const windowAspect = window.innerWidth / window.innerHeight;
             const halfWidth = desiredWidth / 2;

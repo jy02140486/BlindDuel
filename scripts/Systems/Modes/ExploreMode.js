@@ -22,12 +22,6 @@ export class ExploreMode extends BaseMode {
         this.#checkBattleTrigger(character, sceneSequencer);
         this.#checkScriptedCameraTrigger(character, sceneSequencer);
 
-        if (sceneSequencer?.isBusy()) {
-            inputSystem.fixedUpdate(tickCount);
-            character.fixedUpdate(dtMs, tickCount);
-            return;
-        }
-
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
@@ -64,6 +58,10 @@ export class ExploreMode extends BaseMode {
         }
     }
 
+    enter(_payload) {
+        this._battleTriggerFired = false;
+    }
+
     #checkBattleTrigger(character, sceneSequencer) {
         if (this._battleTriggerFired) {
             return;
@@ -83,34 +81,15 @@ export class ExploreMode extends BaseMode {
 
         const enterBattleSequence = {
             id: "enter_battle",
-            durationMs: 6400,
+            durationMs: 2000,
             tracks: [
-                {
-                    id: "hero.input",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "input",
-                    clips: [
-                        { type: "inputLock", atMs: 0, locked: true },
-                        { type: "inputLock", atMs: 6400, locked: false }
-                    ]
-                },
-                {
-                    id: "hero.movement",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "movement",
-                    clips: [
-                        { type: "moveActorTo", startMs: 0, durationMs: 3000, x: -3.2, y: 0 }
-                    ]
-                },
                 {
                     id: "hero.command",
                     kind: "actor",
                     binding: { actorId: "hero" },
                     channel: "command",
                     clips: [
-                        { type: "command", atMs: 3500, command: "draw" }
+                        { type: "command", atMs: 0, command: "draw" }
                     ]
                 },
                 {
@@ -119,14 +98,14 @@ export class ExploreMode extends BaseMode {
                     binding: { cameraId: "duel" },
                     channel: "blend",
                     clips: [
-                        { type: "cameraBlend", startMs: 2900, durationMs: 3500, to: "duel" }
+                        { type: "cameraBlend", startMs: 0, durationMs: 1800, to: "duel" }
                     ]
                 },
                 {
                     id: "mode",
                     kind: "mode",
                     clips: [
-                        { type: "switchMode", atMs: 6400, modeId: "battle", payload: { battleDef: pendingBattleDef } }
+                        { type: "switchMode", atMs: 800, modeId: "battle", payload: { battleDef: pendingBattleDef } }
                     ]
                 }
             ]
