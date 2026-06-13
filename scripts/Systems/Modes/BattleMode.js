@@ -25,9 +25,14 @@ export class BattleMode extends BaseMode {
             stageBoundary.setBounds(this._battleDef.stageBounds);
         }
 
+        const stageBounds = this._battleDef?.stageBounds;
         for (const combatant of this._combatants ?? []) {
             if (combatant?.setFacingMode) {
                 combatant.setFacingMode(FACING_MODE.LOCKED);
+            }
+            if (stageBounds && combatant) {
+                combatant._battleYMin = stageBounds.minY ?? null;
+                combatant._battleYMax = stageBounds.maxY ?? null;
             }
         }
     }

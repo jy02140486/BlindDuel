@@ -58,15 +58,6 @@ export class StageBoundary {
         } else if (pos.x > this.maxX) {
             pos.x = this.maxX;
         }
-        if (Number.isFinite(this.minY) && Number.isFinite(this.maxY)) {
-            const dtSec = (dtMs ?? 16) / 1000;
-            const blend = 1 - Math.exp(-this._yCorrectionSpeed * dtSec);
-            if (pos.y < this.minY) {
-                pos.y += (this.minY - pos.y) * blend;
-            } else if (pos.y > this.maxY) {
-                pos.y += (this.maxY - pos.y) * blend;
-            }
-        }
     }
 
     setBounds(bounds) {

@@ -43,6 +43,10 @@ export class CombatCharacter extends CharacterBase {
             isDead: false,
             deathState: config.deathState ?? "defeated"
         };
+
+        this._battleYMin = null;
+        this._battleYMax = null;
+        this._battleYCorrectionSpeed = 0.4;
     }
 
     getBlockerAabb() {
@@ -363,5 +367,49 @@ export class CombatCharacter extends CharacterBase {
         }
 
         this._updateDebugPanel();
+    }
+
+    _consumeTransition() {
+        const outsideY = this._battleYMin != null && this._battleYMax != null
+            && (this.root.position.y < this._battleYMin || this.root.position.y > this._battleYMax);
+        const savedY = this.moveIntent.y;
+        if (outsideY) {
+            this.moveIntent.y = 0;
+        }
+        const result = super._consumeTransition();
+        this.moveIntent.y = savedY;
+        return result;
+    }
+
+    _applyMovement(dtMs) {
+        const xBefore = this.root.position.x;
+        const yBefore = this.root.position.y;
+
+        const outsideY = this._battleYMin != null && this._battleYMax != null
+            && (this.root.position.y < this._battleYMin || this.root.position.y > this._battleYMax);
+        const savedMoveIntentY = this.moveIntent.y;
+        if (outsideY) {
+            this.moveIntent.y = 0;
+        }
+
+        super._applyMovement(dtMs);
+
+        this.moveIntent.y = savedMoveIntentY;
+
+        if (this._battleYMin == null || this._battleYMax == null) return;
+
+        if (this.root.position.x === xBefore && this.root.position.y === yBefore) return;
+
+        const pos = this.root.position;
+        if (pos.y >= this._battleYMin && pos.y <= this._battleYMax) return;
+
+        const dtSec = (dtMs ?? 16) / 1000;
+        const blend = 1 - Math.exp(-this._battleYCorrectionSpeed * dtSec);
+
+        if (pos.y < this._battleYMin) {
+            pos.y += (this._battleYMin - pos.y) * blend;
+        } else {
+            pos.y += (this._battleYMax - pos.y) * blend;
+        }
     }
 }
