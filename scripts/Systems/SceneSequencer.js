@@ -229,6 +229,9 @@ export class SceneSequencer {
     }
 
     _getActor(actorId) {
+        if (this.context.actorRegistry) {
+            return this.context.actorRegistry.get(actorId) || null;
+        }
         if (actorId === "hero") return this.context.character;
         if (actorId === "enemy") return this.context.rabbleStick;
         return null;

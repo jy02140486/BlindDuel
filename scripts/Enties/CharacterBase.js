@@ -63,7 +63,7 @@ export class CharacterBase {
         this.material.disableDepthWrite = true;
         this.spritePlane.material = this.material;
         this.spritePlane.renderingGroupId = config.renderingGroupId ?? 1;
-        // alphaIndex 不显式设置，保持默认
+        this.spritePlane.alphaIndex = 0;
 
         // stencil 遮挡由 ExploreMode.updateRender() 统一在最后一帧角色绘制后关闭
         // 不在此处关闭，避免多角色时第一个角色画完 stencil 就失效

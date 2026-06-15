@@ -58,6 +58,22 @@ export class ExploreMode extends BaseMode {
         }
     }
 
+    #checkSceneSwitchTrigger(character) {
+        const sceneSwitchTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "sceneSwitch") ?? [];
+        for (const triggerDef of sceneSwitchTriggers) {
+            const trigger = this.context.scene.triggers.get(triggerDef.id);
+            if (trigger && trigger.check(character)) {
+                const targetDef = ALL_SCENES[triggerDef.targetScene];
+                if (!targetDef) {
+                    console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
+                    return;
+                }
+                this.context.scene._pendingSceneLoad = { sceneDef: targetDef, spawnId: triggerDef.targetSpawn };
+                return;
+            }
+        }
+    }
+
     enter(_payload) {
         this._battleTriggerFired = false;
     }
@@ -79,26 +95,17 @@ export class ExploreMode extends BaseMode {
         }
         if (!this._battleTriggerFired || !pendingBattleDef) return;
 
-        const enterBattleSequence = {
-            id: "enter_battle",
-            durationMs: 2000,
+        const enterBattleSequence = pendingBattleDef.enterSequence?.(pendingBattleDef) ?? {
+            id: "enter_battle_fallback",
+            durationMs: 1000,
             tracks: [
-                {
-                    id: "hero.command",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "command",
-                    clips: [
-                        { type: "command", atMs: 0, command: "draw" }
-                    ]
-                },
                 {
                     id: "camera",
                     kind: "camera",
                     binding: { cameraId: "duel" },
                     channel: "blend",
                     clips: [
-                        { type: "cameraBlend", startMs: 0, durationMs: 1800, to: "duel" }
+                        { type: "cameraBlend", startMs: 0, durationMs: 800, to: "duel" }
                     ]
                 },
                 {
@@ -387,7 +394,7 @@ export class ExploreMode extends BaseMode {
             if (entity.spritePlane) {
                 entity.root.position.z = entity.root.position.y * Z_FACTOR;
                 // ALPHABLEND 队列按 alphaIndex 排序，y 越小越近，alphaIndex 越大越后画（在上面）
-                entity.spritePlane.alphaIndex = Math.round(-entity.root.position.y * 1000);
+                entity.spritePlane.alphaIndex = 1000 + Math.round(-entity.root.position.y * 100);
             }
         }
 

@@ -7,10 +7,9 @@ async function start() {
     const scene = new Scene(engine, canvas);
 
     // --- 临时：切换场景测试 ---
-    // 当前加载室内场景 HOUSE_INTERIOR，测试 Tavern 室内效果
-    // TODO: 场景切换触发器实现后，恢复为 OUTDOOR_VILLAGE
+    // HOUSE_INTERIOR 测试通过后可取消注释
+    //await scene.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
     await scene.init(HOUSE_INTERIOR, BATTLE_DEFS);
-    // await scene.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
 
     // 暴露到全局，方便控制台调试
     window.gameScene = scene;

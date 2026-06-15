@@ -37,7 +37,14 @@ export class BattleMode extends BaseMode {
         }
     }
 
-    exit() {}
+    exit() {
+        for (const combatant of this._combatants ?? []) {
+            if (combatant) {
+                combatant._battleYMin = null;
+                combatant._battleYMax = null;
+            }
+        }
+    }
 
     fixedUpdate(dtMs, tickCount) {
         const {
@@ -83,33 +90,25 @@ export class BattleMode extends BaseMode {
 
         if (!character.isDead && !rabbleStick.isDead) return;
 
-        const exitBattleSequence = {
-            id: "exit_battle",
-            durationMs: 8000,
+        // 如果 battleDef 未定义 exitSequence，使用最小默认退场序列保证不会卡死
+        const exitBattleSequence = this._battleDef?.exitSequence ?? {
+            id: "exit_battle_fallback",
+            durationMs: 1000,
             tracks: [
-                {
-                    id: "hero.command",
-                    kind: "actor",
-                    binding: { actorId: "hero" },
-                    channel: "command",
-                    clips: [
-                        { type: "command", atMs: 2500, command: "sheath" }
-                    ]
-                },
                 {
                     id: "camera",
                     kind: "camera",
                     binding: { cameraId: "explore" },
                     channel: "blend",
                     clips: [
-                        { type: "cameraBlend", startMs: 1000, durationMs: 5400, to: "explore" }
+                        { type: "cameraBlend", startMs: 0, durationMs: 800, to: "explore" }
                     ]
                 },
                 {
                     id: "mode",
                     kind: "mode",
                     clips: [
-                        { type: "switchMode", atMs: 6500, modeId: "explore" }
+                        { type: "switchMode", atMs: 800, modeId: "explore" }
                     ]
                 }
             ]
