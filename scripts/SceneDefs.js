@@ -14,7 +14,8 @@ import {
     createMerchantNpc,
     createCustomerNpc,
     createCustomer2Npc,
-    createBardNpc
+    createBardNpc,
+    createPickable,
 } from "./CharacterFactory.js";
 
 // ---------------------------------------------------------------------------
@@ -29,6 +30,7 @@ const ARCHETYPE_FACTORY = {
     npc_customer: (scene, assets) => createCustomerNpc(scene, assets),
     npc_customer2: (scene, assets) => createCustomer2Npc(scene, assets),
     npc_bard: (scene, assets) => createBardNpc(scene, assets),
+    pickable: createPickable,
 };
 
 /**
@@ -43,7 +45,7 @@ export function createEntityFromDef(scene, assets, entityDef) {
     if (!factory) {
         throw new Error(`[SceneDefs] Unknown archetype: ${entityDef.archetype}`);
     }
-    const entity = factory(scene, assets);
+    const entity = factory(scene, assets, entityDef);
 
     // 覆盖 id / name（工厂函数内部设了 name，这里按 def 覆盖）
     entity.id = entityDef.id ?? entityDef.name ?? entity.id;
@@ -259,7 +261,51 @@ export const HOUSE_ENVIRONMENT_CONFIG = {
                     y: 0,
                     width: 32.4,
                     height: 12.0,
-                    alphaIndex: 1
+                    alphaIndex: 3
+                }, {
+                    id: "ground_1",
+                    texture: "Art/Environment/grassbase.png",
+                    atlas: "Art/Environment/grassbase.json",
+                    kind: "animated_tile",
+                    x: 0,
+                    y: -0.8,
+                    width: 64,
+                    height: 8,
+                    tileSize: { width: 1.28, height: 1.28 },
+                    loop: true,
+                    alphaIndex: 2
+                },
+                {
+                    id: "ground_2",
+                    texture: "Art/Environment/grasstop.png",
+                    atlas: "Art/Environment/grasstop.json",
+                    kind: "animated_tile",
+                    x: 0,
+                    y: 3.3,
+                    width: 64,
+                    height: 0.32,
+                    tileSize: { width: 1.28, height: 0.32 },
+                    loop: true,
+                    alphaIndex: 2
+                }
+            ]
+        },
+        {
+            id: "FG_DECOR",
+            z: -10,
+            parallaxFactor: 1.35,
+            renderingGroupId: 2,
+            elements: [
+                {
+                    id: "beamraft_1",
+                    texture: "Art/Environment/beamraft.png",
+                    kind: "tile",
+                    tileSize: { width: 6.4, height: 4.8 },
+                    x: -0,
+                    y: 4,
+                    width: 32,
+                    height: 4.5,
+                    alphaIndex: 0
                 }
             ]
         }
@@ -311,6 +357,55 @@ export const HOUSE_INTERIOR = {
             kind: "npc",
             pos: [11.0, -3.2],
             controller: "npc",
+        },
+        {
+            archetype: "pickable",
+            id: "ham_01",
+            name: "ham",
+            kind: "pickable",
+            pos: [6.0, -2.704],
+            controller: "none",
+            visualYOffset: 1.5,
+            itemDef: {
+                id: "ham",
+                name: "火腿",
+                consumeType: "eat",
+                atlasKey: "ham",
+                textureUrl: "./Art/Sprite/items/Ham.png",
+            },
+        },
+        {
+            archetype: "pickable",
+            id: "tea_01",
+            name: "tea",
+            kind: "pickable",
+            pos: [2.0, -0.2],
+            controller: "none",
+            pxToWorld: 0.01,
+            visualYOffset: 1.5,
+            itemDef: {
+                id: "tea",
+                name: "茶",
+                consumeType: "drink",
+                atlasKey: "tea",
+                textureUrl: "./Art/Sprite/items/Tea.png",
+            },
+        },
+        {
+            archetype: "pickable",
+            id: "dagger_01",
+            name: "dagger",
+            kind: "pickable",
+            pos: [1.0, -3],
+            controller: "none",
+            visualYOffset: 1.5,
+            itemDef: {
+                id: "dagger",
+                name: "匕首",
+                consumeType: "pocket",
+                atlasKey: "dagger",
+                textureUrl: "./Art/Sprite/items/dagger.png",
+            },
         },
         {
             archetype: "rabble_stick",

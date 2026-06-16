@@ -1,5 +1,6 @@
 import { CombatCharacter } from "./Enties/CombatCharacter.js";
 import { NpcCharacter } from "./Enties/NpcCharacter.js";
+import { PickableEntity } from "./Enties/PickableEntity.js";
 
 const DEFAULT_CHARACTER_OPTIONS = {
     pxToWorld: 0.03,
@@ -95,8 +96,29 @@ export function createHeroCharacter(scene, assets) {
                 atlasData: assets.atlas.hero.defeated,
                 colliderData: assets.colliders.hero.defeated,
                 loop: false
+            },
+            pickup: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_pickup.png",
+                atlasData: assets.atlas.hero.pickup,
+                loop: false
+            },
+            eat: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_eat.png",
+                atlasData: assets.atlas.hero.eat,
+                loop: false
+            },
+            drink: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_drink.png",
+                atlasData: assets.atlas.hero.drink,
+                loop: false
+            },
+            topack: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_topack.png",
+                atlasData: assets.atlas.hero.topack,
+                loop: false
             }
-        }
+        },
+        rootMotionData: assets.rootMotion?.hero ?? null,
     });
 }
 
@@ -316,5 +338,33 @@ export function createBardNpc(scene, assets) {
         },
         rootMotion: assets.rootMotion?.npc?.bard ?? null,
         occupancy: assets.occupancy?.npc?.bard ?? null
+    });
+}
+
+export function createPickable(scene, assets, entityDef) {
+    const itemDef = entityDef.itemDef ?? {};
+    const atlas = assets.items?.[itemDef.atlasKey ?? "ham"];
+    const textureUrl = itemDef.textureUrl ?? "./Art/Sprite/items/Ham.png";
+
+    let frameWidth = 32;
+    let frameHeight = 32;
+    if (atlas?.frames) {
+        const firstFrame = Object.values(atlas.frames)[0];
+        if (firstFrame?.frame) {
+            frameWidth = firstFrame.frame.w;
+            frameHeight = firstFrame.frame.h;
+        }
+    }
+
+    return new PickableEntity(scene, {
+        id: entityDef.id,
+        name: entityDef.name ?? entityDef.id,
+        itemDef: itemDef,
+        textureUrl: textureUrl,
+        frameWidth: frameWidth,
+        frameHeight: frameHeight,
+        pxToWorld: entityDef.pxToWorld ?? 0.02,
+        visualYOffset: entityDef.visualYOffset ?? 1.5,
+        renderingGroupId: entityDef.renderingGroupId ?? 1,
     });
 }

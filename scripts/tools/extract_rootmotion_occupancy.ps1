@@ -64,10 +64,10 @@ function Extract-Root($bmp, $fr, $target, $prevRoot) {
   $regions = @(Extract-Regions $bmp $fr $target | Where-Object { $_.Count -ge 1 })
   if ($regions.Count -eq 0) {
     if ($prevRoot) {
-      Write-Warning "Frame '$($fr)' has no root pixels, reusing previous frame root."
+      Write-Warning "Frame '$($fr)' has no matching pixels, reusing previous frame anchor."
       return $prevRoot
     }
-    Write-Warning "Frame '$($fr)' has no root pixels, using default fallback."
+    Write-Warning "Frame '$($fr)' has no matching pixels, using default fallback."
     return [pscustomobject]@{ cx = [Math]::Round($fr.w / 2.0, 3); cy = [Math]::Round($fr.h * 0.8, 3) }
   }
   $best = $regions[0]
@@ -76,7 +76,10 @@ function Extract-Root($bmp, $fr, $target, $prevRoot) {
   return [pscustomobject]@{ cx = [Math]::Round($sumX / $best.Count, 3); cy = [Math]::Round($sumY / $best.Count, 3) }
 }
 
-$ROOT_COLOR = '#7082C1'
+$ANCHOR_COLORS = @{
+    root   = '#7082C1'
+    action = '#00FF00'
+}
 $OCCUPANCY_W = 40
 $OCCUPANCY_H = 24
 
@@ -89,7 +92,6 @@ if (@($rootFrames).Count -eq 0) {
 }
 
 $rootBmp = [System.Drawing.Bitmap]::new($RootAtlasPng)
-$rootTarget = Parse-HexColor $ROOT_COLOR
 
 try {
   $outFrames = @()
@@ -97,29 +99,39 @@ try {
 
   for ($i=0; $i -lt @($rootFrames).Count; $i++) {
     $fr = $rootFrames[$i].data.frame
-    $rootAnchor = Extract-Root $rootBmp $fr $rootTarget $prevRoot
-    $prevRoot = $rootAnchor
 
-    $outFrames += [pscustomobject]@{
+    $anchors = @{}
+    $prevRoot = $null
+    foreach ($colorName in $ANCHOR_COLORS.Keys) {
+      $target = Parse-HexColor $ANCHOR_COLORS[$colorName]
+      $prev = $null
+      $anchor = Extract-Root $rootBmp $fr $target $prev
+      $anchors[$colorName] = $anchor
+      if ($colorName -eq 'root') { $prevRoot = $anchor }
+    }
+
+    $outFrame = [pscustomobject]@{
       frameIndex = $i
       frameName = $rootFrames[$i].name
       frameRect = [pscustomobject]@{ x=$fr.x; y=$fr.y; w=$fr.w; h=$fr.h }
-      anchors = [pscustomobject]@{ root = $rootAnchor }
+      anchors = $anchors
       occupancy = [pscustomobject]@{
         type = "aabb"
-        cx = $rootAnchor.cx
-        cy = $rootAnchor.cy
+        cx = $anchors['root'].cx
+        cy = $anchors['root'].cy
         w = $OCCUPANCY_W
         h = $OCCUPANCY_H
       }
     }
+    $outFrames += $outFrame
   }
 
   $result = [pscustomobject]@{
     source = [pscustomobject]@{
       rootAtlasJson = $RootAtlasJson
       rootAtlasPng = $RootAtlasPng
-      rootColor = $ROOT_COLOR
+      rootColor = $ANCHOR_COLORS['root']
+      actionAnchorColor = $ANCHOR_COLORS['action']
       occupancyWidthPx = $OCCUPANCY_W
       occupancyHeightPx = $OCCUPANCY_H
       generatedAtUtc = [DateTime]::UtcNow.ToString('o')

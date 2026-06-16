@@ -1,0 +1,67 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_topack.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_topack.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  24,
+                   "generatedAtUtc":  "2026-06-15T17:55:40.7102410Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_topack 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  42,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_topack 1.ase",
+                       "frameRect":  {
+                                         "x":  84,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  42,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   }
+               ]
+}

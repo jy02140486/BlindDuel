@@ -62,7 +62,27 @@ export class CombatCharacter extends CharacterBase {
 
     _getCurrentRootAnchor(frameIndex) {
         const colliderClip = this.config.clips?.[this.animation.currentClipName]?.colliderData;
-        return colliderClip?.frames?.[frameIndex]?.anchors?.root ?? null;
+        const rootFromCollider = colliderClip?.frames?.[frameIndex]?.anchors?.root ?? null;
+        if (rootFromCollider) return rootFromCollider;
+
+        // 回退到 rootMotionData（pickup/eat/drink/topack 等无 collider 的动画）
+        return this.getRootAnchor(frameIndex) ?? null;
+    }
+
+    /** 获取当前帧的动作锚点（物品放置位置），{ cx, cy } 在帧像素坐标 */
+    getActionAnchor(frameIndex) {
+        const clipName = this.animation.currentClipName;
+        const occupancy = this.config.rootMotionData?.[clipName];
+        if (!occupancy?.frames) return null;
+        return occupancy.frames[frameIndex]?.anchors?.action ?? null;
+    }
+
+    /** 获取当前帧的 root 锚点，{ cx, cy } 在帧像素坐标 */
+    getRootAnchor(frameIndex) {
+        const clipName = this.animation.currentClipName;
+        const occupancy = this.config.rootMotionData?.[clipName];
+        if (!occupancy?.frames) return null;
+        return occupancy.frames[frameIndex]?.anchors?.root ?? null;
     }
 
     _getStateTimeScale(stateDef) {

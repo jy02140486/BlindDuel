@@ -20,7 +20,11 @@ export const ASSET_MANIFEST = {
             guard: "./Art/Sprite/longswordman/longswordman_Guard.json",
             clash: "./Art/Sprite/longswordman/longswordman_clash.json",
             hit: "./Art/Sprite/longswordman/longswordman_hit.json",
-            defeated: "./Art/Sprite/longswordman/longswordman_defeated.json"
+            defeated: "./Art/Sprite/longswordman/longswordman_defeated.json",
+            pickup: "./Art/Sprite/longswordman/longswordman_pickup.json",
+            eat: "./Art/Sprite/longswordman/longswordman_eat.json",
+            drink: "./Art/Sprite/longswordman/longswordman_drink.json",
+            topack: "./Art/Sprite/longswordman/longswordman_topack.json"
         },
         rabble: {
             idle: "./Art/Sprite/rabble_stick/rabble_stick_idle.json",
@@ -65,6 +69,12 @@ export const ASSET_MANIFEST = {
         }
     },
     rootMotion: {
+        hero: {
+            eat: "./Data/RootMotion/longswordman/longswordman_eat.occupancy.json",
+            pickup: "./Data/RootMotion/longswordman/longswordman_pickup.occupancy.json",
+            drink: "./Data/RootMotion/longswordman/longswordman_drink.occupancy.json",
+            topack: "./Data/RootMotion/longswordman/longswordman_topack.occupancy.json"
+        },
         npc: {
             traveller: "./Data/RootMotion/NPCs/traveller.json",
             merchant: "./Data/RootMotion/NPCs/merchant.json",
@@ -84,5 +94,10 @@ export const ASSET_MANIFEST = {
     },
     stageMasks: {
         tavern_indoor: "./Data/StageMask/Tavern_indoorstage.mask.json"
+    },
+    items: {
+        ham: "./Art/Sprite/items/Ham.json",
+        tea: "./Art/Sprite/items/Tea.json",
+        dagger: "./Art/Sprite/items/dagger.json"
     }
 };

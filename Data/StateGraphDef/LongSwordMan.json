@@ -284,6 +284,58 @@
       "allowMoveInput": false,
       "loop": false,
       "transitions": []
+    },
+    "pickup": {
+      "clip": "pickup",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    "eat": {
+      "clip": "eat",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    "drink": {
+      "clip": "drink",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    "topack": {
+      "clip": "topack",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
     }
   }
 }

@@ -36,6 +36,8 @@
    { "name": "depthmask", "opacity": 255, "blendMode": "normal" },
    { "name": "obstacle", "opacity": 255, "blendMode": "normal" },
    { "name": "folks_colour", "opacity": 255, "blendMode": "normal" },
+   { "name": "teapot_colour", "opacity": 255, "blendMode": "normal" },
+   { "name": "teapot", "opacity": 255, "blendMode": "normal" },
    { "name": "folks", "opacity": 255, "blendMode": "normal" },
    { "name": "char", "opacity": 255, "blendMode": "normal" }
   ]

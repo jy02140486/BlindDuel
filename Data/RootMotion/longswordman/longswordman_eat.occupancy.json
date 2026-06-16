@@ -1,0 +1,148 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_eat.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_eat.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  24,
+                   "generatedAtUtc":  "2026-06-15T16:50:10.1495914Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_eat 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  47.5,
+                                                      "cy":  34.5
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_eat 1.ase",
+                       "frameRect":  {
+                                         "x":  84,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  49.5,
+                                                      "cy":  36.5
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_eat 2.ase",
+                       "frameRect":  {
+                                         "x":  168,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  49.5,
+                                                      "cy":  36.5
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_eat 3.ase",
+                       "frameRect":  {
+                                         "x":  252,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  49.5,
+                                                      "cy":  36.5
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "longswordman_eat 4.ase",
+                       "frameRect":  {
+                                         "x":  336,
+                                         "y":  0,
+                                         "w":  84,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  35,
+                                                    "cy":  117
+                                                },
+                                       "action":  {
+                                                      "cx":  49.5,
+                                                      "cy":  36.5
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  35,
+                                         "cy":  117,
+                                         "w":  40,
+                                         "h":  24
+                                     }
+                   }
+               ]
+}

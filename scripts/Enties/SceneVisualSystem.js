@@ -257,7 +257,15 @@ export class SceneVisualSystem {
         // 加载贴图
         const texture = new BABYLON.Texture(elementConfig.texture, this.scene);
         material.diffuseTexture = texture;
-        
+
+        // tileSize 支持：无动画平铺
+        if (elementConfig.tileSize) {
+            texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+            texture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+            texture.uScale = elementConfig.width / elementConfig.tileSize.width;
+            texture.vScale = elementConfig.height / elementConfig.tileSize.height;
+        }
+
         // 正确设置透明属性（修复黑底问题）
         material.useAlphaFromDiffuseTexture = true;
         material.diffuseTexture.hasAlpha = true;

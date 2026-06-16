@@ -54,7 +54,13 @@ export class CollisionComponent {
     setClip(clipName) {
         const colliderData = this.colliderClips[clipName];
         if (!colliderData) {
-            throw new Error(`Unknown collision clip: ${clipName}`);
+            // 无碰撞数据的动画（如 pickup/eat），使用空数据
+            this.currentClipName = clipName;
+            this.currentColliderData = { frames: {} };
+            for (const mesh of this.debugMeshesById.values()) {
+                mesh.setEnabled(false);
+            }
+            return;
         }
 
         this.currentClipName = clipName;

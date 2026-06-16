@@ -13,7 +13,9 @@ export class ExploreMode extends BaseMode {
         this.staticBlockers = [];
         this.interactables = [];
         this.renderables = [];
+        this.pickables = [];
         this._collisionSystem = new ExploreCollisionSystem();
+        this._pickupSequence = null;
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -37,6 +39,7 @@ export class ExploreMode extends BaseMode {
         this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
 
         this.#checkInteraction(character, tickCount);
+        this.#updatePickupSequence(character);
     }
 
     #checkInteraction(character, tickCount) {
@@ -44,6 +47,7 @@ export class ExploreMode extends BaseMode {
 
         if (!inputSystem.consumeAction("interact", tickCount)) return;
 
+        // 优先检查 NPC 交互（距离最近者优先）
         for (const npc of this.interactables) {
             const controller = npc.npcController;
             if (!controller || controller.state === "ask") continue;
@@ -54,6 +58,26 @@ export class ExploreMode extends BaseMode {
             const interactRadius = controller.greetingRadius ?? 1.6;
             if (distSq <= interactRadius * interactRadius) {
                 controller.enterAsk(npc);
+                return;
+            }
+        }
+
+        // 检查拾取物交互
+        const PICKUP_RADIUS = 1.6;
+        for (const pickable of this.pickables) {
+            if (pickable.isDisposed) continue;
+
+            const dx = character.root.position.x - pickable.root.position.x;
+            const dy = character.root.position.y - pickable.root.position.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq <= PICKUP_RADIUS * PICKUP_RADIUS) {
+                const itemName = pickable.itemDef?.name ?? pickable.id;
+                const consumeType = pickable.itemDef?.consumeType ?? "pocket";
+                console.log(`[Pickup] 捡起 ${itemName} (${consumeType})`);
+
+                // 开始拾取序列
+                this._startPickupSequence(character, pickable, consumeType);
+                return;
             }
         }
     }
@@ -85,8 +109,10 @@ export class ExploreMode extends BaseMode {
 
         const battleTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "battle") ?? [];
         let pendingBattleDef = null;
+        const triggers = this.context.scene.triggers;
+        if (!triggers) return;
         for (const triggerDef of battleTriggers) {
-            const trigger = this.context.scene.triggers.get(triggerDef.id);
+            const trigger = triggers.get(triggerDef.id);
             if (trigger && trigger.check(character)) {
                 this._battleTriggerFired = true;
                 pendingBattleDef = this.context.battleDefs?.[triggerDef.battleId];
@@ -225,6 +251,7 @@ export class ExploreMode extends BaseMode {
         this.staticBlockers.length = 0;
         this.interactables.length = 0;
         this.renderables.length = 0;
+        this.pickables.length = 0;
 
         for (const entity of entityPool) {
             if (entity.kind === "player") {
@@ -235,6 +262,9 @@ export class ExploreMode extends BaseMode {
             }
             if (entity.kind === "npc" && entity.interactable) {
                 this.interactables.push(entity);
+            }
+            if (entity.kind === "pickable" && !entity.isDisposed) {
+                this.pickables.push(entity);
             }
             if (entity.spritePlane) {
                 this.renderables.push(entity);
@@ -397,6 +427,11 @@ export class ExploreMode extends BaseMode {
                 entity.spritePlane.alphaIndex = 1000 + Math.round(-entity.root.position.y * 100);
             }
         }
+        //拾取时物品永远比主角多一层，画在前面
+        const seq = this._pickupSequence;
+        if (seq?.pickable?.spritePlane && character?.spritePlane) {
+            seq.pickable.spritePlane.alphaIndex = character.spritePlane.alphaIndex + 1;
+        }
 
         const pos = character.root.position;
         this._cameraTarget.set(pos.x, pos.y, pos.z);
@@ -430,6 +465,77 @@ export class ExploreMode extends BaseMode {
         const gl = engine?._gl;
         if (gl) {
             gl.disable(gl.STENCIL_TEST);
+        }
+    }
+
+    /** 发起拾取序列：锁定输入 → pickup动画 → eat/drink/topack动画 → 恢复 */
+    _startPickupSequence(character, pickable, consumeType) {
+        // 将物品从场景中移到角色身上
+        pickable.root.setParent(character.root);
+        pickable.root.position.set(0, 0, 0);
+
+        // 移除 Y 偏移（手持时不需要，仅地面放置时才需要）
+        if (pickable.spritePlane) {
+            pickable.spritePlane.position.y = 0;
+        }
+
+        // 进入 pickup 动画（状态机自动禁止移动输入）
+        character.enterState("pickup");
+
+        this._pickupSequence = {
+            phase: "pickup",
+            pickable,
+            consumeType,
+        };
+    }
+
+    /** 每帧更新拾取序列，推进动画状态机 */
+    #updatePickupSequence(character) {
+        const seq = this._pickupSequence;
+        if (!seq) return;
+
+        const pickable = seq.pickable;
+        const pxToWorld = character.pxToWorld ?? 0.03;
+
+        // 更新物品位置：跟随 action 锚点
+        if (pickable && !pickable.isDisposed && seq.phase !== "done") {
+            const frameIdx = character.animation.currentFrameIndex;
+            const actionAnchor = character.getActionAnchor(frameIdx);
+            const rootAnchor = character.getRootAnchor(frameIdx);
+            if (actionAnchor && rootAnchor) {
+                const dx = (actionAnchor.cx - rootAnchor.cx) * pxToWorld * character.facing;
+                const dy = (rootAnchor.cy - actionAnchor.cy) * pxToWorld;
+                pickable.root.position.x = dx;
+                pickable.root.position.y = dy;
+                pickable.root.position.z = -0.01;
+            }
+        }
+
+        // 检查阶段转换
+        if (seq.phase === "pickup" && character.currentStateName !== "pickup") {
+            // pickup 动画播完，进入 consume 动画
+            if (seq.consumeType === "eat") {
+                character.enterState("eat");
+                seq.phase = "eat";
+            } else if (seq.consumeType === "drink") {
+                character.enterState("drink");
+                seq.phase = "drink";
+                pickable.spritePlane.rotation.z = Math.PI / 4 * character.facing;
+            } else {
+                // pocket 类型：收进背包
+                character.enterState("topack");
+                seq.phase = "topack";
+                pickable.spritePlane.isVisible = false;
+            }
+        } else if (
+            (seq.phase === "eat" || seq.phase === "drink" || seq.phase === "topack")
+            && character.currentStateName !== seq.phase
+        ) {
+            // consume 动画播完，收尾
+            seq.phase = "done";
+            pickable.spritePlane.rotation.z = 0;
+            pickable.pickup();
+            this._pickupSequence = null;
         }
     }
 }
