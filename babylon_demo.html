@@ -19,10 +19,45 @@
             touch-action: none;
             display: block;
         }
+        #hud-left {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .inventory-slot, .buff-slot {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .inventory-slot img, .buff-slot img {
+            max-width: 32px;
+            max-height: 32px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+        .buff-icon-unicode {
+            font-size: 24px;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="hud-left">
+        <div id="inventory-bar"></div>
+        <div id="buff-bar"></div>
+    </div>
     <script type="module" src="./character_demo.js?v=20260604"></script>
 </body>
 </html>

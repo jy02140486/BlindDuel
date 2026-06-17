@@ -20,6 +20,9 @@ import { BattleMode } from "./Systems/Modes/BattleMode.js";
 import { ExploreMode } from "./Systems/Modes/ExploreMode.js";
 import { SceneSequencer } from "./Systems/SceneSequencer.js";
 import { CameraManager } from "./Systems/CameraManager.js";
+import { InventoryManager } from "./Systems/InventoryManager.js";
+import { InventoryBar } from "./UI/InventoryBar.js";
+import { BuffBar } from "./UI/BuffBar.js";
 
 const FIXED_DT = 1000 / 60;
 
@@ -40,6 +43,9 @@ export class Scene {
         this.exploreMode = null;
         this.sceneSequencer = null;
         this.cameraManager = null;
+        this.inventoryManager = null;
+        this.inventoryBar = null;
+        this.buffBar = null;
         this._onKeyDown = null;
         this.paused = false;
         this.tickCount = 0;
@@ -109,6 +115,7 @@ export class Scene {
         // --- 控制器 ---
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
         this.playerController = new PlayerController(this.inputSystem, character);
+        character.buffsProvider = this.playerController;
         this.rabbleController = rabbleStick ? new DummyController(rabbleStick) : null;
 
         // NPC 控制器
@@ -201,6 +208,14 @@ export class Scene {
         this.cameraManager.registerRig("scripted", this.scriptedCameraRig);
         sharedContext.cameraManager = this.cameraManager;
         this.combatSystem.cameraManager = this.cameraManager;
+
+        this.inventoryManager = new InventoryManager();
+        this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
+        this.buffBar = new BuffBar(document.getElementById("buff-bar"));
+        sharedContext.inventoryManager = this.inventoryManager;
+        sharedContext.inventoryBar = this.inventoryBar;
+        sharedContext.buffBar = this.buffBar;
+
         this.sharedContext = sharedContext;
 
         this.sceneSequencer = new SceneSequencer(sharedContext);
@@ -288,6 +303,15 @@ export class Scene {
         if (this.inputSystem) {
             this.inputSystem.dispose();
         }
+        if (this.inventoryBar) {
+            this.inventoryBar.dispose();
+            this.inventoryBar = null;
+        }
+        if (this.buffBar) {
+            this.buffBar.dispose();
+            this.buffBar = null;
+        }
+        this.inventoryManager = null;
         if (this.cameraRig) {
             this.cameraRig.dispose();
             this.cameraRig = null;

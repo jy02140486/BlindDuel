@@ -533,6 +533,19 @@ export class ExploreMode extends BaseMode {
         ) {
             // consume 动画播完，收尾
             seq.phase = "done";
+            if (seq.consumeType === "drink" && this.context.playerController) {
+                this.context.playerController.addBuff({
+                    type: "speedMultiplier",
+                    value: 0.5,
+                    icon: "\uD83E\uDDB5",
+                    iconType: "unicode"
+                });
+                this.context.buffBar?.update(this.context.playerController.buffs);
+            }
+            if (seq.consumeType === "pocket" && this.context.inventoryManager) {
+                this.context.inventoryManager.addItem(pickable.itemDef);
+                this.context.inventoryBar?.update(this.context.inventoryManager.items);
+            }
             pickable.spritePlane.rotation.z = 0;
             pickable.pickup();
             this._pickupSequence = null;

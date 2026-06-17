@@ -25,6 +25,7 @@ export class CharacterBase {
         this.rootDebugVisible = this.showCollision;
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
+        this.buffsProvider = null;
         this.currentSpeed = 0;
         this.facing = 1;
         this.facingMode = FACING_MODE.LOCKED;
@@ -363,9 +364,17 @@ export class CharacterBase {
             this.setFacing(nx > 0 ? 1 : -1);
         }
 
-        this.root.position.x += nx * this.baseWalkSpeed * dtSec;
-        this.root.position.y += ny * this.baseWalkSpeed * dtSec;
-        this.currentSpd = Math.hypot(nx * this.baseWalkSpeed, ny * this.baseWalkSpeed);
+        const effectiveSpeed = this.getEffectiveWalkSpeed();
+        this.root.position.x += nx * effectiveSpeed * dtSec;
+        this.root.position.y += ny * effectiveSpeed * dtSec;
+        this.currentSpd = Math.hypot(nx * effectiveSpeed, ny * effectiveSpeed);
+    }
+
+    getEffectiveWalkSpeed() {
+        if (!this.buffsProvider || typeof this.buffsProvider.getSpeedMultiplier !== "function") {
+            return this.baseWalkSpeed;
+        }
+        return this.baseWalkSpeed * this.buffsProvider.getSpeedMultiplier();
     }
 
     _matchesTransitionCondition(condition) {

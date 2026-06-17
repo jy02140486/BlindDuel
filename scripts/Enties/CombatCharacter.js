@@ -146,15 +146,22 @@ export class CombatCharacter extends CharacterBase {
     get maxHp() { return this.combat.maxHp; }
     get isDead() { return this.combat.isDead; }
 
+    getEffectiveCooldownMs() {
+        if (!this.buffsProvider || typeof this.buffsProvider.getCdMultiplier !== "function") {
+            return this.globalCooldownMs;
+        }
+        return this.globalCooldownMs * this.buffsProvider.getCdMultiplier();
+    }
+
     canAct() {
         if (this.combat.isDead) return false;
         const now = performance.now();
-        return now - this.lastActionTime >= this.globalCooldownMs;
+        return now - this.lastActionTime >= this.getEffectiveCooldownMs();
     }
 
     getCooldownRemaining() {
         const now = performance.now();
-        const remaining = this.globalCooldownMs - (now - this.lastActionTime);
+        const remaining = this.getEffectiveCooldownMs() - (now - this.lastActionTime);
         return Math.max(0, remaining);
     }
 
