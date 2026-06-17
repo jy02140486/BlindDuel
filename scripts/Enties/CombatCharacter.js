@@ -169,6 +169,13 @@ export class CombatCharacter extends CharacterBase {
         this.lastActionTime = performance.now();
     }
 
+    heal(amount = 1) {
+        if (this.combat.isDead) return;
+        const before = this.combat.hp;
+        this.combat.hp = Math.min(this.combat.maxHp, this.combat.hp + amount);
+        console.log(`[Heal] +${this.combat.hp - before} HP (${this.combat.hp}/${this.combat.maxHp})`);
+    }
+
     takeDamage(ctx = {}) {
         if (this.currentStateDef?.invincible || this.combat.isDead) {
             return false;

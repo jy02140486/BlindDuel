@@ -23,6 +23,7 @@ import { CameraManager } from "./Systems/CameraManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
 import { InventoryBar } from "./UI/InventoryBar.js";
 import { BuffBar } from "./UI/BuffBar.js";
+import { HpBar } from "./UI/HpBar.js";
 
 const FIXED_DT = 1000 / 60;
 
@@ -46,6 +47,7 @@ export class Scene {
         this.inventoryManager = null;
         this.inventoryBar = null;
         this.buffBar = null;
+        this.hpBar = null;
         this._onKeyDown = null;
         this.paused = false;
         this.tickCount = 0;
@@ -212,9 +214,11 @@ export class Scene {
         this.inventoryManager = new InventoryManager();
         this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
         this.buffBar = new BuffBar(document.getElementById("buff-bar"));
+        this.hpBar = new HpBar(document.getElementById("hp-bar"));
         sharedContext.inventoryManager = this.inventoryManager;
         sharedContext.inventoryBar = this.inventoryBar;
         sharedContext.buffBar = this.buffBar;
+        sharedContext.hpBar = this.hpBar;
 
         this.sharedContext = sharedContext;
 
@@ -310,6 +314,10 @@ export class Scene {
         if (this.buffBar) {
             this.buffBar.dispose();
             this.buffBar = null;
+        }
+        if (this.hpBar) {
+            this.hpBar.dispose();
+            this.hpBar = null;
         }
         this.inventoryManager = null;
         if (this.cameraRig) {

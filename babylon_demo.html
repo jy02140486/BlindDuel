@@ -19,6 +19,18 @@
             touch-action: none;
             display: block;
         }
+        #hp-bar {
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            font-size: 28px;
+            color: #e04040;
+            z-index: 20;
+            pointer-events: none;
+            text-shadow: 0 0 6px rgba(0,0,0,0.7);
+            letter-spacing: 2px;
+            user-select: none;
+        }
         #hud-left {
             position: absolute;
             left: 12px;
@@ -54,6 +66,7 @@
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="hp-bar"></div>
     <div id="hud-left">
         <div id="inventory-bar"></div>
         <div id="buff-bar"></div>

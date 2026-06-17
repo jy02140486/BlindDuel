@@ -417,7 +417,11 @@ export class ExploreMode extends BaseMode {
     }
 
     updateRender(dtMs) {
-        const { character, cameraManager, sceneVisualSystem, sceneSequencer } = this.context;
+        const { character, cameraManager, sceneVisualSystem, sceneSequencer, hpBar } = this.context;
+
+        if (hpBar && character?.hp !== undefined) {
+            hpBar.update(character.hp, character.maxHp);
+        }
 
         const Z_FACTOR = 0.1;
         for (const entity of this.renderables) {
@@ -533,6 +537,9 @@ export class ExploreMode extends BaseMode {
         ) {
             // consume 动画播完，收尾
             seq.phase = "done";
+            if (seq.consumeType === "eat") {
+                character.heal(1);
+            }
             if (seq.consumeType === "drink" && this.context.playerController) {
                 this.context.playerController.addBuff({
                     type: "speedMultiplier",
