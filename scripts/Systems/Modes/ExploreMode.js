@@ -372,11 +372,11 @@ export class ExploreMode extends BaseMode {
             return;
         }
 
-        const shouldLog = () => this.context.scene.tickCount % 60 === 0;
-
         for (const entity of this.renderables) {
             const plane = entity.spritePlane;
             if (!plane) continue;
+
+            if (entity.kind === "pickable") continue;
 
             plane.onBeforeRenderObservable.add(() => {
                 // 角色之间纯 painter 排序，不参与 depth pipeline
@@ -388,12 +388,23 @@ export class ExploreMode extends BaseMode {
                 for (const mesh of masks) {
                     const aabb = mesh._maskAabb;
                     if (!aabb) continue;
-                    const wp = mesh.getAbsolutePosition();
-                    const worldLeft = wp.x - aabb.w / 2;
-                    const worldRight = wp.x + aabb.w / 2;
-                    const worldBottom = wp.y - aabb.h / 2;
+                    const worldLeft = aabb.x;
+                    const worldRight = aabb.x + aabb.w;
+                    const worldBottom = aabb.y;
+                    const worldTop = aabb.y + aabb.h;
+                    // 实体 pushbox 与 mask AABB 做完整重叠检测
+                    if (typeof entity.getBlockerAabb === 'function') {
+                        const blocker = entity.getBlockerAabb();
+                        if (blocker) {
+                            if (blocker.maxX < worldLeft || blocker.minX > worldRight) continue;
+                            if (blocker.maxY < worldBottom || blocker.minY > worldTop) continue;
+                            needMask = true;
+                            break;
+                        }
+                    }
+                    // 无 pushbox 的实体回退宽松判断
                     if (pos.x < worldLeft - 1.0 || pos.x > worldRight + 1.0) continue;
-                    if (pos.y >= worldBottom) {
+                    if (pos.y >= worldBottom && pos.y <= worldTop) {
                         needMask = true;
                         break;
                     }
@@ -404,9 +415,6 @@ export class ExploreMode extends BaseMode {
                     gl.stencilMask(0x00);
                     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
                     gl.stencilFunc(gl.NOTEQUAL, 1, 0xFF);
-                    // if (shouldLog()) {
-                    //     console.log(`[stencil ON] ${entity.id ?? entity.name} y:${pos.y.toFixed(2)}`);
-                    // }
                 } else {
                     gl.disable(gl.STENCIL_TEST);
                 }
