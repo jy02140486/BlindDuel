@@ -1,26 +1,26 @@
-import { Scene } from "./scripts/Scene.js";
+import { Game } from "./scripts/Game.js";
 import { OUTDOOR_VILLAGE, HOUSE_INTERIOR, BATTLE_DEFS } from "./scripts/SceneDefs.js";
 
 async function start() {
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true, { stencil: true });
-    const scene = new Scene(engine, canvas);
+    const game = new Game(engine, canvas);
 
     // --- 临时：切换场景测试 ---
     // HOUSE_INTERIOR 测试通过后可取消注释
-    //await scene.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
-    await scene.init(HOUSE_INTERIOR, BATTLE_DEFS);
+    //await game.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
+    await game.init(HOUSE_INTERIOR, BATTLE_DEFS);
 
     // 暴露到全局，方便控制台调试
-    window.gameScene = scene;
+    window.game = game;
 
     // 暂停键监听（P 或 Esc）
     window.addEventListener("keydown", (e) => {
         if (e.key.toLowerCase() === "p" || e.key === "Escape") {
-            scene.togglePause();
+            game.togglePause();
         }
         if (e.key.toLowerCase() === "o") {
-            scene.toggleCameraProjection();
+            game.toggleCameraProjection();
         }
     });
 
@@ -35,20 +35,20 @@ async function start() {
 
         while (accumulator >= FIXED_DT) {
             tickCount++;
-            scene.fixedUpdate(FIXED_DT, tickCount);
+            game.fixedUpdate(FIXED_DT, tickCount);
             accumulator -= FIXED_DT;
         }
 
-        scene.updateRender(dtMs);
-        scene.render();
+        game.updateRender(dtMs);
+        game.render();
     });
 
     window.addEventListener("resize", () => {
-        scene.onResize();
+        game.onResize();
         engine.resize();
     });
     window.addEventListener("beforeunload", () => {
-        scene.dispose();
+        game.dispose();
     }, { once: true });
 }
 

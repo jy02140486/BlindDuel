@@ -24,13 +24,18 @@ import { InventoryManager } from "./Systems/InventoryManager.js";
 import { InventoryBar } from "./UI/InventoryBar.js";
 import { BuffBar } from "./UI/BuffBar.js";
 import { HpBar } from "./UI/HpBar.js";
+import { DialogueBubble } from "./UI/DialogueBubble.js";
+import { getNpcDef } from "../Data/NpcDefs.js";
 
 const FIXED_DT = 1000 / 60;
 
 export class Scene {
-    constructor(engine, canvas) {
+    constructor(engine, canvas, gameContext = {}) {
         this.engine = engine;
         this.canvas = canvas;
+        this.worldState = gameContext.worldState ?? null;
+        this.questManager = gameContext.questManager ?? null;
+        this.inventoryManager = gameContext.inventoryManager ?? new InventoryManager();
         this.scene = null;
         this.inputSystem = null;
         this.playerController = null;
@@ -44,7 +49,6 @@ export class Scene {
         this.exploreMode = null;
         this.sceneSequencer = null;
         this.cameraManager = null;
-        this.inventoryManager = null;
         this.inventoryBar = null;
         this.buffBar = null;
         this.hpBar = null;
@@ -125,7 +129,8 @@ export class Scene {
             if (entityDef.controller === "npc") {
                 const npc = entityById.get(entityDef.id);
                 if (npc) {
-                    npc.npcController = new NpcController();
+                    const npcDef = getNpcDef(entityDef.id);
+                    npc.npcController = new NpcController(this.worldState, npcDef);
                     npc.npcController.setupDebugVisual(this.scene, npc.root);
                 }
             }
@@ -211,14 +216,16 @@ export class Scene {
         sharedContext.cameraManager = this.cameraManager;
         this.combatSystem.cameraManager = this.cameraManager;
 
-        this.inventoryManager = new InventoryManager();
         this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
         this.buffBar = new BuffBar(document.getElementById("buff-bar"));
         this.hpBar = new HpBar(document.getElementById("hp-bar"));
+        this.dialogueBubble = new DialogueBubble(document.getElementById("dialogue-bubble-container"));
         sharedContext.inventoryManager = this.inventoryManager;
+        sharedContext.questManager = this.questManager;
         sharedContext.inventoryBar = this.inventoryBar;
         sharedContext.buffBar = this.buffBar;
         sharedContext.hpBar = this.hpBar;
+        sharedContext.dialogueBubble = this.dialogueBubble;
 
         this.sharedContext = sharedContext;
 

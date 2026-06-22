@@ -1,6 +1,7 @@
 import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
+import { getItemDef } from "../../../Data/ItemDefs.js";
 
 
 export class ExploreMode extends BaseMode {
@@ -16,6 +17,7 @@ export class ExploreMode extends BaseMode {
         this.pickables = [];
         this._collisionSystem = new ExploreCollisionSystem();
         this._pickupSequence = null;
+        this._giveSequence = null;
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -32,7 +34,12 @@ export class ExploreMode extends BaseMode {
             npc.fixedUpdate(dtMs, tickCount);
             const controller = npc.npcController;
             if (controller) {
-                controller.update(dtMs, npc, { player: character });
+                controller.update(dtMs, npc, {
+                    player: character,
+                    questManager: this.context.questManager,
+                    inventoryManager: this.context.inventoryManager,
+                    dialogueBubble: this.context.dialogueBubble,
+                });
             }
         }
 
@@ -40,6 +47,8 @@ export class ExploreMode extends BaseMode {
 
         this.#checkInteraction(character, tickCount);
         this.#updatePickupSequence(character);
+        this.#updateGiveSequence(character, dtMs);
+        this.#updateDialogueBubble();
     }
 
     #checkInteraction(character, tickCount) {
@@ -47,17 +56,17 @@ export class ExploreMode extends BaseMode {
 
         if (!inputSystem.consumeAction("interact", tickCount)) return;
 
-        // 优先检查 NPC 交互（距离最近者优先）
+        // 检查 give-item NPC
         for (const npc of this.interactables) {
             const controller = npc.npcController;
-            if (!controller || controller.state === "ask") continue;
+            if (!controller?._needsInteract) continue;
 
             const dx = character.root.position.x - npc.root.position.x;
             const dy = character.root.position.y - npc.root.position.y;
             const distSq = dx * dx + dy * dy;
             const interactRadius = controller.greetingRadius ?? 1.6;
             if (distSq <= interactRadius * interactRadius) {
-                controller.enterAsk(npc);
+                this._startGiveSequence(character, controller, npc);
                 return;
             }
         }
@@ -431,10 +440,14 @@ export class ExploreMode extends BaseMode {
                 entity.spritePlane.alphaIndex = 1000 + Math.round(-entity.root.position.y * 100);
             }
         }
-        //拾取时物品永远比主角多一层，画在前面
+        // 拾取/give 时物品永远比主角多一层
         const seq = this._pickupSequence;
         if (seq?.pickable?.spritePlane && character?.spritePlane) {
             seq.pickable.spritePlane.alphaIndex = character.spritePlane.alphaIndex + 1;
+        }
+        const gs = this._giveSequence;
+        if (gs?.plane && character?.spritePlane) {
+            gs.plane.alphaIndex = character.spritePlane.alphaIndex + 1;
         }
 
         const pos = character.root.position;
@@ -460,6 +473,8 @@ export class ExploreMode extends BaseMode {
         }
 
         this._collisionSystem.updateDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
+
+        this.#updateDialogueBubblePosition();
 
         // 使用 SceneVisualSystem 的 panel 方案进行调试
         sceneVisualSystem?.updateDebugPanel?.();
@@ -557,5 +572,132 @@ export class ExploreMode extends BaseMode {
             pickable.pickup();
             this._pickupSequence = null;
         }
+    }
+
+
+    _startGiveSequence(character, controller, npc) {
+        const itemDef = getItemDef(controller._pendingGiveItem);
+        if (!itemDef) {
+            controller._pendingGiveItem = null;
+            controller._pendingAction = null;
+            controller._needsInteract = false;
+            return;
+        }
+
+        const pxToWorld = character.pxToWorld ?? 0.03;
+        const planeW = 32 * pxToWorld;
+        const planeH = 32 * pxToWorld;
+
+        const plane = BABYLON.MeshBuilder.CreatePlane("give_item", {
+            width: planeW, height: planeH
+        }, this.context.babylonScene);
+        const texture = new BABYLON.Texture(itemDef.textureUrl, this.context.babylonScene);
+        const material = new BABYLON.StandardMaterial("give_item_mat", this.context.babylonScene);
+        material.diffuseTexture = texture;
+        material.diffuseTexture.hasAlpha = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        material.backFaceCulling = false;
+        material.disableLighting = true;
+        material.disableDepthWrite = true;
+        material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        plane.material = material;
+        plane.parent = character.root;
+        plane.position.z = -0.01;
+        plane.renderingGroupId = 1;
+
+        character.enterState("give");
+
+        this._giveSequence = {
+            phase: "give",
+            plane,
+            controller,
+            npc,
+            timerMs: 0,
+            bubbleDurationMs: 2000,
+        };
+    }
+
+    #updateGiveSequence(character, dtMs) {
+        const seq = this._giveSequence;
+        if (!seq) return;
+
+        const pxToWorld = character.pxToWorld ?? 0.03;
+        const { dialogueBubble } = this.context;
+
+        if (seq.phase === "give") {
+            if (seq.plane && !seq.plane.isDisposed()) {
+                const frameIdx = character.animation.currentFrameIndex;
+                const actionAnchor = character.getActionAnchor(frameIdx);
+                const rootAnchor = character.getRootAnchor(frameIdx);
+                if (actionAnchor && rootAnchor) {
+                    const dx = (actionAnchor.cx - rootAnchor.cx) * pxToWorld * character.facing;
+                    const dy = (rootAnchor.cy - actionAnchor.cy) * pxToWorld;
+                    seq.plane.position.x = dx;
+                    seq.plane.position.y = dy;
+                }
+            }
+
+            if (character.currentStateName !== "give") {
+                seq.phase = "bubble1";
+                seq.timerMs = 0;
+                if (seq.plane && !seq.plane.isDisposed()) {
+                    seq.plane.isVisible = false;
+                }
+                if (dialogueBubble && seq.npc) {
+                    dialogueBubble.setText("👍");
+                    dialogueBubble.show(seq.npc);
+                }
+            }
+            return;
+        }
+
+        if (seq.phase === "bubble1" || seq.phase === "bubble2") {
+            seq.timerMs += dtMs;
+            if (seq.timerMs >= seq.bubbleDurationMs) {
+                if (seq.phase === "bubble1") {
+                    seq.phase = "bubble2";
+                    seq.timerMs = 0;
+                    if (dialogueBubble) {
+                        dialogueBubble.setText(seq.controller._pendingCompleteText ?? "👋👊");
+                    }
+                } else {
+                    if (seq.controller._pendingAction && this.context.questManager) {
+                        this.context.questManager.executeAction(seq.controller._pendingAction);
+                    }
+                    this.context.inventoryBar?.update(this.context.inventoryManager?.items ?? []);
+                    if (dialogueBubble) dialogueBubble.hide();
+                    if (seq.plane && !seq.plane.isDisposed()) seq.plane.dispose();
+                    seq.controller._pendingGiveItem = null;
+                    seq.controller._pendingAction = null;
+                    seq.controller._pendingCompleteText = null;
+                    seq.controller._needsInteract = false;
+                    this._giveSequence = null;
+                }
+            }
+            return;
+        }
+    }
+
+    #updateDialogueBubble() {
+        const { dialogueBubble } = this.context;
+        if (!dialogueBubble) return;
+
+        if (this._giveSequence) return;
+
+        for (const npc of this.interactables) {
+            const controller = npc.npcController;
+            if (controller && controller.state === "greeting") {
+                dialogueBubble.show(npc);
+                return;
+            }
+        }
+        dialogueBubble.hide();
+    }
+
+    #updateDialogueBubblePosition() {
+        const { dialogueBubble, babylonScene } = this.context;
+        if (!dialogueBubble?.isVisible) return;
+        dialogueBubble.update(babylonScene);
     }
 }

@@ -324,6 +324,19 @@
         }
       ]
     },
+    "give": {
+      "clip": "pickup",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
     "topack": {
       "clip": "topack",
       "allowMoveInput": false,

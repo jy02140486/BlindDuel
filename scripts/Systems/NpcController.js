@@ -1,11 +1,22 @@
 export class NpcController {
-    constructor(options = {}) {
+    constructor(worldState, npcDef, options = {}) {
+        this.world = worldState;
+        this.npcDef = npcDef;
         this.state = "idle";
         this.stateElapsedMs = 0;
         this.greetingRadius = options.greetingRadius ?? 1.6;
-        this.greetingDurationMs = options.greetingDurationMs ?? 2000;
-        this.askDurationMs = options.askDurationMs ?? 3000;
         this.hasGreetedInRange = false;
+        this._activeText = null;
+        this._activeAction = null;
+        this._dialogueTimerMs = 0;
+        this._dialogueDurationMs = options.dialogueDurationMs ?? 3000;
+        this._inventoryManager = null;
+        this._dialogueBubble = null;
+        this._activeGiveItem = null;
+        this._needsInteract = false;
+        this._pendingGiveItem = null;
+        this._pendingAction = null;
+        this._pendingCompleteText = null;
     }
 
     update(dtMs, npc, context) {
@@ -15,32 +26,33 @@ export class NpcController {
             return;
         }
 
+        this._inventoryManager = context.inventoryManager ?? this._inventoryManager;
+        this._dialogueBubble = context.dialogueBubble ?? this._dialogueBubble;
+
         const dx = player.root.position.x - npc.root.position.x;
         const dy = player.root.position.y - npc.root.position.y;
         const distSq = dx * dx + dy * dy;
         const inGreetingRange = distSq <= this.greetingRadius * this.greetingRadius;
 
         if (this.state === "idle" && inGreetingRange && !this.hasGreetedInRange) {
+            if (this._isQuestCompleted()) {
+                this.hasGreetedInRange = true;
+                return;
+            }
             this.enterGreeting(npc);
             this.hasGreetedInRange = true;
             return;
         }
 
         if (this.state === "greeting") {
-            this.stateElapsedMs += dtMs;
-            if (this.stateElapsedMs >= this.greetingDurationMs) {
-                console.log(`[NpcController] greeting timeout (${this.stateElapsedMs.toFixed(0)}ms >= ${this.greetingDurationMs}ms), entering idle`);
+            this._dialogueTimerMs += dtMs;
+            if (this._dialogueTimerMs >= this._dialogueDurationMs) {
+                this._triggerAction(context.questManager);
                 this.enterIdle(npc);
+                return;
             }
         }
 
-        if (this.state === "ask") {
-            this.stateElapsedMs += dtMs;
-            if (this.stateElapsedMs >= this.askDurationMs) {
-                console.log(`[NpcController] ask timeout (${this.stateElapsedMs.toFixed(0)}ms >= ${this.askDurationMs}ms), entering idle`);
-                this.enterIdle(npc);
-            }
-        }
 
         if (!inGreetingRange) {
             this.hasGreetedInRange = false;
@@ -53,20 +65,39 @@ export class NpcController {
     }
 
     enterGreeting(npc) {
-        console.log("[NpcController] enterGreeting called, prevState=" + this.state);
+        const entry = this.resolve();
+        if (!entry) return;
+
+        if (entry.giveItem) {
+            this._needsInteract = true;
+            this._pendingGiveItem = entry.giveItem;
+            this._pendingAction = entry.action ?? null;
+            this._pendingCompleteText = entry.completeText ?? null;
+            if (npc.hasState("greeting")) {
+                npc.enterState("greeting");
+            }
+            return;
+        }
+
         this.state = "greeting";
-        this.stateElapsedMs = 0;
+        this._dialogueTimerMs = 0;
+        this._activeText = entry.text;
+        this._activeAction = entry.action ?? null;
+        if (this._dialogueBubble) {
+            this._dialogueBubble.setText(entry.text);
+            this._dialogueBubble.show(npc);
+        }
         if (npc.hasState("greeting")) {
             npc.enterState("greeting");
-        } else {
-            console.warn("[NpcController] NPC has no 'greeting' state!");
         }
     }
 
     enterIdle(npc) {
-        console.log("[NpcController] enterIdle called, prevState=" + this.state);
         this.state = "idle";
         this.stateElapsedMs = 0;
+        if (this._dialogueBubble) {
+            this._dialogueBubble.hide();
+        }
         if (npc.hasState("idle")) {
             npc.enterState("idle");
         } else {
@@ -74,11 +105,56 @@ export class NpcController {
         }
     }
 
-    enterAsk(npc) {
-        this.state = "ask";
-        this.stateElapsedMs = 0;
-        if (npc.hasState("ask")) {
-            npc.enterState("ask");
+
+    resolve() {
+        if (!this.world || !this.npcDef?.dialogues) return null;
+        const sorted = [...this.npcDef.dialogues].sort((a, b) => b.priority - a.priority);
+        for (const entry of sorted) {
+            if (this._matchCondition(entry.condition)) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    _matchCondition(cond) {
+        if (!cond || Object.keys(cond).length === 0) return true;
+        if (cond.quest !== undefined) {
+            const q = this.world.getQuest(cond.quest);
+            if (cond.stage !== undefined && q.stage !== cond.stage) return false;
+            if (cond.completed !== undefined && q.completed !== cond.completed) return false;
+        }
+        if (cond.flag !== undefined && !this.world.flags[cond.flag]) return false;
+        if (cond.scenario !== undefined && this.world.scenario !== cond.scenario) return false;
+        if (cond.scenarioMin !== undefined && this.world.scenario < cond.scenarioMin) return false;
+        if (cond.hasItem !== undefined) {
+            if (!this._inventoryManager) return false;
+            return this._inventoryManager.hasItem(cond.hasItem);
+        }
+        return true;
+    }
+
+    _triggerAction(questManager) {
+        if (this._activeAction && questManager) {
+            questManager.executeAction(this._activeAction);
+        }
+        this._activeText = null;
+        this._activeAction = null;
+        this._checkPendingGive();
+    }
+
+    _isQuestCompleted() {
+        const entry = this.resolve();
+        return entry?.condition?.completed === true;
+    }
+
+    _checkPendingGive() {
+        const entry = this.resolve();
+        if (entry?.giveItem) {
+            this._needsInteract = true;
+            this._pendingGiveItem = entry.giveItem;
+            this._pendingAction = entry.action ?? null;
+            this._pendingCompleteText = entry.completeText ?? null;
         }
     }
 
