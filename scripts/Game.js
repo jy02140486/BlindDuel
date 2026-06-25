@@ -2,6 +2,7 @@ import { WorldState } from "./WorldState.js";
 import { QuestManager } from "./Systems/QuestManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
 import { Scene } from "./Scene.js";
+import { SCENARIO } from "../Data/ScenarioMilestones.js";
 
 export class Game {
     constructor(engine, canvas) {
@@ -37,6 +38,14 @@ export class Game {
 
     dispose() {
         this.scene.dispose();
+    }
+
+    resetWorldState() {
+        this.worldState.scenario = SCENARIO.CHAPTER_1_START;
+        this.worldState.flags = {};
+        this.worldState.quests = {};
+        this.worldState.sceneStates = {};
+        console.log('[Game] WorldState reset to scenario', this.worldState.scenario);
     }
 
     togglePause() {

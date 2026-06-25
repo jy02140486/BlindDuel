@@ -17,6 +17,7 @@ import {
     createBardNpc,
     createPickable,
 } from "./CharacterFactory.js";
+import { SCENARIO } from "../Data/ScenarioMilestones.js";
 
 // ---------------------------------------------------------------------------
 // 工厂映射：archetype → factory(assets) → entity
@@ -199,7 +200,20 @@ export const OUTDOOR_VILLAGE = {
         minX: -24, maxX: -7,
         minY: -1,  maxY: 0.7,
     },
+    spawns: {
+        house_door: [-12.33, -0.4, 0],
+    },
     triggers: [
+        {
+            type: "sceneSwitch",
+            id: "enter_house",
+            pos: [-12, -1, 0],
+            size: [2, 2, 2],
+            targetScene: "house_interior",
+            targetSpawn: "house_door",
+            debugColor: [0, 1, 1],
+            debugVisible: true,
+        },
         {
             type: "battle",
             id: "bt_field_1",
@@ -209,14 +223,14 @@ export const OUTDOOR_VILLAGE = {
             debugColor: [0, 1, 0],
             debugVisible: false,
         },
-        {
-            type: "scriptedCamera",
-            id: "sc_test_1",
-            pos: [-15, 1, 0],
-            size: [4, 8, 4],
-            debugColor: [0, 0, 1],
-            debugVisible: false,
-        },
+        // {
+        //     type: "scriptedCamera",
+        //     id: "sc_test_1",
+        //     pos: [-15, 1, 0],
+        //     size: [4, 8, 4],
+        //     debugColor: [0, 0, 1],
+        //     debugVisible: false,
+        // },
     ],
 };
 
@@ -414,22 +428,27 @@ export const HOUSE_INTERIOR = {
             kind: "enemy",
             pos: [8.47, -4.92],
             controller: "dummy",
+            spawnIf: { scenarioMax: 109 },
         },
     ],
     walkArea: {
         minX: -6.75, maxX: 13.98,
         minY: -4.77, maxY: -1.65,
     },
+    spawns: {
+        house_door: [-2.09, -1, 0],
+    },
     triggers: [
         {
             type: "sceneSwitch",
             id: "exit_house",
-            pos: [0, -1, 0],
+            pos: [-2, -1, 0],
             size: [2, 2, 2],
             targetScene: "outdoor_village",
             targetSpawn: "house_door",
-            debugColor: [1, 0.5, 0],
-            debugVisible: false,
+            condition: { scenarioMin: 110 },
+            debugColor: [0, 1, 1],
+            debugVisible: true,
         },
         {
             type: "battle",
@@ -437,6 +456,7 @@ export const HOUSE_INTERIOR = {
             pos: [2.47, -4.90, 0],
             size: [1,2, 3],
             battleId: "battle_field_2",
+            condition: { scenarioMax: 109 },
             debugColor: [0, 1, 0],
             debugVisible: false,
         },
@@ -452,6 +472,11 @@ export const BATTLE_FIELD_2 = {
     combatants: ["hero", "enemy_1"],
     stageBounds: { minX: -0.5, maxX: 12, minY: -4.85, maxY: -4.75 },
     battleYBaseline: -4.8,
+    onVictory: {
+        scenario: SCENARIO.BATTLE_1_COMPLETED,
+        flags: ["banditDead"],
+        questStages: [{ id: "dagger", stage: 2 }],
+    },
     duelCamera: {
         zoomMinDistance: 2.4,
         zoomMaxDistance: 5.0,
@@ -534,4 +559,9 @@ export const BATTLE_FIELD_2 = {
 export const BATTLE_DEFS = {
     [BATTLE_FIELD_1.id]: BATTLE_FIELD_1,
     [BATTLE_FIELD_2.id]: BATTLE_FIELD_2,
+};
+
+export const ALL_SCENES = {
+    [HOUSE_INTERIOR.id]: HOUSE_INTERIOR,
+    [OUTDOOR_VILLAGE.id]: OUTDOOR_VILLAGE,
 };

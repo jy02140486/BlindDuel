@@ -27,6 +27,10 @@ export class ExploreCameraRig {
         }
     }
 
+    enter(ctx) {
+        this.projection = "orthographic";
+    }
+
     exit(ctx) {
     }
 

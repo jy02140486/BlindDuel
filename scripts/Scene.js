@@ -59,6 +59,8 @@ export class Scene {
     }
 
     async init(sceneDef, battleDefs = {}) {
+        this._battleDefs = battleDefs;
+        this.entityPool = [];
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
 
@@ -87,6 +89,9 @@ export class Scene {
         // --- 从 SceneDef 创建实体 ---
         const entityById = new Map();
         for (const entityDef of sceneDef.entities) {
+            if (!this._evaluateCondition(entityDef.spawnIf, this.worldState)) {
+                continue;
+            }
             const entity = createEntityFromDef(this.scene, assets, entityDef);
             this.entityPool.push(entity);
             entityById.set(entity.id, entity);
@@ -109,6 +114,7 @@ export class Scene {
                 new BABYLON.Vector3(triggerDef.pos[0], triggerDef.pos[1], triggerDef.pos[2] ?? 0),
                 { width: triggerDef.size[0], height: triggerDef.size[1], depth: triggerDef.size[2] },
                 {
+                    name: triggerDef.id,
                     debugColor: new BABYLON.Color3(...(triggerDef.debugColor ?? [0, 1, 0])),
                     debugVisible: triggerDef.debugVisible ?? false,
                 }
@@ -120,7 +126,12 @@ export class Scene {
 
         // --- 控制器 ---
         this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
-        this.playerController = new PlayerController(this.inputSystem, character);
+        if (this.playerController) {
+            this.playerController.setCharacter(character);
+            this.playerController.inputSystem = this.inputSystem;
+        } else {
+            this.playerController = new PlayerController(this.inputSystem, character);
+        }
         character.buffsProvider = this.playerController;
         this.rabbleController = rabbleStick ? new DummyController(rabbleStick) : null;
 
@@ -207,6 +218,7 @@ export class Scene {
             sceneDef: sceneDef,
             battleDefs: battleDefs,
             stageMaskData: stageMaskData,
+            worldState: this.worldState,
         };
         this.cameraManager = new CameraManager(sharedContext);
         this.cameraManager.init(this.scene, this.canvas, { fov: 0.8, minZ: 0.1, maxZ: 1000 });
@@ -284,7 +296,15 @@ export class Scene {
     fixedUpdate(dtMs, tickCount) {
         this.tickCount = tickCount;
 
-        if (this.paused) {
+        if (this.paused || this._loading) {
+            return;
+        }
+
+        if (this._pendingSceneLoad) {
+            const { sceneDef, spawnId } = this._pendingSceneLoad;
+            this._pendingSceneLoad = null;
+            this._loading = true;
+            this._loadScene(sceneDef, spawnId);
             return;
         }
 
@@ -293,23 +313,34 @@ export class Scene {
     }
 
     updateRender(dtMs) {
+        if (this._loading) return;
         this.gameModeManager.updateRender(dtMs);
         this.sceneSequencer.updateRender(dtMs);
-        this.cameraManager.update(dtMs, this.sharedContext);
+        if (this.cameraManager) {
+            this.cameraManager.update(dtMs, this.sharedContext);
+        }
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
     }
 
     render() {
+        if (this._loading) return;
+        if (!this.scene || !this.scene.activeCamera) return;
         this.scene.render();
     }
 
     dispose() {
+        if (this.entityPool) {
+            for (const entity of this.entityPool) {
+                if (entity.dispose) entity.dispose();
+            }
+        }
+        if (this.scene) {
+            this.scene.debugLayer.hide();
+            this.scene.dispose();
+        }
         if (this._onKeyDown) {
             window.removeEventListener("keydown", this._onKeyDown);
             this._onKeyDown = null;
-        }
-        if (this.playerController) {
-            this.playerController.dispose();
         }
         if (this.inputSystem) {
             this.inputSystem.dispose();
@@ -326,7 +357,6 @@ export class Scene {
             this.hpBar.dispose();
             this.hpBar = null;
         }
-        this.inventoryManager = null;
         if (this.cameraRig) {
             this.cameraRig.dispose();
             this.cameraRig = null;
@@ -354,5 +384,44 @@ export class Scene {
         this.battleTrigger = null;
         this.scriptedCameraTrigger = null;
         this.entityPool = null;
+    }
+
+    _evaluateCondition(cond, worldState) {
+        if (!cond || Object.keys(cond).length === 0) return true;
+        if (cond.flag !== undefined && !worldState.flags[cond.flag]) return false;
+        if (cond.scenario !== undefined && worldState.scenario !== cond.scenario) return false;
+        if (cond.scenarioMin !== undefined && worldState.scenario < cond.scenarioMin) return false;
+        if (cond.scenarioMax !== undefined && worldState.scenario > cond.scenarioMax) return false;
+        if (cond.quest !== undefined) {
+            const q = worldState.getQuest(cond.quest);
+            if (cond.stage !== undefined && q.stage !== cond.stage) return false;
+            if (cond.completed !== undefined && q.completed !== cond.completed) return false;
+        }
+        return true;
+    }
+
+    async _loadScene(sceneDef, spawnId) {
+        const hero = this.entityPool.find(e => e.id === "hero");
+        const savedHp = hero?.hp ?? 3;
+        this.dispose();
+        await this.init(sceneDef, this._battleDefs);
+        this._loading = false;
+
+        const newHero = this.entityPool.find(e => e.id === "hero");
+        if (newHero) {
+            newHero.combat.hp = savedHp;
+        }
+
+        if (this.inventoryManager && this.inventoryBar) {
+            this.inventoryBar.update(this.inventoryManager.items);
+        }
+        if (this.playerController && this.buffBar) {
+            this.buffBar.update(this.playerController.buffs);
+        }
+
+        const spawnPoint = sceneDef.spawns?.[spawnId];
+        if (spawnPoint && newHero) {
+            newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
+        }
     }
 }

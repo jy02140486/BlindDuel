@@ -487,6 +487,7 @@ export class SceneVisualSystem {
      * 销毁系统，释放资源
      */
     dispose() {
+        this.disposeDepthMasks();
         for (const [layerId, layer] of this.layers) {
             // 销毁所有网格
             for (const element of layer.elements) {
@@ -567,16 +568,6 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     alphaIndex: 3
                 },
                 {
-                    id: "tavern",
-                    texture: "Art/Environment/Tavern.png",
-                    kind: "single",
-                    x: -12,
-                    y: 5,
-                    width: 16,
-                    height: 10,
-                    alphaIndex: 4
-                },
-                {
                     id: "treeline",
                     texture: "Art/Environment/treeline.png",
                     kind: "single",
@@ -608,7 +599,7 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     height: 8,
                     tileSize: { width: 1.28, height: 1.28 },
                     loop: true,
-                    alphaIndex: 1
+                    alphaIndex: 4
                 },
                 {
                     id: "ground_2",
@@ -621,7 +612,17 @@ export const DEFAULT_ENVIRONMENT_CONFIG = {
                     height: 0.32,
                     tileSize: { width: 1.28, height: 0.32 },
                     loop: true,
-                    alphaIndex: 1
+                    alphaIndex: 3
+                },
+                {
+                    id: "tavern",
+                    texture: "Art/Environment/Tavern.png",
+                    kind: "single",
+                    x: -12,
+                    y: 5.5,
+                    width: 16,
+                    height: 10,
+                    alphaIndex: 2
                 }
             ]
         },

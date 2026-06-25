@@ -76,6 +76,9 @@ export class ExploreCollisionSystem {
 
     disposeDebugMeshes() {
         for (const mesh of this._debugMeshes) {
+            if (mesh.material) {
+                mesh.material.dispose();
+            }
             mesh.dispose();
         }
         this._debugMeshes.length = 0;

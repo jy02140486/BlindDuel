@@ -4,11 +4,14 @@
 
 ---
 
-## 进行中
+## 最近归档（2026-06-24）
 
-| 计划 | 目标 | 状态 |
-|------|------|------|
-| [SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md](SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md) | 场景切换 + 战斗外部化方案 | 方案评审中 |
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/WorldState-SceneSwitch 实现计划.md](archived/WorldState-SceneSwitch%20实现计划.md) | WorldState 扩展 + 场景切换 | Step 1-8 全部完成：ScenarioMilestones、sceneStates、战斗胜利回写、Entity spawnIf 过滤、Trigger condition 条件化、场景切换交互键触发、buff/inventory 跨场景保持 |
+| [archived/SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md](archived/SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN.md) | 场景切换 + 战斗外部化方案 | Step A-E 全部完成：SceneDef/BattleDef 数据结构、Scene.init 重构、BattleMode 重构、场景切换落地、室内场景测试 |
+| [archived/Quest&Pickables.MD](archived/Quest%26Pickables.MD) | RPG 世界状态架构（设计文档） | 核心架构落地：WorldState（scenario/flags/quests/sceneStates）、QuestManager、InventoryManager、NPC resolve、SceneBuilder 概念 |
+| [archived/NPC-Quest-WorldState 概要设计.md](archived/NPC-Quest-WorldState%20概要设计.md) | NPC/Quest/WorldState 架构（设计文档） | 设计落地：NPC resolve、DialogueEntry 条件匹配、对白 action 触发、QuestManager 写入流程 |
 
 ---
 
@@ -85,15 +88,25 @@
 ---
 
 ## 快速参考：当前开发状态
+- **场景切换**：室内外双向切换已通，交互键触发（防死循环），hero HP/buffs/inventory 跨场景保持
+- **WorldState**：scenario（主线进度）+ flags（世界开关）+ quests（任务进度）+ sceneStates（持久化存储）体系完整
+- **QuestManager**：唯一写入入口，支持 scenario 推进、flag 设置、quest 阶段管理、action 执行
+- **Entity spawnIf 过滤**：实体按条件生成（scenarioMin/Max、flag、quest stage），场景切换后自动生效
+- **Trigger condition 条件化**：触发器按条件启用/禁用，ExploreMode 每帧同步
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
 - `SceneSequencer` 已具备基础 step：`wait / moveActorTo / switchMode / startCameraBlend` 等
-- `Explore -> Battle` 主流程已通：触发器进入 -> `SceneSequencer` 编排 -> `draw` 动画 -> 相机 blend -> 切模式
+- `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
-- NPC 工具链已补齐：`extract_rootmotion_occupancy.ps1` 可独立生成 occupancy 数据
-- `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-06-24)
+- 4 个计划文档完成并归档：`WorldState-SceneSwitch 实现计划`、`SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN`、`Quest&Pickables`、`NPC-Quest-WorldState 概要设计`
+- WorldState 体系完整：ScenarioMilestones、sceneStates、Entity spawnIf 过滤、Trigger condition 条件化、战斗胜利回写
+- 场景切换落地：室内外双向切换、交互键触发（防死循环）、buff/inventory 跨场景保持
+- PlayerController 生命周期修正：与 Scene 同生命周期，不在 dispose/init 中销毁重建
+- AABBTrigger debug 渲染层级提升、sceneSwitch 颜色区分
 
 ## Update Log (2026-06-01)
 - 2 个计划文档完成并归档：`SEQUENCE_CAMERA_AND_FACING_POLICY_PROPOSAL`、`FACING_POLICY_IMPLEMENTATION_STEPS`

@@ -1,5 +1,6 @@
 import { Game } from "./scripts/Game.js";
 import { OUTDOOR_VILLAGE, HOUSE_INTERIOR, BATTLE_DEFS } from "./scripts/SceneDefs.js";
+import { SCENARIO } from "./Data/ScenarioMilestones.js";
 
 async function start() {
     const canvas = document.getElementById("renderCanvas");
@@ -13,6 +14,8 @@ async function start() {
 
     // 暴露到全局，方便控制台调试
     window.game = game;
+    window.resetWorldState = () => game.resetWorldState();
+    window.SCENARIO = SCENARIO;
 
     // 暂停键监听（P 或 Esc）
     window.addEventListener("keydown", (e) => {

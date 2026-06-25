@@ -36,9 +36,9 @@
 |------|------|--------|------|
 | `tickDiff` 外部配置化 | 将 `ContactResolver` 中 Just Guard/预判 guard 使用的 `tickDiff` 阈值（当前硬编码 `<= 7`）提取为外部可配置项（建议进 StateGraph 或 Combat 配置）。 | 中 | 需要同步默认值与回归测试，避免改变现有手感 |
 | **hitstop 时长外部配置化** | `ContactResolver` 中各场景的 hitstop 时长目前全部硬编码：parry（双方 8 帧）、block（双方 4 帧）、clash tie（双方 8 帧）、clash lose（弱方 6 帧 / 强方 4 帧）、命中（双方 8 帧）。应提取为外部配置（建议按场景/攻击类型/武器等级分表）。 | 中 | 需同步默认值与手感测试 |
-| Scene 角色与战斗区域外部配置化 | 当前 `Scene.js` 中硬编码了角色创建（hero、rabbleStick）和战斗触发器位置。应改为从外部 JSON/数据文件读取场景中需要创建的角色定义、战斗区域定义。 | 高 | 影响场景编辑工作流，是后续加入更多角色/场景的前置条件 |
-| 标志点外部配置化（出生点/触发器等） | 出生点、触发器位置、NPC 站位等关键坐标当前分散硬编码在各处。应统一收敛为外部场景数据文件中的标志点定义。 | 高 | 与「角色与战斗区域」条目强关联，可合并实施 |
-| SceneVisual 外部数据化 | `SceneVisualSystem` 中的背景层（BG_FAR/BG_MID/STAGE 等）定义、元素坐标、parallax 参数当前硬编码在代码中。应改为从外部 JSON 读取场景视觉配置。 | 中 | 影响场景美术迭代效率 |
+| ✅ Scene 角色与战斗区域外部配置化 | 当前 `Scene.js` 中硬编码了角色创建（hero、rabbleStick）和战斗触发器位置。应改为从外部 JSON/数据文件读取场景中需要创建的角色定义、战斗区域定义。 | 高 | 已完成（2026-06-24）：`SceneDefs.js` 定义所有实体、触发器、战斗配置，`Scene.init()` 遍历数据构建 |
+| ✅ 标志点外部配置化（出生点/触发器等） | 出生点、触发器位置、NPC 站位等关键坐标当前分散硬编码在各处。应统一收敛为外部场景数据文件中的标志点定义。 | 高 | 已完成（2026-06-24）：`SceneDef.spawns` + `targetSpawn` 场景切换对齐 |
+| ✅ SceneVisual 外部数据化 | `SceneVisualSystem` 中的背景层（BG_FAR/BG_MID/STAGE 等）定义、元素坐标、parallax 参数当前硬编码在代码中。应改为从外部 JSON 读取场景视觉配置。 | 中 | 已完成（2026-06-24）：`SceneDef.environment` 配置，SceneVisualSystem.init() 从数据读取 |
 | Sequence 外部 JSON 化 | `ExploreMode` 和 `BattleMode` 中的 `enter_battle` / `exit_battle` 序列目前硬编码为 JS 对象。应改为从外部 JSON 文件读取，支持策划直接编辑序列步骤。 | 中 | 需定义 step type schema 与校验 |
 | 击退距离外部配置化 | `ContactResolver` 中击退距离（knockbackX）当前硬编码，与武器等级和命中场景绑定。应提取为外部可配置项（建议按武器/攻击类型分表）。 | 低 | 与 hitstop 配置化可同步推进 |
 
@@ -46,7 +46,8 @@
 
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
-| 可拾取小物件增益（食物/饮料） | 在探索模式中加入可拾取物件（如食物、饮料）；拾取后提供临时增益，例如减少招式 CD、提升移动速度。 | 中 | 需定义增益类型、持续时间、叠加规则与 UI 提示 |
+| 可拾取小物件增益（食物/饮料） | 在探索模式中加入可拾取物件（如食物、饮料）；拾取后提供临时增益，例如减少招式 CD、提升移动速度。 | 中 | 拾取流程已完成（eat/drink/pocket 三类），交互键触发；投掷物/暗器玩法待后续 |
+| ✅ 触发器 debug 体积不显示 | 按 C 键切换碰撞显示时，触发器的半透明体积未出现。 | 中 | 已修复（2026-06-24）：AABBTrigger debug mesh 设置 `renderingGroupId = 3` 确保在最上层渲染 |
 | 投掷物与暗器玩法（含 Projectile） | 在探索模式可获得投掷物/暗器资源，并在战斗中释放；同时补齐 projectile 基础能力（生成、飞行、命中、销毁、与现有 Combat 规则衔接）。 | 中 | 建议先做单一 projectile 类型验证战斗闭环 |
 | NPC 物物交换玩法（以物换物） | 探索模式中允许用小物件与 NPC 交易，换取 buff、投掷物或其他战斗资源。 | 中 | 需定义交易条件、库存/消耗规则、NPC 交互反馈与失败提示 |
 | ✅ 角色基类解耦（面向无战斗 NPC） | 将当前"以战斗为中心"的角色结构拆为 `CharacterBase` / `CombatCharacter` / `NpcCharacter`，支持无战斗 NPC 仅具备移动与简单动画。 | 高 | Phase 1-6 已完成（2026-05-27），Interaction 能力预留（Phase 7）与直连逻辑清理（Phase 8）待推进 |
@@ -77,7 +78,7 @@
 | ✅ 探索阶段移动与相机设计 | `EXPLORE_MOVEMENT_DESIGN.md` 中定义的 walkArea、移动映射、相机行为。 | 高 | 已完成，见 `archived/EXPLORE_MOVEMENT_DESIGN.md` |
 | ✅ Combat HP 与死亡 → 探索过渡 | CombatCharacter 血量、死亡状态、战斗结束切回探索模式。 | 高 | 已完成，见 `archived/COMBAT_HP_AND_DEATH_STATE.md` |
 | SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。修复序列中角色朝 -x 移动时不镜像问题。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
-| Phase 5：探索内容扩展 | NPC 对话气泡、buff 拾取、任务触发。 | 中 | 由 Interaction 能力预留后推进 |
+| Phase 5：探索内容扩展 | NPC 对话气泡、buff 拾取、任务触发、give 交互序列。 | 中 | 核心链路已完成：NPC 对话 + action 触发、pickup/give 序列、交互键系统；场景内容填充待后续 |
 
 ## 相机管理重构（后续优化）
 

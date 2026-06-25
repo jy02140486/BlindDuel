@@ -522,6 +522,19 @@ export class CharacterBase {
         this._updateDebugPanel();
     }
 
+    dispose() {
+        if (this.debugPanel) {
+            this.debugPanel.remove();
+            this.debugPanel = null;
+        }
+        if (this.spritePlane) {
+            this.spritePlane.dispose();
+        }
+        if (this.root) {
+            this.root.dispose();
+        }
+    }
+
     setCollisionVisible(value) {
         this.rootDebugVisible = value;
         this.rootDebugMesh.setEnabled(value);

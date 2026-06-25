@@ -1,4 +1,4 @@
-﻿﻿# 项目上下文（Project Context）
+﻿# 项目上下文（Project Context）
 ## 0. 前置工作
 - 读andrej-karpathy-skills-CLAUDE.MD，所有的工作都要遵守里面的规则
 ## 1. 项目概况
@@ -54,6 +54,14 @@ py -m http.server 9000 --bind 127.0.0.1
 - 探索碰撞系统：`scripts/Systems/ExploreCollisionSystem.js`
 - 角色工厂：`scripts/CharacterFactory.js`（四条装配路径：hero / rabble / traveller / merchant）
 - 场景/战斗定义：`scripts/SceneDefs.js`（SceneDef + BattleDef 硬编码数据 + `createEntityFromDef` 工厂）
+- 场景里程碑定义：`Data/ScenarioMilestones.js`（scenario 枚举常量）
+- 世界状态：`scripts/WorldState.js`（scenario / flags / quests / sceneStates）
+- 任务管理器：`scripts/Systems/QuestManager.js`（WorldState 唯一写入入口）
+- 背包管理器：`scripts/Systems/InventoryManager.js`
+- 玩家控制器：`scripts/Systems/PlayerController.js`（输入 → 移动 + 指令队列 + buff 管理）
+- 可拾取实体：`scripts/Enties/PickableEntity.js`（轻量实体，不继承 CharacterBase）
+- UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`
+- 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / Scene 的顶层组装）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
@@ -70,6 +78,11 @@ py -m http.server 9000 --bind 127.0.0.1
 
 ## 4. 动态状态
 > 当前进行中的计划与已完成事项，见 `plans/INDEX.md`。
+>
+> **最近完成（2026-06-24）**：
+> - WorldState 体系完整：ScenarioMilestones、sceneStates、Entity spawnIf 过滤、Trigger condition 条件化
+> - 场景切换落地：室内外双向切换、交互键触发（防死循环）、buff/inventory 跨场景保持
+> - 4 个计划文档归档：WorldState-SceneSwitch、Scene&Battle Externalize、Quest&Pickables、NPC-Quest-WorldState
 
 ## 5. 当前碰撞数据与约定
 1. 扫描颜色约定：
@@ -98,6 +111,9 @@ py -m http.server 9000 --bind 127.0.0.1
 7. 攻击结束当前按"当前帧是否仍存在 `attackInstanceId`"隐式判断；若后续出现"中间空帧再出刀"动作，需要改为更显式的生命周期机制。
 8. `ImpactContext` 已增加生命周期守卫（`expectedStateAtResolve` + `stateEntrySerialAtCreate`），用于避免过期 `nextState` 在 `impact` 结束时误跳转。
 9. `ContactResolver` 当前采用"同一攻击实例对同一目标只取首次结果"的规则：若该 `attackInstanceId|targetId` 已产生 `hit`，后续 guard/parry 不再覆盖该结果。
+10. 场景切换触发器（sceneSwitch）需要玩家按交互键（E/J/手柄X）才能触发，防止室内外双向 trigger 重叠导致的死循环切换。
+11. AABBTrigger debug 网格使用 `renderingGroupId = 3` 确保渲染在最上层，不被场景元素遮挡。
+12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）机制已就绪，但拾取时尚未调用写入，加载时尚未做 spawnIf 过滤。
 
 ## 7. 当前文件结构
 ```
@@ -129,6 +145,9 @@ GemeniPrototype-BlindBattle/
 │   │   └── NPCs/
 │   │       ├── traveller.{json,png,occupancy.json}
 │   │       └── merchant.{json,png,occupancy.json}
+│   ├── ScenarioMilestones.js     # scenario 枚举常量
+│   ├── StageMask/                # 舞台遮罩数据
+│   │   └── Tavern_indoorstage.mask.json
 │   ├── StateGraphDef/            # 状态图定义
 │   │   ├── LongSwordMan.json
 │   │   ├── RabbleStick.json
@@ -148,6 +167,7 @@ GemeniPrototype-BlindBattle/
 │   │   ├── CharacterBase.js
 │   │   ├── CombatCharacter.js
 │   │   ├── NpcCharacter.js
+│   │   ├── PickableEntity.js
 │   │   ├── SceneVisualSystem.js
 │   │   └── WalkArea.js
 │   ├── Systems/
@@ -165,13 +185,19 @@ GemeniPrototype-BlindBattle/
 │   │   ├── ExploreCollisionSystem.js
 │   │   ├── GameModeManager.js
 │   │   ├── InputSystem.js
+│   │   ├── InventoryManager.js
 │   │   ├── NpcController.js
 │   │   ├── PlayerController.js
 │   │   ├── PushboxResolver.js
+│   │   ├── QuestManager.js
 │   │   ├── SceneSequencer.js
 │   │   ├── StageBoundary.js
 │   │   ├── TestController.js
 │   │   └── TimeControlSystem.js
+│   ├── UI/
+│   │   ├── BuffBar.js
+│   │   ├── HpBar.js
+│   │   └── InventoryBar.js
 │   ├── tools/
 │   │   ├── extract_collision_boxes.ps1
 │   │   └── extract_rootmotion_occupancy.ps1
@@ -180,8 +206,10 @@ GemeniPrototype-BlindBattle/
 │   ├── DataLoader.js
 │   ├── DuelCameraRig.js
 │   ├── ExploreCameraRig.js
+│   ├── Game.js
 │   ├── Scene.js
-│   └── SceneDefs.js
+│   ├── SceneDefs.js
+│   └── WorldState.js
 ├── plans/
 │   ├── archived/                 # 已完成计划
 │   ├── backlogs_detailed/
@@ -222,6 +250,8 @@ Scene (scripts/Scene.js)
      -> PushboxResolver (scripts/Systems/PushboxResolver.js)
      -> StageBoundary (scripts/Systems/StageBoundary.js)
   -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+  -> QuestManager (scripts/Systems/QuestManager.js)
+  -> InventoryManager (scripts/Systems/InventoryManager.js)
 ```
 
 ### 9.2 主循环
@@ -275,74 +305,22 @@ InputSystem (scripts/Systems/InputSystem.js)
   -> DummyController (scripts/Systems/DummyController.js)
 ```
 
-## 9. 关键路径索引（调用链 → 源文件）
-
-### 9.1 顶层编排
+### 9.6 WorldState / QuestManager 写入链路
 ```
-Scene (scripts/Scene.js)
-  -> GameModeManager (scripts/Systems/GameModeManager.js)
-     -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
-     -> BattleMode (scripts/Systems/Modes/BattleMode.js)
-  -> SceneSequencer (scripts/Systems/SceneSequencer.js)
-     -> TimelineSequencer (scripts/Systems/TimelineSequencer.js)
-  -> CameraManager (scripts/Systems/CameraManager.js)
-     -> DuelCameraRig (scripts/DuelCameraRig.js)
-     -> ExploreCameraRig (scripts/ExploreCameraRig.js)
-     -> ScriptedCameraRig (scripts/ScriptedCameraRig.js)
-  -> CombatSystem (scripts/Systems/CombatSystem.js)
-     -> ContactResolver (scripts/Systems/ContactResolver.js)
-     -> PushboxResolver (scripts/Systems/PushboxResolver.js)
-     -> StageBoundary (scripts/Systems/StageBoundary.js)
-  -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+BattleMode.onVictory → questManager.advanceTo(scenario) / setFlag()
+NpcController.action  → questManager.executeAction(actionName)
+ExploreMode.pickup    → questManager.markPickableCollected() / setQuestStage()
+      ↓
+  WorldState (scenario / flags / quests / sceneStates)
+      ↓
+Scene.init() 查询 → Entity spawnIf 过滤 + Trigger condition 启用/禁用
 ```
 
-### 9.2 主循环
+### 9.7 场景切换链路
 ```
-character_demo.js
-  -> Scene.fixedUpdate()
-     -> SceneSequencer.fixedUpdate()
-     -> GameModeManager.fixedUpdate()
-        -> ExploreMode/BattleMode.fixedUpdate()
-           -> InputSystem (scripts/Systems/InputSystem.js)
-           -> PlayerController / AIController / NpcController
-           -> CombatSystem.fixedUpdate()
-  -> Scene.updateRender()
-     -> GameModeManager.updateRender()
-        -> ExploreMode/BattleMode.updateRender()
-           -> 写 context.target / basePosition
-           -> SceneVisualSystem.update()
-     -> CameraManager.update()
-        -> activeRig.compute()
-        -> _applyToBabylonCamera()
-```
-
-### 9.3 进入战斗
-```
-ExploreMode.#checkBattleTrigger()
-  -> sceneSequencer.play(enterBattleSequence)
-     -> TimelineSequencer 驱动 cameraBlend / waitUntil / moveActorTo 等 step
-  -> switchMode("battle")
-  -> BattleMode.enter()
-     -> CameraManager.switchRig("duel")
-     -> CombatSystem 激活
-```
-
-### 9.4 相机更新
-```
-BattleMode / ExploreMode.updateRender()
-  -> 写入 context.target / basePosition（角色连线中点 / 主角位置）
-  -> CameraManager.update()
-     -> activeRig.compute(context)
-     -> _applyToBabylonCamera()（平滑插值写入 Babylon Camera）
-```
-
-### 9.5 控制器链路
-```
-InputSystem (scripts/Systems/InputSystem.js)
-  -> PlayerController (scripts/Systems/PlayerController.js)
-  -> AIController (scripts/Systems/AIController.js)
-     -> AIKnowledgeRegistry (scripts/Systems/AIKnowledgeRegistry.js)
-  -> NpcController (scripts/Systems/NpcController.js)
-  -> TestController (scripts/Systems/TestController.js)
-  -> DummyController (scripts/Systems/DummyController.js)
+ExploreMode.#updateSceneSwitchTrigger()
+  → 检测 hero 与 sceneSwitch trigger 重叠
+  → 交互键按下 → scene._pendingSceneLoad = { sceneDef, spawnId }
+  → Scene.fixedUpdate() 消费 _pendingSceneLoad
+  → Scene._loadScene() → dispose() → init() → hero 放置到 spawn 点
 ```

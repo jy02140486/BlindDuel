@@ -114,6 +114,18 @@ export class BattleMode extends BaseMode {
             ]
         };
 
+        const { questManager } = this.context;
+        if (questManager && this._battleDef?.onVictory) {
+            const v = this._battleDef.onVictory;
+            if (v.scenario) questManager.advanceTo(v.scenario);
+            for (const flag of v.flags ?? []) {
+                questManager.setFlag(flag, true);
+            }
+            for (const q of v.questStages ?? []) {
+                questManager.setQuestStage(q.id, q.stage);
+            }
+        }
+
         sceneSequencer.play(exitBattleSequence);
     }
 

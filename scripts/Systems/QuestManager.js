@@ -8,6 +8,12 @@ export class QuestManager {
         this.world.scenario = value;
     }
 
+    advanceTo(milestone) {
+        if (milestone > this.world.scenario) {
+            this.world.scenario = milestone;
+        }
+    }
+
     setFlag(key, value) {
         this.world.flags[key] = value;
     }
@@ -44,5 +50,21 @@ export class QuestManager {
         if (typeof this[actionName] === "function") {
             this[actionName]();
         }
+    }
+
+    markEncounterDefeated(sceneId, encounterId) {
+        this.world.ensureScene(sceneId).encounters[encounterId] = true;
+    }
+
+    isEncounterDefeated(sceneId, encounterId) {
+        return !!this.world.sceneStates[sceneId]?.encounters[encounterId];
+    }
+
+    markPickableCollected(sceneId, pickableId) {
+        this.world.ensureScene(sceneId).pickables[pickableId] = true;
+    }
+
+    isPickableCollected(sceneId, pickableId) {
+        return !!this.world.sceneStates[sceneId]?.pickables[pickableId];
     }
 }

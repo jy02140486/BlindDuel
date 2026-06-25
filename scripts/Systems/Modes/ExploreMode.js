@@ -2,6 +2,7 @@ import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { getItemDef } from "../../../Data/ItemDefs.js";
+import { ALL_SCENES } from "../../SceneDefs.js";
 
 
 export class ExploreMode extends BaseMode {
@@ -23,6 +24,8 @@ export class ExploreMode extends BaseMode {
     fixedUpdate(dtMs, tickCount) {
         const { inputSystem, playerController, character, sceneSequencer } = this.context;
 
+        this.#syncTriggerEnabled();
+        this.#updateSceneSwitchTrigger(character, tickCount);
         this.#checkBattleTrigger(character, sceneSequencer);
         this.#checkScriptedCameraTrigger(character, sceneSequencer);
 
@@ -91,19 +94,46 @@ export class ExploreMode extends BaseMode {
         }
     }
 
-    #checkSceneSwitchTrigger(character) {
+    #updateSceneSwitchTrigger(character, tickCount) {
+        const triggers = this.context.scene.triggers;
+        if (!triggers) return;
+
+        const { inputSystem, scene } = this.context;
+
         const sceneSwitchTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "sceneSwitch") ?? [];
         for (const triggerDef of sceneSwitchTriggers) {
-            const trigger = this.context.scene.triggers.get(triggerDef.id);
-            if (trigger && trigger.check(character)) {
-                const targetDef = ALL_SCENES[triggerDef.targetScene];
-                if (!targetDef) {
-                    console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
+            const trigger = triggers.get(triggerDef.id);
+            if (!trigger || !trigger._enabled) continue;
+
+            const inside = trigger.checkOverlap(character);
+            if (inside) {
+                this._currentSceneSwitchTrigger = { trigger, triggerDef };
+                if (inputSystem.consumeAction("interact", tickCount)) {
+                    this._currentSceneSwitchTrigger = null;
+                    const targetDef = ALL_SCENES[triggerDef.targetScene];
+                    if (!targetDef) {
+                        console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
+                        return;
+                    }
+                    scene._pendingSceneLoad = { sceneDef: targetDef, spawnId: triggerDef.targetSpawn };
                     return;
                 }
-                this.context.scene._pendingSceneLoad = { sceneDef: targetDef, spawnId: triggerDef.targetSpawn };
                 return;
             }
+        }
+        this._currentSceneSwitchTrigger = null;
+    }
+
+    #syncTriggerEnabled() {
+        const { sceneDef, worldState, scene } = this.context;
+        if (!sceneDef?.triggers || !worldState || !scene?.triggers) return;
+
+        for (const triggerDef of sceneDef.triggers) {
+            const trigger = scene.triggers.get(triggerDef.id);
+            if (!trigger) continue;
+
+            const enabled = scene._evaluateCondition(triggerDef.condition, worldState);
+            trigger.setEnabled(enabled);
         }
     }
 
@@ -479,8 +509,6 @@ export class ExploreMode extends BaseMode {
                 .map(e => ({ x: e.root.position.x, y: e.root.position.y }));
             sceneVisualSystem.update(dtMs, { camera: activeCamera, characterPositions });
         }
-
-        this._collisionSystem.updateDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
 
         this.#updateDialogueBubblePosition();
 
