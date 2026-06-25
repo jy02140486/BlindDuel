@@ -183,6 +183,12 @@ export class ExploreMode extends BaseMode {
             ]
         };
 
+        const { game, sceneDef } = this.context;
+        if (game) {
+            const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
+            game.saveCheckpoint(sceneDef.id, spawnId);
+        }
+
         sceneSequencer.play(enterBattleSequence);
     }
 

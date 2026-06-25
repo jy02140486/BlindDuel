@@ -7,10 +7,7 @@ async function start() {
     const engine = new BABYLON.Engine(canvas, true, { stencil: true });
     const game = new Game(engine, canvas);
 
-    // --- 临时：切换场景测试 ---
-    // HOUSE_INTERIOR 测试通过后可取消注释
-    //await game.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
-    await game.init(HOUSE_INTERIOR, BATTLE_DEFS);
+    await game.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
 
     // 暴露到全局，方便控制台调试
     window.game = game;

@@ -36,6 +36,7 @@ export class Scene {
         this.worldState = gameContext.worldState ?? null;
         this.questManager = gameContext.questManager ?? null;
         this.inventoryManager = gameContext.inventoryManager ?? new InventoryManager();
+        this._game = gameContext.game ?? null;
         this.scene = null;
         this.inputSystem = null;
         this.playerController = null;
@@ -137,8 +138,20 @@ export class Scene {
         } else {
             this.playerController = new PlayerController(this.inputSystem, character);
         }
+        this.playerController.enabled = true;
         character.buffsProvider = this.playerController;
-        this.rabbleController = rabbleStick ? new DummyController(rabbleStick) : null;
+        if (rabbleStick) {
+            const rabbleDef = sceneDef.entities.find(e => e.id === "enemy_1" || e.kind === "enemy");
+            const controllerType = rabbleDef?.controller ?? "dummy";
+            if (controllerType === "test") {
+                const scriptConfig = assets?.testScripts?.rabbleBasicSequence ?? {};
+                this.rabbleController = new TestController(rabbleStick, scriptConfig);
+            } else {
+                this.rabbleController = new DummyController(rabbleStick);
+            }
+        } else {
+            this.rabbleController = null;
+        }
 
         // NPC 控制器
         for (const entityDef of sceneDef.entities) {
@@ -222,6 +235,7 @@ export class Scene {
             smoothedFighterDistance: this._smoothedFighterDistance,
             sceneDef: sceneDef,
             battleDefs: battleDefs,
+            game: this._game,
             stageMaskData: stageMaskData,
             worldState: this.worldState,
         };
@@ -409,13 +423,19 @@ export class Scene {
     async _loadScene(sceneDef, spawnId) {
         const hero = this.entityPool.find(e => e.id === "hero");
         const savedHp = hero?.hp ?? 3;
+        const restoreData = this._pendingRestore;
+        this._pendingRestore = null;
         this.dispose();
         await this.init(sceneDef, this._battleDefs);
         this._loading = false;
 
         const newHero = this.entityPool.find(e => e.id === "hero");
         if (newHero) {
-            newHero.combat.hp = savedHp;
+            newHero.combat.hp = restoreData?.hp ?? savedHp;
+        }
+
+        if (restoreData?.buffs && this.playerController) {
+            this.playerController.buffs = restoreData.buffs;
         }
 
         if (this.inventoryManager && this.inventoryBar) {

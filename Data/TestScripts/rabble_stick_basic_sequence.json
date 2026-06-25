@@ -7,7 +7,7 @@
       "waitMs": 1300
     },
     {
-      "moveIntent": { "x": 1, "y": 0 },
+      "moveIntent": { "x": -1, "y": 0 },
       "waitMs": 1500
     }
   ]

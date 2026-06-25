@@ -1,5 +1,6 @@
 import { BaseMode } from "./BaseMode.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
+import { STEP_TYPE } from "../SceneSequencer.js";
 
 
 export class BattleMode extends BaseMode {
@@ -90,6 +91,11 @@ export class BattleMode extends BaseMode {
 
         if (!character.isDead && !rabbleStick.isDead) return;
 
+        if (character.isDead) {
+            this.#handleDefeat(sceneSequencer);
+            return;
+        }
+
         // 如果 battleDef 未定义 exitSequence，使用最小默认退场序列保证不会卡死
         const exitBattleSequence = this._battleDef?.exitSequence ?? {
             id: "exit_battle_fallback",
@@ -126,7 +132,27 @@ export class BattleMode extends BaseMode {
             }
         }
 
+        if (rabbleStick.isDead) {
+            const { game, sceneDef } = this.context;
+            if (game) {
+                const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
+                game.saveCheckpoint(sceneDef.id, spawnId);
+            }
+        }
+
         sceneSequencer.play(exitBattleSequence);
+    }
+
+    #handleDefeat(sceneSequencer) {
+        const defeatSequence = {
+            id: "defeat",
+            steps: [
+                { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
+                { type: STEP_TYPE.WAIT, durationMs: 2500 },
+                { type: STEP_TYPE.CALLBACK, fn: (ctx) => ctx.game?.restoreCheckpoint() },
+            ]
+        };
+        sceneSequencer.play(defeatSequence);
     }
 
     updateRender(dtMs) {

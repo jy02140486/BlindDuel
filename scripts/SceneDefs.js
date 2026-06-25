@@ -180,7 +180,7 @@ export const OUTDOOR_VILLAGE = {
             name: "rabble_stick",
             kind: "enemy",
             pos: [3.2, 0],
-            controller: "dummy",
+            controller: "test",
             spawnIf: { flagNot: "battle_field_1" },
         },
         {
@@ -432,7 +432,7 @@ export const HOUSE_INTERIOR = {
             name: "rabble_stick",
             kind: "enemy",
             pos: [8.47, -4.92],
-            controller: "dummy",
+            controller: "test",
             spawnIf: { flagNot: "battle_field_2" },
         },
     ],

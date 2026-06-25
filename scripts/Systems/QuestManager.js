@@ -2,6 +2,7 @@ export class QuestManager {
     constructor(worldState, inventoryManager = null) {
         this.world = worldState;
         this.inventory = inventoryManager;
+        this.onStateChange = null;
     }
 
     setScenario(value) {
@@ -11,11 +12,13 @@ export class QuestManager {
     advanceTo(milestone) {
         if (milestone > this.world.scenario) {
             this.world.scenario = milestone;
+            this.onStateChange?.();
         }
     }
 
     setFlag(key, value) {
         this.world.flags[key] = value;
+        this.onStateChange?.();
     }
 
     startQuest(questId) {
@@ -24,7 +27,10 @@ export class QuestManager {
 
     setQuestStage(questId, stage) {
         const q = this.world.quests[questId];
-        if (q) q.stage = stage;
+        if (q) {
+            q.stage = stage;
+            this.onStateChange?.();
+        }
     }
 
     completeQuest(questId) {
@@ -32,6 +38,7 @@ export class QuestManager {
         if (q) {
             q.stage = q.stage + 1;
             q.completed = true;
+            this.onStateChange?.();
         }
     }
 

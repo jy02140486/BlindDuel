@@ -1,8 +1,14 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前没有“进行中”的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
+> 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
 ---
+
+## 最近归档（2026-06-25）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [DEFEAT_AND_CHECKPOINT_PLAN.md](DEFEAT_AND_CHECKPOINT_PLAN.md) | 战败与检查点系统 | 5 Step 全部完成：checkpoint save/restore、HP/buffs 恢复、战斗前/胜利后/任务变更后自动保存、战败检测 + defeatSequence、无检查点回退；附修 rabble controller 外部化、enabled 泄漏、场景切换守卫 |
 
 ## 最近归档（2026-06-24）
 
@@ -101,6 +107,10 @@
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
 
+## Update Log (2026-06-25)
+- 战败与检查点系统完成并归档：[DEFEAT_AND_CHECKPOINT_PLAN.md](DEFEAT_AND_CHECKPOINT_PLAN.md) — 5 Step 全部落地
+- 附修：rabble controller 外部化（读 entity def 的 controller 字段）、playerController.enabled 泄漏修复、场景切换守卫
+
 ## Update Log (2026-06-24)
 - 4 个计划文档完成并归档：`WorldState-SceneSwitch 实现计划`、`SCENE_SWITCH_AND_BATTLE_EXTERNALIZE_PLAN`、`Quest&Pickables`、`NPC-Quest-WorldState 概要设计`
 - WorldState 体系完整：ScenarioMilestones、sceneStates、Entity spawnIf 过滤、Trigger condition 条件化、战斗胜利回写
@@ -124,7 +134,7 @@
 ## Update Log (2026-05-27)
 - 6 个计划文档归档：`CHARACTER_NPC_DECOUPLE` x2、`NPC_CONTROLLER`、`NPC_ROOTMOTION_OCCUPANCY`、`GAMEMODE` x2
 - `BACKLOG.md` 补充 GameMode 未完成事项：`CameraManager Phase 3`、`SceneSequencer` 收尾、Phase 5 内容扩展
-- 剩余 Phase 全部移入 `BACKLOG`，`INDEX` 的“进行中”清空
+- 剩余 Phase 全部移入 `BACKLOG`，`INDEX` 的"进行中"清空
 
 ## Update Log (2026-05-28)
 - 探索模式实施完成并归档：`EXPLORE_MODE_DATA_AND_COLLISION_PLAN.md`、`EXPLORE_MODE_DATA_AND_COLLISION_IMPLEMENTATION.md`
