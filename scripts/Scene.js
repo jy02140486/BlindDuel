@@ -92,6 +92,11 @@ export class Scene {
             if (!this._evaluateCondition(entityDef.spawnIf, this.worldState)) {
                 continue;
             }
+            // 跳过已拾取的物品
+            if (entityDef.kind === "pickable" && this.worldState) {
+                const collected = this.worldState.sceneStates?.[sceneDef.id]?.pickables?.[entityDef.id];
+                if (collected) continue;
+            }
             const entity = createEntityFromDef(this.scene, assets, entityDef);
             this.entityPool.push(entity);
             entityById.set(entity.id, entity);
@@ -389,6 +394,7 @@ export class Scene {
     _evaluateCondition(cond, worldState) {
         if (!cond || Object.keys(cond).length === 0) return true;
         if (cond.flag !== undefined && !worldState.flags[cond.flag]) return false;
+        if (cond.flagNot !== undefined && worldState.flags[cond.flagNot]) return false;
         if (cond.scenario !== undefined && worldState.scenario !== cond.scenario) return false;
         if (cond.scenarioMin !== undefined && worldState.scenario < cond.scenarioMin) return false;
         if (cond.scenarioMax !== undefined && worldState.scenario > cond.scenarioMax) return false;

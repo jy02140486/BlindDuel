@@ -606,6 +606,7 @@ export class ExploreMode extends BaseMode {
             }
             pickable.spritePlane.rotation.z = 0;
             pickable.pickup();
+            this.context.questManager?.markPickableCollected(this.context.sceneDef.id, pickable.id);
             this._pickupSequence = null;
         }
     }

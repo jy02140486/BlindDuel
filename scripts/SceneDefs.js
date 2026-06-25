@@ -78,6 +78,9 @@ export const BATTLE_FIELD_1 = {
     combatants: ["hero", "enemy_1"],
     stageBounds: { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
+    onVictory: {
+        flags: ["battle_field_1"],
+    },
     duelCamera: {
         zoomMinDistance: 3.2,
         zoomMaxDistance: 6.4,
@@ -178,6 +181,7 @@ export const OUTDOOR_VILLAGE = {
             kind: "enemy",
             pos: [3.2, 0],
             controller: "dummy",
+            spawnIf: { flagNot: "battle_field_1" },
         },
         {
             archetype: "npc_traveller",
@@ -220,6 +224,7 @@ export const OUTDOOR_VILLAGE = {
             pos: [-6, 0, 0],
             size: [4, 8, 4],
             battleId: "battle_field_1",
+            condition: { flagNot: "battle_field_1" },
             debugColor: [0, 1, 0],
             debugVisible: false,
         },
@@ -428,7 +433,7 @@ export const HOUSE_INTERIOR = {
             kind: "enemy",
             pos: [8.47, -4.92],
             controller: "dummy",
-            spawnIf: { scenarioMax: 109 },
+            spawnIf: { flagNot: "battle_field_2" },
         },
     ],
     walkArea: {
@@ -456,7 +461,7 @@ export const HOUSE_INTERIOR = {
             pos: [2.47, -4.90, 0],
             size: [1,2, 3],
             battleId: "battle_field_2",
-            condition: { scenarioMax: 109 },
+            condition: { flagNot: "battle_field_2" },
             debugColor: [0, 1, 0],
             debugVisible: false,
         },
@@ -474,7 +479,7 @@ export const BATTLE_FIELD_2 = {
     battleYBaseline: -4.8,
     onVictory: {
         scenario: SCENARIO.BATTLE_1_COMPLETED,
-        flags: ["banditDead"],
+        flags: ["battle_field_2"],
         questStages: [{ id: "dagger", stage: 2 }],
     },
     duelCamera: {

@@ -113,7 +113,7 @@ py -m http.server 9000 --bind 127.0.0.1
 9. `ContactResolver` 当前采用"同一攻击实例对同一目标只取首次结果"的规则：若该 `attackInstanceId|targetId` 已产生 `hit`，后续 guard/parry 不再覆盖该结果。
 10. 场景切换触发器（sceneSwitch）需要玩家按交互键（E/J/手柄X）才能触发，防止室内外双向 trigger 重叠导致的死循环切换。
 11. AABBTrigger debug 网格使用 `renderingGroupId = 3` 确保渲染在最上层，不被场景元素遮挡。
-12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）机制已就绪，但拾取时尚未调用写入，加载时尚未做 spawnIf 过滤。
+12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）已就绪，拾取时写入 + 加载时 spawnIf 过滤均已实现。
 
 ## 7. 当前文件结构
 ```
