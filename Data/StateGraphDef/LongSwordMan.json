@@ -2,7 +2,7 @@
   "machine": "longswordman",
   "initialState": "standing",
   "inputs": {
-    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "guard"],
+    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -85,9 +85,21 @@
           ]
         },
         {
+          "to": "fullthrust",
+          "when": [
+            { "command": "fullthrust" }
+          ]
+        },
+        {
           "to": "guard",
           "when": [
             { "command": "guard" }
+          ]
+        },
+        {
+          "to": "dodge",
+          "when": [
+            { "command": "dodge" }
           ]
         },
         {
@@ -128,9 +140,21 @@
           ]
         },
         {
+          "to": "fullthrust",
+          "when": [
+            { "command": "fullthrust" }
+          ]
+        },
+        {
           "to": "guard",
           "when": [
             { "command": "guard" }
+          ]
+        },
+        {
+          "to": "dodge",
+          "when": [
+            { "command": "dodge" }
           ]
         },
         {
@@ -164,6 +188,8 @@
       "clip": "thrust",
       "allowMoveInput": false,
       "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "thrust",
       "attackActiveFrames": [2],
       "loop": false,
       "transitions": [
@@ -180,6 +206,8 @@
       "clip": "quart",
       "allowMoveInput": false,
       "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "slash",
       "attackActiveFrames": [3, 4],
       "loop": false,
       "transitions": [
@@ -196,6 +224,8 @@
       "clip": "zornhut",
       "allowMoveInput": false,
       "attackActive": true,
+      "attackWeight": "heavy",
+      "attackTrajectory": "slash",
       "attackActiveFrames": [3,4],
       "loop": false,
       "timeScale": 1.0,
@@ -208,12 +238,13 @@
           ]
         }
       ],
-      "frameSpeeds": [0.4, 0.8, 0, 1.2, 0.4]
+      "frameSpeeds": [0.4, 1.2, 0, 2.4, 0.4]
     },
     "guard": {
       "clip": "guard",
       "allowMoveInput": false,
       "guardActive": true,
+      "guardType": "guard",
       "loop": false,
       "transitions": [
         {
@@ -237,6 +268,39 @@
           ]
         }
       ]
+    },
+    "dodge": {
+      "clip": "dodge",
+      "allowMoveInput": false,
+      "dodgeActive": true,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [-1.2, 0]
+    },
+    "fullthrust": {
+      "clip": "fullthrust",
+      "allowMoveInput": false,
+      "attackActive": true,
+      "attackWeight": "heavy",
+      "attackTrajectory": "thrust",
+      "attackActiveFrames": [3, 4],
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0, 0, 0, 2.4, 0, 0]
     },
     "clash": {
       "clip": "clash",

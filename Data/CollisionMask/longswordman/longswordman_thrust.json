@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
     "sourceSize": { "w": 192, "h": 128 },
-    "duration": 200
+    "duration": 300
    },
    "longswordman_thrust 2.ase": {
     "frame": { "x": 384, "y": 0, "w": 192, "h": 128 },
@@ -21,26 +21,27 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
     "sourceSize": { "w": 192, "h": 128 },
-    "duration": 400
+    "duration": 300
    }
  },
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "G:\\SpriteOutput\\longswordman_thrust.png",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_thrust.png",
   "format": "RGBA8888",
   "size": { "w": 576, "h": 128 },
   "scale": "1",
   "frameTags": [
   ],
   "layers": [
-   { "name": "RootNode", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
    { "name": "Collision", "opacity": 255, "blendMode": "normal" },
-   { "name": "Collision_Weap", "opacity": 255, "blendMode": "normal" },
    { "name": "lower body", "opacity": 255, "blendMode": "normal" },
    { "name": "body", "opacity": 255, "blendMode": "normal" },
    { "name": "left arm", "opacity": 255, "blendMode": "normal" },
    { "name": "weapon", "opacity": 255, "blendMode": "normal" },
+   { "name": "Collision_Weap", "opacity": 255, "blendMode": "normal" },
    { "name": "right arm", "opacity": 255, "blendMode": "normal" }
   ]
  }

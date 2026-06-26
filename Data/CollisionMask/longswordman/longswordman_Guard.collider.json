@@ -1,4 +1,4 @@
-{
+﻿{
     "source":  {
                    "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_Guard.json",
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_Guard.png",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-02T14:45:45.2897615Z"
+                   "generatedAtUtc":  "2026-06-26T04:35:08.6823405Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_Guard (CollisionMask) 0.ase",
+                       "frameName":  "longswordman_Guard 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -59,23 +59,12 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  88.909,
-                                         "cy":  61.266,
-                                         "w":  47.34,
-                                         "h":  18.222,
-                                         "angle":  25.046,
-                                         "pixelCount":  787
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_0",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  126,
-                                         "cy":  79,
-                                         "w":  36.202,
-                                         "h":  13.102,
-                                         "angle":  23.031,
-                                         "pixelCount":  405
+                                         "cx":  88.886,
+                                         "cy":  61.244,
+                                         "w":  47.274,
+                                         "h":  18.216,
+                                         "angle":  25.008,
+                                         "pixelCount":  785
                                      },
                                      {
                                          "id":  "pushbox_0",
@@ -98,7 +87,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_Guard (CollisionMask) 1.ase",
+                       "frameName":  "longswordman_Guard 1.ase",
                        "frameRect":  {
                                          "x":  160,
                                          "y":  0,

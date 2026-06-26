@@ -19,7 +19,7 @@ async function start() {
         if (e.key.toLowerCase() === "p" || e.key === "Escape") {
             game.togglePause();
         }
-        if (e.key.toLowerCase() === "o") {
+        if (e.key.toLowerCase() === "c") {
             game.toggleCameraProjection();
         }
     });

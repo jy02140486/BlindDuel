@@ -1,11 +1,11 @@
-{
+﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman/longswordman_hit.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman/longswordman_hit.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman/longswordman_hit.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman/longswordman_hit.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman/longswordman_hit.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman/longswordman_hit.png",
+                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_hit.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_hit.png",
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_hit.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_hit.png",
+                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_hit.json",
+                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_hit.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-26T13:31:18.7096168Z"
+                   "generatedAtUtc":  "2026-06-26T04:35:29.6749433Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_hit (CollisionMask) 0.ase",
+                       "frameName":  "longswordman_hit (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -76,7 +76,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_hit (CollisionMask) 1.ase",
+                       "frameName":  "longswordman_hit (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,

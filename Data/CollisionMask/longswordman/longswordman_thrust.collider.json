@@ -1,11 +1,11 @@
-{
+﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\longswordman/longswordman_thrust.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\longswordman/longswordman_thrust.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\longswordman/longswordman_thrust.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\longswordman/longswordman_thrust.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\longswordman/longswordman_thrust.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\longswordman/longswordman_thrust.png",
+                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_thrust.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_thrust.png",
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_thrust.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_thrust.png",
+                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_thrust.json",
+                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-26T13:31:11.8019644Z"
+                   "generatedAtUtc":  "2026-06-26T04:32:24.5853516Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_thrust 0.ase",
+                       "frameName":  "longswordman_thrust 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -78,28 +78,6 @@
                                          "pixelCount":  594
                                      },
                                      {
-                                         "id":  "weaponbox_strong_blade_0",
-                                         "type":  "weaponbox",
-                                         "subtype":  "strong_blade",
-                                         "cx":  81,
-                                         "cy":  65.5,
-                                         "w":  39.028,
-                                         "h":  8.274,
-                                         "angle":  -26.763,
-                                         "pixelCount":  289
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_0",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  112.5,
-                                         "cy":  48.5,
-                                         "w":  31.058,
-                                         "h":  7.648,
-                                         "angle":  -28.059,
-                                         "pixelCount":  203
-                                     },
-                                     {
                                          "id":  "pushbox_0",
                                          "type":  "pushbox",
                                          "subtype":  null,
@@ -120,7 +98,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_thrust 1.ase",
+                       "frameName":  "longswordman_thrust 1.ase",
                        "frameRect":  {
                                          "x":  192,
                                          "y":  0,
@@ -151,26 +129,15 @@
                                          "pixelCount":  396
                                      },
                                      {
-                                         "id":  "weaponbox_strong_blade_1",
+                                         "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
-                                         "subtype":  "strong_blade",
+                                         "subtype":  "weak_blade",
                                          "cx":  105.775,
                                          "cy":  64.922,
                                          "w":  47.043,
                                          "h":  9.603,
                                          "angle":  -21.966,
                                          "pixelCount":  393
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_1",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  144.558,
-                                         "cy":  47.975,
-                                         "w":  36.72,
-                                         "h":  8.996,
-                                         "angle":  -23.314,
-                                         "pixelCount":  278
                                      },
                                      {
                                          "id":  "pushbox_1",
@@ -193,7 +160,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman/longswordman_thrust 2.ase",
+                       "frameName":  "longswordman_thrust 2.ase",
                        "frameRect":  {
                                          "x":  384,
                                          "y":  0,
@@ -235,26 +202,15 @@
                                          "pixelCount":  396
                                      },
                                      {
-                                         "id":  "weaponbox_strong_blade_2",
-                                         "type":  "weaponbox",
-                                         "subtype":  "strong_blade",
-                                         "cx":  121.026,
-                                         "cy":  63.695,
-                                         "w":  50.961,
-                                         "h":  6.783,
-                                         "angle":  -7.546,
-                                         "pixelCount":  247
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_2",
+                                         "id":  "weaponbox_weak_blade_1",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  165.128,
-                                         "cy":  56.904,
-                                         "w":  41.165,
-                                         "h":  5.971,
-                                         "angle":  -8.074,
-                                         "pixelCount":  174
+                                         "cx":  138.001,
+                                         "cy":  60.007,
+                                         "w":  88.926,
+                                         "h":  11.172,
+                                         "angle":  -8.456,
+                                         "pixelCount":  896
                                      },
                                      {
                                          "id":  "pushbox_2",

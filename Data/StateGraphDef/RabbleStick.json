@@ -79,7 +79,7 @@
     "dodge": {
       "clip": "dodge",
       "loop": false,
-      "invincible": true,
+      "dodgeActive": true,
       "transitions": [
         {
           "to": "idle",
@@ -93,6 +93,8 @@
     "thrust": {
       "clip": "thrust",
       "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "thrust",
       "loop": false,
       "transitions": [
         {
@@ -102,11 +104,13 @@
           ]
         }
       ],
-      "frameSpeeds": [0,0.1,-0.3]
+      "frameSpeeds": [0,0.1,-0.7]
     },
     "swing": {
       "clip": "swing",
       "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "slash",
       "loop": false,
       "transitions": [
         {
@@ -116,7 +120,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0.1,-0.4]
+      "frameSpeeds": [0,0.2,-1.4]
     },
     "hit": {
       "clip": "hit",

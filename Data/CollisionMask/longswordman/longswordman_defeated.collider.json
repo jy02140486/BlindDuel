@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_defeated.png",
                    "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_defeated.json",
                    "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_defeated.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_defeated.json",
+                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_defeated.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-30T14:53:24.1289062Z"
+                   "generatedAtUtc":  "2026-06-26T04:35:55.6384136Z"
                },
     "frames":  [
                    {
@@ -54,6 +54,17 @@
                                          "h":  26,
                                          "angle":  90,
                                          "pixelCount":  884
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  33.5,
+                                         "cy":  106.5,
+                                         "w":  46,
+                                         "h":  28,
+                                         "angle":  0,
+                                         "pixelCount":  1288
                                      }
                                  ],
                        "anchors":  {
@@ -83,6 +94,17 @@
                                          "h":  21,
                                          "angle":  90,
                                          "pixelCount":  609
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  39.5,
+                                         "cy":  111,
+                                         "w":  48,
+                                         "h":  23,
+                                         "angle":  0,
+                                         "pixelCount":  1104
                                      }
                                  ],
                        "anchors":  {
@@ -112,6 +134,17 @@
                                          "h":  30,
                                          "angle":  90,
                                          "pixelCount":  1020
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  46,
+                                         "cy":  112.5,
+                                         "w":  53,
+                                         "h":  20,
+                                         "angle":  0,
+                                         "pixelCount":  1060
                                      }
                                  ],
                        "anchors":  {

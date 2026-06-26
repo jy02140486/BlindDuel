@@ -1,4 +1,4 @@
-{
+﻿{
     "source":  {
                    "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_clash.json",
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_clash.png",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-04T16:30:00.1823028Z"
+                   "generatedAtUtc":  "2026-06-26T04:35:41.5520198Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman/longswordman_clash (CollisionMask) 0.ase",
+                       "frameName":  "longswordman_clash (CollisionMask) 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -65,7 +65,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman/longswordman_clash (CollisionMask) 1.ase",
+                       "frameName":  "longswordman_clash (CollisionMask) 1.ase",
                        "frameRect":  {
                                          "x":  160,
                                          "y":  0,

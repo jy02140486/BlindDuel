@@ -197,7 +197,7 @@ export class BattleMode extends BaseMode {
         if (!cam) {
             return;
         }
-        console.log(`[BattleMode] cam pos=(${cam.position.x.toFixed(2)}, ${cam.position.y.toFixed(2)}, ${cam.position.z.toFixed(2)}) orthoL=${cam.orthoLeft?.toFixed(2)}`);
+        // console.log(`[BattleMode] cam pos=(${cam.position.x.toFixed(2)}, ${cam.position.y.toFixed(2)}, ${cam.position.z.toFixed(2)}) orthoL=${cam.orthoLeft?.toFixed(2)}`);
 
         if (sceneVisualSystem) {
             sceneVisualSystem.update(dtMs, { camera: cam });

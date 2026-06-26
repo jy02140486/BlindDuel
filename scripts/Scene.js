@@ -272,7 +272,7 @@ export class Scene {
         this.gameModeManager.start("explore");
 
         this._onKeyDown = (e) => {
-            if (e.key.toLowerCase() === "c") {
+            if (e.key.toLowerCase() === "x") {
                 const first = this.entityPool[0];
                 const nextVisible = !first?.collision?.visible;
                 for (const entity of this.entityPool) {

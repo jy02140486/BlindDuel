@@ -79,6 +79,18 @@ export function createHeroCharacter(scene, assets) {
                 colliderData: assets.colliders.hero.guard,
                 loop: false
             },
+            dodge: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_dodge.png",
+                atlasData: assets.atlas.hero.dodge,
+                colliderData: assets.colliders.hero.dodge,
+                loop: false
+            },
+            fullthrust: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_fullthrust.png",
+                atlasData: assets.atlas.hero.fullthrust,
+                colliderData: assets.colliders.hero.fullthrust,
+                loop: false
+            },
             clash: {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_clash.png",
                 atlasData: assets.atlas.hero.clash,

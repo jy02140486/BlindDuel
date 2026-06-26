@@ -1,5 +1,5 @@
 { "frames": {
-   "longswordman_Guard (CollisionMask) 0.ase": {
+   "longswordman_Guard 0.ase": {
     "frame": { "x": 0, "y": 0, "w": 160, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 160, "h": 128 },
     "duration": 500
    },
-   "longswordman_Guard (CollisionMask) 1.ase": {
+   "longswordman_Guard 1.ase": {
     "frame": { "x": 160, "y": 0, "w": 160, "h": 128 },
     "rotated": false,
     "trimmed": false,
@@ -19,7 +19,7 @@
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_Guard.png",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_Guard.png",
   "format": "RGBA8888",
   "size": { "w": 320, "h": 128 },
   "scale": "1",

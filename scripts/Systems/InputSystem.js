@@ -15,7 +15,9 @@ export class InputSystem {
             i: false,
             k: false,
             j: false,
-            e: false
+            e: false,
+            q: false,
+            o: false
         };
 
         this.gamepad = {
@@ -24,9 +26,12 @@ export class InputSystem {
             index: -1,
             leftStickX: 0,
             leftStickY: 0,
+            a: false,
             b: false,
+            x: false,
             y: false,
-            x: false
+            lb: false,
+            rb: false
         };
 
         this.bufferedInputs = [];
@@ -68,7 +73,13 @@ export class InputSystem {
                 this.#bufferAction("quart", { source: "keyboard", key: "i" });
             }
             if (!wasDown && isDown && key === "k") {
-                this.#bufferAction("zornhut", { source: "keyboard", key: "k" });
+                this.#bufferAction("fullthrust", { source: "keyboard", key: "k" });
+            }
+            if (!wasDown && isDown && key === "o") {
+                this.#bufferAction("zornhut", { source: "keyboard", key: "o" });
+            }
+            if (!wasDown && isDown && key === "q") {
+                this.#bufferAction("dodge", { source: "keyboard", key: "q" });
             }
             if (!wasDown && isDown && key === "j") {
                 this.#bufferAction("guard", { source: "keyboard", key: "j" });
@@ -129,9 +140,9 @@ export class InputSystem {
         this.debugPanel.textContent = [
             "Input Debug",
             `W: ${keyboard.w}  A: ${keyboard.a}  S: ${keyboard.s}  D: ${keyboard.d}`,
-            `L: ${keyboard.l}  I: ${keyboard.i}`,
+            `L: ${keyboard.l}  I: ${keyboard.i}  K: ${keyboard.k}  O: ${keyboard.o}  Q: ${keyboard.q}`,
             `Pad Connected: ${gamepad.connected}`,
-            `Xbox B: ${gamepad.b}  Y: ${gamepad.y}`,
+            `A: ${gamepad.a}  B: ${gamepad.b}  X: ${gamepad.x}  Y: ${gamepad.y}  LB: ${gamepad.lb}  RB: ${gamepad.rb}`,
             `Left Stick: (${stickX}, ${stickY})`
         ].join("\n");
     }
@@ -142,9 +153,12 @@ export class InputSystem {
         this.gamepad.index = -1;
         this.gamepad.leftStickX = 0;
         this.gamepad.leftStickY = 0;
+        this.gamepad.a = false;
         this.gamepad.b = false;
-        this.gamepad.y = false;
         this.gamepad.x = false;
+        this.gamepad.y = false;
+        this.gamepad.lb = false;
+        this.gamepad.rb = false;
     }
 
     #applyDeadzone(value) {
@@ -169,17 +183,17 @@ export class InputSystem {
         this.gamepad.index = connectedPad.index;
         this.gamepad.leftStickX = this.#applyDeadzone(connectedPad.axes?.[0] ?? 0);
         this.gamepad.leftStickY = this.#applyDeadzone(connectedPad.axes?.[1] ?? 0);
+        const nextA = Boolean(connectedPad.buttons?.[0]?.pressed);
+        if (!this.gamepad.a && nextA) {
+            this.#bufferAction("fullthrust", { source: "gamepad", button: "a" });
+        }
+        this.gamepad.a = nextA;
+
         const nextB = Boolean(connectedPad.buttons?.[1]?.pressed);
         if (!this.gamepad.b && nextB) {
             this.#bufferAction("thrust", { source: "gamepad", button: "b" });
         }
         this.gamepad.b = nextB;
-
-        const nextY = Boolean(connectedPad.buttons?.[3]?.pressed);
-        if (!this.gamepad.y && nextY) {
-            this.#bufferAction("quart", { source: "gamepad", button: "y" });
-        }
-        this.gamepad.y = nextY;
 
         const nextX = Boolean(connectedPad.buttons?.[2]?.pressed);
         if (!this.gamepad.x && nextX) {
@@ -187,6 +201,24 @@ export class InputSystem {
             this.#bufferAction("interact", { source: "gamepad", button: "x" });
         }
         this.gamepad.x = nextX;
+
+        const nextY = Boolean(connectedPad.buttons?.[3]?.pressed);
+        if (!this.gamepad.y && nextY) {
+            this.#bufferAction("quart", { source: "gamepad", button: "y" });
+        }
+        this.gamepad.y = nextY;
+
+        const nextLB = Boolean(connectedPad.buttons?.[4]?.pressed);
+        if (!this.gamepad.lb && nextLB) {
+            this.#bufferAction("dodge", { source: "gamepad", button: "lb" });
+        }
+        this.gamepad.lb = nextLB;
+
+        const nextRB = Boolean(connectedPad.buttons?.[5]?.pressed);
+        if (!this.gamepad.rb && nextRB) {
+            this.#bufferAction("zornhut", { source: "gamepad", button: "rb" });
+        }
+        this.gamepad.rb = nextRB;
 
         this.#cleanupBufferedInputs();
         this.#renderDebugPanel();
@@ -223,7 +255,10 @@ export class InputSystem {
         case "s":
         case "d":
         case "l":
+        case "q":
             return this.keyboard[name];
+        case "gamepadA":
+            return this.gamepad.a;
         case "gamepadB":
             return this.gamepad.b;
         default:

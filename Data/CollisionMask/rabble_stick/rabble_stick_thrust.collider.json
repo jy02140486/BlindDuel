@@ -1,11 +1,11 @@
-{
+﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data\\CollisionMask\\rabble_stick/rabble_stick_thrust.json",
-                   "collisionAtlasPng":  "Data\\CollisionMask\\rabble_stick/rabble_stick_thrust.png",
-                   "rootAtlasJson":  "Data\\RootMotion\\rabble_stick/rabble_stick_thrust.json",
-                   "rootAtlasPng":  "Data\\RootMotion\\rabble_stick/rabble_stick_thrust.png",
-                   "pushboxAtlasJson":  "Data\\PushBox\\rabble_stick/rabble_stick_thrust.json",
-                   "pushboxAtlasPng":  "Data\\PushBox\\rabble_stick/rabble_stick_thrust.png",
+                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_thrust.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_thrust.png",
+                   "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_thrust.json",
+                   "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_thrust.png",
+                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_thrust.json",
+                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-04-26T13:31:54.6916982Z"
+                   "generatedAtUtc":  "2026-06-26T04:43:11.2698953Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 0.ase",
+                       "frameName":  "rabble_stick_thrust 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -48,12 +48,23 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  98.5,
-                                         "cy":  76.5,
-                                         "w":  98,
-                                         "h":  40,
+                                         "cx":  98,
+                                         "cy":  58.5,
+                                         "w":  58,
+                                         "h":  33,
                                          "angle":  90,
-                                         "pixelCount":  3920
+                                         "pixelCount":  1914
+                                     },
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  89.5,
+                                         "cy":  107.5,
+                                         "w":  34.31,
+                                         "h":  22.898,
+                                         "angle":  -74.689,
+                                         "pixelCount":  726
                                      },
                                      {
                                          "id":  "pushbox_0",
@@ -76,7 +87,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 1.ase",
+                       "frameName":  "rabble_stick_thrust 1.ase",
                        "frameRect":  {
                                          "x":  160,
                                          "y":  0,
@@ -85,15 +96,26 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_1",
+                                         "id":  "hitbox_2",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  102.5,
-                                         "cy":  76.5,
-                                         "w":  98,
-                                         "h":  40,
+                                         "cx":  98,
+                                         "cy":  58.5,
+                                         "w":  58,
+                                         "h":  33,
                                          "angle":  90,
-                                         "pixelCount":  3920
+                                         "pixelCount":  1914
+                                     },
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  89.5,
+                                         "cy":  107.5,
+                                         "w":  34.31,
+                                         "h":  22.898,
+                                         "angle":  -74.689,
+                                         "pixelCount":  726
                                      },
                                      {
                                          "id":  "pushbox_1",
@@ -116,7 +138,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "rabble_stick/rabble_stick_thrust (Collision) 2.ase",
+                       "frameName":  "rabble_stick_thrust 2.ase",
                        "frameRect":  {
                                          "x":  320,
                                          "y":  0,
@@ -125,26 +147,37 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_2",
+                                         "id":  "hitbox_4",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  95.5,
-                                         "cy":  76.5,
-                                         "w":  98,
-                                         "h":  40,
+                                         "cx":  98,
+                                         "cy":  58.5,
+                                         "w":  58,
+                                         "h":  33,
                                          "angle":  90,
-                                         "pixelCount":  3920
+                                         "pixelCount":  1914
+                                     },
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  89.5,
+                                         "cy":  107.5,
+                                         "w":  34.31,
+                                         "h":  22.898,
+                                         "angle":  -74.689,
+                                         "pixelCount":  726
                                      },
                                      {
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  38.5,
-                                         "cy":  73.5,
-                                         "w":  50,
-                                         "h":  30,
+                                         "cx":  42.5,
+                                         "cy":  73,
+                                         "w":  54,
+                                         "h":  13,
                                          "angle":  0,
-                                         "pixelCount":  1500
+                                         "pixelCount":  702
                                      },
                                      {
                                          "id":  "pushbox_2",

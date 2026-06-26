@@ -21,6 +21,12 @@
 
 ---
 
+## 进行中
+
+| 计划 | 目标 | 进度 |
+|------|------|------|
+| [COMBAT_RULES_REDESIGN_PLAN.md](COMBAT_RULES_REDESIGN_PLAN.md) | 战斗判定规则重设计：从"剑身强弱"转向"招式轻重+轨迹" | Step 0 进行中（mask 重绘） |
+
 ## 待办入口
 
 | 文档 | 目标 | 备注 |

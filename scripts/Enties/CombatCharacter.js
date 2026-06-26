@@ -233,7 +233,7 @@ export class CombatCharacter extends CharacterBase {
         const isActiveAttackFrame = isAttackState && hasWeapon &&
             (attackActiveFrames === undefined || attackActiveFrames.includes(frameIndex));
 
-        const isInvincible = this.currentStateDef?.invincible === true;
+        const isInvincible = this.currentStateDef?.invincible === true || this.currentStateDef?.dodgeActive === true;
         const worldBoxes = boxes
             .filter((box) => !(isInvincible && box.type === "hitbox"))
             .map((box) => {
@@ -243,15 +243,25 @@ export class CombatCharacter extends CharacterBase {
                 const heightWorld = box.h * this.pxToWorld;
                 const depthWorld = this.thicknessPx * this.pxToWorld;
 
+                const boxRole = box.type === "weaponbox"
+                    ? (box.subtype === "strong_blade"
+                        ? (this.currentStateDef?.guardType ? "shield" : null)
+                        : (isActiveAttackFrame ? "attack" : null))
+                    : null;
+
                 return {
                     id: box.id,
                     type: box.type,
                     subtype: box.subtype ?? null,
+                    boxRole,
                     attackInstanceId: box.type === "weaponbox" ? attackInstanceId : null,
                     weaponRole: box.type === "weaponbox"
                         ? (isActiveAttackFrame ? "offense" : "guard")
                         : null,
-                    canParry: box.type === "weaponbox" && this.currentStateDef?.guardActive === true,
+                    attackWeight: boxRole === "attack" ? (this.currentStateDef?.attackWeight ?? null) : null,
+                    attackTrajectory: boxRole === "attack" ? (this.currentStateDef?.attackTrajectory ?? null) : null,
+                    guardType: boxRole === "shield" ? (this.currentStateDef?.guardType ?? null) : null,
+                    canParry: box.type === "weaponbox" && this.currentStateDef?.guardType === "guard",
                     center: {
                         x: this.root.position.x + localX,
                         y: this.root.position.y + localY,
@@ -273,6 +283,7 @@ export class CombatCharacter extends CharacterBase {
             rootPositionX: this.root.position.x,
             attackInstanceId,
             stateEnterTick: this.stateEnterTick,
+            dodgeActive: this.currentStateDef?.dodgeActive === true,
             boxes: worldBoxes
         };
     }

@@ -7,8 +7,16 @@
       "waitMs": 1300
     },
     {
-      "moveIntent": { "x": -1, "y": 0 },
-      "waitMs": 1500
+      "moveIntent": { "x": 1, "y": 0 },
+      "waitMs": 100
+    },
+    {
+      "command": "thrust",
+      "waitMs": 1300
+    },
+    {
+      "command": "dodge",
+      "waitMs": 3300
     }
   ]
 }

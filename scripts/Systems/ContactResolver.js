@@ -34,117 +34,100 @@ export class ContactResolver {
 
         // Phase 1: 先结算 weapon vs weapon（拼刀优先于打到身体）。
         for (const contact of frameContacts.weaponVsWeapon) {
-            const attackA = contact.boxA.attackInstanceId;
-            const attackB = contact.boxB.attackInstanceId;
-            const aOffense = Boolean(attackA);
-            const bOffense = Boolean(attackB);
+            const snapA = snapshotById.get(contact.characterA);
+            const snapB = snapshotById.get(contact.characterB);
 
-            if (!aOffense && !bOffense) {
-                continue;
-            }
+            if (snapA?.dodgeActive || snapB?.dodgeActive) continue;
 
-            if (aOffense !== bOffense) {
-                const offenseAttackId = aOffense ? attackA : attackB;
-                const offenseCharacterId = aOffense ? contact.characterA : contact.characterB;
-                const guardCharacterId = aOffense ? contact.characterB : contact.characterA;
-                const offenseBox = aOffense ? contact.boxA : contact.boxB;
-                const guardBox = aOffense ? contact.boxB : contact.boxA;
-                // Rule: for one attack instance against one target, resolve only the first result.
-                // If a hit was already resolved for this pair, do not allow later guard/parry to overwrite it.
-                const hitKey = `${offenseAttackId}|${guardCharacterId}`;
-                if (this.hitDedupe.has(hitKey)) {
-                    this.#trace(
-                        `[ResolverEvent] guard-skip offense=${offenseCharacterId} guard=${guardCharacterId}` +
-                        ` reason=hit_already_resolved attackId=${offenseAttackId}`
-                    );
-                    continue;
-                }
-                const guardKey = `${offenseAttackId}|${guardCharacterId}`;
-                if (this.guardDedupe.has(guardKey)) {
-                    continue;
-                }
+            const boxA = contact.boxA;
+            const boxB = contact.boxB;
+            const isAAttack = boxA.boxRole === "attack";
+            const isBAttack = boxB.boxRole === "attack";
+            const isAShield = boxA.boxRole === "shield";
+            const isBShield = boxB.boxRole === "shield";
+
+            if ((isAAttack && isBShield) || (isAShield && isBAttack)) {
+                const offenseBox = isAAttack ? boxA : boxB;
+                const defenseBox = isAAttack ? boxB : boxA;
+                const offenseCharId = isAAttack ? contact.characterA : contact.characterB;
+                const defenseCharId = isAAttack ? contact.characterB : contact.characterA;
+                const offenseAttackId = offenseBox.attackInstanceId;
+                if (!offenseAttackId) continue;
+
+                const guardKey = `${offenseAttackId}|${defenseCharId}`;
+                if (this.guardDedupe.has(guardKey)) continue;
                 this.guardDedupe.add(guardKey);
 
-                const offenseLevel = this.#toWeaponLevel(offenseBox.subtype);
-                const guardLevel = this.#toWeaponLevel(guardBox.subtype);
-                this.#trace(
-                    `[ResolverPhase1] guard-check offense=${offenseCharacterId} guard=${guardCharacterId}` +
-                    ` offenseRole=${offenseBox.weaponRole} guardRole=${guardBox.weaponRole}` +
-                    ` offenseLevel=${offenseLevel} guardLevel=${guardLevel}`
-                );
-                if (this.#weaponLevelRank(guardLevel) >= this.#weaponLevelRank(offenseLevel)) {
-                    invalidatedAttacks.add(offenseAttackId);
-                    const offensePos = snapshotById.get(offenseCharacterId)?.rootPositionX ?? 0;
-                    const guardPos = snapshotById.get(guardCharacterId)?.rootPositionX ?? 0;
+                const trajectory = offenseBox.attackTrajectory;
+                const guardType = defenseBox.guardType;
+                const weight = offenseBox.attackWeight;
+                const offensePos = snapshotById.get(offenseCharId)?.rootPositionX ?? 0;
+                const defensePos = snapshotById.get(defenseCharId)?.rootPositionX ?? 0;
 
-                    // Just Guard 时机判定
-                    const offenseSnapshot = snapshotById.get(offenseCharacterId);
-                    const guardSnapshot = snapshotById.get(guardCharacterId);
+                let blocked = false;
+                if (guardType === "guard") {
+                    if (trajectory !== "thrust") blocked = true;
+                } else if (guardType === "shield") {
+                    if (!(trajectory === "slash" && weight === "heavy")) blocked = true;
+                } else {
+                    blocked = true;
+                }
+
+                if (blocked) {
+                    invalidatedAttacks.add(offenseAttackId);
+                    const offenseSnapshot = snapshotById.get(offenseCharId);
+                    const guardSnapshot = snapshotById.get(defenseCharId);
+                    const guardFrameIdx = guardSnapshot?.frameIndex ?? -1;
                     const offenseEnterTick = offenseSnapshot?.stateEnterTick ?? 0;
                     const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
                     const tickDiff = guardEnterTick - offenseEnterTick;
-                    // 预判 guard：guard 第一帧或比攻击早进入
-                    const isPreemptiveGuard = guardSnapshot?.frameIndex === 0 || tickDiff <= 16;
-                    const canParry = guardBox.canParry && isPreemptiveGuard;
+                    const isPreemptiveGuard = guardFrameIdx === 0 || tickDiff <= 16;
+                    const canParry = defenseBox.canParry && isPreemptiveGuard;
+
                     this.#trace(
-                        `[ResolverEvent] guard-result tick=${tickCount} offense=${offenseCharacterId} guard=${guardCharacterId}` +
-                        ` canParry=${canParry} guardCanParry=${guardBox.canParry}` +
-                        ` guardFrame=${guardSnapshot?.frameIndex ?? "?"} tickDiff=${tickDiff}`
+                        `[ResolverPhase1] block offense=${offenseCharId} defense=${defenseCharId}` +
+                        ` trajectory=${trajectory} guardType=${guardType} canParry=${canParry}`
                     );
 
                     if (canParry) {
-                        effects.push({
-                            type: "parryBonus",
-                            targetId: guardCharacterId,
-                            context: { durationFrames: 40 }
-                        });
-                        effects.push({ type: "clash", targetId: guardCharacterId });
-                        // 攻击方也被弹开，进入硬直
-                        effects.push({
-                            type: "clash",
-                            targetId: offenseCharacterId,
-                            context: {
-                                hitState: "hit",
-                                knockbackX: this.#signedKnockback(offensePos, guardPos, this.clashKnockback)
-                            }
-                        });
-                        effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 8 });
-                        effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 8 });
+                        effects.push({ type: "parryBonus", targetId: defenseCharId, context: { durationFrames: 40 } });
+                        effects.push({ type: "clash", targetId: defenseCharId });
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.clashKnockback) } });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 8 });
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 8 });
                     } else {
-                        effects.push({ type: "blockstun", targetId: guardCharacterId, durationFrames: 10 });
-                        effects.push({ type: "hitstop", targetId: offenseCharacterId, durationFrames: 4 });
-                        effects.push({ type: "hitstop", targetId: guardCharacterId, durationFrames: 4 });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: 10 });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 4 });
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 4 });
                     }
-                } else {
-                    this.#trace(
-                        `[ResolverPhase1] guard-fail offense=${offenseCharacterId} guard=${guardCharacterId}` +
-                        ` reason=guard_level_lower offenseLevel=${offenseLevel} guardLevel=${guardLevel}`
-                    );
                 }
                 continue;
             }
 
-            const clashKey = this.#buildClashKey(attackA, attackB);
-            if (this.clashDedupe.has(clashKey)) {
-                continue;
-            }
+            if (!isAAttack || !isBAttack) continue;
 
+            const attackA = boxA.attackInstanceId;
+            const attackB = boxB.attackInstanceId;
+            if (!attackA || !attackB) continue;
+
+            const clashKey = this.#buildClashKey(attackA, attackB);
+            if (this.clashDedupe.has(clashKey)) continue;
             this.clashDedupe.add(clashKey);
-            const levelA = this.#toWeaponLevel(contact.boxA.subtype);
-            const levelB = this.#toWeaponLevel(contact.boxB.subtype);
+
+            const weightA = boxA.attackWeight;
+            const weightB = boxB.attackWeight;
+            const posA = snapA?.rootPositionX ?? 0;
+            const posB = snapB?.rootPositionX ?? 0;
+
             this.#trace(
                 `[ResolverPhase1] clash-check A=${contact.characterA} B=${contact.characterB}` +
-                ` attackA=${attackA} attackB=${attackB} levelA=${levelA} levelB=${levelB}`
+                ` attackA=${attackA} attackB=${attackB} weightA=${weightA} weightB=${weightB}`
             );
-            const posA = snapshotById.get(contact.characterA)?.rootPositionX ?? 0;
-            const posB = snapshotById.get(contact.characterB)?.rootPositionX ?? 0;
 
-            if (levelA === levelB) {
+            if (weightA === weightB) {
                 this.#trace(`[ResolverPhase1] clash-tie A=${contact.characterA} B=${contact.characterB}`);
-                // 同级拼刀：双方攻击都失效，双方都进入弹刀/受击反馈。
                 invalidatedAttacks.add(attackA);
                 invalidatedAttacks.add(attackB);
-
                 effects.push(
                     this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB),
                     this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA)
@@ -154,18 +137,17 @@ export class ContactResolver {
                 continue;
             }
 
-            const strongIsA = levelA === "strong_blade";
-            const loserId = strongIsA ? contact.characterB : contact.characterA;
-            const winnerId = strongIsA ? contact.characterA : contact.characterB;
-            const loserAttack = strongIsA ? attackB : attackA;
-            const loserPos = strongIsA ? posB : posA;
-            const winnerPos = strongIsA ? posA : posB;
+            const heavyIsA = weightA === "heavy";
+            const loserId = heavyIsA ? contact.characterB : contact.characterA;
+            const winnerId = heavyIsA ? contact.characterA : contact.characterB;
+            const loserAttack = heavyIsA ? attackB : attackA;
+            const loserPos = heavyIsA ? posB : posA;
+            const winnerPos = heavyIsA ? posA : posB;
 
-            // 强压弱：仅弱方攻击失效并触发弹刀/受击反馈。
             invalidatedAttacks.add(loserAttack);
             this.#trace(
                 `[ResolverPhase1] clash-lose winner=${winnerId} loser=${loserId}` +
-                ` winnerLevel=${strongIsA ? levelA : levelB} loserLevel=${strongIsA ? levelB : levelA}`
+                ` winnerWeight=${heavyIsA ? weightA : weightB} loserWeight=${heavyIsA ? weightB : weightA}`
             );
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
             effects.push({ type: "hitstop", targetId: loserId, durationFrames: 6 });
@@ -177,7 +159,8 @@ export class ContactResolver {
             const attackId = contact.weapon.attackInstanceId;
             const attackerSnap = snapshotById.get(contact.attackerId);
             const targetSnap = snapshotById.get(contact.targetId);
-            if (!attackId || contact.weapon.weaponRole !== "offense" || invalidatedAttacks.has(attackId)) {
+            if (targetSnap?.dodgeActive) continue;
+            if (!attackId || contact.weapon.boxRole !== "attack" || invalidatedAttacks.has(attackId)) {
                 continue;
             }
 
@@ -216,7 +199,7 @@ export class ContactResolver {
                     attackInstanceId: attackId,
                     attackerId: contact.attackerId,
                     targetId: contact.targetId,
-                    attackLevel: this.#toWeaponLevel(contact.weapon.subtype),
+                    attackLevel: null,
                     contactType: "weapon_vs_hitbox",
                     damage: 1,
                     hitState: "hit",
@@ -382,14 +365,6 @@ export class ContactResolver {
         const dist = Math.abs(dx * axis.x + dy * axis.y);
 
         return dist > (aProj + bProj);
-    }
-
-    #toWeaponLevel(subtype) {
-        return subtype === "strong_blade" ? "strong_blade" : "weak_blade";
-    }
-
-    #weaponLevelRank(level) {
-        return level === "strong_blade" ? 2 : 1;
     }
 
     #buildClashKey(attackA, attackB) {

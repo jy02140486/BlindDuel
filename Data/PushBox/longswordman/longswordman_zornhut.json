@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 256, "h": 160 },
     "sourceSize": { "w": 256, "h": 160 },
-    "duration": 250
+    "duration": 200
    },
    "longswordman_zornhut (pushBox) 2.ase": {
     "frame": { "x": 512, "y": 0, "w": 256, "h": 160 },
@@ -43,6 +43,7 @@
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_zornhut.png",
   "format": "RGBA8888",
   "size": { "w": 1280, "h": 160 },
   "scale": "1",

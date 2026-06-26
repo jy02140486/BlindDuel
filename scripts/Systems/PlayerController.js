@@ -75,8 +75,14 @@ export class PlayerController extends BaseController {
         if (this.inputSystem.consumeAction("zornhut", tickCount)) {
             this.queueCommand("zornhut");
         }
+        if (this.inputSystem.consumeAction("fullthrust", tickCount)) {
+            this.queueCommand("fullthrust");
+        }
         if (this.inputSystem.consumeAction("guard", tickCount)) {
             this.queueCommand("guard");
+        }
+        if (this.inputSystem.consumeAction("dodge", tickCount)) {
+            this.queueCommand("dodge");
         }
 
         this.applyToCharacter();

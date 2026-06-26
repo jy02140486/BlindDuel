@@ -100,8 +100,8 @@ function Extract-Root($bmp, $fr, $target) {
 }
 $collisionScanDefs = @(
   [pscustomobject]@{ key='hitbox'; type='hitbox'; subtype=$null; color='#FFFF00' },
-  [pscustomobject]@{ key='weaponbox_strong_blade'; type='weaponbox'; subtype='strong_blade'; color='#E37800' },
-  [pscustomobject]@{ key='weaponbox_weak_blade'; type='weaponbox'; subtype='weak_blade'; color='#FF0000' }
+  [pscustomobject]@{ key='weaponbox_strong_blade'; type='weaponbox'; subtype='strong_blade'; color='#FF0000' },
+  [pscustomobject]@{ key='weaponbox_weak_blade'; type='weaponbox'; subtype='weak_blade'; color='#E37800' }
 )
 $pushboxScanDefs = @(
   [pscustomobject]@{ key='pushbox'; type='pushbox'; subtype=$null; color='#00FF88' }

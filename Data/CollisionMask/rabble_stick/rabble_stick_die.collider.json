@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_die.png",
                    "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_die.json",
                    "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_die.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_die.json",
+                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_die.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -17,13 +17,13 @@
                                                    "key":  "weaponbox_strong_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "strong_blade",
-                                                   "color":  "#E37800"
+                                                   "color":  "#FF0000"
                                                },
                                                {
                                                    "key":  "weaponbox_weak_blade",
                                                    "type":  "weaponbox",
                                                    "subtype":  "weak_blade",
-                                                   "color":  "#FF0000"
+                                                   "color":  "#E37800"
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-05-30T14:54:26.9617346Z"
+                   "generatedAtUtc":  "2026-06-26T04:34:00.9187396Z"
                },
     "frames":  [
                    {
@@ -54,6 +54,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  82,
+                                         "cy":  119,
+                                         "w":  37,
+                                         "h":  13,
+                                         "angle":  0,
+                                         "pixelCount":  481
                                      }
                                  ],
                        "anchors":  {
@@ -83,6 +94,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  62,
+                                         "cy":  116,
+                                         "w":  63,
+                                         "h":  15,
+                                         "angle":  0,
+                                         "pixelCount":  945
                                      }
                                  ],
                        "anchors":  {
@@ -112,6 +134,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  67,
+                                         "cy":  114.5,
+                                         "w":  59,
+                                         "h":  20,
+                                         "angle":  0,
+                                         "pixelCount":  1180
                                      }
                                  ],
                        "anchors":  {
@@ -141,6 +174,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  56.5,
+                                         "cy":  115,
+                                         "w":  58,
+                                         "h":  19,
+                                         "angle":  0,
+                                         "pixelCount":  1102
                                      }
                                  ],
                        "anchors":  {
@@ -170,6 +214,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_4",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  63,
+                                         "cy":  114.5,
+                                         "w":  109,
+                                         "h":  24,
+                                         "angle":  0,
+                                         "pixelCount":  2616
                                      }
                                  ],
                        "anchors":  {
@@ -199,6 +254,17 @@
                                          "h":  21,
                                          "angle":  0,
                                          "pixelCount":  861
+                                     },
+                                     {
+                                         "id":  "pushbox_5",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  62,
+                                         "cy":  112.5,
+                                         "w":  111,
+                                         "h":  26,
+                                         "angle":  0,
+                                         "pixelCount":  2886
                                      }
                                  ],
                        "anchors":  {
