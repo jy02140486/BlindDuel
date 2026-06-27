@@ -1,10 +1,12 @@
 export const ASSET_MANIFEST = {
     stateGraphs: {
         hero: "./Data/StateGraphDef/LongSwordMan.json",
-        rabble: "./Data/StateGraphDef/RabbleStick.json"
+        rabble: "./Data/StateGraphDef/RabbleStick.json",
+        manatarms: "./Data/StateGraphDef/ManatarmsSword.json"
     },
     testScripts: {
-        rabbleBasicSequence: "./Data/TestScripts/rabble_stick_basic_sequence.json"
+        rabbleBasicSequence: "./Data/TestScripts/rabble_stick_basic_sequence.json",
+        manatarmsBasicSequence: "./Data/TestScripts/manatarms_basic_sequence.json"
     },
     atlas: {
         hero: {
@@ -36,6 +38,15 @@ export const ASSET_MANIFEST = {
             hit: "./Art/Sprite/rabble_stick/rabble_stick_hit.json",
             dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json",
             die: "./Art/Sprite/rabble_stick/rabble_stick_die.json"
+        },
+        manatarms: {
+            idle: "./Art/Sprite/manatarms_sword/manatarms_sword_idle.json",
+            move: "./Art/Sprite/manatarms_sword/manatarms_sword_move.json",
+            quart: "./Art/Sprite/manatarms_sword/manatarms_sword_quart.json",
+            reverse_quart: "./Art/Sprite/manatarms_sword/manatarms_sword_reverse_quart.json",
+            smash: "./Art/Sprite/manatarms_sword/manatarms_sword_smash.json",
+            hit: "./Art/Sprite/manatarms_sword/manatarms_sword_hit.json",
+            knockdown: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.json"
         },
         npc: {
             traveller: "./Art/Sprite/NPCs/traveller.json",
@@ -70,6 +81,15 @@ export const ASSET_MANIFEST = {
             thrust: "./Data/CollisionMask/rabble_stick/rabble_stick_thrust.collider.json",
             dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json",
             die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json"
+        },
+        manatarms: {
+            idle: "./Data/CollisionMask/manatarms_sword/manatarms_sword_idle.collider.json",
+            move: "./Data/CollisionMask/manatarms_sword/manatarms_sword_move.collider.json",
+            quart: "./Data/CollisionMask/manatarms_sword/manatarms_sword_quart.collider.json",
+            reverse_quart: "./Data/CollisionMask/manatarms_sword/manatarms_sword_reverse_quart.collider.json",
+            smash: "./Data/CollisionMask/manatarms_sword/manatarms_sword_smash.collider.json",
+            hit: "./Data/CollisionMask/manatarms_sword/manatarms_sword_hit.collider.json",
+            knockdown: "./Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.collider.json"
         }
     },
     rootMotion: {

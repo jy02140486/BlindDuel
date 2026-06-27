@@ -10,6 +10,7 @@
 import {
     createHeroCharacter,
     createRabbleStickCharacter,
+    createManatarmsCharacter,
     createNpcCharacter,
     createMerchantNpc,
     createCustomerNpc,
@@ -26,6 +27,7 @@ import { SCENARIO } from "../Data/ScenarioMilestones.js";
 const ARCHETYPE_FACTORY = {
     hero_longsword: (scene, assets) => createHeroCharacter(scene, assets),
     rabble_stick: (scene, assets) => createRabbleStickCharacter(scene, assets),
+    manatarms_sword: (scene, assets) => createManatarmsCharacter(scene, assets),
     npc_traveller: (scene, assets) => createNpcCharacter(scene, assets),
     npc_merchant: (scene, assets) => createMerchantNpc(scene, assets),
     npc_customer: (scene, assets) => createCustomerNpc(scene, assets),
@@ -175,9 +177,9 @@ export const OUTDOOR_VILLAGE = {
             controller: "player",
         },
         {
-            archetype: "rabble_stick",
+            archetype: "manatarms_sword",
             id: "enemy_1",
-            name: "rabble_stick",
+            name: "manatarms_sword",
             kind: "enemy",
             pos: [3.2, 0],
             controller: "test",

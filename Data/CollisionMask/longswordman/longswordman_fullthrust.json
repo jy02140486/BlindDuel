@@ -1,0 +1,71 @@
+{ "frames": {
+   "longswordman_fullthrust (collisionmask) 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 100
+   },
+   "longswordman_fullthrust (collisionmask) 1.ase": {
+    "frame": { "x": 220, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 200
+   },
+   "longswordman_fullthrust (collisionmask) 2.ase": {
+    "frame": { "x": 440, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 400
+   },
+   "longswordman_fullthrust (collisionmask) 3.ase": {
+    "frame": { "x": 660, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 250
+   },
+   "longswordman_fullthrust (collisionmask) 4.ase": {
+    "frame": { "x": 880, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 250
+   },
+   "longswordman_fullthrust (collisionmask) 5.ase": {
+    "frame": { "x": 1100, "y": 0, "w": 220, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
+    "sourceSize": { "w": 220, "h": 128 },
+    "duration": 300
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_fullthrust.png",
+  "format": "RGBA8888",
+  "size": { "w": 1320, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower body", "opacity": 255, "blendMode": "normal" },
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "left arm", "opacity": 255, "blendMode": "normal" },
+   { "name": "weapon", "opacity": 255, "blendMode": "normal" },
+   { "name": "right arm", "opacity": 255, "blendMode": "normal" },
+   { "name": "rootmotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "collisionmask", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

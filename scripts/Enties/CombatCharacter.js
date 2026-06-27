@@ -245,7 +245,7 @@ export class CombatCharacter extends CharacterBase {
 
                 const boxRole = box.type === "weaponbox"
                     ? (box.subtype === "strong_blade"
-                        ? (this.currentStateDef?.guardType ? "shield" : null)
+                        ? (this.currentStateDef?.guardType || this.config?.guardType ? "shield" : null)
                         : (isActiveAttackFrame ? "attack" : null))
                     : null;
 
@@ -260,7 +260,7 @@ export class CombatCharacter extends CharacterBase {
                         : null,
                     attackWeight: boxRole === "attack" ? (this.currentStateDef?.attackWeight ?? null) : null,
                     attackTrajectory: boxRole === "attack" ? (this.currentStateDef?.attackTrajectory ?? null) : null,
-                    guardType: boxRole === "shield" ? (this.currentStateDef?.guardType ?? null) : null,
+                    guardType: boxRole === "shield" ? (this.currentStateDef?.guardType ?? this.config?.guardType ?? null) : null,
                     canParry: box.type === "weaponbox" && this.currentStateDef?.guardType === "guard",
                     center: {
                         x: this.root.position.x + localX,

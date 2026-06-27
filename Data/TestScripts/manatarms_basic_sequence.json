@@ -1,0 +1,26 @@
+{
+  "name": "manatarms_attack_cycle",
+  "loop": true,
+  "steps": [
+    {
+      "command": "quart",
+      "waitMs": 1800
+    },
+    {
+      "command": "reverse_quart",
+      "waitMs": 1800
+    },
+    {
+      "moveIntent": { "x": 1, "y": 0 },
+      "waitMs": 1300
+    },
+    {
+      "command": "smash",
+      "waitMs": 1800
+    },
+    {
+      "moveIntent": { "x": 0, "y": 0 },
+      "waitMs": 1500
+    }
+  ]
+}

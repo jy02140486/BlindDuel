@@ -6,6 +6,8 @@ export class ContactResolver {
         this.clashDedupe = new Set();
         // 防守接触去重：同一攻击实例对同一防守方只处理一次拦截结果。
         this.guardDedupe = new Set();
+        // 攻击失效集合：被盾牌拦截或拼刀失败的攻击，跨帧保留直到攻击结束。
+        this.invalidatedAttacks = new Set();
         this.hitKnockback = options.hitKnockback ?? 0.12;
         this.clashKnockback = options.clashKnockback ?? 0.2;
         this.debugTrace = options.debugTrace ?? false;
@@ -27,10 +29,13 @@ export class ContactResolver {
         const activeAttackIds = this.#collectActiveAttackIds(snapshots);
         this.#cleanupDedupe(activeAttackIds);
 
-        // 同帧快照接触：先收集，不立即生效，避免“调用先后”影响结果。
+        // 同帧快照接触：先收集，不立即生效，避免"调用先后"影响结果。
         const frameContacts = this.#collectFrameContacts(snapshots);
-        const invalidatedAttacks = new Set();
+        const invalidatedAttacks = this.invalidatedAttacks;
         const effects = [];
+
+        // --- debug: 打印所有收集到的相交对 ---
+        // this.#dumpContacts(snapshots, frameContacts, tickCount);
 
         // Phase 1: 先结算 weapon vs weapon（拼刀优先于打到身体）。
         for (const contact of frameContacts.weaponVsWeapon) {
@@ -52,10 +57,21 @@ export class ContactResolver {
                 const offenseCharId = isAAttack ? contact.characterA : contact.characterB;
                 const defenseCharId = isAAttack ? contact.characterB : contact.characterA;
                 const offenseAttackId = offenseBox.attackInstanceId;
+
+                // console.log(
+                //     `[Resolver-P1] tick=${tickCount} attack-vs-shield | ` +
+                //     `offense=${offenseCharId}(${offenseBox.id}) defense=${defenseCharId}(${defenseBox.id}) | ` +
+                //     `trajectory=${offenseBox.attackTrajectory} weight=${offenseBox.attackWeight} guardType=${defenseBox.guardType} | ` +
+                //     `attackId=${offenseAttackId} hasAttackId=${!!offenseAttackId}`
+                // );
+
                 if (!offenseAttackId) continue;
 
                 const guardKey = `${offenseAttackId}|${defenseCharId}`;
-                if (this.guardDedupe.has(guardKey)) continue;
+                if (this.guardDedupe.has(guardKey)) {
+                    // console.log(`[Resolver-P1] tick=${tickCount} SKIP: guard dedupe hit for ${guardKey}`);
+                    continue;
+                }
                 this.guardDedupe.add(guardKey);
 
                 const trajectory = offenseBox.attackTrajectory;
@@ -72,6 +88,11 @@ export class ContactResolver {
                 } else {
                     blocked = true;
                 }
+
+                // console.log(
+                //     `[Resolver-P1] tick=${tickCount} block-result | blocked=${blocked} ` +
+                //     `trajectory=${trajectory} weight=${weight} guardType=${guardType}`
+                // );
 
                 if (blocked) {
                     invalidatedAttacks.add(offenseAttackId);
@@ -159,22 +180,33 @@ export class ContactResolver {
             const attackId = contact.weapon.attackInstanceId;
             const attackerSnap = snapshotById.get(contact.attackerId);
             const targetSnap = snapshotById.get(contact.targetId);
-            if (targetSnap?.dodgeActive) continue;
-            if (!attackId || contact.weapon.boxRole !== "attack" || invalidatedAttacks.has(attackId)) {
+
+            const skipReason = targetSnap?.dodgeActive ? "dodgeActive"
+                : !attackId ? "noAttackId"
+                : contact.weapon.boxRole !== "attack" ? `boxRole=${contact.weapon.boxRole}`
+                : invalidatedAttacks.has(attackId) ? "attackInvalidated"
+                : null;
+
+            if (skipReason) {
+                // console.log(
+                //     `[Resolver-P2] tick=${tickCount} SKIP | attacker=${contact.attackerId}(${contact.weapon.id}) target=${contact.targetId}(${contact.hitbox.id}) | ` +
+                //     `reason=${skipReason} attackId=${attackId}`
+                // );
                 continue;
             }
 
             const hitKey = `${attackId}|${contact.targetId}`;
             if (this.hitDedupe.has(hitKey)) {
+                // console.log(`[Resolver-P2] tick=${tickCount} SKIP: hit dedupe for ${hitKey}`);
                 continue;
             }
 
             this.hitDedupe.add(hitKey);
-            this.#trace(
-                `[ResolverEvent] hit-first attacker=${contact.attackerId} target=${contact.targetId}` +
-                ` attackId=${attackId} attacker=${attackerSnap?.stateName}@${attackerSnap?.frameIndex}` +
-                ` target=${targetSnap?.stateName}@${targetSnap?.frameIndex}`
-            );
+            // console.log(
+            //     `[Resolver-P2] tick=${tickCount} >>> HIT <<< attacker=${contact.attackerId}(${contact.weapon.id}) target=${contact.targetId}(${contact.hitbox.id}) | ` +
+            //     `attackId=${attackId} attackerState=${attackerSnap?.stateName}@${attackerSnap?.frameIndex} targetState=${targetSnap?.stateName}@${targetSnap?.frameIndex} | ` +
+            //     `wpnCenter=(${contact.weapon.center.x.toFixed(3)},${contact.weapon.center.y.toFixed(3)}) hitCenter=(${contact.hitbox.center.x.toFixed(3)},${contact.hitbox.center.y.toFixed(3)})`
+            // );
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
             const knockback = this.#signedKnockback(targetPos, attackerPos, this.hitKnockback);
@@ -252,6 +284,12 @@ export class ContactResolver {
                 this.guardDedupe.delete(key);
             }
         }
+
+        for (const attackId of this.invalidatedAttacks) {
+            if (!activeAttackIds.has(attackId)) {
+                this.invalidatedAttacks.delete(attackId);
+            }
+        }
     }
 
     #collectFrameContacts(snapshots) {
@@ -313,6 +351,43 @@ export class ContactResolver {
 
         return { weaponVsWeapon, weaponVsHitbox };
     }
+
+    // #dumpContacts(snapshots, frameContacts, tickCount) {
+    //     const { weaponVsWeapon, weaponVsHitbox } = frameContacts;
+    //     const snapshotById = new Map();
+    //     for (const s of snapshots) snapshotById.set(s.characterId, s);
+    //
+    //     console.log(
+    //         `[Resolver-DUMP] tick=${tickCount} === FRAME CONTACTS === ` +
+    //         `weaponVsWeapon=${weaponVsWeapon.length} weaponVsHitbox=${weaponVsHitbox.length}`
+    //     );
+    //
+    //     for (const c of weaponVsWeapon) {
+    //         const snapA = snapshotById.get(c.characterA);
+    //         const snapB = snapshotById.get(c.characterB);
+    //         console.log(
+    //             `[Resolver-DUMP] tick=${tickCount} WvW | ` +
+    //             `A=${c.characterA}(${snapA?.stateName}@${snapA?.frameIndex}) boxA=${c.boxA.id}(role=${c.boxA.boxRole},subtype=${c.boxA.subtype}) ` +
+    //             `centerA=(${c.boxA.center.x.toFixed(3)},${c.boxA.center.y.toFixed(3)}) halfA=(${c.boxA.half.x.toFixed(3)},${c.boxA.half.y.toFixed(3)}) angleA=${c.boxA.angle} | ` +
+    //             `B=${c.characterB}(${snapB?.stateName}@${snapB?.frameIndex}) boxB=${c.boxB.id}(role=${c.boxB.boxRole},subtype=${c.boxB.subtype}) ` +
+    //             `centerB=(${c.boxB.center.x.toFixed(3)},${c.boxB.center.y.toFixed(3)}) halfB=(${c.boxB.half.x.toFixed(3)},${c.boxB.half.y.toFixed(3)}) angleB=${c.boxB.angle}`
+    //         );
+    //     }
+    //
+    //     for (const c of weaponVsHitbox) {
+    //         const atkSnap = snapshotById.get(c.attackerId);
+    //         const tgtSnap = snapshotById.get(c.targetId);
+    //         console.log(
+    //             `[Resolver-DUMP] tick=${tickCount} WvH | ` +
+    //             `attacker=${c.attackerId}(${atkSnap?.stateName}@${atkSnap?.frameIndex}) weapon=${c.weapon.id}(role=${c.weapon.boxRole}) ` +
+    //             `wpnCenter=(${c.weapon.center.x.toFixed(3)},${c.weapon.center.y.toFixed(3)}) | ` +
+    //             `target=${c.targetId}(${tgtSnap?.stateName}@${tgtSnap?.frameIndex}) hitbox=${c.hitbox.id} ` +
+    //             `hitCenter=(${c.hitbox.center.x.toFixed(3)},${c.hitbox.center.y.toFixed(3)})`
+    //         );
+    //     }
+    //
+    //     console.log(`[Resolver-DUMP] tick=${tickCount} === END CONTACTS ===`);
+    // }
 
     #intersects(a, b) {
         return this.#obbIntersect2D(a, b);

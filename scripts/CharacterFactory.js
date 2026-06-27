@@ -191,6 +191,63 @@ export function createRabbleStickCharacter(scene, assets) {
     });
 }
 
+export function createManatarmsCharacter(scene, assets) {
+    return new CombatCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "manatarms",
+        kind: "enemy",
+        deathState: "defeated",
+        blocksMovement: false,
+        interactable: false,
+        guardType: "shield",
+        stateGraph: assets.stateGraphs.manatarms,
+        clips: {
+            idle: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_idle.png",
+                atlasData: assets.atlas.manatarms.idle,
+                colliderData: assets.colliders.manatarms.idle,
+                loop: true
+            },
+            move: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_move.png",
+                atlasData: assets.atlas.manatarms.move,
+                colliderData: assets.colliders.manatarms.move,
+                loop: true
+            },
+            quart: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_quart.png",
+                atlasData: assets.atlas.manatarms.quart,
+                colliderData: assets.colliders.manatarms.quart,
+                loop: false
+            },
+            reverse_quart: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_reverse_quart.png",
+                atlasData: assets.atlas.manatarms.reverse_quart,
+                colliderData: assets.colliders.manatarms.reverse_quart,
+                loop: false
+            },
+            smash: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_smash.png",
+                atlasData: assets.atlas.manatarms.smash,
+                colliderData: assets.colliders.manatarms.smash,
+                loop: false
+            },
+            hit: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_hit.png",
+                atlasData: assets.atlas.manatarms.hit,
+                colliderData: assets.colliders.manatarms.hit,
+                loop: false
+            },
+            knockdown: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.png",
+                atlasData: assets.atlas.manatarms.knockdown,
+                colliderData: assets.colliders.manatarms.knockdown,
+                loop: false
+            }
+        }
+    });
+}
+
 export function createNpcCharacter(scene, assets) {
     const npcAtlas = assets.atlas.npc.traveller;
     const spriteUrl = "./Art/Sprite/NPCs/traveller.png";

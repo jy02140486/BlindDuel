@@ -1,0 +1,162 @@
+{
+  "machine": "manatarms_sword",
+  "initialState": "idle",
+  "inputs": {
+    "commands": ["quart", "reverse_quart", "smash"],
+    "parameters": {
+      "moveMagnitude": {
+        "type": "number"
+      }
+    }
+  },
+  "states": {
+    "idle": {
+      "clip": "idle",
+      "allowMoveInput": true,
+      "loop": true,
+      "transitions": [
+        {
+          "to": "move",
+          "when": [
+            { "parameter": "moveMagnitude", "op": ">", "value": 0.2 }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" }
+          ]
+        },
+        {
+          "to": "reverse_quart",
+          "when": [
+            { "command": "reverse_quart" }
+          ]
+        },
+        {
+          "to": "smash",
+          "when": [
+            { "command": "smash" }
+          ]
+        }
+      ]
+    },
+    "move": {
+      "clip": "move",
+      "allowMoveInput": true,
+      "loop": true,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        },
+        {
+          "to": "quart",
+          "when": [
+            { "command": "quart" }
+          ]
+        },
+        {
+          "to": "reverse_quart",
+          "when": [
+            { "command": "reverse_quart" }
+          ]
+        },
+        {
+          "to": "smash",
+          "when": [
+            { "command": "smash" }
+          ]
+        }
+      ]
+    },
+    "quart": {
+      "clip": "quart",
+      "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "slash",
+      "attackActiveFrames": [3],
+      "allowMoveInput": false,
+      "loop": false,
+      "chainTimeScale": 1.5,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        },
+        {
+          "to": "reverse_quart",
+          "when": [
+            { "command": "reverse_quart" }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,0.2,0,-0.7]
+    },
+    "reverse_quart": {
+      "clip": "reverse_quart",
+      "attackActive": true,
+      "attackWeight": "light",
+      "attackTrajectory": "slash",
+      "attackActiveFrames": [2],
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,0.1,-1.4,-0.7]
+    },
+    "smash": {
+      "clip": "smash",
+      "attackActive": true,
+      "attackWeight": "heavy",
+      "attackTrajectory": "slash",
+      "attackActiveFrames": [1, 2],
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,0.2,-3]
+    },
+    "hit": {
+      "clip": "hit",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
+    },
+    "knockdown": {
+      "clip": "knockdown",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
+    },
+    "defeated": {
+      "clip": "knockdown",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
+    }
+  }
+}

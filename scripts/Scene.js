@@ -144,7 +144,7 @@ export class Scene {
             const rabbleDef = sceneDef.entities.find(e => e.id === "enemy_1" || e.kind === "enemy");
             const controllerType = rabbleDef?.controller ?? "dummy";
             if (controllerType === "test") {
-                const scriptConfig = assets?.testScripts?.rabbleBasicSequence ?? {};
+                const scriptConfig = assets?.testScripts?.manatarmsBasicSequence ?? {};
                 this.rabbleController = new TestController(rabbleStick, scriptConfig);
             } else {
                 this.rabbleController = new DummyController(rabbleStick);
