@@ -1,0 +1,118 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_clash.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_clash.png",
+                   "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_clash.json",
+                   "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_clash.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-06-27T11:02:03.5485112Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "rabble_stick_clash 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  109,
+                                         "cy":  76.5,
+                                         "w":  52,
+                                         "h":  23,
+                                         "angle":  90,
+                                         "pixelCount":  1196
+                                     },
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  92.205,
+                                         "cy":  120.943,
+                                         "w":  33.352,
+                                         "h":  16.964,
+                                         "angle":  -69.802,
+                                         "pixelCount":  519
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  103.5,
+                                                    "cy":  136.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "rabble_stick_clash 1.ase",
+                       "frameRect":  {
+                                         "x":  160,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  101.5,
+                                         "cy":  73.5,
+                                         "w":  56,
+                                         "h":  26,
+                                         "angle":  90,
+                                         "pixelCount":  1456
+                                     },
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  89,
+                                         "cy":  122,
+                                         "w":  33,
+                                         "h":  19,
+                                         "angle":  90,
+                                         "pixelCount":  627
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  100.5,
+                                                    "cy":  138.5
+                                                }
+                                   }
+                   }
+               ]
+}

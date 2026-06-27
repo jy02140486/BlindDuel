@@ -1,0 +1,118 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_guard.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_guard.png",
+                   "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_guard.json",
+                   "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_guard.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-06-27T10:52:15.2486153Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "rabble_stick_guard 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  87.5,
+                                         "cy":  82,
+                                         "w":  49,
+                                         "h":  32,
+                                         "angle":  90,
+                                         "pixelCount":  1568
+                                     },
+                                     {
+                                         "id":  "weaponbox_strong_blade_0",
+                                         "type":  "weaponbox",
+                                         "subtype":  "strong_blade",
+                                         "cx":  54,
+                                         "cy":  49,
+                                         "w":  61.902,
+                                         "h":  18.315,
+                                         "angle":  -26.892,
+                                         "pixelCount":  1053
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  84.5,
+                                                    "cy":  121.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "rabble_stick_guard 1.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  87.5,
+                                         "cy":  60,
+                                         "w":  51,
+                                         "h":  24,
+                                         "angle":  90,
+                                         "pixelCount":  1224
+                                     },
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  70.5,
+                                         "cy":  106,
+                                         "w":  33,
+                                         "h":  14,
+                                         "angle":  90,
+                                         "pixelCount":  462
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  84.5,
+                                                    "cy":  121.5
+                                                }
+                                   }
+                   }
+               ]
+}

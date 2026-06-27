@@ -181,6 +181,18 @@ export function createRabbleStickCharacter(scene, assets) {
                 colliderData: assets.colliders.rabble.dodge,
                 loop: false
             },
+            guard: {
+                spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_guard.png",
+                atlasData: assets.atlas.rabble.guard,
+                colliderData: assets.colliders.rabble.guard,
+                loop: false
+            },
+            clash: {
+                spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_clash.png",
+                atlasData: assets.atlas.rabble.clash,
+                colliderData: assets.colliders.rabble.clash,
+                loop: false
+            },
             die: {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_die.png",
                 atlasData: assets.atlas.rabble.die,

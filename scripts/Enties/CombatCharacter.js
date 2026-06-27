@@ -86,8 +86,9 @@ export class CombatCharacter extends CharacterBase {
     }
 
     _getStateTimeScale(stateDef) {
-        return this.hasTag("parryBonus")
-            ? (stateDef.parryTimeScale ?? stateDef.timeScale ?? 1.0)
+        const hasBonus = this.hasTag("parryBonus") || this.hasTag("chainBonus");
+        return hasBonus
+            ? (stateDef.bonusTimeScale ?? stateDef.timeScale ?? 1.0)
             : (stateDef.timeScale ?? 1.0);
     }
 

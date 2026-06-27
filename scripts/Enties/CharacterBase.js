@@ -100,6 +100,7 @@ export class CharacterBase {
         this.collision?.syncToFrame(this.animation.currentFrameIndex, current.w, current.h, initialAnchor);
 
         this.currentSpd = 0;
+        this._moveSpeedBonus = 1.0;
 
         this.timedTags = new Map();
 
@@ -371,10 +372,14 @@ export class CharacterBase {
     }
 
     getEffectiveWalkSpeed() {
-        if (!this.buffsProvider || typeof this.buffsProvider.getSpeedMultiplier !== "function") {
-            return this.baseWalkSpeed;
+        let speed = this.baseWalkSpeed;
+        if (this.hasTag("parryBonus") || this.hasTag("chainBonus")) {
+            speed *= this._moveSpeedBonus;
         }
-        return this.baseWalkSpeed * this.buffsProvider.getSpeedMultiplier();
+        if (this.buffsProvider && typeof this.buffsProvider.getSpeedMultiplier === "function") {
+            speed *= this.buffsProvider.getSpeedMultiplier();
+        }
+        return speed;
     }
 
     _matchesTransitionCondition(condition) {
@@ -440,6 +445,10 @@ export class CharacterBase {
 
         const timeScale = this._getStateTimeScale(stateDef);
         this.clearTags();
+        for (const tag of (stateDef.stateTags ?? [])) {
+            this.addTag(tag);
+        }
+        this._moveSpeedBonus = stateDef.moveSpeedBonus ?? 1.0;
 
         this.animation.setTimeScale(timeScale);
 

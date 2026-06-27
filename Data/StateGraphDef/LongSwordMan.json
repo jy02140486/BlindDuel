@@ -229,7 +229,7 @@
       "attackActiveFrames": [3,4],
       "loop": false,
       "timeScale": 1.0,
-      "parryTimeScale": 1.75,
+      "bonusTimeScale": 1.75,
       "transitions": [
         {
           "to": "idle",

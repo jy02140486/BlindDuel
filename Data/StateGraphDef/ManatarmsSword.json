@@ -80,7 +80,7 @@
       "attackActiveFrames": [3],
       "allowMoveInput": false,
       "loop": false,
-      "chainTimeScale": 1.5,
+      "stateTags": ["chainBonus"],
       "transitions": [
         {
           "to": "idle",
@@ -91,11 +91,12 @@
         {
           "to": "reverse_quart",
           "when": [
-            { "command": "reverse_quart" }
+            { "command": "reverse_quart" },
+            { "hasTag": "chainBonus" }
           ]
         }
       ],
-      "frameSpeeds": [0,0.2,0,-0.7]
+      "frameSpeeds": [0,0.2,0,-1.4]
     },
     "reverse_quart": {
       "clip": "reverse_quart",
@@ -105,6 +106,7 @@
       "attackActiveFrames": [2],
       "allowMoveInput": false,
       "loop": false,
+      "bonusTimeScale": 1.5,
       "transitions": [
         {
           "to": "idle",
@@ -113,7 +115,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0,0.1,-1.4,-0.7]
+      "frameSpeeds": [0,0.1,-1.7,-1]
     },
     "smash": {
       "clip": "smash",

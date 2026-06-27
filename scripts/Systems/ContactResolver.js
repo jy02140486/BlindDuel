@@ -35,7 +35,9 @@ export class ContactResolver {
         const effects = [];
 
         // --- debug: 打印所有收集到的相交对 ---
-        // this.#dumpContacts(snapshots, frameContacts, tickCount);
+        // if (frameContacts.weaponVsWeapon.length > 0 || frameContacts.weaponVsHitbox.length > 0) {
+        //     this.#dumpContacts(snapshots, frameContacts, tickCount);
+        // }
 
         // Phase 1: 先结算 weapon vs weapon（拼刀优先于打到身体）。
         for (const contact of frameContacts.weaponVsWeapon) {
@@ -352,42 +354,44 @@ export class ContactResolver {
         return { weaponVsWeapon, weaponVsHitbox };
     }
 
-    // #dumpContacts(snapshots, frameContacts, tickCount) {
-    //     const { weaponVsWeapon, weaponVsHitbox } = frameContacts;
-    //     const snapshotById = new Map();
-    //     for (const s of snapshots) snapshotById.set(s.characterId, s);
-    //
-    //     console.log(
-    //         `[Resolver-DUMP] tick=${tickCount} === FRAME CONTACTS === ` +
-    //         `weaponVsWeapon=${weaponVsWeapon.length} weaponVsHitbox=${weaponVsHitbox.length}`
-    //     );
-    //
-    //     for (const c of weaponVsWeapon) {
-    //         const snapA = snapshotById.get(c.characterA);
-    //         const snapB = snapshotById.get(c.characterB);
-    //         console.log(
-    //             `[Resolver-DUMP] tick=${tickCount} WvW | ` +
-    //             `A=${c.characterA}(${snapA?.stateName}@${snapA?.frameIndex}) boxA=${c.boxA.id}(role=${c.boxA.boxRole},subtype=${c.boxA.subtype}) ` +
-    //             `centerA=(${c.boxA.center.x.toFixed(3)},${c.boxA.center.y.toFixed(3)}) halfA=(${c.boxA.half.x.toFixed(3)},${c.boxA.half.y.toFixed(3)}) angleA=${c.boxA.angle} | ` +
-    //             `B=${c.characterB}(${snapB?.stateName}@${snapB?.frameIndex}) boxB=${c.boxB.id}(role=${c.boxB.boxRole},subtype=${c.boxB.subtype}) ` +
-    //             `centerB=(${c.boxB.center.x.toFixed(3)},${c.boxB.center.y.toFixed(3)}) halfB=(${c.boxB.half.x.toFixed(3)},${c.boxB.half.y.toFixed(3)}) angleB=${c.boxB.angle}`
-    //         );
-    //     }
-    //
-    //     for (const c of weaponVsHitbox) {
-    //         const atkSnap = snapshotById.get(c.attackerId);
-    //         const tgtSnap = snapshotById.get(c.targetId);
-    //         console.log(
-    //             `[Resolver-DUMP] tick=${tickCount} WvH | ` +
-    //             `attacker=${c.attackerId}(${atkSnap?.stateName}@${atkSnap?.frameIndex}) weapon=${c.weapon.id}(role=${c.weapon.boxRole}) ` +
-    //             `wpnCenter=(${c.weapon.center.x.toFixed(3)},${c.weapon.center.y.toFixed(3)}) | ` +
-    //             `target=${c.targetId}(${tgtSnap?.stateName}@${tgtSnap?.frameIndex}) hitbox=${c.hitbox.id} ` +
-    //             `hitCenter=(${c.hitbox.center.x.toFixed(3)},${c.hitbox.center.y.toFixed(3)})`
-    //         );
-    //     }
-    //
-    //     console.log(`[Resolver-DUMP] tick=${tickCount} === END CONTACTS ===`);
-    // }
+    #dumpContacts(snapshots, frameContacts, tickCount) {
+        /*
+        const { weaponVsWeapon, weaponVsHitbox } = frameContacts;
+        const snapshotById = new Map();
+        for (const s of snapshots) snapshotById.set(s.characterId, s);
+
+        console.log(
+            `[Resolver-DUMP] tick=${tickCount} === FRAME CONTACTS === ` +
+            `weaponVsWeapon=${weaponVsWeapon.length} weaponVsHitbox=${weaponVsHitbox.length}`
+        );
+
+        for (const c of weaponVsWeapon) {
+            const snapA = snapshotById.get(c.characterA);
+            const snapB = snapshotById.get(c.characterB);
+            console.log(
+                `[Resolver-DUMP] tick=${tickCount} WvW | ` +
+                `A=${c.characterA}(${snapA?.stateName}@${snapA?.frameIndex}) boxA=${c.boxA.id}(role=${c.boxA.boxRole},subtype=${c.boxA.subtype}) ` +
+                `centerA=(${c.boxA.center.x.toFixed(3)},${c.boxA.center.y.toFixed(3)}) halfA=(${c.boxA.half.x.toFixed(3)},${c.boxA.half.y.toFixed(3)}) angleA=${c.boxA.angle} | ` +
+                `B=${c.characterB}(${snapB?.stateName}@${snapB?.frameIndex}) boxB=${c.boxB.id}(role=${c.boxB.boxRole},subtype=${c.boxB.subtype}) ` +
+                `centerB=(${c.boxB.center.x.toFixed(3)},${c.boxB.center.y.toFixed(3)}) halfB=(${c.boxB.half.x.toFixed(3)},${c.boxB.half.y.toFixed(3)}) angleB=${c.boxB.angle}`
+            );
+        }
+
+        for (const c of weaponVsHitbox) {
+            const atkSnap = snapshotById.get(c.attackerId);
+            const tgtSnap = snapshotById.get(c.targetId);
+            console.log(
+                `[Resolver-DUMP] tick=${tickCount} WvH | ` +
+                `attacker=${c.attackerId}(${atkSnap?.stateName}@${atkSnap?.frameIndex}) weapon=${c.weapon.id}(role=${c.weapon.boxRole}) ` +
+                `wpnCenter=(${c.weapon.center.x.toFixed(3)},${c.weapon.center.y.toFixed(3)}) | ` +
+                `target=${c.targetId}(${tgtSnap?.stateName}@${tgtSnap?.frameIndex}) hitbox=${c.hitbox.id} ` +
+                `hitCenter=(${c.hitbox.center.x.toFixed(3)},${c.hitbox.center.y.toFixed(3)})`
+            );
+        }
+
+        console.log(`[Resolver-DUMP] tick=${tickCount} === END CONTACTS ===`);
+        */
+    }
 
     #intersects(a, b) {
         return this.#obbIntersect2D(a, b);

@@ -37,6 +37,8 @@ export const ASSET_MANIFEST = {
             thrust: "./Art/Sprite/rabble_stick/rabble_stick_thrust.json",
             hit: "./Art/Sprite/rabble_stick/rabble_stick_hit.json",
             dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json",
+            guard: "./Art/Sprite/rabble_stick/rabble_stick_guard.json",
+            clash: "./Art/Sprite/rabble_stick/rabble_stick_clash.json",
             die: "./Art/Sprite/rabble_stick/rabble_stick_die.json"
         },
         manatarms: {
@@ -79,6 +81,8 @@ export const ASSET_MANIFEST = {
             move: "./Data/CollisionMask/rabble_stick/rabble_stick_move.collider.json",
             swing: "./Data/CollisionMask/rabble_stick/rabble_stick_swing.collider.json",
             thrust: "./Data/CollisionMask/rabble_stick/rabble_stick_thrust.collider.json",
+            guard: "./Data/CollisionMask/rabble_stick/rabble_stick_guard.collider.json",
+            clash: "./Data/CollisionMask/rabble_stick/rabble_stick_clash.collider.json",
             dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json",
             die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json"
         },

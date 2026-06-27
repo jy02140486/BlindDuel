@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T11:18:01.9502094Z"
+                   "generatedAtUtc":  "2026-06-27T11:58:44.8557830Z"
                },
     "frames":  [
                    {
@@ -212,12 +212,12 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  24.989,
-                                         "cy":  121.309,
-                                         "w":  40.817,
-                                         "h":  14.315,
-                                         "angle":  -31.132,
-                                         "pixelCount":  530
+                                         "cx":  25.5,
+                                         "cy":  102.5,
+                                         "w":  56,
+                                         "h":  32,
+                                         "angle":  90,
+                                         "pixelCount":  1792
                                      }
                                  ],
                        "anchors":  {

@@ -177,9 +177,9 @@ export const OUTDOOR_VILLAGE = {
             controller: "player",
         },
         {
-            archetype: "manatarms_sword",
+            archetype: "rabble_stick",
             id: "enemy_1",
-            name: "manatarms_sword",
+            name: "rabble_stick",
             kind: "enemy",
             pos: [3.2, 0],
             controller: "test",

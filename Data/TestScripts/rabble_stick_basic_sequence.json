@@ -3,16 +3,11 @@
   "loop": true,
   "steps": [
     {
-      "command": "swing",
-      "waitMs": 1300
+      "waitMs": 500
     },
     {
-      "moveIntent": { "x": 1, "y": 0 },
-      "waitMs": 100
-    },
-    {
-      "command": "thrust",
-      "waitMs": 1300
+      "command": "guard",
+      "waitMs": 2300
     },
     {
       "command": "dodge",
