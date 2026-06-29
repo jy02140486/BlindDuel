@@ -4,6 +4,8 @@ export class WorldState {
         this.flags = {};
         this.quests = {};
         this.sceneStates = {};
+        this.currentSceneId = "prologue";
+        this.currentSpawnId = null;
     }
 
     getQuest(questId) {

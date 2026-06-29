@@ -54,6 +54,8 @@ py -m http.server 9000 --bind 127.0.0.1
 - 探索碰撞系统：`scripts/Systems/ExploreCollisionSystem.js`
 - 角色工厂：`scripts/CharacterFactory.js`（四条装配路径：hero / rabble / traveller / merchant）
 - 场景/战斗定义：`scripts/SceneDefs.js`（SceneDef + BattleDef 硬编码数据 + `createEntityFromDef` 工厂）
+- 场景定义注册表：`scripts/SceneDefRegistry.js`（硬编码 SceneDef 注册 + 异步 fetch JSON 缓存 + 同步查表 fallback）
+- Prologue 场景定义：`Data/SceneDefs/prologue.json`（首个外部化 SceneDef，三层视差环境）
 - 场景里程碑定义：`Data/ScenarioMilestones.js`（scenario 枚举常量）
 - 世界状态：`scripts/WorldState.js`（scenario / flags / quests / sceneStates）
 - 任务管理器：`scripts/Systems/QuestManager.js`（WorldState 唯一写入入口）
@@ -79,6 +81,10 @@ py -m http.server 9000 --bind 127.0.0.1
 ## 4. 动态状态
 > 当前进行中的计划与已完成事项，见 `plans/INDEX.md`。
 >
+> **最近完成（2026-06-29）**：
+> - Prologue 场景落地：WorldState 增加 currentSceneId/currentSpawnId、SceneDefRegistry 模块、Game/character_demo 入口解耦、Scene.init 无 battle trigger 容错、prologue.json 三层视差环境
+> - 计划文档归档：Prologue 场景与数据流重构概要设计
+
 > **最近完成（2026-06-24）**：
 > - WorldState 体系完整：ScenarioMilestones、sceneStates、Entity spawnIf 过滤、Trigger condition 条件化
 > - 场景切换落地：室内外双向切换、交互键触发（防死循环）、buff/inventory 跨场景保持

@@ -7,6 +7,17 @@
  * - createEntityFromDef()：根据 archetype 调用对应工厂函数创建实体
  */
 
+/**
+ * 硬编码 SceneDef/BattleDef 保留说明：
+ * 本文件是数据外部化前的中间产物。新场景应放入 Data/SceneDefs/*.json，
+ * 通过 SceneDefRegistry 加载。本文件保留是为了：
+ * 1) 兼容已有的 outdoor_village / house_interior 测试场景（迁移成本未排期）
+ * 2) 提供 createEntityFromDef 工厂函数（archetype → entity 实例化逻辑，本质是代码不是数据）
+ * 3) BattleDef 因 enterSequence 仍是函数，暂无法 JSON 化（待战斗场景重构时处理）
+ * 后续随外部化推进，本文件中的 SceneDef/BattleDef 常量应逐步迁移到 JSON，
+ * 最终只保留工厂函数与 registry 注册逻辑。
+ */
+
 import {
     createHeroCharacter,
     createRabbleStickCharacter,
@@ -19,6 +30,7 @@ import {
     createPickable,
 } from "./CharacterFactory.js";
 import { SCENARIO } from "../Data/ScenarioMilestones.js";
+import { registerScene } from "./SceneDefRegistry.js";
 
 // ---------------------------------------------------------------------------
 // 工厂映射：archetype → factory(assets) → entity
@@ -572,3 +584,5 @@ export const ALL_SCENES = {
     [HOUSE_INTERIOR.id]: HOUSE_INTERIOR,
     [OUTDOOR_VILLAGE.id]: OUTDOOR_VILLAGE,
 };
+
+Object.values(ALL_SCENES).forEach(def => registerScene(def.id, def));

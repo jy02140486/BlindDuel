@@ -3,7 +3,8 @@ import { QuestManager } from "./Systems/QuestManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
 import { Scene } from "./Scene.js";
 import { SCENARIO } from "../Data/ScenarioMilestones.js";
-import { ALL_SCENES, OUTDOOR_VILLAGE } from "./SceneDefs.js";
+import { BATTLE_DEFS } from "./SceneDefs.js";
+import { resolveSceneDef, getSceneDefSync } from "./SceneDefRegistry.js";
 
 export class Game {
     constructor(engine, canvas) {
@@ -13,7 +14,9 @@ export class Game {
         this.questManager.onStateChange = () => {
             const sceneDef = this.scene?.sharedContext?.sceneDef;
             if (sceneDef) {
-                const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
+                const spawnId = this.worldState.currentSpawnId
+                    ?? Object.keys(sceneDef.spawns)[0]
+                    ?? "house_door";
                 this.saveCheckpoint(sceneDef.id, spawnId);
             }
         };
@@ -26,8 +29,10 @@ export class Game {
         this._checkpoint = null;
     }
 
-    async init(sceneDef, battleDefs) {
-        await this.scene.init(sceneDef, battleDefs);
+    async init() {
+        const sceneId = this.worldState.currentSceneId;
+        const sceneDef = await resolveSceneDef(sceneId);
+        await this.scene.init(sceneDef, BATTLE_DEFS);
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -55,6 +60,8 @@ export class Game {
         this.worldState.flags = {};
         this.worldState.quests = {};
         this.worldState.sceneStates = {};
+        this.worldState.currentSceneId = "prologue";
+        this.worldState.currentSpawnId = null;
         console.log('[Game] WorldState reset to scenario', this.worldState.scenario);
     }
 
@@ -82,7 +89,10 @@ export class Game {
             this.resetWorldState();
             this.inventoryManager.items = [];
             this.scene._pendingRestore = { hp: 3, maxHp: 3, buffs: [] };
-            this.scene._pendingSceneLoad = { sceneDef: OUTDOOR_VILLAGE, spawnId: "house_door" };
+            this.scene._pendingSceneLoad = {
+                sceneDef: getSceneDefSync(this.worldState.currentSceneId),
+                spawnId: this.worldState.currentSpawnId ?? "house_door",
+            };
             return;
         }
 
@@ -93,7 +103,7 @@ export class Game {
         this.inventoryManager.items = JSON.parse(JSON.stringify(cp.inventory));
 
         this.scene._pendingRestore = { hp: cp.hp, maxHp: cp.maxHp, buffs: JSON.parse(JSON.stringify(cp.buffs)) };
-        this.scene._pendingSceneLoad = { sceneDef: ALL_SCENES[cp.sceneId], spawnId: cp.spawnId };
+        this.scene._pendingSceneLoad = { sceneDef: getSceneDefSync(cp.sceneId), spawnId: cp.spawnId };
 
         console.log('[Checkpoint] restored', { sceneId: cp.sceneId, spawnId: cp.spawnId, scenario: cp.scenario, hp: cp.hp });
     }

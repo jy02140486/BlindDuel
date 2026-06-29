@@ -4,6 +4,14 @@
 
 ---
 
+## 最近归档（2026-06-29）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/Prologue 场景与数据流重构概要设计.MD](archived/Prologue%20场景与数据流重构概要设计.MD) | Prologue 场景落地 + 入口解耦 | Step 1-5 全部完成：WorldState 加 currentSceneId/currentSpawnId、SceneDefRegistry 模块、Game/character_demo 入口解耦、Scene.init 无 battle trigger 容错、prologue.json 三层视差环境；Step 6（BattleDef 外部化）留待战斗场景 |
+
+---
+
 ## 最近归档（2026-06-25）
 
 | 计划 | 目标 | 完成内容 |
@@ -112,6 +120,15 @@
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-06-29)
+- Prologue 场景与数据流重构完成并归档：`Prologue 场景与数据流重构概要设计.MD` — Step 1-5 全部落地
+- WorldState 扩展 `currentSceneId` / `currentSpawnId`，新游戏默认起点改为 `prologue`
+- 新增 `scripts/SceneDefRegistry.js`：硬编码 SceneDef 注册 + 异步 fetch JSON 缓存 + 同步查表 fallback
+- Game/character_demo 入口解耦：`game.init()` 无参，从 `worldState.currentSceneId` 读起点；`restoreCheckpoint` 用 `getSceneDefSync` 同步查表
+- Scene.init 容错：无 battle trigger 时用默认 StageBoundary/DuelCameraRig 配置，不再强行查 `battleDefs["battle_field_1"]` 兜底
+- 新增首个外部化 SceneDef：`Data/SceneDefs/prologue.json`（三层视差环境：BG_FAR skybase / MID AcientRuin layer1+2 / STAGE grassbase+grasstop+AcientRuin）
+- 待办：Step 6 BattleDef 外部化 + 组件延迟创建，留待做战斗场景时再加
 
 ## Update Log (2026-06-25)
 - 战败与检查点系统完成并归档：[DEFEAT_AND_CHECKPOINT_PLAN.md](DEFEAT_AND_CHECKPOINT_PLAN.md) — 5 Step 全部落地

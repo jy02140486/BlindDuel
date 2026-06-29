@@ -2,7 +2,7 @@ import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { getItemDef } from "../../../Data/ItemDefs.js";
-import { ALL_SCENES } from "../../SceneDefs.js";
+import { getSceneDefSync } from "../../SceneDefRegistry.js";
 
 
 export class ExploreMode extends BaseMode {
@@ -110,7 +110,7 @@ export class ExploreMode extends BaseMode {
                 this._currentSceneSwitchTrigger = { trigger, triggerDef };
                 if (inputSystem.consumeAction("interact", tickCount)) {
                     this._currentSceneSwitchTrigger = null;
-                    const targetDef = ALL_SCENES[triggerDef.targetScene];
+                    const targetDef = getSceneDefSync(triggerDef.targetScene);
                     if (!targetDef) {
                         console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
                         return;

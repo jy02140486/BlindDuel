@@ -1,0 +1,124 @@
+{
+    "id": "prologue",
+    "camera": {
+        "defaultRig": "explore"
+    },
+    "entities": [
+        {
+            "archetype": "hero_longsword",
+            "id": "hero",
+            "name": "hero",
+            "kind": "player",
+            "pos": [0, 0],
+            "controller": "player"
+        }
+    ],
+    "walkArea": {
+        "minX": -6.75,
+        "maxX": 9.98,
+        "minY": -2,
+        "maxY": 1
+    },
+    "spawns": {
+        "house_door": [-1, -1, 0]
+    },
+    "triggers": [],
+    "environment": {
+        "layers": [
+            {
+                "id": "BG_FAR",
+                "z": 40,
+                "parallaxFactor": 0.15,
+                "renderingGroupId": 0,
+                "loopX": true,
+                "loopWidth": 40,
+                "elements": [
+                    {
+                        "id": "sky_1",
+                        "texture": "Art/Environment/skybase.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 8,
+                        "width": 48,
+                        "height": 32,
+                        "alphaIndex": 0
+                    }
+                ]
+            },
+            {
+                "id": "MID",
+                "z": 20,
+                "parallaxFactor": 0.91,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "ruin_layer1",
+                        "texture": "Art/Environment/AcientRuin_layer1.png",
+                        "kind": "single",
+                        "x": -10,
+                        "y": 3.7,
+                        "width": 16,
+                        "height": 6,
+                        "alphaIndex": 1
+                    },
+                    {
+                        "id": "ruin_layer2",
+                        "texture": "Art/Environment/AcientRuin_layer2.png",
+                        "kind": "single",
+                        "x": 12,
+                        "y": 3.7,
+                        "width": 16,
+                        "height": 6,
+                        "alphaIndex": 2
+                    }
+                ]
+            },
+            {
+                "id": "STAGE",
+                "z": 10,
+                "parallaxFactor": 1.0,
+                "renderingGroupId": 1,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/grassbase.png",
+                        "atlas": "Art/Environment/grassbase.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": -2.78,
+                        "width": 64,
+                        "height": 8,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "loop": true,
+                        "alphaIndex": 2
+                    },
+                    {
+                        "id": "ground_2",
+                        "texture": "Art/Environment/grasstop.png",
+                        "atlas": "Art/Environment/grasstop.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": 1.2,
+                        "width": 64,
+                        "height": 0.32,
+                        "tileSize": { "width": 1.28, "height": 0.32 },
+                        "loop": true,
+                        "alphaIndex": 2
+                    },
+                    {
+                        "id": "ruin_main",
+                        "texture": "Art/Environment/AcientRuin.png",
+                        "kind": "single",
+                        "x": 0,
+                        "y": 6,
+                        "width": 16,
+                        "height": 10,
+                        "alphaIndex": 3
+                    }
+                ]
+            }
+        ]
+    }
+}

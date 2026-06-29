@@ -1,5 +1,4 @@
 import { Game } from "./scripts/Game.js";
-import { OUTDOOR_VILLAGE, HOUSE_INTERIOR, BATTLE_DEFS } from "./scripts/SceneDefs.js";
 import { SCENARIO } from "./Data/ScenarioMilestones.js";
 
 async function start() {
@@ -7,7 +6,7 @@ async function start() {
     const engine = new BABYLON.Engine(canvas, true, { stencil: true });
     const game = new Game(engine, canvas);
 
-    await game.init(OUTDOOR_VILLAGE, BATTLE_DEFS);
+    await game.init();
 
     // 暴露到全局，方便控制台调试
     window.game = game;

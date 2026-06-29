@@ -170,10 +170,25 @@ export class Scene {
         // --- 战斗系统与边界 ---
         this.combatSystem = new CombatSystem({ debugTrace: true });
         const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
-        const defaultBattleDef = firstBattleTrigger
-            ? battleDefs[firstBattleTrigger.battleId]
-            : battleDefs["battle_field_1"];
-        this.stageBoundary = new StageBoundary(this.scene, defaultBattleDef.stageBounds);
+        const DEFAULT_DUEL_CAMERA = {
+            zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
+            orthoMinWidth: 16, orthoMaxWidth: 32,
+            perspMinDistance: 15, perspMaxDistance: 35,
+            minCameraHeight: 3.2, maxCameraHeight: 5.2,
+            targetAspect: 16 / 9,
+        };
+        const DEFAULT_STAGE_BOUNDS = { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 };
+        let stageBounds;
+        let duelCameraCfg;
+        if (firstBattleTrigger) {
+            const battleDef = battleDefs[firstBattleTrigger.battleId];
+            stageBounds = battleDef.stageBounds;
+            duelCameraCfg = battleDef.duelCamera;
+        } else {
+            stageBounds = DEFAULT_STAGE_BOUNDS;
+            duelCameraCfg = DEFAULT_DUEL_CAMERA;
+        }
+        this.stageBoundary = new StageBoundary(this.scene, stageBounds);
         // WalkArea：若 StageMask JSON 中有 walkArea，优先使用；否则回退到 sceneDef.walkArea
         const walkAreaDef = stageMaskData?.walkArea
             ? {
@@ -187,7 +202,7 @@ export class Scene {
         this.pushboxResolver = new PushboxResolver();
 
         // --- 相机 ---
-        this.cameraRig = new DuelCameraRig(defaultBattleDef.duelCamera);
+        this.cameraRig = new DuelCameraRig(duelCameraCfg);
         this.exploreCameraRig = new ExploreCameraRig();
         this.scriptedCameraRig = new ScriptedCameraRig();
 
