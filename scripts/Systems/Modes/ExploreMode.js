@@ -115,7 +115,8 @@ export class ExploreMode extends BaseMode {
                         console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
                         return;
                     }
-                    scene._pendingSceneLoad = { sceneDef: targetDef, spawnId: triggerDef.targetSpawn };
+                    const game = this.context.game;
+                    game.requestSceneSwitch(targetDef, triggerDef.targetSpawn);
                     return;
                 }
                 return;

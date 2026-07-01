@@ -1,6 +1,5 @@
 export class InputSystem {
-    constructor(scene, options = {}) {
-        this.scene = scene;
+    constructor(options = {}) {
         this.deadzone = options.deadzone ?? 0.2;
         this.actionListeners = new Set();
         this.debugEnabled = options.debugEnabled ?? true;
@@ -40,25 +39,23 @@ export class InputSystem {
 
         this._onKeyDown = (event) => this.#setKeyState(event, true);
         this._onKeyUp = (event) => this.#setKeyState(event, false);
+        this._onGamepadConnected = (event) => {
+            const pad = event.gamepad;
+            this.gamepad.connected = true;
+            this.gamepad.id = pad?.id ?? "unknown";
+            this.gamepad.index = typeof pad?.index === "number" ? pad.index : 0;
+        };
+        this._onGamepadDisconnected = (event) => {
+            const padIndex = typeof event?.gamepad?.index === "number" ? event.gamepad.index : this.gamepad.index;
+            if (padIndex === this.gamepad.index) {
+                this.#resetGamepadState();
+            }
+        };
 
         window.addEventListener("keydown", this._onKeyDown);
         window.addEventListener("keyup", this._onKeyUp);
-
-        this.gamepadManager = typeof BABYLON !== "undefined" ? new BABYLON.GamepadManager(scene) : null;
-        if (this.gamepadManager) {
-            this.gamepadManager.onGamepadConnectedObservable.add((pad) => {
-                this.gamepad.connected = true;
-                this.gamepad.id = pad.id ?? "unknown";
-                this.gamepad.index = typeof pad.index === "number" ? pad.index : 0;
-            });
-
-            this.gamepadManager.onGamepadDisconnectedObservable.add((pad) => {
-                const padIndex = typeof pad?.index === "number" ? pad.index : this.gamepad.index;
-                if (padIndex === this.gamepad.index) {
-                    this.#resetGamepadState();
-                }
-            });
-        }
+        window.addEventListener("gamepadconnected", this._onGamepadConnected);
+        window.addEventListener("gamepaddisconnected", this._onGamepadDisconnected);
     }
 
     #setKeyState(event, isDown) {
@@ -307,7 +304,8 @@ export class InputSystem {
     dispose() {
         window.removeEventListener("keydown", this._onKeyDown);
         window.removeEventListener("keyup", this._onKeyUp);
-        this.gamepadManager?.dispose();
+        window.removeEventListener("gamepadconnected", this._onGamepadConnected);
+        window.removeEventListener("gamepaddisconnected", this._onGamepadDisconnected);
         this.debugPanel?.remove();
     }
 }

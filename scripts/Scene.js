@@ -1,30 +1,15 @@
-import { InputSystem } from "./Systems/InputSystem.js";
-import { PlayerController } from "./Systems/PlayerController.js";
 import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
 import { NpcController } from "./Systems/NpcController.js";
-import { CombatSystem } from "./Systems/CombatSystem.js";
-import { ASSET_MANIFEST } from "./AssetManifest.js";
-import { loadDataAssets } from "./DataLoader.js";
 import { createEntityFromDef } from "./SceneDefs.js";
-import { DuelCameraRig } from "./DuelCameraRig.js";
-import { ExploreCameraRig } from "./ExploreCameraRig.js";
-import { ScriptedCameraRig } from "./ScriptedCameraRig.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 import { AABBTrigger } from "./Enties/AABBTrigger.js";
 import { WalkArea } from "./Enties/WalkArea.js";
 import { StageBoundary } from "./Systems/StageBoundary.js";
 import { PushboxResolver } from "./Systems/PushboxResolver.js";
-import { GameModeManager } from "./Systems/GameModeManager.js";
 import { BattleMode } from "./Systems/Modes/BattleMode.js";
 import { ExploreMode } from "./Systems/Modes/ExploreMode.js";
-import { SceneSequencer } from "./Systems/SceneSequencer.js";
-import { CameraManager } from "./Systems/CameraManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
-import { InventoryBar } from "./UI/InventoryBar.js";
-import { BuffBar } from "./UI/BuffBar.js";
-import { HpBar } from "./UI/HpBar.js";
-import { DialogueBubble } from "./UI/DialogueBubble.js";
 import { getNpcDef } from "../Data/NpcDefs.js";
 
 const FIXED_DT = 1000 / 60;
@@ -78,7 +63,8 @@ export class Scene {
         this.sceneVisualSystem = new SceneVisualSystem(this.scene);
         await this.sceneVisualSystem.init(sceneDef.environment ?? DEFAULT_ENVIRONMENT_CONFIG);
 
-        const assets = await loadDataAssets(ASSET_MANIFEST);
+        const assets = this._game?.assets;
+        console.log("[Scene] assets from game.assets, keys=", Object.keys(assets ?? {}).length);
 
         // --- 加载 StageMask 数据并创建深度遮罩 ---
         let stageMaskData = null;
@@ -131,14 +117,12 @@ export class Scene {
         this.scriptedCameraTrigger = this.triggers.get("sc_test_1");
 
         // --- 控制器 ---
-        this.inputSystem = new InputSystem(this.scene, { debugEnabled: true });
-        if (this.playerController) {
-            this.playerController.setCharacter(character);
-            this.playerController.inputSystem = this.inputSystem;
-        } else {
-            this.playerController = new PlayerController(this.inputSystem, character);
-        }
+        this.inputSystem = this._game.inputSystem;
+        this.playerController = this._game.playerController;
+        this.playerController.setCharacter(character);
+        this.playerController.inputSystem = this.inputSystem;
         this.playerController.enabled = true;
+        console.log("[Scene] B8: using game.inputSystem + game.playerController");
         character.buffsProvider = this.playerController;
         if (rabbleStick) {
             const rabbleDef = sceneDef.entities.find(e => e.id === "enemy_1" || e.kind === "enemy");
@@ -168,7 +152,7 @@ export class Scene {
         }
 
         // --- 战斗系统与边界 ---
-        this.combatSystem = new CombatSystem({ debugTrace: true });
+        this.combatSystem = this._game.combatSystem;
         const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
         const DEFAULT_DUEL_CAMERA = {
             zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -201,14 +185,25 @@ export class Scene {
         this.walkArea = new WalkArea(this.scene, { ...walkAreaDef, visible: true });
         this.pushboxResolver = new PushboxResolver();
 
-        // --- 相机 ---
-        this.cameraRig = new DuelCameraRig(duelCameraCfg);
-        this.exploreCameraRig = new ExploreCameraRig();
-        this.scriptedCameraRig = new ScriptedCameraRig();
+        // --- 相机 rigs（复用 game 的，duelRig 用场景配置更新）---
+        this.cameraRig = this._game.cameraRig;
+        this.exploreCameraRig = this._game.exploreCameraRig;
+        this.scriptedCameraRig = this._game.scriptedCameraRig;
+        Object.assign(this.cameraRig, {
+            zoomMinDistance: duelCameraCfg.zoomMinDistance,
+            zoomMaxDistance: duelCameraCfg.zoomMaxDistance,
+            orthoMinWidth: duelCameraCfg.orthoMinWidth,
+            orthoMaxWidth: duelCameraCfg.orthoMaxWidth,
+            perspMinDistance: duelCameraCfg.perspMinDistance,
+            perspMaxDistance: duelCameraCfg.perspMaxDistance,
+            minCameraHeight: duelCameraCfg.minCameraHeight,
+            maxCameraHeight: duelCameraCfg.maxCameraHeight,
+            targetAspect: duelCameraCfg.targetAspect,
+        });
 
         // 复用 Vector3 避免每帧创建对象
-        this._cameraBasePosition = new BABYLON.Vector3(0, 8, -25);
-        this._cameraTarget = new BABYLON.Vector3(0, 0, 0);
+        this._cameraBasePosition = this._game.sharedContext.cameraBasePosition;
+        this._cameraTarget = this._game.sharedContext.cameraTarget;
         this._smoothedFighterDistance = rabbleStick
             ? Math.abs(rabbleStick.root.position.x - character.root.position.x)
             : 0;
@@ -224,50 +219,62 @@ export class Scene {
         const controllerRegistry = new Map();
         controllerRegistry.set("hero", this.playerController);
 
-        const sharedContext = {
-            scene: this,
-            babylonScene: this.scene,
-            inputSystem: this.inputSystem,
-            playerController: this.playerController,
-            rabbleController: this.rabbleController,
-            actorRegistry,
-            entityRegistry: actorRegistry,
-            controllerRegistry,
-            character: character,
-            rabbleStick: rabbleStick || null,
-            pushboxResolver: this.pushboxResolver,
-            stageBoundary: this.stageBoundary,
-            walkArea: this.walkArea,
-            combatSystem: this.combatSystem,
-            cameraRig: this.cameraRig,
-            exploreCameraRig: this.exploreCameraRig,
-            scriptedCameraRig: this.scriptedCameraRig,
-            cameraManager: null,
-            sceneVisualSystem: this.sceneVisualSystem,
-            entityPool: this.entityPool,
-            actorRegistry,
-            controllerRegistry,
-            cameraBasePosition: this._cameraBasePosition,
-            cameraTarget: this._cameraTarget,
-            smoothedFighterDistance: this._smoothedFighterDistance,
-            sceneDef: sceneDef,
-            battleDefs: battleDefs,
-            game: this._game,
-            stageMaskData: stageMaskData,
-            worldState: this.worldState,
-        };
-        this.cameraManager = new CameraManager(sharedContext);
-        this.cameraManager.init(this.scene, this.canvas, { fov: 0.8, minZ: 0.1, maxZ: 1000 });
+        const sharedContext = this._game.sharedContext;
+        sharedContext.scene = this;
+        sharedContext.babylonScene = this.scene;
+        sharedContext.inputSystem = this.inputSystem;
+        sharedContext.playerController = this.playerController;
+        sharedContext.rabbleController = this.rabbleController;
+        sharedContext.actorRegistry = actorRegistry;
+        sharedContext.entityRegistry = actorRegistry;
+        sharedContext.controllerRegistry = controllerRegistry;
+        sharedContext.character = character;
+        sharedContext.rabbleStick = rabbleStick || null;
+        sharedContext.pushboxResolver = this.pushboxResolver;
+        sharedContext.stageBoundary = this.stageBoundary;
+        sharedContext.walkArea = this.walkArea;
+        sharedContext.combatSystem = this.combatSystem;
+        sharedContext.cameraRig = this.cameraRig;
+        sharedContext.exploreCameraRig = this.exploreCameraRig;
+        sharedContext.scriptedCameraRig = this.scriptedCameraRig;
+        sharedContext.sceneVisualSystem = this.sceneVisualSystem;
+        sharedContext.entityPool = this.entityPool;
+        sharedContext.cameraBasePosition = this._cameraBasePosition;
+        sharedContext.cameraTarget = this._cameraTarget;
+        sharedContext.smoothedFighterDistance = this._smoothedFighterDistance;
+        sharedContext.sceneDef = sceneDef;
+        sharedContext.battleDefs = battleDefs;
+        sharedContext.stageMaskData = stageMaskData;
+        sharedContext.worldState = this.worldState;
+        this.camera = new BABYLON.UniversalCamera(
+            "main_camera",
+            new BABYLON.Vector3(0, 8, -25),
+            this.scene
+        );
+        this.camera.mode = BABYLON.Camera.PERSPECTIVE_CAMERA;
+        this.camera.fov = 0.8;
+        this.camera.minZ = 0.1;
+        this.camera.maxZ = 1000;
+        this.camera.inputs.clear();
+        this.scene.activeCamera = this.camera;
+
+        this.cameraManager = this._game.cameraManager;
+        this.cameraManager.rigs.clear();
         this.cameraManager.registerRig("duel", this.cameraRig);
         this.cameraManager.registerRig("explore", this.exploreCameraRig);
         this.cameraManager.registerRig("scripted", this.scriptedCameraRig);
+        this.cameraManager.activeRig = null;
+        this.cameraManager.activeRigId = null;
+        this.cameraManager.rebind(this.scene, this.camera);
         sharedContext.cameraManager = this.cameraManager;
+        sharedContext.camera = this.camera;
         this.combatSystem.cameraManager = this.cameraManager;
+        console.log("[Scene] B8: using game stable objects (combatSystem/rigs/sharedContext)");
 
-        this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
-        this.buffBar = new BuffBar(document.getElementById("buff-bar"));
-        this.hpBar = new HpBar(document.getElementById("hp-bar"));
-        this.dialogueBubble = new DialogueBubble(document.getElementById("dialogue-bubble-container"));
+        this.inventoryBar = this._game.inventoryBar;
+        this.buffBar = this._game.buffBar;
+        this.hpBar = this._game.hpBar;
+        this.dialogueBubble = this._game.sharedContext.dialogueBubble;
         sharedContext.inventoryManager = this.inventoryManager;
         sharedContext.questManager = this.questManager;
         sharedContext.inventoryBar = this.inventoryBar;
@@ -277,16 +284,20 @@ export class Scene {
 
         this.sharedContext = sharedContext;
 
-        this.sceneSequencer = new SceneSequencer(sharedContext);
+        this.sceneSequencer = this._game.sceneSequencer;
         sharedContext.sceneSequencer = this.sceneSequencer;
 
-        this.gameModeManager = new GameModeManager();
-        this.battleMode = new BattleMode(sharedContext);
-        this.exploreMode = new ExploreMode(sharedContext);
-
-        this.gameModeManager.registerMode(this.battleMode);
-        this.gameModeManager.registerMode(this.exploreMode);
+        this.gameModeManager = this._game.gameModeManager;
+        this.battleMode = this.gameModeManager.modes.get("battle");
+        this.exploreMode = this.gameModeManager.modes.get("explore");
+        if (!this.battleMode || !this.exploreMode) {
+            this.battleMode = new BattleMode(sharedContext);
+            this.exploreMode = new ExploreMode(sharedContext);
+            this.gameModeManager.registerMode(this.battleMode);
+            this.gameModeManager.registerMode(this.exploreMode);
+        }
         this.gameModeManager.start("explore");
+        console.log("[Scene] B8: using game UI + sceneSequencer + gameModeManager");
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "x") {
@@ -336,14 +347,6 @@ export class Scene {
             return;
         }
 
-        if (this._pendingSceneLoad) {
-            const { sceneDef, spawnId } = this._pendingSceneLoad;
-            this._pendingSceneLoad = null;
-            this._loading = true;
-            this._loadScene(sceneDef, spawnId);
-            return;
-        }
-
         this.sceneSequencer.fixedUpdate(dtMs, tickCount);
         this.gameModeManager.fixedUpdate(dtMs, tickCount);
     }
@@ -378,28 +381,23 @@ export class Scene {
             window.removeEventListener("keydown", this._onKeyDown);
             this._onKeyDown = null;
         }
-        if (this.inputSystem) {
+        if (this.inputSystem && this.inputSystem !== this._game?.inputSystem) {
             this.inputSystem.dispose();
         }
-        if (this.inventoryBar) {
+        if (this.inventoryBar && this.inventoryBar !== this._game?.inventoryBar) {
             this.inventoryBar.dispose();
-            this.inventoryBar = null;
         }
-        if (this.buffBar) {
+        if (this.buffBar && this.buffBar !== this._game?.buffBar) {
             this.buffBar.dispose();
-            this.buffBar = null;
         }
-        if (this.hpBar) {
+        if (this.hpBar && this.hpBar !== this._game?.hpBar) {
             this.hpBar.dispose();
-            this.hpBar = null;
         }
-        if (this.cameraRig) {
+        if (this.cameraRig && this.cameraRig !== this._game?.cameraRig) {
             this.cameraRig.dispose();
-            this.cameraRig = null;
         }
-        if (this.exploreCameraRig) {
+        if (this.exploreCameraRig && this.exploreCameraRig !== this._game?.exploreCameraRig) {
             this.exploreCameraRig.dispose();
-            this.exploreCameraRig = null;
         }
         this.cameraManager = null;
         if (this.sceneVisualSystem) {
@@ -435,36 +433,5 @@ export class Scene {
             if (cond.completed !== undefined && q.completed !== cond.completed) return false;
         }
         return true;
-    }
-
-    async _loadScene(sceneDef, spawnId) {
-        const hero = this.entityPool.find(e => e.id === "hero");
-        const savedHp = hero?.hp ?? 3;
-        const restoreData = this._pendingRestore;
-        this._pendingRestore = null;
-        this.dispose();
-        await this.init(sceneDef, this._battleDefs);
-        this._loading = false;
-
-        const newHero = this.entityPool.find(e => e.id === "hero");
-        if (newHero) {
-            newHero.combat.hp = restoreData?.hp ?? savedHp;
-        }
-
-        if (restoreData?.buffs && this.playerController) {
-            this.playerController.buffs = restoreData.buffs;
-        }
-
-        if (this.inventoryManager && this.inventoryBar) {
-            this.inventoryBar.update(this.inventoryManager.items);
-        }
-        if (this.playerController && this.buffBar) {
-            this.buffBar.update(this.playerController.buffs);
-        }
-
-        const spawnPoint = sceneDef.spawns?.[spawnId];
-        if (spawnPoint && newHero) {
-            newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
-        }
     }
 }

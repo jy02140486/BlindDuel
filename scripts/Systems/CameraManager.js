@@ -85,6 +85,17 @@ export class CameraManager {
         this._createOverlay(canvas);
     }
 
+    rebind(newScene, newCamera) {
+        const oldSceneId = this.camera?.getScene?.()?.uid ?? null;
+        const newSceneId = newScene?.uid ?? null;
+        console.log(`[CameraManager] rebind scene ${oldSceneId} → ${newSceneId}, camera=`, !!newCamera);
+        this.camera = newCamera;
+        if (newScene && newCamera) {
+            newScene.activeCamera = newCamera;
+            this._applyToBabylonCamera(this.state);
+        }
+    }
+
     registerRig(id, rigAdapter) {
         if (!id || !rigAdapter) return;
         this.rigs.set(id, rigAdapter);
@@ -479,6 +490,14 @@ export class CameraManager {
             this._overlay.container.remove();
             this._overlay = null;
         }
+        for (const rig of this.rigs.values()) {
+            if (rig && typeof rig.dispose === "function") {
+                rig.dispose();
+            }
+        }
+        this.rigs.clear();
+        this.activeRig = null;
+        this.activeRigId = null;
         this._effects.length = 0;
     }
 
