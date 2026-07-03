@@ -10,9 +10,12 @@
 
 | 项 | 决策 |
 |----|------|
-| 同伴 NPC | 新做 archetype `npc_companion`，资源待补，先用 traveller atlas 占位 |
+| 同伴 NPC | 新做 archetype `npc_companion`，资源待补，先用 Charlotte atlas 占位（`Art/RawAssets/Charlotte.ase`，png 待导出） |
 | 拾取道具 | dagger 占位（复用现有 itemDef） |
-| 同伴动画 | 至少 idle + walk（资源待补，先用 traveller 的 idle 凑合，walk 缺失时回退 idle） |
+| 同伴动画 | 至少 idle + walk（资源待补，先用 Charlotte 的 idle 凑合，walk 缺失时回退 idle） |
+| quest 命名 | `prologue_pickup_quest`（不叫 prologue_dagger） |
+| dialogueBubble | Game.bootstrap 实例化（Scene 重构遗留未做，bard give-item 已 latent 崩溃） |
+| callback handler | 挂 TimelineSequencer.ACTION_HANDLERS（§2.5/§2.6 走 tracks+clips 路径，非 SceneSequencer steps） |
 | 战斗 | rabble_stick × 1，1 场，prologue 专用 BattleDef |
 | intro | hero + 同伴从左侧（walkarea 外）走入，MGS 风格 fade-in 渐显与走位叠播 |
 | outro | 右侧 trigger → outdoor_village，本章结束，outro 与 fade-out 叠播（MGS 风格，outro 长度 > fade 时间） |
@@ -61,12 +64,51 @@
 - 基础系统不该知道"哪章哪个任务"，应改为数据化指令数组
 
 ### 1.6 同伴资源缺失
-- traveller atlas 只有 idle/greeting/ask 三 clip（[createNpcCharacter](file:///e:/se/BlindDuel/scripts/CharacterFactory.js#L218)）
-- 无 walk 动画，跟随态先用 idle 滑动凑合（视觉妥协，待美术补 walk）
+- Charlotte atlas 待导出（`Art/RawAssets/Charlotte.ase`），先用 traveller atlas 临时占位验证流程；Charlotte png 就绪后替换
+- 无 walk 动画，跟随态先用 idle 滑动凑合（视觉妥协，待 Charlotte png 导出后补 walk clip）
 
 ### 1.7 BattleMode onVictory 链路（已确认就绪）
 - [BattleMode.#checkBattleEnd](file:///e:/se/BlindDuel/scripts/Systems/Modes/BattleMode.js#L139-153) 已支持 `onVictory.scenario` / `onVictory.flags` / `onVictory.questStages`
 - BattleDef 只需配对字段，无需改 BattleMode
+
+### 1.8 dialogueBubble 从未实例化（Scene 重构遗留，Step 0 修）
+- [Scene.js:277](file:///e:/se/BlindDuel/scripts/Scene.js#L277) 读 `game.sharedContext.dialogueBubble`，但 [Game.bootstrap()](file:///e:/se/BlindDuel/scripts/Game.js#L62) 未 `new DialogueBubble`
+- `sharedContext.dialogueBubble` 恒 undefined；bard give-item 路径已 latent 崩溃（[ExploreMode.js:691](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L691) 调 `.show` 会崩），只是没人真交 dagger 回 bard
+- Prologue 同伴气泡（§2.6 `showCompanionBubble`）同样无对象可调
+
+### 1.9 TimelineSequencer 无 callback handler（§2.6 静默失效，Step 6 修）
+- §2.5 intro/outro 与 §2.6 prop 演出走 tracks+clips（[TimelineSequencer.js](file:///e:/se/BlindDuel/scripts/Systems/TimelineSequencer.js) 路径），不是 steps 数组
+- ACTION_HANDLERS 注册了 command/moveActorTo/cameraBlend/inputLock/faceWorldX/switchMode/setCameraFrame/cameraEffect，**无 callback handler**
+- 后果：§2.6 的 `disposeProp`/`showCompanionBubble`/`hideCompanionBubble`/`enterCompanionFollowing` 全部静默失效
+- **注意**：原计划 Step 6 把 callback 修订挂在 SceneSequencer.CALLBACK step 上是错的，必须改 TimelineSequencer.ACTION_HANDLERS
+
+### 1.10 _loading 阻塞 CameraManager.update（fade-in fx 不推进，Step 2 修）
+- [Scene.js:355](file:///e:/se/BlindDuel/scripts/Scene.js#L355) `_loading` 时 updateRender 直接 return，`cameraManager.update` 在 return 之后
+- 切场景 `newScene._loading=true → await init → _loading=false` 期间主循环仍跑，但 CameraManager 不更新 → fade-in/letterbox/shake/flash 的 fx 状态机不推进
+- 原计划 Step 2 风险"CSS transition 仍走，视觉能播完"只对纯 CSS fade 成立，对 fx 状态机驱动的 effect 不成立
+
+### 1.11 首场景 init 期间主循环未启动（根因 blocker，Step 2 修）
+- [character_demo.js:9](file:///e:/se/BlindDuel/character_demo.js#L9) `await game.init()` 在 [character_demo.js:30](file:///e:/se/BlindDuel/character_demo.js#L30) `engine.runRenderLoop` 之前
+- intro 在 `game.init()` 内部播，主循环还没注册，`sceneSequencer.fixedUpdate` / `cameraManager.update` 都不跑 → fade/letterbox/blend/moveActorTo 全部不推进，intro 卡死
+- 与 §1.10 区别：§1.10 是"切场景期间 newScene._loading=true 拦截 update"，本条是"首场景 init 期间主循环根本没注册"——更深一层
+- 上个会话轮询补丁（_awaitSequenceAndEffects）即因此而生，越修越崩，已废弃
+- **决策**：采用方案 W——分离引擎 init（`Game.bootstrap`）与游戏 init（`Game.init`），`engine.runRenderLoop` 在 bootstrap 后、`game.init` 前启动，让主循环在 init 期间也跑；废弃轮询主动推进方案（备选：方案 X 直接把 runRenderLoop 挪到 game.init 之前，但违反引擎惯例，半初始化状态风险大）
+
+### 1.12 Scene 重构遗留架构债（不阻塞 Step 2，单独清理）
+- B1-B10 重构已达成“稳定对象上移”核心目标，**无双重创建、无孤儿、无 DOM 泄漏**（早期误判已纠正）
+- 遗留整洁性问题：Scene 持稳定对象别名（cameraManager/rigs/UI）、Scene.init rigs 幂等冗余、dispose 死代码、sharedContext 重复赋值
+- 潜在窗口期问题（§2.5）：切场景 `oldScene.dispose()` 后 `await newScene.init()` 期间，sharedContext 的 Scene 局部字段指向已 dispose 对象——当前靠 `_loading` 早退屏蔽，方案 W 需验证 _loading 期被放行的子系统不访问脏字段
+- **详见**：[Scene 生命周期与稳定对象上移重构-回归.MD](file:///e:/se/BlindDuel/plans/Scene%20生命周期与稳定对象上移重构-回归.MD)
+- **处理时机**：不在 Step 2 之前动；Step 2 完成后做 §2.1+§2.4 清理，用 Step 2 分层验证当回归
+
+### 1.13 intro 一次性播放（per-scene flag 跟踪）
+- 游戏有 3 个场景入口：`Game.init`（程序首启动）、`requestSceneSwitch→_loadSceneInternal`（切场景/读档）、`restoreCheckpoint→requestSceneSwitch`（读档恢复）
+- **intro 触发条件**：`worldState.flags["intro_played_" + sceneDef.id]` 未置位时播，播完置 true。避免以下场景误播：
+  - 未来持久化后，玩家中途退出再进，不重播已看过的 intro
+  - 切场景各场景独立跟踪（prologue/outdoor_village/house_interior 互不干扰）
+- **flags 天然持久化友好**：已在 [Game.js:210/236](file:///e:/se/BlindDuel/scripts/Game.js#L210) checkpoint 深拷贝，未来 localStorage 持久化 worldState 时自动带上
+- **outro 不走此机制**：outro 是“离开场景时播”，语义不同（可能每次离开都播或也一次性），2f 再定
+- **2f 需注意**：实现 `_loadSceneInternal` 的 intro 触发时复用同一 flag 机制；给 `requestSceneSwitch(sceneDef, spawnId, options)` 加 `options.skipIntro` 参数，`restoreCheckpoint` 传 `{ skipIntro: true }` 避免读档复活走 _loadSceneInternal 时误播（虽然 flag 会拦住，但 skipIntro 更明确）
 
 ---
 
@@ -372,7 +414,7 @@ NpcDef 的 action 字段从字符串改为指令数组：
 // companion（prologue）
 {
   "priority": 90,
-  "condition": { "quest": "prologue_dagger", "stage": 1, "hasItem": "dagger" },
+  "condition": { "quest": "prologue_pickup_quest", "stage": 1, "hasItem": "dagger" },
   "text": "👍",
   "action": [
     { "type": "removeItem", "item": "dagger" },
@@ -409,28 +451,90 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
 
 ## 3. 分步实施
 
+### Step 0：dialogueBubble 实例化（前置 blocker，§1.8）
+- **文件**：[scripts/Game.js](file:///e:/se/BlindDuel/scripts/Game.js)、`babylon_demo.html` / `index.html`
+- **改动**：
+  - `Game.bootstrap()` 加 `this.dialogueBubble = new DialogueBubble(document.getElementById("dialogue-bubble"))` + `this.sharedContext.dialogueBubble = this.dialogueBubble`，并 import DialogueBubble
+  - HTML 加 `<div id="dialogue-bubble"></div>` 容器
+- **影响**：修复 bard give-item latent 崩溃；为 Prologue 同伴气泡铺路
+- **验证**：控制台 `game.sharedContext.dialogueBubble` 非空
+
 ### Step 1：ScenarioMilestones 补充中间值
 - **文件**：[Data/ScenarioMilestones.js](file:///e:/se/BlindDuel/Data/ScenarioMilestones.js)
-- **改动**：增加 `PROLOGUE_TRAVELER_JOIN: 105`
+- **改动**：增加 `PROLOGUE_CHARLOTTE_JOIN: 105`
 - **影响**：无
 
-### Step 2：场景切换 fade 包裹 + intro/outro 钩子
-- **文件**：[scripts/Scene.js](file:///e:/se/BlindDuel/scripts/Scene.js)
+### Step 2：场景切换 fade 包裹 + intro/outro 钩子（按 Layer 0-7 分层验证）
+
+> **核心原则**：废弃轮询主动推进（_awaitSequenceAndEffects 已回退）。采用方案 W（§1.11）：分离引擎 init（`Game.bootstrap`）与游戏 init（`Game.init`），`engine.runRenderLoop` 在 bootstrap 后、`game.init` 前启动，让主循环在 init 期间也跑，所有系统由单一执行路径驱动。符合 Unity/Unreal 引擎惯例，无半初始化状态。
+> 每子步前层未通过不进下一层；每子步有明确的"通过信号"。临时验证 sequence 通过后删除。
+> **架构债**：Step 2 期间若发现 §1.12/§2.5 窗口期问题，单独记录不展开修。
+
+#### Step 2a（Layer 0）：主循环时序修正（方案 W）
+- **文件**：[character_demo.js](file:///e:/se/BlindDuel/character_demo.js)、[scripts/Game.js](file:///e:/se/BlindDuel/scripts/Game.js)
+- **当前状态**：`Game.init()` 内部第一行 `await this.bootstrap()`（[Game.js:143-148](file:///e:/se/BlindDuel/scripts/Game.js#L143-148)），`character_demo.js` 是 `await game.init()` → `engine.runRenderLoop()`（[character_demo.js:9,30](file:///e:/se/BlindDuel/character_demo.js#L9)）
 - **改动**：
-  - 新增 `requestSceneSwitch(sceneDef, spawnId)`：若有 outroSequence 则 play（末段叠 fade-out），await 播完；无则直接 enqueueEffect(fade-out) + 等
-  - `_loadScene` 改 async：`等 fade-out → dispose+init → 若有 introSequence 则 play（首步自带 fade-in）；无则 enqueueEffect(fade-in)`
+  - `character_demo.js`：拆成 `await game.bootstrap()` → `engine.runRenderLoop(...)` → `await game.init()` → `game.playOpening()`（playOpening 可选，见 2e）
+  - `Game.init`：去掉内部首行 `await this.bootstrap()`（bootstrap 已在外部调过），init 变纯游戏层：`resolveSceneDef` + `scene.init`
+  - `Game.bootstrap`：保持现状（已含 CameraManager/UI/rigs/sceneSequencer 等所有稳定对象，[Game.js:65-138](file:///e:/se/BlindDuel/scripts/Game.js#L65-138)）
+  - `Game.fixedUpdate`/`Game.updateRender`：当前转发给 `this.scene.fixedUpdate/updateRender`（[Game.js:150-156](file:///e:/se/BlindDuel/scripts/Game.js#L150-156)），Scene 内部 `_loading` 早退——需在 Scene 层放行 §1.10/§1.11 子系统（见下）
+  - `Scene.updateRender`（[Scene.js:355](file:///e:/se/BlindDuel/scripts/Scene.js#L355)）：`_loading` 时不再整段 return，改为"放行 cameraManager.update（推进 fx/blend），其余早退"——修 §1.10
+  - `Scene.fixedUpdate`（[Scene.js:344](file:///e:/se/BlindDuel/scripts/Scene.js#L344)）：`_loading` 时不再整段 return，改为"放行 sceneSequencer.fixedUpdate（推进 intro clips），其余早退"——修 §1.11
+- **验证 §1.12/§2.5 窗口期**：bootstrap 后 scene.init 前主循环跑，此时 `scene.cameraManager` 是 null（Scene 构造时设 null，[Scene.js:37](file:///e:/se/BlindDuel/scripts/Scene.js#L37)），[Scene.js:358](file:///e:/se/BlindDuel/scripts/Scene.js#L358) `if (this.cameraManager)` null-safe。但若 §1.12 把别名改成 `this._game.cameraManager`，则 bootstrap 后即非空，update 会被调——需确认 update 内部不访问脏 sharedContext.sceneVisualSystem 等字段
+- **通过信号**：临时 log 在 `Scene.fixedUpdate`/`updateRender` 开头，能看到 `await game.init()` 期间主循环在跑（_loading=true 时放行子系统也跑）；`game.init()` 返回前主循环 tick 数 > 0；无报错
+
+#### Step 2b（Layer 1）：SceneSequencer 单独走通（无 fx、无 blend）
+- **改动**：临时配一条最小 sequence（一条 actor track，一个 `moveActorTo` clip，无 camera track），在 `Scene.init` 末尾或 `Game.init` 末尾手动 enqueue
+- **隔离验证**：`sceneSequencer.fixedUpdate` + MOVE_ACTOR_TO handler
+- **通过信号**：`hero.root.position` 从 A 变到 B；`sceneSequencer.isBusy()` true→false；无 fx 干扰
+- **通过后删除临时 sequence**
+
+#### Step 2c（Layer 2）：单个 cameraEffect 走通（无 blend、无 move）
+- **改动**：临时配一条只含 `cameraEffect`（letterbox 或 fade）clip 的 sequence
+- **隔离验证**：`enqueueEffect` + `_applyEffects` + `_updateLetterbox`/`_triggerFade`
+- **通过信号**：letterbox DOM 高度 0→72 / fade overlay opacity 1→0；effect 从 `_effects` 数组移除；`[CameraManager]` 相关 log
+- **通过后删除临时 sequence**
+
+#### Step 2d（Layer 3）：cameraBlend 单独走通（无 fx、无 move）⚠️ 关键
+- **改动**：临时配一条只含 `cameraBlend` clip [0,1000] 切到另一 rig 的 sequence
+- **隔离验证**：`startBlend` + `_updateBlend`
+- **重点验证**：**blend 在 effects 队列空时仍能推进**——这正是上个会话问题2 的雷区。确认 `_updateBlend` 不依赖 `hasActiveEffects`，仅靠 `_blend.active`（[CameraManager.js:131-144](file:///e:/se/BlindDuel/scripts/Systems/CameraManager.js#L131-144) 已确认是同一 update 入口，主循环正常调时无需额外条件）
+- **通过信号**：已有 log `[CameraManager] blend COMPLETE elapsed=... → switchRig "..."`
+- **通过后删除临时 sequence**
+
+#### Step 2e（Layer 4+5）：effect + blend 叠播 → 完整 intro
+- **改动**：先用 Layer 2 + Layer 3 合并 sequence 验证叠播（Layer 4）；通过后接入真实 `prologue_intro.json`（Layer 5）
+- **intro 触发点**：`Game.init` 末尾或新增 `Game.playOpening()`，读 `sceneDef.introSequenceUrl` 加载并 enqueue。不阻塞 `await game.init()` 返回（intro 借主循环驱动，无需 await 完成）
+- **验证**：Layer 2 和 Layer 3 的信号都触发，两者独立完成
+- **通过信号**：所有 track 按序完成，末尾 blend 到 explore；`sceneSequencer.isBusy()` true→false；hero 锁定→解锁
+
+#### Step 2f（Layer 6+7）：fade 包裹场景切换 + outro 叠 fade-out
+- **文件**：[scripts/Game.js](file:///e:/se/BlindDuel/scripts/Game.js)（入口已迁移到 `Game._loadSceneInternal`，CameraManager 跨场景稳定）
+- **当前 `_loadSceneInternal`**（[Game.js:225-258](file:///e:/se/BlindDuel/scripts/Game.js#L225-258)）是先切 `this.scene=newScene` 再 dispose，outro 在 oldScene 上播不动——顺序要倒
+- **改动**：`_loadSceneInternal` 流程改：
+    1. oldScene 上 enqueue outro + 末段叠 fade-out（oldScene 仍是 `this.scene`，主循环驱动 fixedUpdate → SceneSequencer）
+    2. `await` 直到 `sceneSequencer.isBusy()` 为 false 且 `cameraManager` effects/blend 都空——**因主循环驱动，await 用 Promise + fixedUpdate 末尾检查 resolve，不再用轮询**
+    3. `newScene._loading=true; this.scene=newScene; oldScene.dispose()`
+    4. `await newScene.init()`
+    5. `_loading=false`
+    6. 播 intro（Step 2e 已验证）或 enqueueEffect(fade-in)
   - `_fadeOutMs` / `_fadeInMs` 从 sceneDef.transition 读，默认 400/600
   - intro/outro 时序：outro 末段（最后 fadeOutMs）叠 fade-out；intro 首步 = fade-in 渐显与走位叠播
-- **风险**：
-  - `_loading` 期间 updateRender return，fade-in 的 fx 对象 elapsedMs 不推进——但 CSS transition 仍走，视觉能播完。fx 残留无害
-  - outroSequence 在旧 scene 上播，需保证 dispose 在 outro + fade-out 都完成后才调
-  - `_loadScene` 改 async 后，`fixedUpdate` 里的 `_pendingSceneLoad` 消费要适配（标记 loading 后 await，期间 fixedUpdate 跳过）
-  - outro 与 fade-out 叠播要求 outro 总时长 > fade-out 时长，配置时注意
+- **通过信号**：黑屏出现 → 场景切换 → 黑屏淡出；outro clips 全完成 + fade 到 1.0 + 场景切换
 
-### Step 3：ExploreMode sceneSwitch trigger 接 outro + clamp 旁路 + 播片优先
+- **风险（合并）**：
+  - outro 必须在 `this.scene` 仍指向 oldScene 时播完，再切引用再 dispose（流程顺序是本步核心难点）
+  - outro 与 fade-out 叠播要求 outro 总时长 > fade-out 时长，配置时注意
+  - Step 2a 的 Scene._loading 放行逻辑要稳定，否则切场景期间崩
+  - §1.12/§2.5 窗口期：`oldScene.dispose()` 后 `await newScene.init()` 期间 sharedContext 的 Scene 局部字段指向已 dispose 对象——需确认 _loading 期被放行的 cameraManager/sceneSequencer 不访问脏字段，访问处加 null check
+  - **备忘（数值类）**：prologue.json hero 初始 `pos` 与 `spawns.house_door` 不一致（[prologue.json](file:///e:/se/BlindDuel/Data/SceneDefs/prologue.json) pos=[0,0] vs spawn=[-1,-1,0]），intro 期间会被 moveActorTo 覆盖，配 prologue.json 时把 hero 初始 pos 放 walkarea 外即可
+  - **备忘（验证后定）**：scripted rig 的 frame 切场景后是否需重置——intro 用 scripted rig 设的 frame 在切 explore 后保留，再切回 prologue 时 frame 仍是上次的值
+  - **备忘（验证后定）**：Scene.init 末尾 `gameModeManager.start("explore")` 每次切场景都触发 ExploreMode.enter（设 AUTO_FROM_MOVE + _buildIndices），intro 期间可能与其副作用冲突
+
+### Step 3：ExploreMode clamp 旁路 + 播片优先（sceneSwitch trigger 已接 game.requestSceneSwitch，无需改）
 - **文件**：[scripts/Systems/Modes/ExploreMode.js](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js)
+- **背景**：原计划的 `#updateSceneSwitchTrigger` 改调 `scene.requestSceneSwitch` 已在 Scene 重构 B9 完成（[ExploreMode.js:97-100](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L97-100) 调 `game.requestSceneSwitch`），本步只剩 clamp 旁路 + 播片优先
 - **改动**：
-  - `#updateSceneSwitchTrigger`：trigger 命中 + 交互键后，改调 `scene.requestSceneSwitch(targetDef, spawnId)`（不直接赋 `_pendingSceneLoad`）
   - `fixedUpdate`：`if (sceneSequencer.isBusy())` 跳过 `_collisionSystem.resolveMovement`（clamp 旁路，moveActorTo 直接改 root.position 不查 blocker）
   - `fixedUpdate`：`if (sceneSequencer.isBusy())` 跳过 companion 的 `npcController.update`（播片优先，避免 following 与 moveActorTo 冲突）
 - **风险**：clamp 旁路期间 hero 可走出 walkarea——intro/outro 期间这是预期行为；正常探索期间 sequence 不 busy，无影响
@@ -445,8 +549,9 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
 - **风险**：bard 仍走旧路径，下一章迁移
 
 ### Step 5：同伴 NPC（npc_companion）+ 跟随行为
-- **新增**：[CharacterFactory.js](file:///e:/se/BlindDuel/scripts/CharacterFactory.js) 加 `createCompanionNpc`，先用 traveller atlas 占位（idle + walk 缺失时回退 idle）
+- **新增**：[CharacterFactory.js](file:///e:/se/BlindDuel/scripts/CharacterFactory.js) 加 `createCompanionNpc`，先用 Charlotte atlas 占位（png 待导出，导出前临时用 traveller atlas 验证流程；idle + walk 缺失时回退 idle）
 - **新增 archetype**：`npc_companion` 进 `ARCHETYPE_FACTORY`
+- **备忘（易抄错）**：现有 NPC 工厂（createNpcCharacter/createBardNpc 等）都硬编码 `blocksMovement:true`，companion 必须显式传 `blocksMovement:false`，否则会挡 hero 路
 - **改动**：[NpcController.js](file:///e:/se/BlindDuel/scripts/Systems/NpcController.js) 加 `following` 状态：
   - 进入方式：由 sequence 末尾 callback 显式调 `npcController.enterFollowing()`（不靠 NpcController 自己判 scenario）
   - 行为：每帧算与 hero 距离，> 2.5 朝 hero 右侧 offset 1.0 走（速度 1.1），<= 1.5 归零
@@ -454,20 +559,20 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
   - sequence busy 期间 ExploreMode 跳过 update（见 Step 3），following 不冲突
 - **改动**：[ExploreMode.js](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js) `_buildIndices`：companion 进 `interactables`（可交 dagger）但不进 `staticBlockers`（blocksMovement=false）
 - **改动**：[Data/NpcDefs.js](file:///e:/se/BlindDuel/Data/NpcDefs.js) 加 companion 定义（dialogue 结构同 bard，action 用指令数组）：
-  - condition: quest=prologue_dagger stage=1 hasItem=dagger → 接收 dagger，action=[removeItem(dagger), advanceScenario(105)]
+  - condition: quest=prologue_pickup_quest stage=1 hasItem=dagger → 接收 dagger，action=[removeItem(dagger), advanceScenario(105)]
   - condition: scenario>=105 → 空对话或简短回应
-  - condition: {} → 派任务 startQuest(prologue_dagger)
-- **风险**：traveller 无 walk atlas，跟随态视觉是 idle 滑动——待美术补
+  - condition: {} → 派任务 startQuest(prologue_pickup_quest)
+- **风险**：Charlotte 无 walk atlas，跟随态视觉是 idle 滑动——待 Charlotte png 导出后补 walk
 
 ### Step 6：PropEntity + prop 演出 sequence
 - **新增**：[scripts/Enties/PropEntity.js](file:///e:/se/BlindDuel/scripts/Enties/PropEntity.js)（见 §2.4）
 - **新增 archetype**：`npc_prop` 进 `ARCHETYPE_FACTORY`，工厂调 `new PropEntity(scene, config)`
-- **改动**：[SceneSequencer.js](file:///e:/se/BlindDuel/scripts/Systems/SceneSequencer.js) CALLBACK step 支持按字符串名查 handler：
+- **改动**：[TimelineSequencer.js](file:///e:/se/BlindDuel/scripts/Systems/TimelineSequencer.js) ACTION_HANDLERS 新增 `callback` handler（§1.9，**注意是 TimelineSequencer 不是原计划写的 SceneSequencer**——§2.5/§2.6 走 tracks+clips 路径，原计划 Step 6 错挂在 SceneSequencer.CALLBACK step 上）：
   - sharedContext 新增 `sequenceHandlers: Map<string, Function>`
-  - CALLBACK step：若 `step.fn` 是字符串，从 `context.sequenceHandlers.get(step.fn)` 查；是函数则直接调
+  - `callback` clip：`clip.fn` 为字符串则从 `context.sequenceHandlers.get(clip.fn)` 查；为函数则直接调
   - ExploreMode 注册 handler：`disposeProp` / `showCompanionBubble` / `hideCompanionBubble` / `enterCompanionFollowing` / `triggerSceneSwitch`
 - **新增**：prop 演出 sequence（见 §2.6），由 ExploreMode 检测 scenario===105 且 flag `prologue_prop_played` 未置位时触发，触发后立即 setFlag
-- **风险**：prop 资源待补，下落+跑动画先用 traveller idle 占位，视觉是"传送+滑动"
+- **风险**：prop 资源待补，下落+跑动画先用 Charlotte idle 占位，视觉是"传送+滑动"
 
 ### Step 7：prologue 专用 BattleDef
 - **文件**：[scripts/SceneDefs.js](file:///e:/se/BlindDuel/scripts/SceneDefs.js)
@@ -515,12 +620,41 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
 
 ## 5. 验证清单
 
-### Step 1-3 完成后
+### Step 1 + Step 2a 完成后（Layer 0：主循环时序）
 - [ ] scenario=105 常量存在
+- [ ] `character_demo.js` 顺序为 `bootstrap` → `runRenderLoop` → `init` → `playOpening`
+- [ ] `Game.init` 内部不再调 `bootstrap`
+- [ ] 临时 log 显示 `await game.init()` 期间主循环 tick 数 > 0
+- [ ] `_loading=true` 时 `sceneSequencer.fixedUpdate` 仍被调（§1.11 放行）
+- [ ] `_loading=true` 时 `cameraManager.update` 仍被调（§1.10 放行）
+- [ ] 无报错；§1.12/§2.5 窗口期不崩
+
+### Step 2b 完成后（Layer 1：SceneSequencer 原语）
+- [ ] 临时最小 sequence（单个 moveActorTo）执行后 `hero.root.position` 从 A 变到 B
+- [ ] `sceneSequencer.isBusy()` true→false
+- [ ] 无 fx/blend 干扰
+
+### Step 2c 完成后（Layer 2：cameraEffect 原语）
+- [ ] 临时 sequence（单个 letterbox 或 fade）执行后 DOM/overlay 状态变化
+- [ ] effect 从 `_effects` 数组移除
+- [ ] `[CameraManager]` 相关 log 正常
+
+### Step 2d 完成后（Layer 3：cameraBlend 原语）⚠️ 关键
+- [ ] 临时 sequence（单个 cameraBlend）执行后 log 显示 `[CameraManager] blend COMPLETE ... → switchRig`
+- [ ] **blend 在 effects 队列空时仍推进**（问题2 雷区验证）
+
+### Step 2e 完成后（Layer 4+5：叠播 + 完整 intro）
+- [ ] effect + blend 叠播两者独立完成
+- [ ] 接入真实 `prologue_intro.json` 后所有 track 按序完成
+- [ ] 末尾 blend 到 explore；hero 锁定→解锁
+- [ ] `sceneSequencer.isBusy()` true→false
+
+### Step 2f + Step 3 完成后（Layer 6+7：fade 包裹 + outro）
 - [ ] 切场景时画面 fade-out → 黑屏 → fade-in，无闪烁
 - [ ] prologue 加 introSequence 后，进场景自动播 intro，hero 锁定
-- [ ] intro 期间 hero 不被 walkArea clamp
+- [ ] intro 期间 hero 不被 walkArea clamp（Step 3 clamp 旁路生效）
 - [ ] sceneSwitch trigger 命中后播 outro（末段叠 fade-out），outro 末尾自动切场景
+- [ ] await outro 不用轮询，用 Promise + fixedUpdate 末尾 resolve
 
 ### Step 4-5 完成后
 - [ ] companion 在 intro 中从左侧走入，到等待点驻留
@@ -551,8 +685,13 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
 
 按依赖关系分批：
 
-- **批次 A（基础设施）**：Step 1 + Step 2 + Step 3
-  - 先跑通 fade 包裹 + intro/outro 钩子 + clamp 旁路，prologue 加个最小 introSequence（纯 fade-in + letterbox）验证
+- **批次 A（基础设施，Step 2 严格串行）**：Step 1 + Step 2a + Step 2b + Step 2c + Step 2d + Step 2e + Step 2f + Step 3
+  - Step 2 内部 **2a→2b→2c→2d→2e→2f 严格串行**，前层未通过不进下层
+  - 2a 先修主循环时序（方案 W）+ §1.10/§1.11 放行，这是地基
+  - 2b/2c/2d 用临时最小 sequence 验证三个原语（moveActorTo/cameraEffect/cameraBlend），通过后删除临时 sequence
+  - 2e 验证叠播 + 接入真实 prologue_intro.json
+  - 2f 实现 fade 包裹场景切换 + outro 叠 fade-out
+  - Step 3（clamp 旁路）在 2f 验证 intro 期间 clamp 不卡 hero 时加
 - **批次 B（任务系统数据化）**：Step 4
   - QuestManager.executeDirectives + NpcController 兼容，单独验证 bard 不破
 - **批次 C（同伴 + prop 演出）**：Step 5 + Step 6
@@ -562,7 +701,9 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
 - **批次 E（回归）**：Step 9
   - 第一章三场景 fade-only 验证
 
-每批次结束做一次手动验证再进下一批，避免问题堆积。
+每批次结束做一次手动验证再进下一批，避免问题堆叠。
+
+**架构债清理（批次 A 完成后）**：依 [Scene 生命周期与稳定对象上移重构-回归.MD](file:///e:/se/BlindDuel/plans/Scene%20生命周期与稳定对象上移重构-回归.MD) §3，批次 A 跑通后做 §2.1+§2.4 清理，用 Step 2a-2f 分层验证当回归。
 
 ---
 

@@ -40,6 +40,7 @@ export class Scene {
         this.hpBar = null;
         this._onKeyDown = null;
         this.paused = false;
+        this._loading = true;
         this.tickCount = 0;
         this.entityPool = [];
     }
@@ -343,7 +344,10 @@ export class Scene {
     fixedUpdate(dtMs, tickCount) {
         this.tickCount = tickCount;
 
-        if (this.paused || this._loading) {
+        if (this.paused) return;
+
+        if (this._loading) {
+            if (this.sceneSequencer) this.sceneSequencer.fixedUpdate(dtMs, tickCount);
             return;
         }
 
@@ -352,7 +356,11 @@ export class Scene {
     }
 
     updateRender(dtMs) {
-        if (this._loading) return;
+        if (this._loading) {
+            if (this.cameraManager) this.cameraManager.update(dtMs, this.sharedContext);
+            if (this.sceneSequencer) this.sceneSequencer.updateRender(dtMs);
+            return;
+        }
         this.gameModeManager.updateRender(dtMs);
         this.sceneSequencer.updateRender(dtMs);
         if (this.cameraManager) {
@@ -362,7 +370,6 @@ export class Scene {
     }
 
     render() {
-        if (this._loading) return;
         if (!this.scene || !this.scene.activeCamera) return;
         this.scene.render();
     }

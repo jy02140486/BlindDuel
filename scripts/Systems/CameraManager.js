@@ -230,6 +230,10 @@ export class CameraManager {
         }
     }
 
+    hasActiveEffects() {
+        return this._effects.length > 0;
+    }
+
     clearEffects(filterFn) {
         if (typeof filterFn === "function") {
             for (let i = this._effects.length - 1; i >= 0; i--) {

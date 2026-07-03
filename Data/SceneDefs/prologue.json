@@ -3,6 +3,9 @@
     "camera": {
         "defaultRig": "explore"
     },
+    "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "introSequenceUrl": "Data/Sequences/prologue_intro.json",
+    "outroSequenceUrl": "Data/Sequences/prologue_outro.json",
     "entities": [
         {
             "archetype": "hero_longsword",
@@ -20,9 +23,22 @@
         "maxY": 1
     },
     "spawns": {
-        "house_door": [-1, -1, 0]
+        "house_door": [-1, -1, 0],
+        "from_prologue": [6, 0, 0]
     },
-    "triggers": [],
+    "triggers": [
+        {
+            "_devNote": "DEV ONLY: 验证 Step 2f-2 场景切换 fade 包裹。走到右端按 interact 键切到 outdoor_village。验证后删除。",
+            "type": "sceneSwitch",
+            "id": "dev_to_outdoor",
+            "pos": [9, 0, 0],
+            "size": [2, 2, 2],
+            "targetScene": "outdoor_village",
+            "targetSpawn": "house_door",
+            "debugColor": [1, 0.5, 0],
+            "debugVisible": true
+        }
+    ],
     "environment": {
         "layers": [
             {

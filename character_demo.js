@@ -6,7 +6,7 @@ async function start() {
     const engine = new BABYLON.Engine(canvas, true, { stencil: true });
     const game = new Game(engine, canvas);
 
-    await game.init();
+    await game.bootstrap();
 
     // 暴露到全局，方便控制台调试
     window.game = game;
@@ -41,6 +41,8 @@ async function start() {
         game.updateRender(dtMs);
         game.render();
     });
+
+    await game.init();
 
     window.addEventListener("resize", () => {
         game.onResize();

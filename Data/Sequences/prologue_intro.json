@@ -1,0 +1,61 @@
+{
+  "id": "prologue_intro",
+  "durationMs": 6000,
+  "tracks": [
+    {
+      "id": "fx.fadein",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 0, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "fx.letterbox",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 5500, "height": 72, "speed": 240 }
+      ]
+    },
+    {
+      "id": "camera.scripted",
+      "kind": "camera",
+      "binding": { "cameraId": "scripted" },
+      "channel": "blend",
+      "clips": [
+        { "type": "cameraBlend", "startMs": 0, "durationMs": 0, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 0, "center": [0, 0, 0], "height": 4.5, "orthoWidth": 20 }
+      ]
+    },
+    {
+      "id": "hero.walk",
+      "kind": "actor",
+      "binding": { "actorId": "hero" },
+      "channel": "movement",
+      "clips": [
+        { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": 2, "y": 0, "speed": 1.5 },
+        { "type": "inputLock", "atMs": 5500, "locked": false }
+      ]
+    },
+    {
+      "id": "companion.walk",
+      "kind": "actor",
+      "binding": { "actorId": "companion" },
+      "channel": "movement",
+      "clips": [
+        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -2, "y": 0, "speed": 1.4 }
+      ]
+    },
+    {
+      "id": "camera.back",
+      "kind": "camera",
+      "binding": { "cameraId": "explore" },
+      "channel": "blend",
+      "clips": [
+        { "type": "cameraBlend", "startMs": 5000, "durationMs": 1000, "to": "explore" }
+      ]
+    }
+  ]
+}

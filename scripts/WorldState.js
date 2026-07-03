@@ -4,7 +4,7 @@ export class WorldState {
         this.flags = {};
         this.quests = {};
         this.sceneStates = {};
-        this.currentSceneId = "outdoor_village";
+        this.currentSceneId = "prologue";
         this.currentSpawnId = null;
     }
 

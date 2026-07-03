@@ -19,6 +19,7 @@ import { SceneSequencer } from "./Systems/SceneSequencer.js";
 import { InventoryBar } from "./UI/InventoryBar.js";
 import { BuffBar } from "./UI/BuffBar.js";
 import { HpBar } from "./UI/HpBar.js";
+import { DialogueBubble } from "./UI/DialogueBubble.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
 
@@ -67,6 +68,7 @@ export class Game {
         this.inventoryBar = null;
         this.buffBar = null;
         this.hpBar = null;
+        this.dialogueBubble = null;
         this.sharedContext = null;
         this.assets = null;
     }
@@ -89,6 +91,7 @@ export class Game {
         this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
         this.buffBar = new BuffBar(document.getElementById("buff-bar"));
         this.hpBar = new HpBar(document.getElementById("hp-bar"));
+        this.dialogueBubble = new DialogueBubble(document.getElementById("dialogue-bubble-container"));
 
         // 影子 sharedContext（Scene 不读它，仅为后续切换准备结构）
         this.sharedContext = {
@@ -105,6 +108,7 @@ export class Game {
             inventoryBar: this.inventoryBar,
             buffBar: this.buffBar,
             hpBar: this.hpBar,
+            dialogueBubble: this.dialogueBubble,
             cameraBasePosition: new BABYLON.Vector3(0, 8, -25),
             cameraTarget: new BABYLON.Vector3(0, 0, 0),
             smoothedFighterDistance: 0,
@@ -134,10 +138,27 @@ export class Game {
     }
 
     async init() {
-        await this.bootstrap();
         const sceneId = this.worldState.currentSceneId;
         const sceneDef = await resolveSceneDef(sceneId);
+        this.scene._loading = true;
         await this.scene.init(sceneDef, BATTLE_DEFS);
+        this.scene._loading = false;
+        this._playIntro(sceneDef);
+    }
+
+    _playIntro(sceneDef) {
+        const url = sceneDef?.introSequenceUrl;
+        if (!url) return;
+        const flagKey = `intro_played_${sceneDef.id}`;
+        if (this.worldState.flags[flagKey]) return;
+        fetch(url, { cache: "no-cache" })
+            .then(r => r.json())
+            .then(seq => {
+                console.log("[Game] intro sequence loaded", seq.id, "tracks=", seq.tracks?.length);
+                this.sceneSequencer.play(seq, {});
+                this.worldState.flags[flagKey] = true;
+            })
+            .catch(err => console.warn("[Game] intro sequence load failed", url, err));
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -166,6 +187,7 @@ export class Game {
         this.inventoryBar?.hide?.();
         this.buffBar?.hide?.();
         this.hpBar?.hide?.();
+        this.dialogueBubble?.dispose?.();
         this.gameModeManager = null;
         this.sceneSequencer = null;
         this.combatSystem = null;
@@ -233,6 +255,8 @@ export class Game {
 
     async _loadSceneInternal(sceneDef, spawnId) {
         const oldScene = this.scene;
+        const oldSceneId = this.worldState.currentSceneId;
+        const oldSceneDef = oldSceneId ? await resolveSceneDef(oldSceneId) : null;
         const hero = oldScene?.entityPool?.find(e => e.id === "hero");
         const savedHp = hero?.combat?.hp ?? 3;
         const restoreData = this._pendingRestore;
@@ -245,13 +269,20 @@ export class Game {
             game: this,
         });
         newScene._loading = true;
-        this.scene = newScene;
 
-        console.log("[Game] B9: _loadSceneInternal dispose old scene, savedHp=", savedHp);
+        const transition = sceneDef.transition || {};
+        const fadeOutMs = transition.fadeOutMs ?? 400;
+        const fadeInMs = transition.fadeInMs ?? 600;
+
+        console.log("[Game] _loadSceneInternal begin outro+fadeout, old=", oldSceneId, "new=", sceneDef.id);
+        await this._playOutro(oldSceneDef, { fadeOutMs });
+        await this._awaitOutroAndFadeComplete();
+
+        this.scene = newScene;
+        console.log("[Game] _loadSceneInternal dispose old scene, savedHp=", savedHp);
         oldScene.dispose();
 
         await newScene.init(sceneDef, BATTLE_DEFS);
-        newScene._loading = false;
 
         const newHero = newScene.entityPool?.find(e => e.id === "hero");
         if (newHero) {
@@ -274,7 +305,51 @@ export class Game {
             newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
         }
 
-        console.log("[Game] B9: _loadSceneInternal done, new scene=", sceneDef.id);
+        console.log("[Game] _loadSceneInternal fadeIn+intro, new=", sceneDef.id);
+        this.cameraManager.enqueueEffect({
+            type: "fade",
+            durationMs: fadeInMs,
+            params: { from: 1, to: 0, color: "black" }
+        });
+        this._playIntro(sceneDef);
+
+        newScene._loading = false;
+        console.log("[Game] _loadSceneInternal done, new scene=", sceneDef.id);
+    }
+
+    async _playOutro(sceneDef, opts = {}) {
+        if (!sceneDef?.outroSequenceUrl) {
+            this.cameraManager.enqueueEffect({
+                type: "fade",
+                durationMs: opts.fadeOutMs ?? 400,
+                params: { from: 0, to: 1, color: "black" }
+            });
+            return;
+        }
+        try {
+            const seq = await fetch(sceneDef.outroSequenceUrl, { cache: "no-cache" }).then(r => r.json());
+            console.log("[Game] outro sequence loaded", seq.id, "tracks=", seq.tracks?.length);
+            this.sceneSequencer.play(seq, {});
+        } catch (err) {
+            console.warn("[Game] outro sequence load failed", sceneDef.outroSequenceUrl, err);
+            this.cameraManager.enqueueEffect({
+                type: "fade",
+                durationMs: opts.fadeOutMs ?? 400,
+                params: { from: 0, to: 1, color: "black" }
+            });
+        }
+    }
+
+    async _awaitOutroAndFadeComplete() {
+        const seq = this.sceneSequencer;
+        const cm = this.cameraManager;
+        while (seq.isBusy() || cm.hasActiveEffects()) {
+            await this._nextFrame();
+        }
+    }
+
+    _nextFrame() {
+        return new Promise(resolve => requestAnimationFrame(resolve));
     }
 
     hasCheckpoint() {

@@ -499,9 +499,9 @@ export class ExploreMode extends BaseMode {
         this._cameraTarget.set(pos.x, pos.y, pos.z);
         this.context.target = this._cameraTarget;
 
-        if (sceneSequencer?.isBusy()) {
-            console.log(`[ExploreMode] updateRender during sequence — context.target set to char pos=(${pos.x.toFixed(2)},${pos.y.toFixed(2)},${pos.z.toFixed(2)}) activeRig=${cameraManager?.activeRigId}`);
-        }
+        //if (sceneSequencer?.isBusy()) {
+            //console.log(`[ExploreMode] updateRender during sequence — context.target set to char pos=(${pos.x.toFixed(2)},${pos.y.toFixed(2)},${pos.z.toFixed(2)}) activeRig=${cameraManager?.activeRigId}`);
+        //}
 
         for (const entity of this.renderables) {
             if (entity.spritePlane) {

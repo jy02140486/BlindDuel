@@ -71,7 +71,7 @@ export class TimelineSequencer {
         const prevTimeMs = this.currentTimeMs;
         this.currentTimeMs += dtMs;
 
-        console.log(`[TimelineSeq] tick prev=${prevTimeMs.toFixed(1)} cur=${this.currentTimeMs.toFixed(1)} dt=${dtMs.toFixed(2)} activeClips=${this.activeClipStates.size}`);
+        //console.log(`[TimelineSeq] tick prev=${prevTimeMs.toFixed(1)} cur=${this.currentTimeMs.toFixed(1)} dt=${dtMs.toFixed(2)} activeClips=${this.activeClipStates.size}`);
 
         for (const track of timeline.tracks) {
             for (const clip of track.clips) {
