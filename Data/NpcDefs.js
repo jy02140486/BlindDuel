@@ -1,4 +1,33 @@
 export const NPC_DEFS = {
+    companion: {
+        id: "companion",
+        name: "Charlotte",
+        dialogues: [
+            {
+                priority: 100,
+                condition: { scenarioMin: 105 },
+                text: "👍"
+            },
+            {
+                priority: 90,
+                condition: { quest: "prologue_pickup_quest", stage: 1, hasItem: "dagger" },
+                text: "👍",
+                action: [
+                    { type: "removeItem", item: "dagger" },
+                    { type: "advanceScenario", value: 105 }
+                ],
+                giveItem: "dagger"
+            },
+            {
+                priority: 0,
+                condition: {},
+                text: "🗡️",
+                action: [
+                    { type: "startQuest", id: "prologue_pickup_quest" }
+                ]
+            }
+        ]
+    },
     bard: {
         id: "bard",
         name: "吟游诗人",

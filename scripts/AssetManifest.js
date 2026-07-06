@@ -56,6 +56,15 @@ export const ASSET_MANIFEST = {
             customer: "./Art/Sprite/NPCs/customer.json",
             customer2: "./Art/Sprite/NPCs/customer2.json",
             bard: "./Art/Sprite/NPCs/bard.json"
+        },
+        companion: {
+            charlotte: "./Art/Sprite/NPCs/Charlotte.json"
+        },
+        csChars: {
+            prologue_rabble_flee0: "./Art/Sprite/CS_Chars/prologue_rabble_flee0.json",
+            prologue_rabble_flee1: "./Art/Sprite/CS_Chars/prologue_rabble_flee1.json",
+            prologue_rabble_flee2: "./Art/Sprite/CS_Chars/prologue_rabble_flee2.json",
+            prologue_rabble_flee3: "./Art/Sprite/CS_Chars/prologue_rabble_flee3.json"
         }
     },
     colliders: {
@@ -109,6 +118,15 @@ export const ASSET_MANIFEST = {
             customer: "./Data/RootMotion/NPCs/customer.json",
             customer2: "./Data/RootMotion/NPCs/customer2.json",
             bard: "./Data/RootMotion/NPCs/bard.json"
+        },
+        companion: {
+            charlotte: "./Data/RootMotion/NPCs/Charlotte.json"
+        },
+        csChars: {
+            prologue_rabble_flee0: "./Data/RootMotion/CS_Chars/prologue_rabble_flee0.json",
+            prologue_rabble_flee1: "./Data/RootMotion/CS_Chars/prologue_rabble_flee1.json",
+            prologue_rabble_flee2: "./Data/RootMotion/CS_Chars/prologue_rabble_flee2.json",
+            prologue_rabble_flee3: "./Data/RootMotion/CS_Chars/prologue_rabble_flee3.json"
         }
     },
     occupancy: {
@@ -118,6 +136,9 @@ export const ASSET_MANIFEST = {
             customer: "./Data/RootMotion/NPCs/customer.occupancy.json",
             customer2: "./Data/RootMotion/NPCs/customer2.occupancy.json",
             bard: "./Data/RootMotion/NPCs/bard.occupancy.json"
+        },
+        companion: {
+            charlotte: "./Data/RootMotion/NPCs/Charlotte.occupancy.json"
         }
     },
     stageMasks: {

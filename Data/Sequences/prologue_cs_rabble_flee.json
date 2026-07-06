@@ -1,0 +1,79 @@
+{
+  "id": "prologue_prop_and_follow",
+  "durationMs": 7000,
+  "tracks": [
+    {
+      "id": "prop.idle",
+      "kind": "actor",
+      "binding": { "actorId": "prop_faller" },
+      "channel": "command",
+      "clips": [
+        { "type": "command", "atMs": 0, "command": "idle" }
+      ]
+    },
+    {
+      "id": "prop.fall",
+      "kind": "actor",
+      "binding": { "actorId": "prop_faller" },
+      "channel": "command",
+      "clips": [
+        { "type": "command", "atMs": 500, "command": "fall" },
+        { "type": "moveActorTo", "startMs": 500, "durationMs": 400, "x": -1.2, "y": -1.25, "speed": 4 }
+      ]
+    },
+    {
+      "id": "prop.land",
+      "kind": "actor",
+      "binding": { "actorId": "prop_faller" },
+      "channel": "command",
+      "clips": [
+        { "type": "command", "atMs": 900, "command": "land" }
+      ]
+    },
+    {
+      "id": "prop.run",
+      "kind": "actor",
+      "binding": { "actorId": "prop_faller" },
+      "channel": "command",
+      "clips": [
+        { "type": "command", "atMs": 1200, "command": "run" },
+        { "type": "moveActorTo", "startMs": 1200, "durationMs": 2000, "x": 15, "y": 0, "speed": 4 }
+      ]
+    },
+    {
+      "id": "prop.dispose",
+      "kind": "callback",
+      "clips": [
+        { "type": "callback", "atMs": 4000, "fn": "disposeProp" }
+      ]
+    },
+    {
+      "id": "companion.bubble_show",
+      "kind": "callback",
+      "clips": [
+        { "type": "callback", "atMs": 4200, "fn": "showCompanionBubble" }
+      ]
+    },
+    {
+      "id": "companion.bubble_wait",
+      "kind": "wait",
+      "clips": [
+        { "type": "wait", "atMs": 4200, "durationMs": 2000 }
+      ]
+    },
+    {
+      "id": "companion.bubble_hide",
+      "kind": "callback",
+      "clips": [
+        { "type": "callback", "atMs": 6200, "fn": "hideCompanionBubble" }
+      ]
+    },
+    {
+      "id": "companion.follow",
+      "kind": "callback",
+      "clips": [
+        { "type": "callback", "atMs": 6400, "fn": "enterCompanionFollowing" }
+      ]
+    }
+  ]
+}

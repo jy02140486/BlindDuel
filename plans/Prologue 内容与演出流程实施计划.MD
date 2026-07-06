@@ -539,6 +539,11 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
   - `fixedUpdate`：`if (sceneSequencer.isBusy())` 跳过 companion 的 `npcController.update`（播片优先，避免 following 与 moveActorTo 冲突）
 - **风险**：clamp 旁路期间 hero 可走出 walkarea——intro/outro 期间这是预期行为；正常探索期间 sequence 不 busy，无影响
 
+> **实施备注（2026-07-04 验证 Step 2f-2 时发现）**：上述 clamp 旁路代码 **当前不需要写**。outro 期间 clamp 不生效是 `_loading=true` 短路 ExploreMode 的副作用，天然免费：
+> - **outro 路径**：[Game.js:252](file:///e:/se/BlindDuel/scripts/Game.js#L252) `requestSceneSwitch` 第一行即 `this.scene._loading = true`，随后 `await _loadSceneInternal` 内部 `await _playOutro`。outro 播放期间 [Scene.js:349-352](file:///e:/se/BlindDuel/scripts/Scene.js#L349-352) `if (this._loading) { sceneSequencer.fixedUpdate; return; }` 提前 return，`gameModeManager.fixedUpdate` 不被调 → ExploreMode.fixedUpdate 不跑 → `resolveMovement`（clamp）不执行。moveActorTo 在 `sceneSequencer.fixedUpdate` 里写 `hero.root.position` 无人 clamp，hero 能走出 walkArea。
+> - **intro 路径**：[Game.js:316](file:///e:/se/BlindDuel/scripts/Game.js#L316) `newScene._loading = false` 在 `_playIntro` **之后**，所以 intro 播放期间 `_loading=false`，ExploreMode 会跑，clamp 生效。当前 prologue 配置下 hero spawn 在 `house_door(-1,-1)`、intro 走位目标 `(0,0)`，全在 walkArea 内（minX=-6.75, maxX=9.98）→ clamp 无影响。**未来若 intro 要让 hero 从 walkArea 外走入（如计划 §2.5 原设计 hero 从 x=-20 走入），需另外处理**：要么把 `newScene._loading = false` 挪到 intro 播完之后，要么补上原计划的 `if (sceneSequencer.isBusy())` clamp 旁路。
+> - **架构债标记**：这是"巧合正确"——clamp 旁路的正确性依赖 `_loading` 短路时序，而非显式语义。未来若重构 `_loadSceneInternal` 时序（如把 `_loading=false` 提前），outro 期间 clamp 会突然生效导致 hero 卡边界。建议在 [Scene 生命周期回归文档](file:///e:/se/BlindDuel/plans/Scene%20生命周期与稳定对象上移重构-回归.MD) §2.5 窗口期问题清单里登记此依赖。
+
 ### Step 4：QuestManager 数据化 directives
 - **文件**：[scripts/Systems/QuestManager.js](file:///e:/se/BlindDuel/scripts/Systems/QuestManager.js)
 - **改动**：
@@ -564,6 +569,8 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
   - condition: {} → 派任务 startQuest(prologue_pickup_quest)
 - **风险**：Charlotte 无 walk atlas，跟随态视觉是 idle 滑动——待 Charlotte png 导出后补 walk
 
+> **实施备注（2026-07-04 讨论问题 1）**：cutscene 期间 Charlotte 的 idle 滑步不是 bug，是 sequence 播片的固有特性——`moveActorTo` 直接写 `root.position`（[TimelineSequencer.js:336-337](file:///e:/se/BlindDuel/scripts/Systems/TimelineSequencer.js#L336-337)），完全绕过 `moveIntent` / stateGraph / `_applyMovement`，state 只管动画帧不管位移。hero 在 intro 里走 moveActorTo 也有同样行为。若要 cutscene 期间走路动画对得上位移，sequence clip 需先 `SEND_COMMAND walk` 再 `moveActorTo`——属 sequence 配置问题。**本备注所提问题留到 §2.6 系统性梳理 sequencer 与 character/controller 交互职责时一起处理**，不在 Step 5/6 范围。
+
 ### Step 6：PropEntity + prop 演出 sequence
 - **新增**：[scripts/Enties/PropEntity.js](file:///e:/se/BlindDuel/scripts/Enties/PropEntity.js)（见 §2.4）
 - **新增 archetype**：`npc_prop` 进 `ARCHETYPE_FACTORY`，工厂调 `new PropEntity(scene, config)`
@@ -571,6 +578,7 @@ BattleMode.onVictory 已支持 `scenario` / `flags` 字段，无需改 BattleMod
   - sharedContext 新增 `sequenceHandlers: Map<string, Function>`
   - `callback` clip：`clip.fn` 为字符串则从 `context.sequenceHandlers.get(clip.fn)` 查；为函数则直接调
   - ExploreMode 注册 handler：`disposeProp` / `showCompanionBubble` / `hideCompanionBubble` / `enterCompanionFollowing` / `triggerSceneSwitch`
+- **补充修复（2026-07-04 讨论问题 5）**：修 `SEND_COMMAND` handler 的 pushCommand fallback bug。当前 [TimelineSequencer.js:301-309](file:///e:/se/BlindDuel/scripts/Systems/TimelineSequencer.js#L301-309) 在 `actor.pushCommand(command)` 返回 `false` 时只打注释掉的 warn，**不 fallback 到 `enterState`**。Charlotte/companion 这类无 transitions 的 NPC 永远 pushCommand 失败 → SEND_COMMAND 完全无效。修法：pushCommand 返回 false 时 fallback 调 `enterState(command)`。修完后 intro sequence 末尾可加 `SEND_COMMAND observe` clip 让 Charlotte 切到 observe 状态（用户需求：sequence 播完后 Charlotte 播 observe）。
 - **新增**：prop 演出 sequence（见 §2.6），由 ExploreMode 检测 scenario===105 且 flag `prologue_prop_played` 未置位时触发，触发后立即 setFlag
 - **风险**：prop 资源待补，下落+跑动画先用 Charlotte idle 占位，视觉是"传送+滑动"
 

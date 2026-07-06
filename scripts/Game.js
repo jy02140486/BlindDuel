@@ -109,6 +109,7 @@ export class Game {
             buffBar: this.buffBar,
             hpBar: this.hpBar,
             dialogueBubble: this.dialogueBubble,
+            sequenceHandlers: new Map(),
             cameraBasePosition: new BABYLON.Vector3(0, 8, -25),
             cameraTarget: new BABYLON.Vector3(0, 0, 0),
             smoothedFighterDistance: 0,

@@ -30,11 +30,20 @@
 | NPC root 锚点与 hero 锚点约定不一致 | NPC 默认使用帧中心作为 root 锚点，hero 使用 collider 定义的 near-bottom 锚点，两者不在同一约定。当前 Y-sort 通过 `getVisualBottomY()` 统一计算绕过。 | 中 | 长期应统一锚点约定，或显式区分两种锚点语义 |
 | 状态机事件回调与移动驱动未展开 | 当前 demo 最小状态机已接入输入链路，但事件回调、移动驱动和更多动作状态仍未展开。 | 中 | 原型阶段可接受，后续迭代需补齐 |
 
+| 实体默认隐藏 + 触发时显示 | cutscene/battle 相关实体（如 prop_faller、scenario-gated enemy）在触发条件未满足时应保持隐藏，而非场景加载即出现。当前 `spawnIf` 只控制生成，未满足时实体直接不存在；但部分场景需要实体已生成但不可见（如 prop_faller 需在 scenario=105 后才播 fall 动画，但生成位置需提前预备）。应加 `visibleIf` 字段（与 `spawnIf` 并列），在 `_buildIndices` / fixedUpdate 里根据 WorldState 切换 `spritePlane.isVisible`。同样适用于 BattleDef 中的敌人（如 scenario<105 时 enemy 不可见）。 | 中 | Step 6 prop_faller 暂用 spawnIf 单独生成，idle 静止待机。后续扩到 battle enemy 与多个 cutscene actor |
+
 ## 探索系统切换问题
 
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
 | Sequence 中角色朝 -x 移动时不镜像 | `SceneSequencer._updateMoveActorTo` 设 `moveIntent` 触发 `_applyMovement`，但 `allowFacing` 在序列执行期间为 `false`，sprite 不翻转。 | 中 | 影响 battle→explore 退出序列的 `moveActorTo` 步骤；需解耦序列移动与 `allowFacing` 守卫 |
+
+## NPC 行为架构
+
+| 事项 | 描述 | 优先级 | 备注 |
+|------|------|--------|------|
+| NpcController Behavior 解耦 | 当前 `NpcController` 把状态管理、感知、行为逻辑揉在一起（idle/greeting/following）。Step 5 已抽 `FollowingBehavior` 验证接口，但 `idle` 和 `greeting` 仍在 controller 内部。应进一步抽 `IdleBehavior` / `GreetingBehavior`，controller 只负责 behavior 调度与状态切换。未来可做到 `NpcDef.behaviors: ["greeting", "following"]` 数据驱动装配。 | 中 | Step 5 验证 FollowingBehavior 接口后，渐进迁移 idle/greeting；同步考虑 `canEnter(context)` 接口用于 controller 自动判进入条件 |
+| Charlotte 跟随穿模 | companion `blocksMovement:false`（避免挡路），导致 follow 期间 Charlotte 朝 target=hero.x+1.0 移动时可能穿过 hero。视觉上是"Charlotte 贴着 hero 走过去"。 | 低 | 原型阶段可接受，属 §2.6 sequencer/character 交互职责范围；未来可考虑路径规划绕开、或 follow target 改为动态偏移（hero 左/右根据 Charlotte 当前侧） |
 
 ## GameMode 未完成事项
 

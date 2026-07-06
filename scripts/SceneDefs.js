@@ -27,6 +27,8 @@ import {
     createCustomerNpc,
     createCustomer2Npc,
     createBardNpc,
+    createCompanionNpc,
+    createPropEntity,
     createPickable,
 } from "./CharacterFactory.js";
 import { SCENARIO } from "../Data/ScenarioMilestones.js";
@@ -45,6 +47,8 @@ const ARCHETYPE_FACTORY = {
     npc_customer: (scene, assets) => createCustomerNpc(scene, assets),
     npc_customer2: (scene, assets) => createCustomer2Npc(scene, assets),
     npc_bard: (scene, assets) => createBardNpc(scene, assets),
+    npc_companion: (scene, assets) => createCompanionNpc(scene, assets),
+    prop: (scene, assets, entityDef) => createPropEntity(scene, assets, entityDef),
     pickable: createPickable,
 };
 

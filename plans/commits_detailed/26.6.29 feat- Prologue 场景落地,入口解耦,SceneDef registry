@@ -1,0 +1,341 @@
+## 🎯 高层摘要（TL;DR）
+
+*   **影响范围**：🔴 **高** - 核心架构重构，涉及场景定义数据化、游戏入口解耦、世界状态扩展
+*   **关键变更**：
+    *   ✅ **场景定义外部化**：新增 `prologue.json` 作为首个外部化场景定义，实现三层视差环境
+    *   ✅ **注册表模式**：引入 `SceneDefRegistry` 模块，支持硬编码注册 + 异步 JSON 缓存 + 同步查表 fallback
+    *   ✅ **入口解耦**：`Game.init()` 改为无参数，从 `WorldState.currentSceneId` 读取起点
+    *   ✅ **容错增强**：无战斗触发器时使用默认配置，不再依赖 `battleDefs["battle_field_1"]` 兜底
+    *   ✅ **世界状态扩展**：新增 `currentSceneId` / `currentSpawnId` 字段，默认起点改为 `prologue`
+
+---
+
+## 🗺️ 视觉概览（代码与逻辑映射）
+
+```mermaid
+graph TD
+    subgraph "入口层 character_demo.js"
+        "start()" --> "game.init()"
+    end
+
+    subgraph "游戏核心 scripts/Game.js"
+        "init()" --> "resolveSceneDef<br/>sceneId"
+        "resolveSceneDef" --> "SceneDefRegistry"
+        "resolveSceneDef" --> "scene.init()"
+        "resetWorldState" --> "currentSceneId = prologue"
+        "restoreCheckpoint" --> "getSceneDefSync"
+    end
+
+    subgraph "场景定义层 scripts/SceneDefRegistry.js"
+        "resolveSceneDef" --> "_hardcoded.has?"
+        "_hardcoded.has?" -->|No| "fetch JSON"
+        "_hardcoded.has?" -->|Yes| "return cached"
+        "fetch JSON" --> "_cache.set"
+    end
+
+    subgraph "场景初始化 scripts/Scene.js"
+        "init" --> "有无battle trigger?"
+        "有无battle trigger?" -->|Yes| "使用battleDefs配置"
+        "有无battle trigger?" -->|No| "使用DEFAULT配置"
+        "使用battleDefs配置" --> "StageBoundary"
+        "使用DEFAULT配置" --> "StageBoundary"
+    end
+
+    subgraph "数据层 Data/SceneDefs/prologue.json"
+        "prologue.json" --> "三层视差环境"
+    end
+
+    subgraph "世界状态 scripts/WorldState.js"
+        "WorldState" --> "currentSceneId"
+        "WorldState" --> "currentSpawnId"
+    end
+
+    "SceneDefRegistry" -.注册.-> "scripts/SceneDefs.js"
+    "ExploreMode.js" -.查询.-> "getSceneDefSync"
+```
+
+```mermaid
+sequenceDiagram
+    participant Demo as character_demo.js
+    participant Game as Game.js
+    participant Registry as SceneDefRegistry
+    participant Scene as Scene.js
+    participant WorldState as WorldState
+    participant JSON as prologue.json
+
+    Demo->>Game: game.init()
+    Game->>WorldState: 读取 currentSceneId
+    WorldState-->>Game: "prologue"
+    Game->>Registry: resolveSceneDef("prologue")
+    
+    alt 硬编码存在
+        Registry-->>Game: 返回硬编码 SceneDef
+    else 硬编码不存在
+        Registry->>JSON: fetch Data/SceneDefs/prologue.json
+        JSON-->>Registry: SceneDef 对象
+        Registry->>Registry: 缓存到 _cache
+        Registry-->>Game: 返回 SceneDef
+    end
+    
+    Game->>Scene: init(sceneDef)
+    Scene->>Scene: 检查 triggers 是否有 battle
+    
+    alt 无战斗触发器
+        Scene->>Scene: 使用 DEFAULT_DUEL_CAMERA<br/>DEFAULT_STAGE_BOUNDS
+    else 有战斗触发器
+        Scene->>Scene: 使用 battleDefs 配置
+    end
+    
+    Scene-->>Game: 初始化完成
+```
+
+---
+
+## 📊 详细变更分析
+
+### 🏗️ 组件 1：场景定义注册表（SceneDefRegistry）
+
+#### 新增文件：`scripts/SceneDefRegistry.js`
+
+**变更说明**：
+- 实现了三层场景定义获取机制：硬编码缓存 → JSON 缓存 → 同步查表
+- **核心函数**：
+  - `registerScene(id, def)` - 注册硬编码场景
+  - `getSceneDefSync(id)` - 同步获取（用于检查点恢复等同步上下文）
+  - `resolveSceneDef(id)` - 异步解析（优先硬编码，否则 fetch JSON 并缓存）
+
+**技术亮点**：
+- 双缓存设计：`_hardcoded` 存储硬编码场景，`_cache` 存储 JSON 场景
+- 懒加载：JSON 场景按需加载并缓存
+- 兼容性：支持新旧场景并存（硬编码 + 外部化）
+
+---
+
+### 🏗️ 组件 2：游戏入口解耦（Game & Character Demo）
+
+#### 文件：`character_demo.js`
+
+| 变更项 | 旧代码 | 新代码 | 说明 |
+|--------|--------|--------|------|
+| 导入 | `import { OUTDOOR_VILLAGE, BATTLE_DEFS }` | `import { Game }` | 移除硬编码场景依赖 |
+| 初始化调用 | `await game.init(OUTDOOR_VILLAGE, BATTLE_DEFS)` | `await game.init()` | 改为无参数，由内部决定起点 |
+
+#### 文件：`scripts/Game.js`
+
+**变更说明**：
+1. **导入变更**：
+   - ❌ 移除：`import { ALL_SCENES, OUTDOOR_VILLAGE }`
+   - ✅ 新增：`import { resolveSceneDef, getSceneDefSync }`
+
+2. **init() 方法重构**：
+   ```javascript
+   // 旧：async init(sceneDef, battleDefs)
+   // 新：async init()
+   async init() {
+       const sceneId = this.worldState.currentSceneId;
+       const sceneDef = await resolveSceneDef(sceneId);
+       await this.scene.init(sceneDef, BATTLE_DEFS);
+   }
+   ```
+
+3. **resetWorldState() 增强**：
+   - 新增：`this.worldState.currentSceneId = "prologue"`
+   - 新增：`this.worldState.currentSpawnId = null`
+
+4. **questManager.onStateChange 优化**：
+   - SpawnId 优先级：`worldState.currentSpawnId` → 场景第一个 → "house_door" 兜底
+
+5. **restoreCheckpoint() 同步化**：
+   - 旧：`ALL_SCENES[cp.sceneId]`
+   - 新：`getSceneDefSync(cp.sceneId)`
+
+---
+
+### 🏗️ 组件 3：场景初始化容错（Scene）
+
+#### 文件：`scripts/Scene.js`
+
+**变更说明**：
+移除强制依赖 `battleDefs["battle_field_1"]` 的兜底逻辑，改为使用默认配置：
+
+| 配置项 | 默认值 | 用途 |
+|--------|--------|------|
+| `DEFAULT_DUEL_CAMERA` | `zoomMinDistance: 3.2`, `zoomMaxDistance: 6.4`, `targetAspect: 16/9` 等 | 无战斗场景的相机配置 |
+| `DEFAULT_STAGE_BOUNDS` | `minX: -8, maxX: 8, minY: -0.05, maxY: 0.05` | 无战斗场景的舞台边界 |
+
+**逻辑流程**：
+```javascript
+const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
+
+if (firstBattleTrigger) {
+    // 有战斗：使用 battleDefs 配置
+    const battleDef = battleDefs[firstBattleTrigger.battleId];
+    stageBounds = battleDef.stageBounds;
+    duelCameraCfg = battleDef.duelCamera;
+} else {
+    // 无战斗：使用默认配置
+    stageBounds = DEFAULT_STAGE_BOUNDS;
+    duelCameraCfg = DEFAULT_DUEL_CAMERA;
+}
+```
+
+---
+
+### 🏗️ 组件 4：外部化场景定义（prologue.json）
+
+#### 新增文件：`Data/SceneDefs/prologue.json`
+
+**场景配置概览**：
+
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| `id` | `"prologue"` | 场景标识 |
+| `camera.defaultRig` | `"explore"` | 默认探索相机 |
+| `entities[0].archetype` | `"hero_longsword"` | 主角类型 |
+| `entities[0].pos` | `[0, 0]` | 主角初始位置 |
+
+**三层视差环境结构**：
+
+| 层级 | Layer ID | Z 轴 | 视差系数 | 内容元素 |
+|------|----------|-----|----------|----------|
+| 背景 | BG_FAR | 40 | 0.15 | skybase（天空） |
+| 中景 | MID | 20 | 0.91 | AcientRuin_layer1 + layer2（遗迹） |
+| 前景 | STAGE | 10 | 1.0 | grassbase + grasstop + AcientRuin（草地+遗迹） |
+
+**行走区域**：
+- `minX: -6.75, maxX: 9.98`
+- `minY: -2, maxY: 1`
+
+---
+
+### 🏗️ 组件 5：世界状态扩展（WorldState）
+
+#### 文件：`scripts/WorldState.js`
+
+| 新增字段 | 类型 | 默认值 | 说明 |
+|----------|------|--------|------|
+| `currentSceneId` | string | `"prologue"` | 当前场景 ID |
+| `currentSpawnId` | string\|null | `null` | 当前生成点 ID（null = 使用场景默认） |
+
+---
+
+### 🏗️ 组件 6：硬编码场景注册（SceneDefs）
+
+#### 文件：`scripts/SceneDefs.js`
+
+**变更说明**：
+1. **新增头部注释**：说明硬编码保留原因（兼容性 + 工厂函数 + BattleDef 函数化限制）
+2. **自动注册**：文件末尾添加 `Object.values(ALL_SCENES).forEach(def => registerScene(def.id, def))`
+
+**保留原因**：
+- 兼容已有的 `outdoor_village` / `house_interior` 测试场景
+- 提供 `createEntityFromDef` 工厂函数（本质是代码，非数据）
+- BattleDef 因 `enterSequence` 是函数，暂无法 JSON 化
+
+---
+
+### 🏗️ 组件 7：探索模式场景切换（ExploreMode）
+
+#### 文件：`scripts/Systems/Modes/ExploreMode.js`
+
+**变更说明**：
+- 旧：`const targetDef = ALL_SCENES[triggerDef.targetScene]`
+- 新：`const targetDef = getSceneDefSync(triggerDef.targetScene)`
+
+---
+
+### 🏗️ 组件 8：文档更新（计划与上下文）
+
+#### 文件：`plans/INDEX.md`
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| Prologue 场景与数据流重构 | Prologue 场景落地 + 入口解耦 | Step 1-5 全部完成；Step 6（BattleDef 外部化）留待战斗场景 |
+
+#### 文件：`PROJECT_CONTEXT.md`
+- 新增 `SceneDefRegistry` 模块说明
+- 新增 `prologue.json` 说明
+- 记录 2026-06-29 完成事项
+
+#### 新增归档：`plans/archived/Prologue 场景与数据流重构概要设计.MD`
+- 完整的设计决策文档（219 行）
+- 包含决策清单、现状问题、目标架构、分步实施、影响面、验证清单
+
+---
+
+## ⚠️ 影响与风险评估
+
+### 🚨 破坏性变更
+
+| 变更项 | 影响 | 缓解措施 |
+|--------|------|----------|
+| `Game.init()` 参数取消 | 所有调用方需更新 | ✅ 已更新 `character_demo.js` |
+| `ALL_SCENES` 导出移除 | 依赖全局常量的代码需修改 | ✅ 已迁移到 `SceneDefRegistry` |
+| 默认起点改为 `prologue` | 新游戏不再从 `OUTDOOR_VILLAGE` 启动 | ✅ 符合设计预期 |
+
+### 🧪 测试建议
+
+#### 必测场景：
+1. **新游戏启动**：
+   - ✅ 验证默认场景为 `prologue`
+   - ✅ 主角在 `(0, 0)` 出生
+   - ✅ 三层视差正常显示（BG_FAR / MID / STAGE）
+   - ✅ 方向键移动正常，相机跟随正常
+
+2. **场景切换**：
+   - ✅ `outdoor_village` ↔ `house_interior` 双向切换仍正常
+   - ✅ 检查点恢复后 spawnId 正确
+
+3. **容错场景**：
+   - ✅ 无战斗触发器的场景不会因 `battleDefs["battle_field_1"]` 不存在而崩溃
+   - ✅ 控制台无相关 warning
+
+#### 可选测试：
+- 视差滚动效果确认（layer1/layer2 远近关系）
+- 现有测试场景（`outdoor_village` / `house_interior`）回归测试
+
+---
+
+## 📋 配置参数总表
+
+### WorldState 新增字段
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `currentSceneId` | `string` | `"prologue"` | 当前场景 ID |
+| `currentSpawnId` | `string \| null` | `null` | 当前生成点 ID |
+
+### 默认战斗配置（无触发器时）
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| `zoomMinDistance` | `3.2` | 最小缩放距离 |
+| `zoomMaxDistance` | `6.4` | 最大缩放距离 |
+| `orthoMinWidth` | `16` | 正交相机最小宽度 |
+| `orthoMaxWidth` | `32` | 正交相机最大宽度 |
+| `targetAspect` | `16/9` | 目标宽高比 |
+| `stageBounds.minX` | `-8` | 舞台边界最小 X |
+| `stageBounds.maxX` | `8` | 舞台边界最大 X |
+
+### Prologue 视差层级
+| 层级 | Z | 视差系数 | 循环 X | 渲染组 |
+|------|---|----------|--------|--------|
+| BG_FAR | 40 | 0.15 | true | 0 |
+| MID | 20 | 0.91 | false | 0 |
+| STAGE | 10 | 1.0 | false | 1 |
+
+---
+
+## 📝 待办事项（未完成部分）
+
+根据归档设计文档，**Step 6 留待战斗场景开发时完成**：
+
+1. **BattleDef 外部化**：
+   - 将 `enterSequence` 函数改为数据化（`{ battleDefId: "xxx" }`）
+   - 新增 `Data/BattleDefs/*.json` + `BattleDefRegistry.js`
+
+2. **组件延迟创建**：
+   - `StageBoundary` / `DuelCameraRig` 延迟到 `BattleMode.enter` 创建
+   - 移除 `Scene.init` 的 `battleDefs` 参数
+
+3. **清理过渡代码**：
+   - 移除 `sharedContext.battleDefs`
+   - 移除 `Game.init` 的 `BATTLE_DEFS` 传递

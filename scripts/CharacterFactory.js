@@ -1,6 +1,7 @@
 import { CombatCharacter } from "./Enties/CombatCharacter.js";
 import { NpcCharacter } from "./Enties/NpcCharacter.js";
 import { PickableEntity } from "./Enties/PickableEntity.js";
+import { PropEntity } from "./Enties/PropEntity.js";
 
 const DEFAULT_CHARACTER_OPTIONS = {
     pxToWorld: 0.03,
@@ -419,6 +420,73 @@ export function createBardNpc(scene, assets) {
         },
         rootMotion: assets.rootMotion?.npc?.bard ?? null,
         occupancy: assets.occupancy?.npc?.bard ?? null
+    });
+}
+
+export function createCompanionNpc(scene, assets) {
+    const charlotteAtlas = assets.atlas?.companion?.charlotte;
+    const spriteUrl = "./Art/Sprite/NPCs/Charlotte.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "companion",
+        kind: "npc",
+        blocksMovement: false,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        walkSpeed: 1.1,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "idle", loop: true },
+                walk: { clip: "walk", loop: true },
+                observe: { clip: "observe", loop: true }
+            }
+        },
+        clips: {
+            idle: { spriteSheetUrl: spriteUrl, atlasData: charlotteAtlas, loop: true },
+            walk: { spriteSheetUrl: spriteUrl, atlasData: charlotteAtlas, loop: true },
+            observe: { spriteSheetUrl: spriteUrl, atlasData: charlotteAtlas, loop: true }
+        },
+        rootMotion: assets.rootMotion?.companion?.charlotte ?? null,
+        occupancy: assets.occupancy?.companion?.charlotte ?? null
+    });
+}
+
+export function createPropEntity(scene, assets, entityDef) {
+    const csAtlas = assets.atlas?.csChars;
+    const csRootMotion = assets.rootMotion?.csChars;
+    const spriteBase = "./Art/Sprite/CS_Chars";
+    const rmBase = "./Data/RootMotion/CS_Chars";
+    const propKey = entityDef?.propKey ?? "prologue_rabble_flee";
+
+    function buildClip(idx, mode) {
+        const key = `${propKey}${idx}`;
+        return {
+            spriteSheetUrl: `${spriteBase}/${key}.png`,
+            atlasData: csAtlas?.[key],
+            rootMotionUrl: `${rmBase}/${key}.json`,
+            rootMotion: csRootMotion?.[key],
+            mode
+        };
+    }
+
+    const pos = entityDef?.pos ?? [0, 0, 0];
+    return new PropEntity(scene, {
+        id: entityDef?.id ?? `prop_${Date.now()}`,
+        name: entityDef?.name ?? entityDef?.id ?? "prop",
+        pos,
+        pxToWorld: 0.03,
+        frameWidth: 128,
+        frameHeight: 128,
+        initialClip: entityDef?.initialClip ?? "idle",
+        clips: {
+            idle: buildClip(0, "hold"),
+            fall: buildClip(1, "loop"),
+            land: buildClip(2, "hold"),
+            run:  buildClip(3, "loop")
+        }
     });
 }
 

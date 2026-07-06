@@ -16,6 +16,9 @@ export class ExploreMode extends BaseMode {
         this.interactables = [];
         this.renderables = [];
         this.pickables = [];
+        this.props = [];
+        this._playedCutsceneIds = new Set();
+        this._cutsceneTimers = new Map();
         this._collisionSystem = new ExploreCollisionSystem();
         this._pickupSequence = null;
         this._giveSequence = null;
@@ -24,6 +27,7 @@ export class ExploreMode extends BaseMode {
     fixedUpdate(dtMs, tickCount) {
         const { inputSystem, playerController, character, sceneSequencer } = this.context;
 
+        this.#updateCutsceneInvokers(dtMs);
         this.#syncTriggerEnabled();
         this.#updateSceneSwitchTrigger(character, tickCount);
         this.#checkBattleTrigger(character, sceneSequencer);
@@ -52,6 +56,10 @@ export class ExploreMode extends BaseMode {
         this.#updatePickupSequence(character);
         this.#updateGiveSequence(character, dtMs);
         this.#updateDialogueBubble();
+
+        for (const prop of this.props) {
+            prop.fixedUpdate(dtMs);
+        }
     }
 
     #checkInteraction(character, tickCount) {
@@ -279,6 +287,7 @@ export class ExploreMode extends BaseMode {
         this._setupDrawOrderDebug();
         this._setupPerCharacterStencil();
         this._collisionSystem.createDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
+        this._registerSequenceHandlers();
     }
 
     exit() {
@@ -287,6 +296,99 @@ export class ExploreMode extends BaseMode {
             character.setFacingMode(FACING_MODE.LOCKED);
         }
         this._collisionSystem.disposeDebugMeshes();
+        this._unregisterSequenceHandlers();
+    }
+
+    _registerSequenceHandlers() {
+        const handlers = this.context.sequenceHandlers;
+        if (!handlers) return;
+        handlers.set("disposeProp", (ctx, clip) => this.#handleDisposeProp(ctx, clip));
+        handlers.set("showCompanionBubble", (ctx, clip) => this.#handleShowCompanionBubble(ctx, clip));
+        handlers.set("hideCompanionBubble", (ctx, clip) => this.#handleHideCompanionBubble(ctx, clip));
+        handlers.set("enterCompanionFollowing", (ctx, clip) => this.#handleEnterCompanionFollowing(ctx, clip));
+    }
+
+    _unregisterSequenceHandlers() {
+        const handlers = this.context.sequenceHandlers;
+        if (!handlers) return;
+        handlers.delete("disposeProp");
+        handlers.delete("showCompanionBubble");
+        handlers.delete("hideCompanionBubble");
+        handlers.delete("enterCompanionFollowing");
+    }
+
+    #updateCutsceneInvokers(dtMs) {
+        const { sceneDef, worldState, sceneSequencer, scene } = this.context;
+        if (!sceneDef?.cutsceneInvokers?.length || !worldState) return;
+        if (sceneSequencer?.isBusy()) return;
+
+        for (const invoker of sceneDef.cutsceneInvokers) {
+            if (this._playedCutsceneIds.has(invoker.id)) continue;
+            const flagKey = invoker.flagOnPlay;
+            if (flagKey && worldState.flags[flagKey]) {
+                this._playedCutsceneIds.add(invoker.id);
+                continue;
+            }
+            const ok = scene?._evaluateCondition(invoker.condition, worldState) ?? true;
+            if (!ok) continue;
+
+            let timer = this._cutsceneTimers.get(invoker.id);
+            if (!timer) {
+                timer = { remainingMs: invoker.armDelayMs ?? 500 };
+                this._cutsceneTimers.set(invoker.id, timer);
+                console.log(`[ExploreMode] cutscene "${invoker.id}" armed, firing in ${timer.remainingMs}ms`);
+            }
+            timer.remainingMs -= dtMs;
+            if (timer.remainingMs > 0) continue;
+
+            this._cutsceneTimers.delete(invoker.id);
+            this._playedCutsceneIds.add(invoker.id);
+            if (flagKey) worldState.flags[flagKey] = true;
+            console.log(`[ExploreMode] cutscene "${invoker.id}" firing, fetching ${invoker.sequenceUrl}`);
+            fetch(invoker.sequenceUrl, { cache: "no-cache" })
+                .then(r => r.json())
+                .then(seq => {
+                    console.log(`[ExploreMode] cutscene sequence loaded: ${seq.id}`);
+                    sceneSequencer.play(seq);
+                })
+                .catch(err => console.warn(`[ExploreMode] cutscene sequence load failed: ${invoker.sequenceUrl}`, err));
+        }
+    }
+
+    #handleDisposeProp(_ctx, _clip) {
+        for (let i = this.props.length - 1; i >= 0; i--) {
+            const prop = this.props[i];
+            if (prop.kind === "prop") {
+                console.log(`[ExploreMode] disposeProp: ${prop.id}`);
+                prop.dispose?.();
+                this.props.splice(i, 1);
+            }
+        }
+        for (let i = this.renderables.length - 1; i >= 0; i--) {
+            if (this.renderables[i].kind === "prop") {
+                this.renderables.splice(i, 1);
+            }
+        }
+    }
+
+    #handleShowCompanionBubble(_ctx, _clip) {
+        const companion = this.interactables.find(n => n.id === "companion");
+        const bubble = this.context.dialogueBubble;
+        if (!companion || !bubble) return;
+        bubble.setText("!");
+        bubble.show(companion);
+    }
+
+    #handleHideCompanionBubble(_ctx, _clip) {
+        this.context.dialogueBubble?.hide();
+    }
+
+    #handleEnterCompanionFollowing(_ctx, _clip) {
+        const companion = this.interactables.find(n => n.id === "companion");
+        if (companion?.npcController && companion.npcController.state !== "following") {
+            companion.npcController.enterFollowing(companion);
+            console.log("[ExploreMode] companion enterFollowing triggered by sequence");
+        }
     }
 
     _buildIndices() {
@@ -298,6 +400,7 @@ export class ExploreMode extends BaseMode {
         this.interactables.length = 0;
         this.renderables.length = 0;
         this.pickables.length = 0;
+        this.props.length = 0;
 
         for (const entity of entityPool) {
             if (entity.kind === "player") {
@@ -311,6 +414,9 @@ export class ExploreMode extends BaseMode {
             }
             if (entity.kind === "pickable" && !entity.isDisposed) {
                 this.pickables.push(entity);
+            }
+            if (entity.kind === "prop") {
+                this.props.push(entity);
             }
             if (entity.spritePlane) {
                 this.renderables.push(entity);
@@ -707,7 +813,12 @@ export class ExploreMode extends BaseMode {
                     }
                 } else {
                     if (seq.controller._pendingAction && this.context.questManager) {
-                        this.context.questManager.executeAction(seq.controller._pendingAction);
+                        const action = seq.controller._pendingAction;
+                        if (Array.isArray(action)) {
+                            this.context.questManager.executeDirectives(action);
+                        } else {
+                            this.context.questManager.executeAction(action);
+                        }
                     }
                     this.context.inventoryBar?.update(this.context.inventoryManager?.items ?? []);
                     if (dialogueBubble) dialogueBubble.hide();

@@ -298,15 +298,41 @@ const ACTION_HANDLERS = {
                 console.warn(`[TimelineSequencer] command: actor not found`);
                 return;
             }
+            // pushCommand 失败时 fallback 到 enterState（支持无 transitions 的 actor，如 PropEntity / companion）
             if (typeof actor.pushCommand === "function") {
                 const accepted = actor.pushCommand(clip.command);
-                if (!accepted) {
-                    // console.error(`[TimelineSequencer] command "${clip.command}" rejected — no transition in state "${actor.currentStateName}" accepts this command`);
+                if (!accepted && typeof actor.enterState === "function") {
+                    actor.enterState(clip.command);
                 }
             } else if (typeof actor.enterState === "function") {
                 actor.enterState(clip.command);
             } else {
                 console.warn(`[TimelineSequencer] command: actor has no pushCommand or enterState`);
+            }
+        }
+    },
+
+    callback: {
+        start(ctx, clip, track) {
+            const fn = clip.fn;
+            if (!fn) {
+                console.warn(`[TimelineSequencer] callback: clip.fn missing`);
+                return;
+            }
+            let handler;
+            if (typeof fn === "function") {
+                handler = fn;
+            } else if (typeof fn === "string" && ctx.sequenceHandlers) {
+                handler = ctx.sequenceHandlers.get(fn);
+            }
+            if (typeof handler !== "function") {
+                console.warn(`[TimelineSequencer] callback: handler not found for fn=${fn}`);
+                return;
+            }
+            try {
+                handler(ctx, clip);
+            } catch (e) {
+                console.error(`[TimelineSequencer] callback handler "${fn}" threw:`, e);
             }
         }
     },

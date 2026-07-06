@@ -6,18 +6,48 @@
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",
     "outroSequenceUrl": "Data/Sequences/prologue_outro.json",
+    "cutsceneInvokers": [
+        {
+            "id": "prologue_prop_and_follow",
+            "sequenceUrl": "Data/Sequences/prologue_cs_rabble_flee.json",
+            "armDelayMs": 500,
+            "flagOnPlay": "prologue_prop_played",
+            "condition": {
+                "scenarioMin": 105,
+                "flagNot": "prologue_prop_played"
+            }
+        }
+    ],
     "entities": [
         {
             "archetype": "hero_longsword",
             "id": "hero",
             "name": "hero",
             "kind": "player",
-            "pos": [0, 0],
+            "pos": [-8, 0],
             "controller": "player"
+        },
+        {
+            "archetype": "npc_companion",
+            "id": "companion",
+            "name": "Charlotte",
+            "kind": "npc",
+            "pos": [-10, 0, 0],
+            "controller": "npc"
+        },
+        {
+            "archetype": "prop",
+            "id": "prop_faller",
+            "name": "prop_faller",
+            "kind": "prop",
+            "pos": [-1.2, 1, 0],
+            "controller": "none",
+            "initialClip": "idle",
+            "spawnIf": { "flagNot": "prologue_prop_played" }
         }
     ],
     "walkArea": {
-        "minX": -6.75,
+        "minX": -10.75,
         "maxX": 9.98,
         "minY": -2,
         "maxY": 1

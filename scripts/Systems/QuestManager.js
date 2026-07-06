@@ -1,3 +1,5 @@
+import { getItemDef } from "../../Data/ItemDefs.js";
+
 export class QuestManager {
     constructor(worldState, inventoryManager = null) {
         this.world = worldState;
@@ -56,6 +58,28 @@ export class QuestManager {
     executeAction(actionName) {
         if (typeof this[actionName] === "function") {
             this[actionName]();
+        }
+    }
+
+    executeDirectives(directives) {
+        if (!Array.isArray(directives)) return;
+        for (const d of directives) {
+            switch (d.type) {
+                case "advanceScenario": this.advanceTo(d.value); break;
+                case "setScenario": this.setScenario(d.value); break;
+                case "setFlag": this.setFlag(d.key, d.value ?? true); break;
+                case "clearFlag": this.setFlag(d.key, false); break;
+                case "startQuest": this.startQuest(d.id); break;
+                case "setQuestStage": this.setQuestStage(d.id, d.stage); break;
+                case "completeQuest": this.completeQuest(d.id); break;
+                case "removeItem": this.inventory?.removeItem(d.item); break;
+                case "addItem": {
+                    const itemDef = getItemDef(d.item);
+                    if (itemDef) this.inventory?.addItem(itemDef);
+                    break;
+                }
+                default: console.warn(`[QuestManager] unknown directive: ${d.type}`);
+            }
         }
     }
 

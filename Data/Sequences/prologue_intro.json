@@ -35,7 +35,7 @@
       "channel": "movement",
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": 2, "y": 0, "speed": 1.5 },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -3, "y": 0, "speed": 1.5 },
         { "type": "inputLock", "atMs": 5500, "locked": false }
       ]
     },
@@ -45,7 +45,7 @@
       "binding": { "actorId": "companion" },
       "channel": "movement",
       "clips": [
-        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -2, "y": 0, "speed": 1.4 }
+        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -4, "y": 0, "speed": 1.4 }
       ]
     },
     {

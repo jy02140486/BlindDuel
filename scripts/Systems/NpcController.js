@@ -1,3 +1,5 @@
+import { FollowingBehavior } from "./NpcBehaviors/FollowingBehavior.js";
+
 export class NpcController {
     constructor(worldState, npcDef, options = {}) {
         this.world = worldState;
@@ -17,6 +19,8 @@ export class NpcController {
         this._pendingGiveItem = null;
         this._pendingAction = null;
         this._pendingCompleteText = null;
+        this._behavior = null;
+        this._followingBehavior = null;
     }
 
     update(dtMs, npc, context) {
@@ -28,6 +32,15 @@ export class NpcController {
 
         this._inventoryManager = context.inventoryManager ?? this._inventoryManager;
         this._dialogueBubble = context.dialogueBubble ?? this._dialogueBubble;
+
+        if (this._behavior) {
+            this._behavior.update(dtMs, npc, context);
+            if (this._debugDisc && this._debugRootNode) {
+                this._debugDisc.position.x = this._debugRootNode.position.x;
+                this._debugDisc.position.y = this._debugRootNode.position.y;
+            }
+            return;
+        }
 
         const dx = player.root.position.x - npc.root.position.x;
         const dy = player.root.position.y - npc.root.position.y;
@@ -95,6 +108,7 @@ export class NpcController {
     enterIdle(npc) {
         this.state = "idle";
         this.stateElapsedMs = 0;
+        this._behavior = null;
         if (this._dialogueBubble) {
             this._dialogueBubble.hide();
         }
@@ -103,6 +117,15 @@ export class NpcController {
         } else {
             console.warn("[NpcController] NPC has no 'idle' state!");
         }
+    }
+
+    enterFollowing(npc) {
+        this.state = "following";
+        if (!this._followingBehavior) {
+            this._followingBehavior = new FollowingBehavior();
+        }
+        this._behavior = this._followingBehavior;
+        this._behavior.enter(npc, { dialogueBubble: this._dialogueBubble });
     }
 
 
@@ -136,7 +159,11 @@ export class NpcController {
 
     _triggerAction(questManager) {
         if (this._activeAction && questManager) {
-            questManager.executeAction(this._activeAction);
+            if (Array.isArray(this._activeAction)) {
+                questManager.executeDirectives(this._activeAction);
+            } else {
+                questManager.executeAction(this._activeAction);
+            }
         }
         this._activeText = null;
         this._activeAction = null;
