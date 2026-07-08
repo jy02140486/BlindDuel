@@ -8,18 +8,18 @@ export class QuestManager {
     }
 
     setScenario(value) {
-        this.world.scenario = value;
+        this.world.setScenario(value);
     }
 
     advanceTo(milestone) {
         if (milestone > this.world.scenario) {
-            this.world.scenario = milestone;
+            this.world.setScenario(milestone);
             this.onStateChange?.();
         }
     }
 
     setFlag(key, value) {
-        this.world.flags[key] = value;
+        this.world.setFlag(key, value);
         this.onStateChange?.();
     }
 

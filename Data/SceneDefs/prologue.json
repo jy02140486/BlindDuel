@@ -44,6 +44,15 @@
             "controller": "none",
             "initialClip": "idle",
             "spawnIf": { "flagNot": "prologue_prop_played" }
+        },
+        {
+            "archetype": "rabble_stick",
+            "id": "enemy_1",
+            "name": "rabble_stick",
+            "kind": "enemy",
+            "pos": [6, 0, 0],
+            "controller": "test",
+            "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
         }
     ],
     "walkArea": {
@@ -54,7 +63,8 @@
     },
     "spawns": {
         "house_door": [-1, -1, 0],
-        "from_prologue": [6, 0, 0]
+        "from_prologue": [6, 0, 0],
+        "intro_start": [-20, 0, 0]
     },
     "triggers": [
         {
@@ -66,6 +76,16 @@
             "targetScene": "outdoor_village",
             "targetSpawn": "house_door",
             "debugColor": [1, 0.5, 0],
+            "debugVisible": true
+        },
+        {
+            "type": "battle",
+            "id": "bt_prologue",
+            "pos": [4, 0, 0],
+            "size": [2, 2, 2],
+            "battleId": "prologue_battle",
+            "condition": { "flagNot": "prologue_battle", "scenarioMin": 105 },
+            "debugColor": [0, 1, 0],
             "debugVisible": true
         }
     ],

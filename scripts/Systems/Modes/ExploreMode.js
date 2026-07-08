@@ -356,6 +356,8 @@ export class ExploreMode extends BaseMode {
     }
 
     #handleDisposeProp(_ctx, _clip) {
+        const entityPool = this.context.entityPool;
+        // 1. 释放 prop 的 GPU 资源，并从 exploreMode.props 移除（fixedUpdate 列表）
         for (let i = this.props.length - 1; i >= 0; i--) {
             const prop = this.props[i];
             if (prop.kind === "prop") {
@@ -364,9 +366,18 @@ export class ExploreMode extends BaseMode {
                 this.props.splice(i, 1);
             }
         }
+        // 2. 从 exploreMode.renderables 移除（本帧绘制列表）
         for (let i = this.renderables.length - 1; i >= 0; i--) {
             if (this.renderables[i].kind === "prop") {
                 this.renderables.splice(i, 1);
+            }
+        }
+        // 3. 从 scene.entityPool 移除（持久实体清单）—— 防止 _buildIndices 重新收集已 dispose 的 prop
+        if (entityPool) {
+            for (let i = entityPool.length - 1; i >= 0; i--) {
+                if (entityPool[i].kind === "prop") {
+                    entityPool.splice(i, 1);
+                }
             }
         }
     }
@@ -415,7 +426,7 @@ export class ExploreMode extends BaseMode {
             if (entity.kind === "pickable" && !entity.isDisposed) {
                 this.pickables.push(entity);
             }
-            if (entity.kind === "prop") {
+            if (entity.kind === "prop" && !entity.isDisposed) {
                 this.props.push(entity);
             }
             if (entity.spritePlane) {

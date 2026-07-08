@@ -315,6 +315,8 @@ export class Game {
         this._playIntro(sceneDef);
 
         newScene._loading = false;
+        this.worldState.currentSceneId = sceneDef.id;
+        this.worldState.currentSpawnId = spawnId;
         console.log("[Game] _loadSceneInternal done, new scene=", sceneDef.id);
     }
 

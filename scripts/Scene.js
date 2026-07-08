@@ -43,6 +43,13 @@ export class Scene {
         this._loading = true;
         this.tickCount = 0;
         this.entityPool = [];
+        this._pendingSpawns = [];
+        this._unsubscribeWorldState = null;
+        this._actorRegistry = null;
+        this._entityById = null;
+        this._sceneAssets = null;
+        this._sceneDef = null;
+        this._rabbleControllerBound = false;
     }
 
     async init(sceneDef, battleDefs = {}) {
@@ -75,9 +82,15 @@ export class Scene {
         }
 
         // --- 从 SceneDef 创建实体 ---
-        const entityById = new Map();
+        this._sceneDef = sceneDef;
+        this._sceneAssets = assets;
+        this._entityById = new Map();
+        this._pendingSpawns = [];
         for (const entityDef of sceneDef.entities) {
             if (!this._evaluateCondition(entityDef.spawnIf, this.worldState)) {
+                if (entityDef.spawnIf) {
+                    this._pendingSpawns.push(entityDef);
+                }
                 continue;
             }
             // 跳过已拾取的物品
@@ -85,13 +98,10 @@ export class Scene {
                 const collected = this.worldState.sceneStates?.[sceneDef.id]?.pickables?.[entityDef.id];
                 if (collected) continue;
             }
-            const entity = createEntityFromDef(this.scene, assets, entityDef);
-            this.entityPool.push(entity);
-            entityById.set(entity.id, entity);
-            if (entity.name) entityById.set(entity.name, entity);
+            this._spawnEntity(entityDef);
         }
-        const character = entityById.get("hero");
-        const rabbleStick = entityById.get("enemy_1");
+        const character = this._entityById.get("hero");
+        const rabbleStick = this._entityById.get("enemy_1");
 
         // --- 临时：只加载 hero 时，rabbleStick 可能不存在 ---
         // TODO: 恢复多实体后删除这行
@@ -126,16 +136,7 @@ export class Scene {
         console.log("[Scene] B8: using game.inputSystem + game.playerController");
         character.buffsProvider = this.playerController;
         if (rabbleStick) {
-            const rabbleDef = sceneDef.entities.find(e => e.id === "enemy_1" || e.kind === "enemy");
-            const controllerType = rabbleDef?.controller ?? "dummy";
-            if (controllerType === "test") {
-                const archetype = rabbleDef?.archetype ?? "";
-                const scriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
-                const scriptConfig = assets?.testScripts?.[scriptKey] ?? {};
-                this.rabbleController = new TestController(rabbleStick, scriptConfig);
-            } else {
-                this.rabbleController = new DummyController(rabbleStick);
-            }
+            this._initRabbleController(sceneDef.entities, rabbleStick);
         } else {
             this.rabbleController = null;
         }
@@ -143,7 +144,7 @@ export class Scene {
         // NPC 控制器
         for (const entityDef of sceneDef.entities) {
             if (entityDef.controller === "npc") {
-                const npc = entityById.get(entityDef.id);
+                const npc = this._entityById.get(entityDef.id);
                 if (npc) {
                     const npcDef = getNpcDef(entityDef.id);
                     npc.npcController = new NpcController(this.worldState, npcDef);
@@ -210,6 +211,7 @@ export class Scene {
             : 0;
 
         const actorRegistry = new Map();
+        this._actorRegistry = actorRegistry;
         for (const entity of this.entityPool) {
             if (entity.id) actorRegistry.set(entity.id, entity);
             if (entity.name) actorRegistry.set(entity.name, entity);
@@ -285,6 +287,10 @@ export class Scene {
 
         this.sharedContext = sharedContext;
 
+        // init 阶段已 spawn 的 enemy_1 此时 sharedContext 才就绪，补同步 rabbleController/rabbleStick
+        if (this.rabbleController) sharedContext.rabbleController = this.rabbleController;
+        if (this.rabbleStick) sharedContext.rabbleStick = this.rabbleStick;
+
         this.sceneSequencer = this._game.sceneSequencer;
         sharedContext.sceneSequencer = this.sceneSequencer;
 
@@ -326,6 +332,13 @@ export class Scene {
             }
         };
         window.addEventListener("keydown", this._onKeyDown);
+
+        // 订阅 WorldState 变化，驱动动态 spawn
+        if (this.worldState && typeof this.worldState.onChange === "function") {
+            this._unsubscribeWorldState = this.worldState.onChange(() => this._onWorldStateChange());
+        } else {
+            console.warn(`[Scene] WorldState subscription skipped: worldState=${!!this.worldState}, onChange=${typeof this.worldState?.onChange}`);
+        }
     }
 
     togglePause() {
@@ -375,6 +388,10 @@ export class Scene {
     }
 
     dispose() {
+        if (this._unsubscribeWorldState) {
+            this._unsubscribeWorldState();
+            this._unsubscribeWorldState = null;
+        }
         if (this.entityPool) {
             for (const entity of this.entityPool) {
                 if (entity.dispose) entity.dispose();
@@ -425,6 +442,73 @@ export class Scene {
         this.battleTrigger = null;
         this.scriptedCameraTrigger = null;
         this.entityPool = null;
+    }
+
+    _spawnEntity(entityDef) {
+        // 跳过已拾取的物品
+        if (entityDef.kind === "pickable" && this.worldState) {
+            const collected = this.worldState.sceneStates?.[this._sceneDef.id]?.pickables?.[entityDef.id];
+            if (collected) return null;
+        }
+        const entity = createEntityFromDef(this.scene, this._sceneAssets, entityDef);
+        if (!entity) return null;
+        this.entityPool.push(entity);
+        this._entityById.set(entity.id, entity);
+        if (entity.name) this._entityById.set(entity.name, entity);
+        if (this._actorRegistry) {
+            if (entity.id) this._actorRegistry.set(entity.id, entity);
+            if (entity.name) this._actorRegistry.set(entity.name, entity);
+        }
+
+        // 敌人 controller 绑定（如果还没绑过）
+        if ((entityDef.id === "enemy_1" || entityDef.kind === "enemy") && !this._rabbleControllerBound) {
+            this._initRabbleController(this._sceneDef.entities, entity);
+            // sharedContext 可能在 init 阶段还未赋值，延迟同步到 sharedContext 就绪后做
+            if (this.sharedContext) {
+                this.sharedContext.rabbleController = this.rabbleController;
+                this.sharedContext.rabbleStick = entity;
+            }
+            if (this._actorRegistry) this._actorRegistry.set("enemy", entity);
+        }
+
+        // NPC controller
+        if (entityDef.controller === "npc") {
+            const npcDef = getNpcDef(entityDef.id);
+            entity.npcController = new NpcController(this.worldState, npcDef);
+            entity.npcController.setupDebugVisual(this.scene, entity.root);
+        }
+
+        // 通知 ExploreMode 重建 indices（如果在运行中）
+        if (this.exploreMode?._buildIndices) {
+            this.exploreMode._buildIndices();
+        }
+        return entity;
+    }
+
+    _initRabbleController(entityDefs, rabbleStick) {
+        const rabbleDef = entityDefs.find(e => e.id === "enemy_1" || e.kind === "enemy");
+        const controllerType = rabbleDef?.controller ?? "dummy";
+        if (controllerType === "test") {
+            const archetype = rabbleDef?.archetype ?? "";
+            const scriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
+            const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
+            this.rabbleController = new TestController(rabbleStick, scriptConfig);
+        } else {
+            this.rabbleController = new DummyController(rabbleStick);
+        }
+        this._rabbleControllerBound = true;
+    }
+
+    _onWorldStateChange() {
+        if (!this._pendingSpawns || this._pendingSpawns.length === 0) return;
+        for (let i = this._pendingSpawns.length - 1; i >= 0; i--) {
+            const def = this._pendingSpawns[i];
+            if (this._evaluateCondition(def.spawnIf, this.worldState)) {
+                this._spawnEntity(def);
+                this._pendingSpawns.splice(i, 1);
+                console.log(`[Scene] dynamic spawn: ${def.id} (spawnIf satisfied)`);
+            }
+        }
     }
 
     _evaluateCondition(cond, worldState) {

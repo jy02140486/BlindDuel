@@ -576,12 +576,31 @@ export const BATTLE_FIELD_2 = {
 };
 
 // ---------------------------------------------------------------------------
+// Prologue 专用 BattleDef（序章战斗）
+// ---------------------------------------------------------------------------
+
+export const PROLOGUE_BATTLE = {
+    id: "prologue_battle",
+    combatants: ["hero", "enemy_1"],
+    stageBounds: { minX: -4, maxX: 8, minY: -0.05, maxY: 0.05 },
+    battleYBaseline: 0,
+    onVictory: {
+        scenario: SCENARIO.BATTLE_1_COMPLETED,
+        flags: ["prologue_battle"],
+    },
+    duelCamera: BATTLE_FIELD_1.duelCamera,
+    enterSequence: BATTLE_FIELD_1.enterSequence,
+    exitSequence: BATTLE_FIELD_1.exitSequence,
+};
+
+// ---------------------------------------------------------------------------
 // BattleDef 索引（按 id 快速查找）
 // ---------------------------------------------------------------------------
 
 export const BATTLE_DEFS = {
     [BATTLE_FIELD_1.id]: BATTLE_FIELD_1,
     [BATTLE_FIELD_2.id]: BATTLE_FIELD_2,
+    [PROLOGUE_BATTLE.id]: PROLOGUE_BATTLE,
 };
 
 export const ALL_SCENES = {

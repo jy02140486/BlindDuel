@@ -132,6 +132,7 @@ export class PropEntity {
     }
 
     fixedUpdate(dtMs) {
+        if (this.isDisposed) return;
         if (!this._currentClip || !this._frames.length) return;
 
         const frame = this._frames[this._currentFrameIndex];

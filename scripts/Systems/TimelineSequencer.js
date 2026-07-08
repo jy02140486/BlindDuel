@@ -141,7 +141,7 @@ export class TimelineSequencer {
 
         if (isEvent) {
             if (justCrossedStart && !this.firedEventClipIds.has(clipId)) {
-                console.log(`[TimelineSeq] EVENT FIRE ${clipId} type=${clip.type} atMs=${startMs}`);
+                //console.log(`[TimelineSeq] EVENT FIRE ${clipId} type=${clip.type} atMs=${startMs}`);
                 this.firedEventClipIds.add(clipId);
                 const handler = this._getHandler(clip.type);
                 if (handler && typeof handler.start === "function") {
@@ -369,7 +369,7 @@ const ACTION_HANDLERS = {
                 actor.setMoveIntent({ x: dx / dist, y: dy / dist });
             }
 
-            console.log(`[TimelineSeq] moveActorTo UPDATE t=${t.toFixed(3)} pos=(${actor.root.position.x.toFixed(2)}, ${actor.root.position.y.toFixed(2)})`);
+            //console.log(`[TimelineSeq] moveActorTo UPDATE t=${t.toFixed(3)} pos=(${actor.root.position.x.toFixed(2)}, ${actor.root.position.y.toFixed(2)})`);
 
             return t < 1;
         },
@@ -446,7 +446,7 @@ const ACTION_HANDLERS = {
         update(ctx, clip, state, localMs, dtMs) {
             if (state.invalid) return false;
             const blending = state.cameraManager?.isBlending() ?? false;
-            console.log(`[TimelineSeq] cameraBlend UPDATE localMs=${localMs.toFixed(1)} isBlending=${blending} activeRig=${state.cameraManager?.activeRigId}`);
+            //console.log(`[TimelineSeq] cameraBlend UPDATE localMs=${localMs.toFixed(1)} isBlending=${blending} activeRig=${state.cameraManager?.activeRigId}`);
             return blending;
         },
         end(ctx, clip, state) {
