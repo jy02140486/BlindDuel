@@ -4,6 +4,13 @@
 
 ---
 
+## 最近归档（2026-07-08）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [commits_detailed/26.7.7 新增同伴和场景中rabblestick的flee cutscene.MD](commits_detailed/26.7.7%20新增同伴和场景中rabblestick的flee%20cutscene.MD) | Prologue Step 6：PropEntity + cutscene + companion | Charlotte 同伴 NPC + FollowingBehavior + PropEntity + cutsceneInvokers 数据驱动 + TimelineSequencer callback + QuestManager.executeDirectives |
+| [commits_detailed/26.7.8 pologue 正式制作part2.MD](commits_detailed/26.7.8%20pologue%20正式制作part2.MD) | Prologue Step 7-8：战斗 + 动态 spawn | WorldState 观察者模式 + Scene 动态实体生成 + PROLOGUE_BATTLE + PropEntity dispose 三层防御 + outro 误用 bug 修复 |
+
 ## 最近归档（2026-06-29）
 
 | 计划 | 目标 | 完成内容 |
@@ -109,17 +116,34 @@
 
 ## 快速参考：当前开发状态
 - **场景切换**：室内外双向切换已通，交互键触发（防死循环），hero HP/buffs/inventory 跨场景保持
-- **WorldState**：scenario（主线进度）+ flags（世界开关）+ quests（任务进度）+ sceneStates（持久化存储）体系完整
-- **QuestManager**：唯一写入入口，支持 scenario 推进、flag 设置、quest 阶段管理、action 执行
-- **Entity spawnIf 过滤**：实体按条件生成（scenarioMin/Max、flag、quest stage），场景切换后自动生效
+- **WorldState**：scenario + flags + quests + sceneStates 体系完整，**观察者模式**（onChange/setScenario/setFlag）驱动动态 spawn
+- **QuestManager**：唯一写入入口，支持 scenario 推进、flag 设置、quest 阶段管理、action 执行、**executeDirectives 批量指令**
+- **动态实体生成**：Scene 维护 `_pendingSpawns`，WorldState 变更时检查条件并动态 spawn + 绑定 controller + 重建索引
+- **Entity spawnIf 过滤**：实体按条件生成（scenarioMin/Max、flag、quest stage），init 时 + 运行时双重评估
 - **Trigger condition 条件化**：触发器按条件启用/禁用，ExploreMode 每帧同步
+- **PropEntity**：过场动画道具实体，hold/loop 双模式，不进 NpcController/staticBlockers/interactables
+- **同伴 NPC**：Charlotte + FollowingBehavior，基于距离的动态速度调整，cutscene 末尾 callback 激活跟随
+- **cutsceneInvokers**：SceneDef 数据驱动 cutscene 触发（condition + sequenceUrl + flagOnPlay），替代硬编码
+- **TimelineSequencer**：多 track + 10 种 clip 类型 + callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer.md`
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
-- `SceneSequencer` 已具备基础 step：`wait / moveActorTo / switchMode / startCameraBlend` 等
-- `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通（通过死亡状态触发 SceneSequencer）
+- `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
-- NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting) + occupancy` 已接入 `ExploreMode`
+- NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting/following) + occupancy`
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-07-08)
+- Prologue Step 6-8 完成并归档：`commits_detailed/26.7.7` + `26.7.8 part1/part2`
+- WorldState 观察者模式：`onChange/setScenario/setFlag/_notify`，状态变更派发通知
+- Scene 动态实体生成系统：`_pendingSpawns + _spawnEntity + _onWorldStateChange`，支持条件延迟 spawn
+- PropEntity 独立类：过场动画用，hold/loop 双模式，不进 NpcController/staticBlockers/interactables
+- Charlotte 同伴 NPC + FollowingBehavior：基于距离的动态速度调整，滞后带防抖动
+- cutsceneInvokers 数据驱动：SceneDef 配置触发条件 + sequence URL + flag，替代硬编码
+- TimelineSequencer 扩展：callback action（Map<String, Function>）+ SEND_COMMAND fallback + 用户文档 `docs/TimelineSequencer.md`
+- QuestManager.executeDirectives：批量指令执行（advanceScenario/setFlag/startQuest/removeItem 等）
+- PROLOGUE_BATTLE BattleDef：enemy_1 + bt_prologue + onVictory 回写 scenario/flag
+- PropEntity dispose 三层防御：isDisposed 守卫 + _buildIndices 过滤 + entityPool 清理
+- Bug 修复：outro 误用 prologue（worldState.currentSceneId 未同步）
 
 ## Update Log (2026-06-29)
 - Prologue 场景与数据流重构完成并归档：`Prologue 场景与数据流重构概要设计.MD` — Step 1-5 全部落地

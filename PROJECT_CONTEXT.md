@@ -28,6 +28,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - 基础实体类：`scripts/Enties/CharacterBase.js`
 - 战斗角色类：`scripts/Enties/CombatCharacter.js`
 - NPC 实体类：`scripts/Enties/NpcCharacter.js`
+- 道具实体：`scripts/Enties/PropEntity.js`（过场动画用，hold/loop 双模式，不进 NpcController）
 - 场景视觉系统：`scripts/Enties/SceneVisualSystem.js`
 - AABB 触发器：`scripts/Enties/AABBTrigger.js`
 - 行走区域：`scripts/Enties/WalkArea.js`
@@ -42,9 +43,14 @@ py -m http.server 9000 --bind 127.0.0.1
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`
 - NPC 控制器：`scripts/Systems/NpcController.js`
+- NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
+- 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
 - 时间控制系统：`scripts/Systems/TimeControlSystem.js`
 - 游戏模式管理器：`scripts/Systems/GameModeManager.js`
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）
+- 时间轴序列器：`scripts/Systems/TimelineSequencer.js`（多 track + clip + callback handler，文档见 `docs/TimelineSequencer.md`）
+- 过场序列文件：`Data/Sequences/*.json`（prologue_intro / prologue_outro / prologue_cs_rabble_flee）
+- TimelineSequencer 用户文档：`docs/TimelineSequencer.md`
 - 相机管理器：`scripts/Systems/CameraManager.js`
 - 决斗相机：`scripts/DuelCameraRig.js`
 - 探索相机：`scripts/ExploreCameraRig.js`
@@ -81,6 +87,13 @@ py -m http.server 9000 --bind 127.0.0.1
 ## 4. 动态状态
 > 当前进行中的计划与已完成事项，见 `plans/INDEX.md`。
 >
+> **最近完成（2026-07-08）**：
+> - Prologue Step 6-8 完成：PropEntity + cutsceneInvokers + Charlotte 同伴 + FollowingBehavior + PROLOGUE_BATTLE
+> - WorldState 观察者模式：onChange/setScenario/setFlag + _notify，状态变更派发通知
+> - Scene 动态实体生成系统：_pendingSpawns + _spawnEntity + _onWorldStateChange，支持条件延迟 spawn
+> - TimelineSequencer 扩展：callback action + SEND_COMMAND fallback + 用户文档
+> - Bug 修复：PropEntity dispose 三层防御、outro 误用 prologue（currentSceneId 未同步）
+
 > **最近完成（2026-06-29）**：
 > - Prologue 场景落地：WorldState 增加 currentSceneId/currentSpawnId、SceneDefRegistry 模块、Game/character_demo 入口解耦、Scene.init 无 battle trigger 容错、prologue.json 三层视差环境
 > - 计划文档归档：Prologue 场景与数据流重构概要设计
@@ -314,12 +327,17 @@ InputSystem (scripts/Systems/InputSystem.js)
 ### 9.6 WorldState / QuestManager 写入链路
 ```
 BattleMode.onVictory → questManager.advanceTo(scenario) / setFlag()
-NpcController.action  → questManager.executeAction(actionName)
+NpcController.action  → questManager.executeAction(actionName) / executeDirectives()
 ExploreMode.pickup    → questManager.markPickableCollected() / setQuestStage()
       ↓
-  WorldState (scenario / flags / quests / sceneStates)
+  QuestManager → world.setScenario() / world.setFlag()（触发 _notify）
+      ↓
+  WorldState (scenario / flags / quests / sceneStates) — 观察者模式
+      ↓
+  Scene._onWorldStateChange() → 遍历 _pendingSpawns → _spawnEntity()
       ↓
 Scene.init() 查询 → Entity spawnIf 过滤 + Trigger condition 启用/禁用
+（运行时 spawnIf 满足 → 动态 spawn + controller 绑定 + ExploreMode 重建索引）
 ```
 
 ### 9.7 场景切换链路
