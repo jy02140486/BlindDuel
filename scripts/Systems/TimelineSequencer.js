@@ -52,12 +52,22 @@ export class TimelineSequencer {
             }
         }
 
+        this._resetControlledActors();
         console.log("[TimelineSequencer] stop");
         this.busy = false;
         this.timeline = null;
         this.currentTimeMs = 0;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
+    }
+
+    _resetControlledActors() {
+        for (const state of this.activeClipStates.values()) {
+            const actor = state.actor;
+            if (actor && "controlledBySequence" in actor) {
+                actor.controlledBySequence = false;
+            }
+        }
     }
 
     clear() {
@@ -100,6 +110,7 @@ export class TimelineSequencer {
                 }
             }
         }
+        this._resetControlledActors();
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
         this.currentTimeMs = 0;
@@ -121,6 +132,7 @@ export class TimelineSequencer {
             }
         }
         console.log(`[TimelineSequencer] sequence complete: ${this.timeline.id}`);
+        this._resetControlledActors();
         this.busy = false;
         this.timeline = null;
         this.currentTimeMs = 0;
@@ -232,7 +244,7 @@ export class TimelineSequencer {
             console.warn(`[TimelineSequencer] timeline ${timeline.id} has invalid durationMs`);
         }
 
-        const intervalKeys = new Set();
+        const intervalMap = new Map();
         for (const track of timeline.tracks) {
             for (const clip of track.clips) {
                 const isEvent = "atMs" in clip;
@@ -249,12 +261,14 @@ export class TimelineSequencer {
 
                     if (track.binding && track.channel) {
                         const key = `${JSON.stringify(track.binding)}|${track.channel}`;
-                        for (const existingKey of intervalKeys) {
-                            if (existingKey === key) {
-                                console.warn(`[TimelineSequencer] overlapping interval clips on same binding+channel: ${key}`);
+                        const intervals = intervalMap.get(key) || [];
+                        for (const iv of intervals) {
+                            if (startMs < iv.endMs && endMs > iv.startMs) {
+                                console.warn(`[TimelineSequencer] overlapping interval clips on same binding+channel: ${key} [${startMs},${endMs}] vs [${iv.startMs},${iv.endMs}]`);
                             }
                         }
-                        intervalKeys.add(key);
+                        intervals.push({ startMs, endMs });
+                        intervalMap.set(key, intervals);
                     }
                 }
             }
@@ -350,6 +364,9 @@ const ACTION_HANDLERS = {
             state.startY = actor.root.position.y;
             state.targetX = clip.x ?? state.startX;
             state.targetY = clip.y ?? state.startY;
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = true;
+            }
             console.log(`[TimelineSeq] moveActorTo START from (${state.startX.toFixed(2)}, ${state.startY.toFixed(2)}) → (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) durationMs=${clip.durationMs}`);
         },
         update(ctx, clip, state, localMs, dtMs) {
@@ -369,8 +386,6 @@ const ACTION_HANDLERS = {
                 actor.setMoveIntent({ x: dx / dist, y: dy / dist });
             }
 
-            //console.log(`[TimelineSeq] moveActorTo UPDATE t=${t.toFixed(3)} pos=(${actor.root.position.x.toFixed(2)}, ${actor.root.position.y.toFixed(2)})`);
-
             return t < 1;
         },
         end(ctx, clip, state) {
@@ -380,6 +395,9 @@ const ACTION_HANDLERS = {
             actor.root.position.x = state.targetX;
             actor.root.position.y = state.targetY;
             console.log(`[TimelineSeq] moveActorTo END snap to (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) yDelta=${(state.targetY - beforeY).toFixed(3)}`);
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = false;
+            }
             if (typeof actor.setMoveIntent === "function") {
                 actor.setMoveIntent({ x: 0, y: 0 });
             }
@@ -481,7 +499,7 @@ const ACTION_HANDLERS = {
 
     switchMode: {
         start(ctx, clip, track) {
-            const gameModeManager = ctx.scene?.gameModeManager;
+            const gameModeManager = ctx.gameModeManager;
             if (!gameModeManager) {
                 console.warn("[TimelineSequencer] switchMode: gameModeManager not found");
                 return;

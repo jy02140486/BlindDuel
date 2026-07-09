@@ -1,6 +1,6 @@
 # Scene 生命周期与稳定对象上移重构-回归
 
-> **状态：待实施。** 本文档承接 `Scene 生命周期与稳定对象上移重构计划.MD`（B1-B10 已完成），记录重构后遗留的架构债分析与修复计划。
+> **状态：已完成（2026-07-08）。** §2.1-§2.4 + §2.6 已清理；§2.5 验证通过（方案 W 实施期 _loading 早退保护生效）；§2.7 暂不单独修（event clip 自管生命周期工作正常）。
 > **触发背景**：Prologue Step 2 设计主循环时序方案 W（bootstrap/init 分离）时排查发现。
 > **核心结论**：B1-B10 重构已达成"稳定对象上移"的核心目标，**无双重创建、无孤儿对象、无 DOM 泄漏**。遗留问题主要是代码整洁性与职责边界清晰度，不阻塞 Prologue 开发，但建议在 Prologue Step 2 完成后清理。
 
@@ -249,3 +249,27 @@ PlayerController 即使 `enabled=false`（inputLock），其 fixedUpdate 仍调 
 2. **Prologue Step 2 完成后做 §2.1+§2.4**：作为独立小重构，用 Step 2 的分层验证当回归
 3. **§2.2/§2.3 任意时机顺手清**：风险低，可单独 commit
 4. **§2.5 在 Step 2 实施时顺带验证**：若 Layer 0 主循环提前后不崩，说明 §2.5 不是问题；若崩，单独修
+
+---
+
+## 7. 实施总结（2026-07-08）
+
+| 项 | 状态 | 实施方式 |
+|----|------|---------|
+| §2.1 别名冗余 | ✅ 完成 | 删 Scene 13 个别名字段（构造 null 初始化 + init 赋值行 + 业务方法读取改 `this._game.xxx`）；Game.bootstrap 补 sharedContext.gameModeManager；Game.js 4 处 `newScene.playerController` → `this.playerController`；SceneSequencer/TimelineSequencer 的 `ctx.scene?.gameModeManager` → `ctx.gameModeManager` |
+| §2.2 rigs 幂等冗余 | ✅ 完成 | 删 Scene.init 的 `rigs.clear()` + 3 行 `registerRig` + `activeRig/activeRigId` 重置（bootstrap 已注册，跨场景稳定） |
+| §2.3 dispose 死代码 | ✅ 完成 | 删 6 块 `!== this._game?.xxx` 判断 + `cameraManager=null`（别名移除后这些判断永远 false） |
+| §2.4 sharedContext 重复赋值 | ✅ 完成 | 删 Scene.init 里稳定对象的 sharedContext 重复赋值（Game.bootstrap 已赋）；保留 Scene 局部字段赋值 |
+| §2.5 切场景窗口期 | ✅ 验证通过 | 方案 W 实施期 _loading 早退保护生效，cameraManager.update/sceneSequencer.fixedUpdate 不访问脏字段，未崩 |
+| §2.6 sequencer/character 交互 | ✅ 完成（B-1 方案） | CharacterBase 加 `controlledBySequence` 标记；CombatCharacter._consumeTransition + BaseController.applyToCharacter 检查标记早退；TimelineSequencer/SceneSequencer 的 moveActorTo start 设 true、end 设 false + 恢复 moveIntent 写入；SceneSequencer.stop 清残留 |
+| §2.7 cameraEffect event clip | ⏸ 暂不修 | event clip 自管生命周期工作正常，等后续 sequencer/effect 职责统一时考虑 |
+
+### 附带修复
+- TimelineSequencer `_validateTimeline` 重叠检查 bug：Set→Map，真正检查时间区间重叠（原来只检查 key 重复会误报）
+- TimelineSequencer switchMode handler `ctx.scene?.gameModeManager` → `ctx.gameModeManager`（§2.1 别名移除后的遗漏修复）
+
+### §2.6 B-1 方案设计要点
+- `controlledBySequence` 只加在 CombatCharacter（唯一有 parameter-driven transition 的类型）；NpcCharacter/PropEntity 无 transition 覆盖问题，不加
+- sequencer 驱动期间：controller.applyToCharacter 早退 + _consumeTransition 早退 → moveIntent 只由 sequencer 写，walk 态不会被 moveMagnitude<=0.2 切回
+- sequencer 结束：controlledBySequence=false + moveIntent 清零 → controller 接管
+- SceneSequencer 用 `_sequencerActorSet` 追踪被标记 actor，stop 时 `_resetControlledActors` 清残留防卡死

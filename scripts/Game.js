@@ -124,6 +124,7 @@ export class Game {
         this.sharedContext.cameraManager = this.cameraManager;
 
         this.gameModeManager = new GameModeManager();
+        this.sharedContext.gameModeManager = this.gameModeManager;
         this.sceneSequencer = new SceneSequencer(this.sharedContext);
         this.sharedContext.sceneSequencer = this.sceneSequencer;
 
@@ -290,15 +291,15 @@ export class Game {
             newHero.combat.hp = restoreData?.hp ?? savedHp;
         }
 
-        if (restoreData?.buffs && newScene.playerController) {
-            newScene.playerController.buffs = restoreData.buffs;
+        if (restoreData?.buffs && this.playerController) {
+            this.playerController.buffs = restoreData.buffs;
         }
 
         if (this.inventoryBar) {
             this.inventoryBar.update(this.inventoryManager.items);
         }
-        if (newScene.playerController && this.buffBar) {
-            this.buffBar.update(newScene.playerController.buffs);
+        if (this.playerController && this.buffBar) {
+            this.buffBar.update(this.playerController.buffs);
         }
 
         const spawnPoint = sceneDef.spawns?.[spawnId];

@@ -133,6 +133,8 @@
 - 当前下一阶段重点：待从 BACKLOG 中选取
 
 ## Update Log (2026-07-08)
+- Scene 生命周期回归清理完成：§2.1 别名冗余 + §2.2 rigs 幂等 + §2.3 dispose 死代码 + §2.4 sharedContext 重复赋值 + §2.6 sequencer/character 交互（B-1 `controlledBySequence` 标记方案）；§2.5 验证通过；§2.7 暂不修
+- 附带修复：TimelineSequencer `_validateTimeline` 重叠检查 bug（Set→Map）+ switchMode handler ctx 路径遗漏
 - Prologue Step 6-8 完成并归档：`commits_detailed/26.7.7` + `26.7.8 part1/part2`
 - WorldState 观察者模式：`onChange/setScenario/setFlag/_notify`，状态变更派发通知
 - Scene 动态实体生成系统：`_pendingSpawns + _spawnEntity + _onWorldStateChange`，支持条件延迟 spawn

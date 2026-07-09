@@ -88,6 +88,7 @@ py -m http.server 9000 --bind 127.0.0.1
 > 当前进行中的计划与已完成事项，见 `plans/INDEX.md`。
 >
 > **最近完成（2026-07-08）**：
+> - Scene 生命周期回归清理：§2.1 别名冗余移除（Scene 不再持稳定对象别名，业务方法走 `this._game.xxx`）+ §2.2 rigs 幂等 + §2.3 dispose 死代码 + §2.4 sharedContext 重复赋值 + §2.6 sequencer/character 交互（`controlledBySequence` 标记，CombatCharacter 独有）
 > - Prologue Step 6-8 完成：PropEntity + cutsceneInvokers + Charlotte 同伴 + FollowingBehavior + PROLOGUE_BATTLE
 > - WorldState 观察者模式：onChange/setScenario/setFlag + _notify，状态变更派发通知
 > - Scene 动态实体生成系统：_pendingSpawns + _spawnEntity + _onWorldStateChange，支持条件延迟 spawn
@@ -133,6 +134,8 @@ py -m http.server 9000 --bind 127.0.0.1
 10. 场景切换触发器（sceneSwitch）需要玩家按交互键（E/J/手柄X）才能触发，防止室内外双向 trigger 重叠导致的死循环切换。
 11. AABBTrigger debug 网格使用 `renderingGroupId = 3` 确保渲染在最上层，不被场景元素遮挡。
 12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）已就绪，拾取时写入 + 加载时 spawnIf 过滤均已实现。
+13. Scene 不再持有稳定对象别名字段（cameraManager/cameraRig/playerController 等），业务方法统一通过 `this._game.xxx` 或 `this.sharedContext.xxx` 访问；稳定对象生命周期归 Game。
+14. CombatCharacter 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估；NpcCharacter/PropEntity 不需要（无 transition 覆盖问题）。
 
 ## 7. 当前文件结构
 ```

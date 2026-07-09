@@ -47,6 +47,10 @@ export class BaseController {
             return;
         }
 
+        if (this.character.controlledBySequence) {
+            return;
+        }
+
         if (typeof this.character.setMoveIntent === "function") {
             this.character.setMoveIntent(this.moveIntent);
         }

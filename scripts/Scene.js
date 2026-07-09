@@ -23,21 +23,10 @@ export class Scene {
         this.inventoryManager = gameContext.inventoryManager ?? new InventoryManager();
         this._game = gameContext.game ?? null;
         this.scene = null;
-        this.inputSystem = null;
-        this.playerController = null;
         this.rabbleController = null;
-        this.combatSystem = null;
-        this.cameraRig = null;
-        this.exploreCameraRig = null;
         this.sceneVisualSystem = null;
-        this.gameModeManager = null;
         this.battleMode = null;
         this.exploreMode = null;
-        this.sceneSequencer = null;
-        this.cameraManager = null;
-        this.inventoryBar = null;
-        this.buffBar = null;
-        this.hpBar = null;
         this._onKeyDown = null;
         this.paused = false;
         this._loading = true;
@@ -129,12 +118,11 @@ export class Scene {
 
         // --- 控制器 ---
         this.inputSystem = this._game.inputSystem;
-        this.playerController = this._game.playerController;
-        this.playerController.setCharacter(character);
-        this.playerController.inputSystem = this.inputSystem;
-        this.playerController.enabled = true;
+        this._game.playerController.setCharacter(character);
+        this._game.playerController.inputSystem = this._game.inputSystem;
+        this._game.playerController.enabled = true;
         console.log("[Scene] B8: using game.inputSystem + game.playerController");
-        character.buffsProvider = this.playerController;
+        character.buffsProvider = this._game.playerController;
         if (rabbleStick) {
             this._initRabbleController(sceneDef.entities, rabbleStick);
         } else {
@@ -154,7 +142,7 @@ export class Scene {
         }
 
         // --- 战斗系统与边界 ---
-        this.combatSystem = this._game.combatSystem;
+        // combatSystem/cameraRig 等 Game 稳定对象直接经 this._game 访问，不再存别名
         const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
         const DEFAULT_DUEL_CAMERA = {
             zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -188,10 +176,10 @@ export class Scene {
         this.pushboxResolver = new PushboxResolver();
 
         // --- 相机 rigs（复用 game 的，duelRig 用场景配置更新）---
-        this.cameraRig = this._game.cameraRig;
-        this.exploreCameraRig = this._game.exploreCameraRig;
-        this.scriptedCameraRig = this._game.scriptedCameraRig;
-        Object.assign(this.cameraRig, {
+        const cameraRig = this._game.cameraRig;
+        const exploreCameraRig = this._game.exploreCameraRig;
+        const scriptedCameraRig = this._game.scriptedCameraRig;
+        Object.assign(cameraRig, {
             zoomMinDistance: duelCameraCfg.zoomMinDistance,
             zoomMaxDistance: duelCameraCfg.zoomMaxDistance,
             orthoMinWidth: duelCameraCfg.orthoMinWidth,
@@ -220,13 +208,11 @@ export class Scene {
         if (rabbleStick) actorRegistry.set("enemy", rabbleStick);
 
         const controllerRegistry = new Map();
-        controllerRegistry.set("hero", this.playerController);
+        controllerRegistry.set("hero", this._game.playerController);
 
         const sharedContext = this._game.sharedContext;
         sharedContext.scene = this;
         sharedContext.babylonScene = this.scene;
-        sharedContext.inputSystem = this.inputSystem;
-        sharedContext.playerController = this.playerController;
         sharedContext.rabbleController = this.rabbleController;
         sharedContext.actorRegistry = actorRegistry;
         sharedContext.entityRegistry = actorRegistry;
@@ -236,10 +222,6 @@ export class Scene {
         sharedContext.pushboxResolver = this.pushboxResolver;
         sharedContext.stageBoundary = this.stageBoundary;
         sharedContext.walkArea = this.walkArea;
-        sharedContext.combatSystem = this.combatSystem;
-        sharedContext.cameraRig = this.cameraRig;
-        sharedContext.exploreCameraRig = this.exploreCameraRig;
-        sharedContext.scriptedCameraRig = this.scriptedCameraRig;
         sharedContext.sceneVisualSystem = this.sceneVisualSystem;
         sharedContext.entityPool = this.entityPool;
         sharedContext.cameraBasePosition = this._cameraBasePosition;
@@ -261,29 +243,14 @@ export class Scene {
         this.camera.inputs.clear();
         this.scene.activeCamera = this.camera;
 
-        this.cameraManager = this._game.cameraManager;
-        this.cameraManager.rigs.clear();
-        this.cameraManager.registerRig("duel", this.cameraRig);
-        this.cameraManager.registerRig("explore", this.exploreCameraRig);
-        this.cameraManager.registerRig("scripted", this.scriptedCameraRig);
-        this.cameraManager.activeRig = null;
-        this.cameraManager.activeRigId = null;
-        this.cameraManager.rebind(this.scene, this.camera);
-        sharedContext.cameraManager = this.cameraManager;
+        const cameraManager = this._game.cameraManager;
+        cameraManager.rebind(this.scene, this.camera);
         sharedContext.camera = this.camera;
-        this.combatSystem.cameraManager = this.cameraManager;
+        this._game.combatSystem.cameraManager = cameraManager;
         console.log("[Scene] B8: using game stable objects (combatSystem/rigs/sharedContext)");
 
-        this.inventoryBar = this._game.inventoryBar;
-        this.buffBar = this._game.buffBar;
-        this.hpBar = this._game.hpBar;
-        this.dialogueBubble = this._game.sharedContext.dialogueBubble;
         sharedContext.inventoryManager = this.inventoryManager;
         sharedContext.questManager = this.questManager;
-        sharedContext.inventoryBar = this.inventoryBar;
-        sharedContext.buffBar = this.buffBar;
-        sharedContext.hpBar = this.hpBar;
-        sharedContext.dialogueBubble = this.dialogueBubble;
 
         this.sharedContext = sharedContext;
 
@@ -291,19 +258,16 @@ export class Scene {
         if (this.rabbleController) sharedContext.rabbleController = this.rabbleController;
         if (this.rabbleStick) sharedContext.rabbleStick = this.rabbleStick;
 
-        this.sceneSequencer = this._game.sceneSequencer;
-        sharedContext.sceneSequencer = this.sceneSequencer;
-
-        this.gameModeManager = this._game.gameModeManager;
-        this.battleMode = this.gameModeManager.modes.get("battle");
-        this.exploreMode = this.gameModeManager.modes.get("explore");
+        const gameModeManager = this._game.gameModeManager;
+        this.battleMode = gameModeManager.modes.get("battle");
+        this.exploreMode = gameModeManager.modes.get("explore");
         if (!this.battleMode || !this.exploreMode) {
             this.battleMode = new BattleMode(sharedContext);
             this.exploreMode = new ExploreMode(sharedContext);
-            this.gameModeManager.registerMode(this.battleMode);
-            this.gameModeManager.registerMode(this.exploreMode);
+            gameModeManager.registerMode(this.battleMode);
+            gameModeManager.registerMode(this.exploreMode);
         }
-        this.gameModeManager.start("explore");
+        gameModeManager.start("explore");
         console.log("[Scene] B8: using game UI + sceneSequencer + gameModeManager");
 
         this._onKeyDown = (e) => {
@@ -347,11 +311,11 @@ export class Scene {
     }
 
     toggleCameraProjection() {
-        this.cameraManager?.toggleProjection();
+        this._game.cameraManager?.toggleProjection();
     }
 
     onResize() {
-        this.cameraManager?.onResize();
+        this._game.cameraManager?.onResize();
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -359,25 +323,28 @@ export class Scene {
 
         if (this.paused) return;
 
+        const sceneSequencer = this._game.sceneSequencer;
         if (this._loading) {
-            if (this.sceneSequencer) this.sceneSequencer.fixedUpdate(dtMs, tickCount);
+            if (sceneSequencer) sceneSequencer.fixedUpdate(dtMs, tickCount);
             return;
         }
 
-        this.sceneSequencer.fixedUpdate(dtMs, tickCount);
-        this.gameModeManager.fixedUpdate(dtMs, tickCount);
+        sceneSequencer.fixedUpdate(dtMs, tickCount);
+        this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
     }
 
     updateRender(dtMs) {
+        const cameraManager = this._game.cameraManager;
+        const sceneSequencer = this._game.sceneSequencer;
         if (this._loading) {
-            if (this.cameraManager) this.cameraManager.update(dtMs, this.sharedContext);
-            if (this.sceneSequencer) this.sceneSequencer.updateRender(dtMs);
+            if (cameraManager) cameraManager.update(dtMs, this.sharedContext);
+            if (sceneSequencer) sceneSequencer.updateRender(dtMs);
             return;
         }
-        this.gameModeManager.updateRender(dtMs);
-        this.sceneSequencer.updateRender(dtMs);
-        if (this.cameraManager) {
-            this.cameraManager.update(dtMs, this.sharedContext);
+        this._game.gameModeManager.updateRender(dtMs);
+        sceneSequencer.updateRender(dtMs);
+        if (cameraManager) {
+            cameraManager.update(dtMs, this.sharedContext);
         }
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
     }
@@ -405,25 +372,6 @@ export class Scene {
             window.removeEventListener("keydown", this._onKeyDown);
             this._onKeyDown = null;
         }
-        if (this.inputSystem && this.inputSystem !== this._game?.inputSystem) {
-            this.inputSystem.dispose();
-        }
-        if (this.inventoryBar && this.inventoryBar !== this._game?.inventoryBar) {
-            this.inventoryBar.dispose();
-        }
-        if (this.buffBar && this.buffBar !== this._game?.buffBar) {
-            this.buffBar.dispose();
-        }
-        if (this.hpBar && this.hpBar !== this._game?.hpBar) {
-            this.hpBar.dispose();
-        }
-        if (this.cameraRig && this.cameraRig !== this._game?.cameraRig) {
-            this.cameraRig.dispose();
-        }
-        if (this.exploreCameraRig && this.exploreCameraRig !== this._game?.exploreCameraRig) {
-            this.exploreCameraRig.dispose();
-        }
-        this.cameraManager = null;
         if (this.sceneVisualSystem) {
             this.sceneVisualSystem.dispose();
             this.sceneVisualSystem = null;

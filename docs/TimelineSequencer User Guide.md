@@ -92,9 +92,16 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `speed` | number | **未使用**，留作未来扩展 |
 | `easing` | string | 可选，目前只有 `"linear"`（默认） |
 
-**行为**：`start` 记录起点，`update` 按 `t = localMs / durationMs` 线性插值写 `root.position`，`end` snap 到目标点并清 `moveIntent`。
+**行为**：`start` 记录起点并设 `actor.controlledBySequence = true`，`update` 按 `t = localMs / durationMs` 线性插值写 `root.position` + 同步写 `moveIntent`（方向归一化），`end` snap 到目标点、清 `moveIntent`、设 `controlledBySequence = false`。
 
-**注意**：直接写 `root.position`，**绕过** moveIntent / stateGraph / `_applyMovement`。若要走路动画对得上位移，需在同一时刻先发 `command: "walk"`。
+**controlledBySequence 标记**（CombatCharacter 独有）：
+- sequencer 驱动期间，`BaseController.applyToCharacter` 和 `CombatCharacter._consumeTransition` 检查此标记早退——防止 controller 覆盖 `moveIntent`、防止 moveMagnitude 触发的 walk transition 被切回 standing/idle
+- NpcCharacter / PropEntity 不检查（无 transition 覆盖问题），标记无副作用
+- sequence 被 `stop()` / 正常 `_onComplete` / `_onLoop` 时统一兜底清标记，防残留
+
+**动画同步**：
+- **CombatCharacter**（hero/rabble）：walk 动画靠 `moveMagnitude > 0.2` 触发，sequencer 写 moveIntent 自动驱动，无需额外 command clip
+- **NpcCharacter / PropEntity**：无 transition，walk 动画需配 `command: "walk"` clip 直接 enterState
 
 ### 5.3 cameraBlend（相机切换）
 
@@ -168,6 +175,8 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `locked` | boolean | `true` 锁定（controller.enabled = false），`false` 解锁 |
 
 **解析**：通过 `track.binding.actorId` 找 controller（默认查 `playerController`）。
+
+**与 controlledBySequence 的关系**：`inputLock` 锁 controller.enabled，`controlledBySequence` 标记让 controller.applyToCharacter 早退。两者作用相似但层次不同：moveActorTo 期间自动设 controlledBySequence（细粒度，仅禁 moveIntent 写入和 transition 评估），inputLock 是粗粒度全锁（含 command 队列）。多数 sequencer 场景只需 moveActorTo 自带的 controlledBySequence，无需再配 inputLock。
 
 ### 5.7 faceWorldX（朝向）
 
@@ -334,6 +343,7 @@ sceneSequencer.stop();    // 强制停
 | clip 没触发 | 检查 `atMs` / `startMs` 是否超出 `durationMs`（会被 warn） |
 | callback 静默失效 | handler 没注册——检查 ExploreMode.enter 是否调了 `_registerSequenceHandlers` |
 | moveActorTo 不动 | binding.actorId 找不到 actor——看日志 `actor not found` |
+| sequencer 结束后角色不能控制 | controlledBySequence 未被清——检查是否走了 stop 路径（兜底清标记）|
 | cameraBlend 卡住 | 目标 rig 没注册——看 `unknown rig` warn |
 | 短命 clip 漏调 | 不会漏，sequencer 有 same-frame start+end 容错 |
 

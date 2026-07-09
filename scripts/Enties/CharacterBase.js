@@ -22,6 +22,7 @@ export class CharacterBase {
         this.currentStateDef = null;
         this.pendingCommands = [];
         this.moveIntent = { x: 0, y: 0 };
+        this.controlledBySequence = false;
         this.rootDebugVisible = this.showCollision;
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;

@@ -24,7 +24,17 @@ export class SceneSequencer {
         this._stepIndex = 0;
         this._stepState = null;
         this._busy = false;
+        this._sequencerActorSet = new Set();
         this._timelineSequencer = new TimelineSequencer(context);
+    }
+
+    _resetControlledActors() {
+        for (const actor of this._sequencerActorSet) {
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = false;
+            }
+        }
+        this._sequencerActorSet.clear();
     }
 
     isBusy() {
@@ -65,6 +75,7 @@ export class SceneSequencer {
         this._sequence = null;
         this._stepIndex = 0;
         this._stepState = null;
+        this._resetControlledActors();
     }
 
     clear() {
@@ -274,6 +285,13 @@ export class SceneSequencer {
         const actor = this._getActor(step.actorId);
         if (!actor || !actor.root) return true;
 
+        if (!this._sequencerActorSet.has(actor)) {
+            this._sequencerActorSet.add(actor);
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = true;
+            }
+        }
+
         const speed = (step.speed || 4.0) * dtMs / 1000;
         const targetX = step.x ?? actor.root.position.x;
         const targetY = step.y ?? actor.root.position.y;
@@ -286,6 +304,10 @@ export class SceneSequencer {
             actor.root.position.y = targetY;
             if (typeof actor.setMoveIntent === "function") {
                 actor.setMoveIntent({ x: 0, y: 0 });
+            }
+            this._sequencerActorSet.delete(actor);
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = false;
             }
             return true;
         }
@@ -305,7 +327,7 @@ export class SceneSequencer {
     }
 
     _switchMode(step, payload) {
-        this.context.scene.gameModeManager.switchMode(step.modeId, payload);
+        this.context.gameModeManager.switchMode(step.modeId, payload);
     }
 
     _setCameraFrame(step) {

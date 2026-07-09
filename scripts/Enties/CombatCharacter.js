@@ -416,6 +416,7 @@ export class CombatCharacter extends CharacterBase {
     }
 
     _consumeTransition() {
+        if (this.controlledBySequence) return null;
         const outsideY = this._battleYMin != null && this._battleYMax != null
             && (this.root.position.y < this._battleYMin || this.root.position.y > this._battleYMax);
         const savedY = this.moveIntent.y;
