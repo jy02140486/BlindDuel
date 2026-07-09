@@ -85,24 +85,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - 注意：旧路径 `scripts/extract_collision_boxes.ps1` 可能仍存在（文件锁），后续可再清理
 
 ## 4. 动态状态
-> 当前进行中的计划与已完成事项，见 `plans/INDEX.md`。
->
-> **最近完成（2026-07-08）**：
-> - Scene 生命周期回归清理：§2.1 别名冗余移除（Scene 不再持稳定对象别名，业务方法走 `this._game.xxx`）+ §2.2 rigs 幂等 + §2.3 dispose 死代码 + §2.4 sharedContext 重复赋值 + §2.6 sequencer/character 交互（`controlledBySequence` 标记，CombatCharacter 独有）
-> - Prologue Step 6-8 完成：PropEntity + cutsceneInvokers + Charlotte 同伴 + FollowingBehavior + PROLOGUE_BATTLE
-> - WorldState 观察者模式：onChange/setScenario/setFlag + _notify，状态变更派发通知
-> - Scene 动态实体生成系统：_pendingSpawns + _spawnEntity + _onWorldStateChange，支持条件延迟 spawn
-> - TimelineSequencer 扩展：callback action + SEND_COMMAND fallback + 用户文档
-> - Bug 修复：PropEntity dispose 三层防御、outro 误用 prologue（currentSceneId 未同步）
-
-> **最近完成（2026-06-29）**：
-> - Prologue 场景落地：WorldState 增加 currentSceneId/currentSpawnId、SceneDefRegistry 模块、Game/character_demo 入口解耦、Scene.init 无 battle trigger 容错、prologue.json 三层视差环境
-> - 计划文档归档：Prologue 场景与数据流重构概要设计
-
-> **最近完成（2026-06-24）**：
-> - WorldState 体系完整：ScenarioMilestones、sceneStates、Entity spawnIf 过滤、Trigger condition 条件化
-> - 场景切换落地：室内外双向切换、交互键触发（防死循环）、buff/inventory 跨场景保持
-> - 4 个计划文档归档：WorldState-SceneSwitch、Scene&Battle Externalize、Quest&Pickables、NPC-Quest-WorldState
+> 当前进行中的计划、已完成事项与最近归档（含 Update Log）统一见 [plans/INDEX.md](plans/INDEX.md)，不再在此重复维护，避免双份不同步。
 
 ## 5. 当前碰撞数据与约定
 1. 扫描颜色约定：
@@ -138,111 +121,7 @@ py -m http.server 9000 --bind 127.0.0.1
 14. CombatCharacter 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估；NpcCharacter/PropEntity 不需要（无 transition 覆盖问题）。
 
 ## 7. 当前文件结构
-```
-GemeniPrototype-BlindBattle/
-├── Art/
-│   ├── Environment/              # 环境资源（地面、建筑、天空等）
-│   ├── RawAssets/                # 原始源文件（.ase, .kra）
-│   │   ├── Env/
-│   │   ├── longswordman/
-│   │   ├── rabblestick/
-│   │   ├── merchant.ase
-│   │   └── traveller.ase
-│   └── Sprite/                   # 精灵图集（导出后）
-│       ├── longswordman/
-│       ├── rabble_stick/
-│       └── NPCs/
-│           ├── traveller.{json,png}
-│           └── merchant.{json,png}
-├── Data/
-│   ├── CollisionMask/            # 碰撞遮罩（战斗用）
-│   │   ├── longswordman/
-│   │   └── rabble_stick/
-│   ├── PushBox/                  # 推盒数据
-│   │   ├── longswordman/
-│   │   └── rabble_stick/
-│   ├── RootMotion/               # 根运动数据
-│   │   ├── longswordman/
-│   │   ├── rabble_stick/
-│   │   └── NPCs/
-│   │       ├── traveller.{json,png,occupancy.json}
-│   │       └── merchant.{json,png,occupancy.json}
-│   ├── ScenarioMilestones.js     # scenario 枚举常量
-│   ├── StageMask/                # 舞台遮罩数据
-│   │   └── Tavern_indoorstage.mask.json
-│   ├── StateGraphDef/            # 状态图定义
-│   │   ├── LongSwordMan.json
-│   │   ├── RabbleStick.json
-│   │   └── Merchant.json
-│   └── TestScripts/
-├── lib/                          # 第三方库
-│   └── babylon.js
-├── scripts/
-│   ├── Components/
-│   │   ├── AnimatedTileComponent.js
-│   │   ├── CollisionComponent.js
-│   │   ├── FrameAnimationComponent.js
-│   │   ├── NpcFrameComponent.js
-│   │   └── TimeControlComponent.js
-│   ├── Enties/
-│   │   ├── AABBTrigger.js
-│   │   ├── CharacterBase.js
-│   │   ├── CombatCharacter.js
-│   │   ├── NpcCharacter.js
-│   │   ├── PickableEntity.js
-│   │   ├── SceneVisualSystem.js
-│   │   └── WalkArea.js
-│   ├── Systems/
-│   │   ├── Modes/
-│   │   │   ├── BaseMode.js
-│   │   │   ├── BattleMode.js
-│   │   │   └── ExploreMode.js
-│   │   ├── AIController.js
-│   │   ├── AIKnowledgeRegistry.js
-│   │   ├── BaseController.js
-│   │   ├── CameraManager.js
-│   │   ├── CombatSystem.js
-│   │   ├── ContactResolver.js
-│   │   ├── DummyController.js
-│   │   ├── ExploreCollisionSystem.js
-│   │   ├── GameModeManager.js
-│   │   ├── InputSystem.js
-│   │   ├── InventoryManager.js
-│   │   ├── NpcController.js
-│   │   ├── PlayerController.js
-│   │   ├── PushboxResolver.js
-│   │   ├── QuestManager.js
-│   │   ├── SceneSequencer.js
-│   │   ├── StageBoundary.js
-│   │   ├── TestController.js
-│   │   └── TimeControlSystem.js
-│   ├── UI/
-│   │   ├── BuffBar.js
-│   │   ├── HpBar.js
-│   │   └── InventoryBar.js
-│   ├── tools/
-│   │   ├── extract_collision_boxes.ps1
-│   │   └── extract_rootmotion_occupancy.ps1
-│   ├── AssetManifest.js
-│   ├── CharacterFactory.js
-│   ├── DataLoader.js
-│   ├── DuelCameraRig.js
-│   ├── ExploreCameraRig.js
-│   ├── Game.js
-│   ├── Scene.js
-│   ├── SceneDefs.js
-│   └── WorldState.js
-├── plans/
-│   ├── archived/                 # 已完成计划
-│   ├── backlogs_detailed/
-│   ├── BACKLOG.md
-│   ├── INDEX.md
-├── .codebuddy/plans/
-├── babylon_demo.html
-├── character_demo.js
-├── index.html
-└── style.css
-```
+> 文件清单见 §3「当前目录与关键文件」（含职责说明），不再单独维护树形结构，避免双份不同步。
 
 
 

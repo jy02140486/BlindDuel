@@ -145,6 +145,8 @@ NpcDefs.js 里 companion 的 dialogue 跟 bard 结构一样（priority + conditi
 
 ### 2.4 PropEntity（独立类，无状态图）
 
+> **状态：已实施（2026-07-07/08）。** 详见 [commits_detailed/26.7.7 新增同伴和场景中rabblestick的flee cutscene.MD](commits_detailed/26.7.7%20新增同伴和场景中rabblestick的flee%20cutscene.MD)。下文为原始设计，保留作历史参考。
+
 ```js
 export class PropEntity {
     constructor(scene, config) {
@@ -188,6 +190,8 @@ export class PropEntity {
 注册进 actorRegistry 后，SceneSequencer 的 `_getActor` / `SEND_COMMAND` / `MOVE_ACTOR_TO` / `CALLBACK` 全部复用，**零新增 step type**。
 
 ### 2.5 intro / outro sequence（prologue 专用）
+
+> **状态：已实施（2026-07-08）。** sequence 文件见 `Data/Sequences/prologue_intro.json` / `prologue_outro.json`；落地细节见 [commits_detailed/26.7.8 pologue 正式制作part2.MD](commits_detailed/26.7.8%20pologue%20正式制作part2.MD)。下文为原始设计，保留作历史参考。
 
 **intro**（MGS 风格，fade-in 与走位叠播）：
 ```jsonc
@@ -317,6 +321,8 @@ export class PropEntity {
 ```
 
 ### 2.6 prop 演出 + 同伴气泡 + 切跟随（串行 sequence）
+
+> **状态：已实施（2026-07-07/08）。** 详见 [commits_detailed/26.7.7 新增同伴和场景中rabblestick的flee cutscene.MD](commits_detailed/26.7.7%20新增同伴和场景中rabblestick的flee%20cutscene.MD)（PropEntity + cutsceneInvokers + callback handler）与 [commits_detailed/26.7.8 pologue 正式制作part2.MD](commits_detailed/26.7.8%20pologue%20正式制作part2.MD)（PropEntity dispose 三层防御）。下文为原始设计，保留作历史参考。
 
 交任务后由 ExploreMode 检测 scenario=105 触发，flag `prologue_prop_played` 锁一次性：
 
