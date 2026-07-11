@@ -2,6 +2,7 @@ export const NPC_DEFS = {
     companion: {
         id: "companion",
         name: "Charlotte",
+        idle: { clip: "observe" },
         dialogues: [
             {
                 priority: 100,
@@ -31,6 +32,7 @@ export const NPC_DEFS = {
     bard: {
         id: "bard",
         name: "吟游诗人",
+        idle: { clip: "Play" },
         dialogues: [
             {
                 priority: 100,

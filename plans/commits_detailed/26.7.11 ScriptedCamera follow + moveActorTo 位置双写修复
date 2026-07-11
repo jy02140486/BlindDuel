@@ -1,0 +1,34 @@
+# 26.7.11 ScriptedCamera follow + moveActorTo 位置双写修复
+
+## TL;DR
+- **需求2**：ScriptedCameraRig 新增 follow target 模式，支持 sequence 内相机跟随 actor；TimelineSequencer 新增 `setCameraFollow` clip
+- **根因修复**：`CharacterBase._applyMovement` 加 `controlledBySequence` 守卫，消除 sequencer 期间 position 双重写入（moveActorTo 绝对值 + _applyMovement 增量叠加）
+- **防御性整洁**：ScriptedCameraRig.exit 清理 follow target，与 enter 对称
+
+---
+
+## 改动清单
+
+### 1. ScriptedCameraRig follow target 模式
+`scripts/ScriptedCameraRig.js`
+- 新增 `_followTarget / _followOffset / _followLerp` 字段
+- `setFollowTarget(actor, opts)` / `clearFollow()`
+- `setFrame` 隐式 `clearFollow`（设静态框即停跟随）
+- `enter` / `exit` 均重置 follow（防跨 sequence 残留 + 及时释放 actor 引用）
+- `compute` 内按 `dtMs` 归一化 lerp `_center` 追 `actor.root.position + offset`
+  - `k = 1 - Math.pow(1 - lerp, dtMs / 16.67)` — 帧率无关
+  - `if (_followTarget && _followTarget.root)` — disposed actor 防御
+
+### 2. TimelineSequencer 新 clip
+`scripts/Systems/TimelineSequencer.js`
+- 新增 `setCameraFollow` event handler（只 start）
+- 走 `_resolveActor` 解析 actor，支持 `clip.actorId` 或 `track.binding`
+
+### 3. moveActorTo 位置双写修复（根因）
+`scripts/Enties/CharacterBase.js`
+- `_applyMovement` 开头加守卫：
+  ```js
+  if (this.controlledBySequence) {
+      this.currentSpd = 0;
+      return;
+  }

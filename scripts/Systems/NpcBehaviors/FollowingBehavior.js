@@ -47,8 +47,11 @@ export class FollowingBehavior extends NpcBehavior {
 
         if (!moving) {
             npc.setMoveIntent({ x: 0, y: 0 });
-            if (npc.currentStateName !== "idle" && npc.hasState("idle")) {
-                npc.enterState("idle");
+            const playerDx = player.root.position.x - npc.root.position.x;
+            npc.setFacing(playerDx >= 0 ? 1 : -1);
+            const idleClip = this.options.idleClip ?? "idle";
+            if (npc.currentStateName !== idleClip && npc.hasState(idleClip)) {
+                npc.enterState(idleClip);
             }
             return;
         }

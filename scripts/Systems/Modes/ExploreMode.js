@@ -306,6 +306,7 @@ export class ExploreMode extends BaseMode {
         handlers.set("showCompanionBubble", (ctx, clip) => this.#handleShowCompanionBubble(ctx, clip));
         handlers.set("hideCompanionBubble", (ctx, clip) => this.#handleHideCompanionBubble(ctx, clip));
         handlers.set("enterCompanionFollowing", (ctx, clip) => this.#handleEnterCompanionFollowing(ctx, clip));
+        handlers.set("enterCompanionIdle", (ctx, clip) => this.#handleEnterCompanionIdle(ctx, clip));
     }
 
     _unregisterSequenceHandlers() {
@@ -315,6 +316,7 @@ export class ExploreMode extends BaseMode {
         handlers.delete("showCompanionBubble");
         handlers.delete("hideCompanionBubble");
         handlers.delete("enterCompanionFollowing");
+        handlers.delete("enterCompanionIdle");
     }
 
     #updateCutsceneInvokers(dtMs) {
@@ -399,6 +401,14 @@ export class ExploreMode extends BaseMode {
         if (companion?.npcController && companion.npcController.state !== "following") {
             companion.npcController.enterFollowing(companion);
             console.log("[ExploreMode] companion enterFollowing triggered by sequence");
+        }
+    }
+
+    #handleEnterCompanionIdle(_ctx, _clip) {
+        const companion = this.interactables.find(n => n.id === "companion");
+        if (companion?.npcController) {
+            companion.npcController.enterIdle(companion);
+            console.log("[ExploreMode] companion enterIdle triggered by sequence");
         }
     }
 

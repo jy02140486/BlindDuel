@@ -48,7 +48,7 @@
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
         { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -4, "y": 0, "speed": 1.4 },
-        { "type": "command", "atMs": 3600, "command": "observe" }
+        { "type": "callback", "atMs": 3600, "fn": "enterCompanionIdle" }
       ]
     },
     {

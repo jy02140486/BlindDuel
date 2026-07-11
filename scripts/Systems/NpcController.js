@@ -1,4 +1,5 @@
 import { FollowingBehavior } from "./NpcBehaviors/FollowingBehavior.js";
+import { IdleBehavior } from "./NpcBehaviors/IdleBehavior.js";
 
 export class NpcController {
     constructor(worldState, npcDef, options = {}) {
@@ -21,6 +22,8 @@ export class NpcController {
         this._pendingCompleteText = null;
         this._behavior = null;
         this._followingBehavior = null;
+        const idleClip = npcDef?.idle?.clip ?? "idle";
+        this._idleBehavior = new IdleBehavior({ clip: idleClip });
     }
 
     update(dtMs, npc, context) {
@@ -112,11 +115,7 @@ export class NpcController {
         if (this._dialogueBubble) {
             this._dialogueBubble.hide();
         }
-        if (npc.hasState("idle")) {
-            npc.enterState("idle");
-        } else {
-            console.warn("[NpcController] NPC has no 'idle' state!");
-        }
+        this._idleBehavior.enter(npc, {});
     }
 
     enterFollowing(npc) {
