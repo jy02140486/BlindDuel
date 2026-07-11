@@ -320,6 +320,11 @@ export class CharacterBase {
     }
 
     _applyMovement(dtMs) {
+        if (this.controlledBySequence) {
+            this.currentSpd = 0;
+            return;
+        }
+
         const stateSpeed = this.currentStateDef?.speed;
         const frameSpeeds = this.currentStateDef?.frameSpeeds;
 

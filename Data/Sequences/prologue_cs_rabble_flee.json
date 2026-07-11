@@ -3,6 +3,26 @@
   "durationMs": 7000,
   "tracks": [
     {
+      "id": "camera.cutscene",
+      "kind": "camera",
+      "binding": { "cameraId": "scripted" },
+      "channel": "frame",
+      "clips": [
+        { "type": "cameraBlend", "startMs": 0, "durationMs": 1100, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 0, "center": [-1.2, 0, 0], "height": 4.5, "orthoWidth": 20 },
+        { "type": "setCameraFollow", "atMs": 1200, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 4.5, "orthoWidth": 20 }
+      ]
+    },
+    {
+      "id": "camera.back",
+      "kind": "camera",
+      "binding": { "cameraId": "explore" },
+      "channel": "blend",
+      "clips": [
+        { "type": "cameraBlend", "startMs": 2500, "durationMs": 1500, "to": "explore" }
+      ]
+    },
+    {
       "id": "prop.idle",
       "kind": "actor",
       "binding": { "actorId": "prop_faller" },
@@ -73,6 +93,14 @@
       "kind": "callback",
       "clips": [
         { "type": "callback", "atMs": 6400, "fn": "enterCompanionFollowing" }
+      ]
+    },
+    {
+      "id": "fx.letterbox",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 5500, "height": 72, "speed": 240 }
       ]
     }
   ]

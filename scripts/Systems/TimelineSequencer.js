@@ -524,6 +524,30 @@ const ACTION_HANDLERS = {
         }
     },
 
+    setCameraFollow: {
+        start(ctx, clip, track) {
+            const rig = ctx.scriptedCameraRig;
+            if (!rig) {
+                console.warn("[TimelineSequencer] setCameraFollow: scriptedCameraRig not available");
+                return;
+            }
+            const binding = clip.actorId ? { actorId: clip.actorId } : track.binding;
+            const actor = _resolveActor(ctx, binding);
+            if (!actor || !actor.root) {
+                console.warn(`[TimelineSequencer] setCameraFollow: actor not found (actorId=${clip.actorId ?? track.binding?.actorId})`);
+                return;
+            }
+            rig.setFollowTarget(actor, {
+                offsetX: clip.offsetX,
+                offsetY: clip.offsetY,
+                offsetZ: clip.offsetZ,
+                lerp: clip.lerp,
+                height: clip.height,
+                orthoWidth: clip.orthoWidth
+            });
+        }
+    },
+
     cameraEffect: {
         start(ctx, clip, state) {
             const cm = ctx.cameraManager;

@@ -43,7 +43,7 @@
             "pos": [-1.2, 1, 0],
             "controller": "none",
             "initialClip": "idle",
-            "spawnIf": { "flagNot": "prologue_prop_played" }
+            "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_prop_played" }
         },
         {
             "archetype": "rabble_stick",
