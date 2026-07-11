@@ -118,7 +118,7 @@ py -m http.server 9000 --bind 127.0.0.1
 11. AABBTrigger debug 网格使用 `renderingGroupId = 3` 确保渲染在最上层，不被场景元素遮挡。
 12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）已就绪，拾取时写入 + 加载时 spawnIf 过滤均已实现。
 13. Scene 不再持有稳定对象别名字段（cameraManager/cameraRig/playerController 等），业务方法统一通过 `this._game.xxx` 或 `this.sharedContext.xxx` 访问；稳定对象生命周期归 Game。
-14. CombatCharacter 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估；NpcCharacter/PropEntity 不需要（无 transition 覆盖问题）。
+14. CharacterBase 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估，同时 `_applyMovement` 开头加守卫跳过 frameSpeeds/stateSpeed/moveIntent 三个位移分支，确保 sequencer 期间 position 写入来源唯一（只有 moveActorTo 的绝对设置），消除位置双写。NpcCharacter/PropEntity 不需要该标记（无 transition 覆盖问题），但 NpcCharacter 的 idle/following 行为由 IdleBehavior/FollowingBehavior 数据驱动（idle clip 配置在 NpcDef）。
 
 ## 7. 当前文件结构
 > 文件清单见 §3「当前目录与关键文件」（含职责说明），不再单独维护树形结构，避免双份不同步。

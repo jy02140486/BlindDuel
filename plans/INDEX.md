@@ -4,6 +4,12 @@
 
 ---
 
+## 最近归档（2026-07-12）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [Prologue 收尾三项设计.MD](Prologue%20收尾三项设计.MD) | Prologue 剩余三块收尾 | ① cutscene 演员按需生成（prop_faller spawnIf 加 scenarioMin:105）② ScriptedCamera follow target 模式 + setCameraFollow clip + exit 清理 follow ③ NPC idle 解耦为 IdleBehavior（companion=observe / bard=Play 数据驱动）+ intro 改 callback + FollowingBehavior 停下朝向玩家；附修 moveActorTo 期间 position 双写根因（_applyMovement 加 controlledBySequence 守卫） |
+
 ## 最近归档（2026-07-08）
 
 | 计划 | 目标 | 完成内容 |
@@ -131,6 +137,16 @@
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting/following) + occupancy`
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-07-12)
+- Prologue 收尾三项全部完成并归档：`Prologue 收尾三项设计.MD`
+- 需求1 cutscene 按需生成：`prologue.json` 的 `prop_faller` spawnIf 加 `scenarioMin:105`，与 cutsceneInvoker condition 对齐，零代码改动复用 _pendingSpawns
+- 需求2 ScriptedCamera 跟随：ScriptedCameraRig 加 follow target 模式（_followTarget/setFollowTarget/clearFollow，setFrame 隐式 clearFollow，enter/exit 重置 follow），compute 按 dtMs 归一化 lerp；TimelineSequencer 新增 setCameraFollow event clip；prologue_cs_rabble_flee.json 补 camera track 示范
+- 需求2 附修：ScriptedCameraRig.exit 清理 follow target（防御性整洁，与 enter 对称）
+- 需求2 根因修复：CharacterBase._applyMovement 加 controlledBySequence 守卫，消除 moveActorTo 期间 position 双写（moveActorTo 绝对值 + _applyMovement 增量叠加），moveIntent 退化为纯动画信号
+- 需求3 NPC idle 解耦：新增 IdleBehavior（NpcBehavior 子类，enter 优先 enterState(clip) 保持 currentStateName 同步，失败才 animation.play fallback）；NpcController.enterIdle 走 _idleBehavior；NpcDefs companion/bard 加 idle.clip；prologue_intro command:observe → callback:enterCompanionIdle；ExploreMode 注册 handler
+- 需求3 实施调整：following 停下播普通 idle 而非 observe（方案 A，observe 仅非跟随 idle 态常驻）；FollowingBehavior 停下朝向玩家（用 player.x-npc.x 算 facing）
+- 附增资源：长剑兵 inspect 动画 + 环境祭坛 atlas + 碰撞盒更新 skill 文档
 
 ## Update Log (2026-07-08)
 - Scene 生命周期回归清理完成：§2.1 别名冗余 + §2.2 rigs 幂等 + §2.3 dispose 死代码 + §2.4 sharedContext 重复赋值 + §2.6 sequencer/character 交互（B-1 `controlledBySequence` 标记方案）；§2.5 验证通过；§2.7 暂不修

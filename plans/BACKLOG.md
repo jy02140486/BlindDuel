@@ -17,7 +17,7 @@
 |------|------|--------|------|
 | `tickDiff` 外部配置化 | 将 `ContactResolver` 中 Just Guard/预判 guard 使用的 `tickDiff` 阈值（当前硬编码 `<= 7`）提取为外部可配置项（建议进 StateGraph 或 Combat 配置）。 | 中 | 需要同步默认值与回归测试，避免改变现有手感 |
 | **hitstop 时长外部配置化** | `ContactResolver` 中各场景的 hitstop 时长目前全部硬编码：parry（双方 8 帧）、block（双方 4 帧）、clash tie（双方 8 帧）、clash lose（弱方 6 帧 / 强方 4 帧）、命中（双方 8 帧）。应提取为外部配置（建议按场景/攻击类型/武器等级分表）。 | 中 | 需同步默认值与手感测试 |
-| Sequence 外部 JSON 化 | `BattleDef.enterSequence`（函数）/ `exitSequence`（对象）目前硬编码在 `SceneDefs.js`。应改为从外部 JSON 文件读取，支持策划直接编辑序列步骤。 | 中 | cutsceneInvokers 已 JSON 化可参考；剩 enter/exit battle sequence 需处理 enterSequence 是函数的问题 |
+| Sequence 外部 JSON 化 | `BattleDef.enterSequence`（函数）/ `exitSequence`（对象）目前硬编码在 `SceneDefs.js`。应改为从外部 JSON 文件读取，支持策划直接编辑序列步骤。 | 中 | cutsceneInvokers 已 JSON 化、prologue_intro 的 command:observe 也已改 callback:enterCompanionIdle；剩 enter/exit battle sequence 需处理 enterSequence 是函数的问题 |
 | 击退距离外部配置化 | `ContactResolver` 中击退距离（knockbackX）当前硬编码，与武器等级和命中场景绑定。应提取为外部可配置项（建议按武器/攻击类型分表）。 | 低 | 与 hitstop 配置化可同步推进 |
 
 ## 探索系统
@@ -41,7 +41,7 @@
 
 | 事项 | 描述 | 优先级 | 备注 |
 |------|------|--------|------|
-| NpcController Behavior 解耦 | 当前 `NpcController` 把状态管理、感知、行为逻辑揉在一起（idle/greeting/following）。Step 5 已抽 `FollowingBehavior` 验证接口，但 `idle` 和 `greeting` 仍在 controller 内部。应进一步抽 `IdleBehavior` / `GreetingBehavior`，controller 只负责 behavior 调度与状态切换。未来可做到 `NpcDef.behaviors: ["greeting", "following"]` 数据驱动装配。 | 中 | Step 5 验证 FollowingBehavior 接口后，渐进迁移 idle/greeting；同步考虑 `canEnter(context)` 接口用于 controller 自动判进入条件 |
+| NpcController Behavior 解耦 | 当前 `NpcController` 把状态管理、感知、行为逻辑揉在一起（greeting 仍在 controller 内部）。`FollowingBehavior` 和 `IdleBehavior` 已抽出（idle clip 数据驱动，companion=observe / bard=Play）。应进一步抽 `GreetingBehavior`，controller 只负责 behavior 调度与状态切换。未来可做到 `NpcDef.behaviors: ["greeting", "following"]` 数据驱动装配。 | 中 | IdleBehavior 已落地，剩 greeting 待抽；同步考虑 `canEnter(context)` 接口用于 controller 自动判进入条件 |
 | Charlotte 跟随穿模 | companion `blocksMovement:false`（避免挡路），导致 follow 期间 Charlotte 朝 target=hero.x+1.0 移动时可能穿过 hero。视觉上是"Charlotte 贴着 hero 走过去"。 | 低 | 原型阶段可接受，属 §2.6 sequencer/character 交互职责范围；未来可考虑路径规划绕开、或 follow target 改为动态偏移（hero 左/右根据 Charlotte 当前侧） |
 
 ## GameMode 未完成事项

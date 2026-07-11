@@ -1,7 +1,7 @@
 e:\se\BlindDuel\plans\Prologue 收尾三项设计.MD
 # Prologue 收尾三项设计
 
-> **状态：设计评审中（未实施）。** 覆盖 Prologue 剩余三块内容：① cutscene 按需生成（scenario 推进）② ScriptedCamera 在 sequence 内跟随对象 ③ NPC idle 解耦为 behavior（Charlotte observe 常驻）。
+> **状态：已完成（2026-07-12）。** 三项需求全部落地。实施过程中对需求 3 有两处调整：① following 停下播普通 idle 而非 observe（方案 A，observe 仅非跟随 idle 态常驻）② FollowingBehavior 停下时朝向玩家（设计未提，实施时补）。另附修 moveActorTo 期间 position 双写根因（_applyMovement 加 controlledBySequence 守卫）。
 > **关联文档**：[Prologue 内容与演出流程实施计划.MD](./Prologue%20内容与演出流程实施计划.MD)、[Scene 生命周期与稳定对象上移重构-回归.MD](./Scene%20生命周期与稳定对象上移重构-回归.MD)。
 
 ---
@@ -226,11 +226,19 @@ bard:      { ..., idle: { clip: "Play" } },
 
 ```js
 const idleClip = this.options.idleClip ?? "idle";
-if (npc.animation?.play) npc.animation.play(idleClip, { restart: false });
-else if (npc.hasState(idleClip)) npc.enterState(idleClip);
+if (npc.currentStateName !== idleClip && npc.hasState(idleClip)) {
+    npc.enterState(idleClip);
+}
 ```
 
-`enterFollowing` 时 `new FollowingBehavior({ idleClip: npcDef?.idle?.clip ?? "idle" })`。
+**实施调整**：`enterFollowing` 时 `new FollowingBehavior()`（无参），不传 idleClip。FollowingBehavior 停下用默认 "idle" clip，**不播 observe**。observe 仅在非跟随的 idle 态常驻。
+
+**实施补充**：FollowingBehavior 停下分支额外加朝向玩家逻辑：
+```js
+const playerDx = player.root.position.x - npc.root.position.x;
+npc.setFacing(playerDx >= 0 ? 1 : -1);
+```
+注意用 `player.x - npc.x` 而非 `targetX - npc.x`（后者含 targetOffsetX，停下时会导致背对玩家）。
 
 ### 3.4 与 intro 的关系
 
@@ -255,6 +263,8 @@ handlers.set("enterCompanionIdle", (ctx, clip) => {
 - prop cutscene 末尾 `enterCompanionFollowing` → 跟随态；停下时也播 observe（idleClip 传入）。
 
 > **注意**：intro 期间 NpcController._behavior 仍为 null（构造时未 enterIdle），sequencer 的 `command: walk` / callback 不会被 IdleBehavior 覆盖，无冲突。这与 §2.6 的 `controlledBySequence` 无关（NpcCharacter 不加该标记，见回归文档 §2.6）。
+>
+> **实施调整**：following 停下播普通 idle 而非 observe，故 `controlledBySequence` 守卫不涉及 NpcCharacter 位移（NpcCharacter 的 `_applyMovement` 也加了同橡守卫，但 following 期间 _behavior 走 FollowingBehavior.update 设 moveIntent，NpcCharacter.fixedUpdate 仍会调 _applyMovement 消费 moveIntent 做位移——这是正常的跟随位移，不是 sequencer 绝对定位）。
 
 ### 3.5 代码改动点
 
@@ -307,8 +317,9 @@ handlers.set("enterCompanionIdle", (ctx, clip) => {
 - [ ] 切回 explore rig 再切回 scripted，无残留 follow
 
 ### 需求3
-- [ ] intro 3600ms callback 触发 enterIdle → Charlotte 播 observe
-- [ ] 玩家走近触发 greeting → 结束后回 idle → 重新播 observe（常驻）
-- [ ] prop cutscene 后 enterFollowing，跟随停下时播 observe
-- [ ] bard（idle.clip="Play"）在 tavern 仍正常播 Play，无回归
-- [ ] 未配 idle 的 NPC（customer 等）回退 "idle" clip，行为不变
+- [x] intro 3600ms callback 触发 enterIdle → Charlotte 播 observe
+- [x] 玩家走近触发 greeting → 结束后回 idle → 重新播 observe（常驻）
+- [x] prop cutscene 后 enterFollowing，跟随停下时播普通 idle（**实施调整**：非 observe）
+- [x] FollowingBehavior 停下朝向玩家（**实施补充**）
+- [ ] bard（idle.clip="Play"）在 tavern 仍正常播 Play，无回归（待场景回归）
+- [x] 未配 idle 的 NPC（customer 等）回退 "idle" clip，行为不变
