@@ -68,6 +68,48 @@ export class PickableEntity {
         this._debugMaterial.disableLighting = true;
         this._debugDisc.material = this._debugMaterial;
         this._debugDisc.setEnabled(this._debugVisible);
+
+        this.debugPanel = this.#createDebugPanel();
+    }
+
+    #createDebugPanel() {
+        const panel = document.createElement("div");
+        panel.style.position = "absolute";
+        panel.style.pointerEvents = "none";
+        panel.style.background = "rgba(60, 0, 80, 0.78)";
+        panel.style.color = "#e8d4ff";
+        panel.style.font = "12px/1.2 Consolas, monospace";
+        panel.style.padding = "4px 8px";
+        panel.style.borderRadius = "4px";
+        panel.style.border = "1px solid rgba(200, 160, 255, 0.5)";
+        panel.style.whiteSpace = "nowrap";
+        panel.style.zIndex = "1000";
+        panel.style.display = "none";
+        document.body.appendChild(panel);
+        return panel;
+    }
+
+    _updateDebugPanel() {
+        if (!this.debugPanel || !this.spritePlane) return;
+        const canvas = this.scene.getEngine().getRenderingCanvas();
+        if (!canvas) return;
+        const anchor = this.root.position.clone();
+        anchor.y += this.visualYOffset;
+        const projected = BABYLON.Vector3.Project(
+            anchor,
+            BABYLON.Matrix.Identity(),
+            this.scene.getTransformMatrix(),
+            this.scene.activeCamera.viewport.toGlobal(canvas.width, canvas.height)
+        );
+        if (projected.z > 0 && projected.z < 1) {
+            this.debugPanel.style.display = "block";
+            this.debugPanel.style.left = `${projected.x - this.debugPanel.offsetWidth / 2}px`;
+            this.debugPanel.style.top = `${projected.y}px`;
+        } else {
+            this.debugPanel.style.display = "none";
+        }
+        const ry = this.root.position.y;
+        this.debugPanel.textContent = `y:${ry.toFixed(2)} visY:${(ry + this.visualYOffset).toFixed(2)} alpha:${this.spritePlane.alphaIndex}`;
     }
 
     setCollisionVisible(value) {
@@ -79,6 +121,10 @@ export class PickableEntity {
 
     /** 被拾取：销毁 mesh */
     pickup() {
+        if (this.debugPanel) {
+            this.debugPanel.remove();
+            this.debugPanel = null;
+        }
         if (this.spritePlane) {
             this.spritePlane.dispose();
             this.spritePlane = null;

@@ -642,8 +642,8 @@ export class ExploreMode extends BaseMode {
         //}
 
         for (const entity of this.renderables) {
-            if (entity.spritePlane) {
-                // alphaIndex 不再显式设置，保持默认
+            if (entity.kind === "pickable") {
+                entity._updateDebugPanel?.();
             }
         }
 

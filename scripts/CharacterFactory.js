@@ -508,7 +508,8 @@ export function createPropEntity(scene, assets, entityDef) {
         if (entityDef.pxToWorld !== undefined) cfg.pxToWorld = entityDef.pxToWorld;
         if (entityDef.initialClip !== undefined) cfg.initialClip = entityDef.initialClip;
         if (entityDef.blocker !== undefined) cfg.blocker = entityDef.blocker;
-        if (entityDef.depthMask !== undefined) cfg.depthMask = entityDef.depthMask;
+        // 暂不采用：prop depthMask 方案搁置，靠 blocker + y-sort/alphaIndex 即可
+        // if (entityDef.depthMask !== undefined) cfg.depthMask = entityDef.depthMask;
         if (entityDef.stateMap !== undefined) cfg.stateMap = entityDef.stateMap;
         if (entityDef.blocksMovement !== undefined) cfg.blocksMovement = entityDef.blocksMovement;
         if (entityDef.renderingGroupId !== undefined) cfg.renderingGroupId = entityDef.renderingGroupId;

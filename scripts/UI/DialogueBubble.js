@@ -21,7 +21,38 @@ export class DialogueBubble {
     }
 
     setText(text) {
-        if (this._bubble) this._bubble.textContent = text;
+        if (!this._bubble) return;
+        this._clear();
+        this._bubble.innerHTML = text;
+    }
+
+    setContent(segments) {
+        if (!this._bubble) return;
+        this._clear();
+        if (!Array.isArray(segments)) return;
+        for (const seg of segments) {
+            if (!seg || typeof seg !== "object") continue;
+            if (seg.type === "text" && typeof seg.value === "string") {
+                this._bubble.appendChild(document.createTextNode(seg.value));
+            } else if (seg.type === "image" && typeof seg.src === "string") {
+                const img = document.createElement("img");
+                img.src = seg.src;
+                img.alt = seg.alt ?? "";
+                img.style.verticalAlign = "middle";
+                if (seg.width != null) img.style.width = `${seg.width}px`;
+                if (seg.height != null) img.style.height = `${seg.height}px`;
+                if (seg.style && typeof seg.style === "object") {
+                    for (const [k, v] of Object.entries(seg.style)) {
+                        img.style[k] = v;
+                    }
+                }
+                this._bubble.appendChild(img);
+            }
+        }
+    }
+
+    _clear() {
+        if (this._bubble) this._bubble.innerHTML = "";
     }
 
     hide() {

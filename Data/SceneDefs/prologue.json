@@ -56,18 +56,18 @@
         },
         {
             "archetype": "pickable",
-            "id": "dagger_01",
-            "name": "dagger",
+            "id": "altar_gem_01",
+            "name": "altar_gem",
             "kind": "pickable",
             "pos": [-3.0, -1.5],
             "controller": "none",
-            "visualYOffset": 1.5,
+            "visualYOffset": 0,
             "itemDef": {
-                "id": "dagger",
-                "name": "匕首",
+                "id": "altar_gem",
+                "name": "祭坛宝石",
                 "consumeType": "pocket",
-                "atlasKey": "dagger",
-                "textureUrl": "./Art/Sprite/items/dagger.png"
+                "atlasKey": "altar_gem",
+                "textureUrl": "./Art/Sprite/items/altar_gem.png"
             }
         },{
   "archetype": "prop",
@@ -186,19 +186,6 @@
                 "loopX": false,
                 "elements": [
                     {
-                        "id": "ground_1",
-                        "texture": "Art/Environment/grassbase.png",
-                        "atlas": "Art/Environment/grassbase.json",
-                        "kind": "animated_tile",
-                        "x": 0,
-                        "y": -2.78,
-                        "width": 64,
-                        "height": 8,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
-                        "loop": true,
-                        "alphaIndex": 2
-                    },
-                    {
                         "id": "ground_2",
                         "texture": "Art/Environment/grasstop.png",
                         "atlas": "Art/Environment/grasstop.json",
@@ -212,6 +199,27 @@
                         "alphaIndex": 2
                     },
                     {
+                        "id": "ground",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": -2.8,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 48,
+                        "height": 8,
+                        "alphaIndex": 2
+                    },{
+                        "id": "grass_deco",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": -2.9,
+                        "tileSize": { "width": 5.12, "height": 2.56 },
+                        "width": 48,
+                        "height": 8,
+                        "alphaIndex": 3
+                    },
+                    {
                         "id": "ruin_main",
                         "texture": "Art/Environment/AcientRuin.png",
                         "kind": "single",
@@ -219,7 +227,16 @@
                         "y": 6,
                         "width": 16,
                         "height": 10,
-                        "alphaIndex": 3
+                        "alphaIndex": 4
+                    }, {
+                        "id": "ruin_floor",
+                        "texture": "Art/Environment/floor.png",
+                        "kind": "single",
+                        "x": -8,
+                        "y": 0,
+                        "width": 14.4,
+                        "height": 2.4,
+                        "alphaIndex": 5
                     }
                 ]
             }

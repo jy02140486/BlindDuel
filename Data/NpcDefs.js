@@ -11,18 +11,22 @@ export const NPC_DEFS = {
             },
             {
                 priority: 90,
-                condition: { quest: "prologue_pickup_quest", stage: 1, hasItem: "dagger" },
+                condition: { quest: "prologue_pickup_quest", stage: 1, hasItem: "altar_gem" },
                 text: "👍",
+                giveItem: "altar_gem",
                 action: [
-                    { type: "removeItem", item: "dagger" },
+                    { type: "removeItem", item: "altar_gem" },
                     { type: "advanceScenario", value: 105 }
                 ],
-                giveItem: "dagger"
             },
             {
                 priority: 0,
                 condition: {},
                 text: "🗡️",
+                content: [
+                    { type: "text", value: "🗡️ " },
+                    { type: "image", src: "./Art/Sprite/items/altar_gem.png", width: 20, height: 20, alt: "altar_gem" }
+                ],
                 action: [
                     { type: "startQuest", id: "prologue_pickup_quest" }
                 ]

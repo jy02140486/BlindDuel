@@ -100,7 +100,11 @@ export class NpcController {
         this._activeText = entry.text;
         this._activeAction = entry.action ?? null;
         if (this._dialogueBubble) {
-            this._dialogueBubble.setText(entry.text);
+            if (Array.isArray(entry.content)) {
+                this._dialogueBubble.setContent(entry.content);
+            } else {
+                this._dialogueBubble.setText(entry.text);
+            }
             this._dialogueBubble.show(npc);
         }
         if (npc.hasState("greeting")) {

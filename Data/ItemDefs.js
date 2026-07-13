@@ -24,6 +24,13 @@ export const ITEM_DEFS = {
         atlasKey: "dagger",
         textureUrl: "./Art/Sprite/items/dagger.png",
     },
+    altar_gem: {
+        id: "altar_gem",
+        name: "祭坛宝石",
+        consumeType: "pocket",
+        atlasKey: "altar_gem",
+        textureUrl: "./Art/Sprite/items/altar_gem.png",
+    },
 };
 
 /**
