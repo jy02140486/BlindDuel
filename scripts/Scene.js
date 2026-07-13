@@ -163,16 +163,24 @@ export class Scene {
             duelCameraCfg = DEFAULT_DUEL_CAMERA;
         }
         this.stageBoundary = new StageBoundary(this.scene, stageBounds);
-        // WalkArea：若 StageMask JSON 中有 walkArea，优先使用；否则回退到 sceneDef.walkArea
-        const walkAreaDef = stageMaskData?.walkArea
-            ? {
-                  minX: stageMaskData.walkArea.x,
-                  maxX: stageMaskData.walkArea.x + stageMaskData.walkArea.w,
-                  minY: stageMaskData.walkArea.y,
-                  maxY: stageMaskData.walkArea.y + stageMaskData.walkArea.h,
-              }
-            : sceneDef.walkArea;
-        this.walkArea = new WalkArea(this.scene, { ...walkAreaDef, visible: true });
+        // WalkArea：构建 _walkAreas 有序数组（stageMask 优先 > walkAreas 数组 > walkArea 单对象），调 _applyWalkArea() 评估首个命中
+        this._walkAreas = [];
+        if (stageMaskData?.walkArea) {
+            this._walkAreas.push({
+                if: {},
+                minX: stageMaskData.walkArea.x,
+                maxX: stageMaskData.walkArea.x + stageMaskData.walkArea.w,
+                minY: stageMaskData.walkArea.y,
+                maxY: stageMaskData.walkArea.y + stageMaskData.walkArea.h,
+            });
+        }
+        if (Array.isArray(sceneDef.walkAreas)) {
+            this._walkAreas.push(...sceneDef.walkAreas);
+        }
+        if (!stageMaskData?.walkArea && sceneDef.walkArea) {
+            this._walkAreas.push({ if: {}, ...sceneDef.walkArea });
+        }
+        this._applyWalkArea();
         this.pushboxResolver = new PushboxResolver();
 
         // --- 相机 rigs（复用 game 的，duelRig 用场景配置更新）---
@@ -430,6 +438,9 @@ export class Scene {
         if (this.exploreMode?._buildIndices) {
             this.exploreMode._buildIndices();
         }
+
+        this._applyStateMap(entity);
+
         return entity;
     }
 
@@ -448,15 +459,24 @@ export class Scene {
     }
 
     _onWorldStateChange() {
-        if (!this._pendingSpawns || this._pendingSpawns.length === 0) return;
-        for (let i = this._pendingSpawns.length - 1; i >= 0; i--) {
-            const def = this._pendingSpawns[i];
-            if (this._evaluateCondition(def.spawnIf, this.worldState)) {
-                this._spawnEntity(def);
-                this._pendingSpawns.splice(i, 1);
-                console.log(`[Scene] dynamic spawn: ${def.id} (spawnIf satisfied)`);
+        if (this._pendingSpawns?.length) {
+            for (let i = this._pendingSpawns.length - 1; i >= 0; i--) {
+                const def = this._pendingSpawns[i];
+                if (this._evaluateCondition(def.spawnIf, this.worldState)) {
+                    this._spawnEntity(def);
+                    this._pendingSpawns.splice(i, 1);
+                    console.log(`[Scene] dynamic spawn: ${def.id} (spawnIf satisfied)`);
+                }
             }
         }
+
+        for (const entity of this.entityPool) {
+            if (entity?.stateMap?.length && !entity.isDisposed) {
+                this._applyStateMap(entity);
+            }
+        }
+
+        this._applyWalkArea();
     }
 
     _evaluateCondition(cond, worldState) {
@@ -472,5 +492,48 @@ export class Scene {
             if (cond.completed !== undefined && q.completed !== cond.completed) return false;
         }
         return true;
+    }
+
+    _applyStateMap(entity) {
+        if (!entity?.stateMap?.length) return;
+        if (entity.isDisposed) return;
+
+        for (const entry of entity.stateMap) {
+            if (this._evaluateCondition(entry.if, this.worldState)) {
+                if (entity.currentStateName !== entry.clip) {
+                    entity.enterState(entry.clip);
+                }
+                return;
+            }
+        }
+
+        const fallback = entity._initialClip ?? Object.keys(entity.clips)[0];
+        if (fallback && entity.currentStateName !== fallback) {
+            entity.enterState(fallback);
+        }
+    }
+
+    _applyWalkArea() {
+        if (!this._walkAreas?.length) return;
+
+        for (const def of this._walkAreas) {
+            if (this._evaluateCondition(def.if, this.worldState)) {
+                const current = this.walkArea;
+                if (!current ||
+                    current.minX !== def.minX || current.maxX !== def.maxX ||
+                    current.minY !== def.minY || current.maxY !== def.maxY) {
+                    if (current) current.dispose();
+                    this.walkArea = new WalkArea(this.scene, {
+                        minX: def.minX, maxX: def.maxX,
+                        minY: def.minY, maxY: def.maxY,
+                        visible: true
+                    });
+                    if (this.sharedContext) {
+                        this.sharedContext.walkArea = this.walkArea;
+                    }
+                }
+                return;
+            }
+        }
     }
 }

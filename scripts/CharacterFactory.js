@@ -473,13 +473,13 @@ export function createPropEntity(scene, assets, entityDef) {
     }
 
     const pos = entityDef?.pos ?? [0, 0, 0];
-    return new PropEntity(scene, {
+    const baseConfig = {
         id: entityDef?.id ?? `prop_${Date.now()}`,
         name: entityDef?.name ?? entityDef?.id ?? "prop",
         pos,
-        pxToWorld: 0.03,
-        frameWidth: 128,
-        frameHeight: 128,
+        pxToWorld: 1,
+        frameWidth: 3.84,
+        frameHeight: 3.84,
         initialClip: entityDef?.initialClip ?? "idle",
         clips: {
             idle: buildClip(0, "hold"),
@@ -487,7 +487,34 @@ export function createPropEntity(scene, assets, entityDef) {
             land: buildClip(2, "hold"),
             run:  buildClip(3, "loop")
         }
-    });
+    };
+
+    if (entityDef?.clips) {
+        const cfg = baseConfig;
+        cfg.clips = entityDef.clips;
+        if (entityDef.spriteSheetUrl !== undefined) cfg.spriteSheetUrl = entityDef.spriteSheetUrl;
+        if (entityDef.atlasKey !== undefined && entityDef.atlasData === undefined) {
+            const parts = entityDef.atlasKey.split(".");
+            let resolved = assets.atlas;
+            for (const p of parts) {
+                resolved = resolved?.[p];
+                if (!resolved) break;
+            }
+            if (resolved) cfg.atlasData = resolved;
+        }
+        if (entityDef.atlasData !== undefined) cfg.atlasData = entityDef.atlasData;
+        if (entityDef.frameWidth !== undefined) cfg.frameWidth = entityDef.frameWidth;
+        if (entityDef.frameHeight !== undefined) cfg.frameHeight = entityDef.frameHeight;
+        if (entityDef.pxToWorld !== undefined) cfg.pxToWorld = entityDef.pxToWorld;
+        if (entityDef.initialClip !== undefined) cfg.initialClip = entityDef.initialClip;
+        if (entityDef.blocker !== undefined) cfg.blocker = entityDef.blocker;
+        if (entityDef.depthMask !== undefined) cfg.depthMask = entityDef.depthMask;
+        if (entityDef.stateMap !== undefined) cfg.stateMap = entityDef.stateMap;
+        if (entityDef.blocksMovement !== undefined) cfg.blocksMovement = entityDef.blocksMovement;
+        if (entityDef.renderingGroupId !== undefined) cfg.renderingGroupId = entityDef.renderingGroupId;
+    }
+
+    return new PropEntity(scene, baseConfig);
 }
 
 export function createPickable(scene, assets, entityDef) {

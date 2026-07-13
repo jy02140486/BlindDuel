@@ -6,11 +6,12 @@ export class PropEntity {
         this.name = config.name ?? this.id;
         this.kind = "prop";
         this.interactable = false;
-        this.blocksMovement = false;
+        this.blocksMovement = config.blocksMovement ?? false;
+        this._blocker = config.blocker ?? null;
 
-        this.pxToWorld = config.pxToWorld ?? 0.06;
-        this.baseFrameWidthPx = config.frameWidth ?? 128;
-        this.baseFrameHeightPx = config.frameHeight ?? 128;
+        this.pxToWorld = config.pxToWorld ?? 1;
+        this.displayWidth = config.frameWidth ?? 3.84;
+        this.displayHeight = config.frameHeight ?? 3.84;
 
         this.root = new BABYLON.TransformNode(this.name, scene);
         const pos = config.pos ?? [0, 0, 0];
@@ -23,6 +24,10 @@ export class PropEntity {
         this._currentFrameIndex = 0;
         this._timeInFrameMs = 0;
         this._mode = "loop";
+        this._sharedTexture = null;
+        this._sharedAtlasData = null;
+        this.stateMap = config.stateMap ?? null;
+        this._initialClip = config.initialClip ?? null;
 
         this.facing = 1;
         this.facingMode = "locked";
@@ -32,12 +37,14 @@ export class PropEntity {
         this._buildSpritePlane(config);
 
         const initialClip = config.initialClip ?? Object.keys(this.clips)[0];
-        if (initialClip) this._setClip(initialClip);
+        if (initialClip) {
+            this._setClip(initialClip);
+        }
     }
 
     _buildSpritePlane(config) {
-        const planeW = this.baseFrameWidthPx * this.pxToWorld;
-        const planeH = this.baseFrameHeightPx * this.pxToWorld;
+        const planeW = this.displayWidth;
+        const planeH = this.displayHeight;
 
         this.spritePlane = BABYLON.MeshBuilder.CreatePlane(`${this.name}_plane`, {
             width: planeW,
@@ -57,20 +64,36 @@ export class PropEntity {
         this.spritePlane.material = this.material;
         this.spritePlane.renderingGroupId = config.renderingGroupId ?? 1;
         this.spritePlane.alphaIndex = 0;
+
+        if (config.spriteSheetUrl && config.atlasData?.frames) {
+            this._sharedAtlasData = config.atlasData;
+            const tex = new BABYLON.Texture(
+                config.spriteSheetUrl,
+                this.scene,
+                false,
+                false,
+                BABYLON.Texture.NEAREST_SAMPLINGMODE
+            );
+            tex.hasAlpha = true;
+            tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            this.material.diffuseTexture = tex;
+            this._sharedTexture = tex;
+        }
     }
 
     _setClip(clipName) {
         const clip = this.clips[clipName];
         if (!clip || this._currentClipName === clipName) return;
 
-        const atlas = clip.atlasData;
+        const useShared = this._sharedTexture && !clip.spriteSheetUrl;
+        const atlas = useShared ? this._sharedAtlasData : clip.atlasData;
         if (!atlas?.frames) {
             console.warn(`[PropEntity] clip ${clipName} has no atlas.frames`);
             return;
         }
 
         this._currentClipName = clipName;
-        this._currentClip = { ...clip, atlas };
         this._mode = clip.mode === "hold" ? "hold" : "loop";
 
         const entries = Object.entries(atlas.frames);
@@ -88,26 +111,41 @@ export class PropEntity {
             h: item.frame.h,
             durationMs: item.duration || 100
         }));
-        this._currentFrameIndex = 0;
+
+        let frameTag = null;
+        if (useShared && clip.tag) {
+            const tagDef = atlas.meta?.frameTags?.find(t => t.name === clip.tag);
+            if (tagDef) {
+                frameTag = { from: tagDef.from, to: tagDef.to };
+            }
+        }
+        if (!frameTag) {
+            frameTag = { from: 0, to: this._frames.length - 1 };
+        }
+
+        this._currentFrameIndex = frameTag.from;
         this._timeInFrameMs = 0;
         this.currentStateName = clipName;
+        this._currentClip = { ...clip, atlas, frameTag };
 
-        if (this.material.diffuseTexture) {
-            this.material.diffuseTexture.dispose();
+        if (!useShared) {
+            if (this.material.diffuseTexture) {
+                this.material.diffuseTexture.dispose();
+            }
+            const tex = new BABYLON.Texture(
+                clip.spriteSheetUrl,
+                this.scene,
+                false,
+                false,
+                BABYLON.Texture.NEAREST_SAMPLINGMODE
+            );
+            tex.hasAlpha = true;
+            tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            this.material.diffuseTexture = tex;
         }
-        const tex = new BABYLON.Texture(
-            clip.spriteSheetUrl,
-            this.scene,
-            false,
-            false,
-            BABYLON.Texture.NEAREST_SAMPLINGMODE
-        );
-        tex.hasAlpha = true;
-        tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-        tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-        this.material.diffuseTexture = tex;
 
-        this._applyFrame(0);
+        this._applyFrame(this._currentFrameIndex);
     }
 
     _applyFrame(idx) {
@@ -126,32 +164,32 @@ export class PropEntity {
             tex.vOffset = 1 - (frame.y / atlasH);
         }
 
-        const baseScaleX = frame.w / this.baseFrameWidthPx;
-        this.spritePlane.scaling.x = baseScaleX * this.facing;
-        this.spritePlane.scaling.y = frame.h / this.baseFrameHeightPx;
+        this.spritePlane.scaling.x = this.facing;
+        this.spritePlane.scaling.y = 1;
     }
 
     fixedUpdate(dtMs) {
         if (this.isDisposed) return;
         if (!this._currentClip || !this._frames.length) return;
 
+        const tag = this._currentClip.frameTag;
+        const to = tag ? tag.to : this._frames.length - 1;
+        const from = tag ? tag.from : 0;
+
         const frame = this._frames[this._currentFrameIndex];
         this._timeInFrameMs += dtMs;
         while (this._timeInFrameMs >= frame.durationMs) {
             this._timeInFrameMs -= frame.durationMs;
-            const next = this._currentFrameIndex + 1;
-            if (next >= this._frames.length) {
-                if (this._mode === "loop") {
-                    this._currentFrameIndex = 0;
-                    this._applyFrame(0);
-                } else {
-                    this._currentFrameIndex = this._frames.length - 1;
-                    this._timeInFrameMs = 0;
-                    return;
-                }
+            if (this._currentFrameIndex + 1 <= to) {
+                this._currentFrameIndex += 1;
+                this._applyFrame(this._currentFrameIndex);
+            } else if (this._mode === "loop") {
+                this._currentFrameIndex = from;
+                this._applyFrame(this._currentFrameIndex);
             } else {
-                this._currentFrameIndex = next;
-                this._applyFrame(next);
+                this._currentFrameIndex = to;
+                this._timeInFrameMs = 0;
+                return;
             }
         }
     }
@@ -164,13 +202,21 @@ export class PropEntity {
         const next = facing >= 0 ? 1 : -1;
         if (next === this.facing) return;
         this.facing = next;
-        if (this.spritePlane && this._frames.length) {
-            const frame = this._frames[this._currentFrameIndex];
-            const baseScaleX = frame.w / this.baseFrameWidthPx;
-            this.spritePlane.scaling.x = baseScaleX * this.facing;
+        if (this.spritePlane) {
+            this.spritePlane.scaling.x = this.facing;
         }
     }
     setFacingMode(_mode) {}
+
+    getBlockerAabb() {
+        if (!this._blocker) return null;
+        const p = this.root.position;
+        const b = this._blocker;
+        return {
+            minX: p.x - b.halfW, maxX: p.x + b.halfW,
+            minY: b.centerY - b.halfH, maxY: b.centerY + b.halfH
+        };
+    }
 
     getVisualBottomY() { return this.root.position.y; }
 
@@ -182,6 +228,8 @@ export class PropEntity {
         this.material = null;
         this.spritePlane = null;
         this.root = null;
+        this._sharedTexture = null;
+        this._sharedAtlasData = null;
     }
 
     get isDisposed() { return !this.root && !this.spritePlane; }

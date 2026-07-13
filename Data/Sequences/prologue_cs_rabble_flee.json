@@ -64,7 +64,7 @@
       "id": "prop.dispose",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 4000, "fn": "disposeProp" }
+        { "type": "callback", "atMs": 4000, "fn": "disposeProp", "actorId": "prop_faller" }
       ]
     },
     {

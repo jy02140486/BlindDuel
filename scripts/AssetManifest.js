@@ -65,6 +65,9 @@ export const ASSET_MANIFEST = {
             prologue_rabble_flee1: "./Art/Sprite/CS_Chars/prologue_rabble_flee1.json",
             prologue_rabble_flee2: "./Art/Sprite/CS_Chars/prologue_rabble_flee2.json",
             prologue_rabble_flee3: "./Art/Sprite/CS_Chars/prologue_rabble_flee3.json"
+        },
+        environment: {
+            altar: "./Art/Environment/altar.json"
         }
     },
     colliders: {
@@ -147,6 +150,7 @@ export const ASSET_MANIFEST = {
     items: {
         ham: "./Art/Sprite/items/Ham.json",
         tea: "./Art/Sprite/items/Tea.json",
-        dagger: "./Art/Sprite/items/dagger.json"
+        dagger: "./Art/Sprite/items/dagger.json",
+        altar_gem: "./Art/Sprite/items/altar_gem.json"
     }
 };

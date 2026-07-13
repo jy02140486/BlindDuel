@@ -357,12 +357,15 @@ export class ExploreMode extends BaseMode {
         }
     }
 
-    #handleDisposeProp(_ctx, _clip) {
+    #handleDisposeProp(_ctx, clip) {
         const entityPool = this.context.entityPool;
+        const targetId = clip?.actorId;
+        const match = (e) => e?.kind === "prop" && (targetId == null || e.id === targetId || e.name === targetId);
+
         // 1. 释放 prop 的 GPU 资源，并从 exploreMode.props 移除（fixedUpdate 列表）
         for (let i = this.props.length - 1; i >= 0; i--) {
             const prop = this.props[i];
-            if (prop.kind === "prop") {
+            if (match(prop)) {
                 console.log(`[ExploreMode] disposeProp: ${prop.id}`);
                 prop.dispose?.();
                 this.props.splice(i, 1);
@@ -370,14 +373,20 @@ export class ExploreMode extends BaseMode {
         }
         // 2. 从 exploreMode.renderables 移除（本帧绘制列表）
         for (let i = this.renderables.length - 1; i >= 0; i--) {
-            if (this.renderables[i].kind === "prop") {
+            if (match(this.renderables[i])) {
                 this.renderables.splice(i, 1);
+            }
+        }
+        // 2b. 从 exploreMode.staticBlockers 移除（Phase 4 后 prop 进 staticBlockers）
+        for (let i = this.staticBlockers.length - 1; i >= 0; i--) {
+            if (match(this.staticBlockers[i])) {
+                this.staticBlockers.splice(i, 1);
             }
         }
         // 3. 从 scene.entityPool 移除（持久实体清单）—— 防止 _buildIndices 重新收集已 dispose 的 prop
         if (entityPool) {
             for (let i = entityPool.length - 1; i >= 0; i--) {
-                if (entityPool[i].kind === "prop") {
+                if (match(entityPool[i])) {
                     entityPool.splice(i, 1);
                 }
             }
@@ -427,7 +436,9 @@ export class ExploreMode extends BaseMode {
             if (entity.kind === "player") {
                 this.dynamicActors.push(entity);
             }
-            if (entity.kind === "npc" && entity.blocksMovement) {
+            if ((entity.kind === "npc" || entity.kind === "prop")
+                && entity.blocksMovement
+                && typeof entity.getBlockerAabb === "function") {
                 this.staticBlockers.push(entity);
             }
             if (entity.kind === "npc" && entity.interactable) {

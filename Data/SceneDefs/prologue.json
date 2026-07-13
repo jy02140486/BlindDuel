@@ -69,7 +69,29 @@
                 "atlasKey": "dagger",
                 "textureUrl": "./Art/Sprite/items/dagger.png"
             }
-        }
+        },{
+  "archetype": "prop",
+  "id": "altar",
+  "kind": "prop",
+  "pos": [-8, 0.5, 0],
+  "controller": "none",
+  "blocksMovement": true,
+  "blocker": { "halfW": 1.9, "halfH": 0.6, "centerY": 1.4 },
+  "depthMask": { "halfW": 1.3, "halfH": 2.0, "centerY": 1.0 },
+  "spriteSheetUrl": "./Art/Environment/altar.png",
+  "atlasKey": "environment.altar",
+  "frameWidth": 3.8,
+  "frameHeight": 3.2,
+  "initialClip": "init",
+  "clips": {
+    "init":      { "tag": "init",      "mode": "hold" },
+    "completed": { "tag": "completed", "mode": "hold" }
+  },
+  "stateMap": [
+    { "if": { "scenarioMin": 105 }, "clip": "completed" },
+    { "if": {}, "clip": "init" }
+  ]
+}
     ],
     "walkArea": {
         "minX": -10.75,
