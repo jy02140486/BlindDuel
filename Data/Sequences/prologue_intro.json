@@ -25,7 +25,8 @@
       "channel": "blend",
       "clips": [
         { "type": "cameraBlend", "startMs": 0, "durationMs": 0, "to": "scripted" },
-        { "type": "setCameraFrame", "atMs": 0, "center": [0, 0, 0], "height": 4.5, "orthoWidth": 20 }
+        { "type": "setCameraFrame", "atMs": 0, "center": [-0, 0, 0], "height": 4.5, "orthoWidth": 8 },
+        { "type": "setCameraFollow", "atMs": 200, "actorId": "companion", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1.6, "orthoWidth": 20 }
       ]
     },
     {
@@ -36,7 +37,7 @@
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -3, "y": 1, "speed": 1.5 },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -18, "y": 1, "speed": 1.4 },
         { "type": "inputLock", "atMs": 5500, "locked": false }
       ]
     },
@@ -47,7 +48,7 @@
       "channel": "movement",
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -4, "y": 0, "speed": 1.4 },
+        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -18, "y": 0, "speed": 1.4 },
         { "type": "callback", "atMs": 3600, "fn": "enterCompanionIdle" }
       ]
     },

@@ -35,6 +35,9 @@ export class BattleMode extends BaseMode {
                 combatant._battleYMin = stageBounds.minY ?? null;
                 combatant._battleYMax = stageBounds.maxY ?? null;
             }
+            if (combatant) {
+                combatant.activeSpeedMode = "move";
+            }
         }
     }
 
@@ -43,6 +46,7 @@ export class BattleMode extends BaseMode {
             if (combatant) {
                 combatant._battleYMin = null;
                 combatant._battleYMax = null;
+                combatant.activeSpeedMode = "walk";
             }
         }
     }

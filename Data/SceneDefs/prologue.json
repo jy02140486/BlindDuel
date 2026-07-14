@@ -24,7 +24,7 @@
             "id": "hero",
             "name": "hero",
             "kind": "player",
-            "pos": [-8, 0],
+            "pos": [-26, 0],
             "controller": "player"
         },
         {
@@ -32,7 +32,7 @@
             "id": "companion",
             "name": "Charlotte",
             "kind": "npc",
-            "pos": [-10, 0, 0],
+            "pos": [-24, 0, 0],
             "controller": "npc"
         },
         {
@@ -93,12 +93,10 @@
   ]
 }
     ],
-    "walkArea": {
-        "minX": -10.75,
-        "maxX": 9.98,
-        "minY": -2,
-        "maxY": 1
-    },
+"walkAreas": [
+  { "if": { "scenarioMin": 105 },"minX": -10, "maxX": 9, "minY": -1, "maxY": 0.7},
+  { "if": {},  "minX": -32, "maxX": -7, "minY": -1, "maxY": 0.7  }
+],
     "spawns": {
         "house_door": [-1, -1, 0],
         "from_prologue": [6, 0, 0],
@@ -164,7 +162,7 @@
                         "y": 3.7,
                         "width": 16,
                         "height": 6,
-                        "alphaIndex": 1
+                        "alphaIndex": 4
                     },
                     {
                         "id": "ruin_layer2",
@@ -174,7 +172,85 @@
                         "y": 3.7,
                         "width": 16,
                         "height": 6,
-                        "alphaIndex": 2
+                        "alphaIndex": 3
+                    }
+                ]
+            },
+            {
+                "id": "MID",
+                "z": 24,
+                "parallaxFactor": 0.86,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                    "id": " treeline_pine_near",
+                    "texture": "Art/Environment/treeline_pine.png",
+                    "kind": "tile",
+                    "tileSize": { "width": 24, "height": 16 },
+                    "x": -16,
+                    "y": 7.2,
+                    "width": 32,
+                    "height": 12.8,
+                    "alphaIndex": 4
+                },{
+                        "id": "ground_treeline_near",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 1.6,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 64,
+                        "height": 1,
+                        "alphaIndex": 3
+                    }
+                ]
+            },{
+                "id": "MID",
+                "z": 32,
+                "parallaxFactor": 0.64,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                    "id": " treeline_pine",
+                    "texture": "Art/Environment/treeline_pine.png",
+                    "kind": "tile",
+                    "tileSize": { "width": 16, "height": 12 },
+                    "x": -16,
+                    "y": 7.2,
+                    "width": 32,
+                    "height": 9.6,
+                    "alphaIndex": 2
+                },{
+                        "id": "ground_treeline_far",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 2.4,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 64,
+                        "height": 1,
+                        "alphaIndex": 1
+                    }
+                ]
+            },{
+                "id": "MID",
+                "z": 32,
+                "parallaxFactor": 0.48,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "ground_treeline_far",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 3.2,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 64,
+                        "height": 1,
+                        "alphaIndex": 1
                     }
                 ]
             },
@@ -205,7 +281,7 @@
                         "x": 0,
                         "y": -2.8,
                         "tileSize": { "width": 1.28, "height": 1.28 },
-                        "width": 48,
+                        "width": 64,
                         "height": 8,
                         "alphaIndex": 2
                     },{
@@ -215,7 +291,7 @@
                         "x": 0,
                         "y": -2.9,
                         "tileSize": { "width": 5.12, "height": 2.56 },
-                        "width": 48,
+                        "width": 64,
                         "height": 8,
                         "alphaIndex": 3
                     },

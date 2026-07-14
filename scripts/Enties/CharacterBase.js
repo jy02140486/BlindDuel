@@ -26,6 +26,8 @@ export class CharacterBase {
         this.rootDebugVisible = this.showCollision;
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
+        this.baseMoveSpeed = config.moveSpeed ?? this.baseWalkSpeed;
+        this.activeSpeedMode = "walk";
         this.buffsProvider = null;
         this.currentSpeed = 0;
         this.facing = 1;
@@ -371,14 +373,16 @@ export class CharacterBase {
             this.setFacing(nx > 0 ? 1 : -1);
         }
 
-        const effectiveSpeed = this.getEffectiveWalkSpeed();
+        const effectiveSpeed = this.getEffectiveSpeed();
         this.root.position.x += nx * effectiveSpeed * dtSec;
         this.root.position.y += ny * effectiveSpeed * dtSec;
         this.currentSpd = Math.hypot(nx * effectiveSpeed, ny * effectiveSpeed);
     }
 
-    getEffectiveWalkSpeed() {
-        let speed = this.baseWalkSpeed;
+    getEffectiveSpeed() {
+        let speed = this.activeSpeedMode === "move"
+            ? this.baseMoveSpeed
+            : this.baseWalkSpeed;
         if (this.hasTag("parryBonus") || this.hasTag("chainBonus")) {
             speed *= this._moveSpeedBonus;
         }

@@ -7,7 +7,8 @@ const DEFAULT_CHARACTER_OPTIONS = {
     pxToWorld: 0.03,
     collisionThicknessPx: 40,
     moveDeadzone: 0.2,
-    walkSpeed: 0.41,
+    walkSpeed: 1.4,
+    moveSpeed: 0.4,
     showCollision: true
 };
 

@@ -74,7 +74,7 @@ export class AIKnowledgeRegistry {
         const clips = character.config?.clips || {};
         const states = character.stateGraph?.states || {};
         const pxToWorld = character.pxToWorld ?? 0.03;
-        const walkSpeed = character.baseWalkSpeed ?? 0;
+        const moveSpeed = character.baseMoveSpeed ?? character.baseWalkSpeed ?? 0;
 
         const attackProfiles = [];
         const stateDisplacements = {};
@@ -119,10 +119,10 @@ export class AIKnowledgeRegistry {
         return {
             characterId: character.id,
             pxToWorld,
-            walkSpeed,
+            moveSpeed,
             attacks: attackProfiles,
             movement: {
-                walkSpeed,
+                moveSpeed,
                 stateDisplacements
             }
         };

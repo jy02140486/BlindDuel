@@ -282,6 +282,12 @@ export class ExploreMode extends BaseMode {
         cameraManager?.switchRig("explore");
         if (character) {
             character.setFacingMode(FACING_MODE.AUTO_FROM_MOVE);
+            // 防御性复位：BattleMode.exit 正常情况下已写回 "walk"；
+            // 若异常路径跳过 exit，此处兜底，并 warn 提示
+            if (character.activeSpeedMode !== "walk") {
+                console.warn(`[ExploreMode] character.activeSpeedMode was "${character.activeSpeedMode}" on enter (expected "walk"); BattleMode.exit may have been skipped. Resetting to "walk".`);
+            }
+            character.activeSpeedMode = "walk";
         }
         this._buildIndices();
         this._setupDrawOrderDebug();
