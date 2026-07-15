@@ -148,7 +148,7 @@
                 ]
             },
             {
-                "id": "MID",
+                "id": "mid_ruin",
                 "z": 20,
                 "parallaxFactor": 0.91,
                 "renderingGroupId": 0,
@@ -177,14 +177,14 @@
                 ]
             },
             {
-                "id": "MID",
+                "id": "mid_treeline_1",
                 "z": 24,
                 "parallaxFactor": 0.86,
                 "renderingGroupId": 0,
                 "loopX": false,
                 "elements": [
                     {
-                    "id": " treeline_pine_near",
+                    "id": " treeline_pine_1",
                     "texture": "Art/Environment/treeline_pine.png",
                     "kind": "tile",
                     "tileSize": { "width": 24, "height": 16 },
@@ -192,9 +192,9 @@
                     "y": 7.2,
                     "width": 32,
                     "height": 12.8,
-                    "alphaIndex": 4
+                    "alphaIndex": 8
                 },{
-                        "id": "ground_treeline_near",
+                        "id": "ground_treeline_1",
                         "texture": "Art/Environment/dirt_base.png",
                         "kind": "tile",
                         "x": 0,
@@ -202,11 +202,40 @@
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
                         "height": 1,
-                        "alphaIndex": 3
+                        "alphaIndex": 7
                     }
                 ]
             },{
-                "id": "MID",
+                "id": "mid_treeline_2",
+                "z": 32,
+                "parallaxFactor": 0.72,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                    "id": " treeline_pine",
+                    "texture": "Art/Environment/treeline_pine.png",
+                    "kind": "tile",
+                    "tileSize": { "width": 19.6, "height": 14.4 },
+                    "x": -16,
+                    "y": 6.4,
+                    "width": 32,
+                    "height": 9.6,
+                    "alphaIndex": 6
+                },{
+                        "id": "ground_treeline_2",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 2.4,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 64,
+                        "height": 1,
+                        "alphaIndex": 5
+                    }
+                ]
+            },{
+                "id": "mid_treeline_3",
                 "z": 32,
                 "parallaxFactor": 0.64,
                 "renderingGroupId": 0,
@@ -221,9 +250,9 @@
                     "y": 7.2,
                     "width": 32,
                     "height": 9.6,
-                    "alphaIndex": 2
+                    "alphaIndex": 4
                 },{
-                        "id": "ground_treeline_far",
+                        "id": "ground_treeline_2",
                         "texture": "Art/Environment/dirt_base.png",
                         "kind": "tile",
                         "x": 0,
@@ -231,11 +260,11 @@
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
                         "height": 1,
-                        "alphaIndex": 1
+                        "alphaIndex": 3
                     }
                 ]
             },{
-                "id": "MID",
+                "id": "mid_ground_far",
                 "z": 32,
                 "parallaxFactor": 0.48,
                 "renderingGroupId": 0,
