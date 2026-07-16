@@ -256,9 +256,10 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | fn 名 | 作用 |
 |-------|------|
 | `disposeProp` | 销毁所有 kind="prop" 实体（清 props + renderables，dispose sprite） |
-| `showCompanionBubble` | Charlotte 头顶气泡显示 "!" |
-| `hideCompanionBubble` | 隐藏气泡 |
 | `enterCompanionFollowing` | Charlotte 切 following 态（调 NpcController.enterFollowing） |
+| `enterCompanionIdle` | Charlotte 切回 idle 态（调 NpcController.enterIdle） |
+
+**气泡控制已迁出 callback**：旧版 `showCompanionBubble` / `hideCompanionBubble` 两个写死 Charlotte 的 callback 已删，改用通用 `dialogueBubble` clip（见 §5.12）。
 
 **扩展新 handler**：在 ExploreMode `_registerSequenceHandlers()` 里加 `handlers.set("yourFn", (ctx, clip) => this.#handleYourFn(ctx, clip))`。
 
@@ -271,6 +272,38 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 ```
 
 **注意**：wait 是 interval clip，`start`/`end` 都是空实现。多数场景下其实不需要 wait track——多 track 已天然并行。wait 主要用于"同 track 内想要串行等待"的语义化表达。
+
+### 5.12 dialogueBubble（对话气泡）
+
+控制 DialogueBubble 的显示/隐藏，支持指定 NPC 与文本。
+
+```jsonc
+// 显示气泡（单行文本）
+{ "type": "dialogueBubble", "atMs": 4200, "actorId": "companion", "text": "!" }
+
+// 显示气泡（多行/富文本，传 segments 数组）
+{ "type": "dialogueBubble", "atMs": 4200, "actorId": "companion",
+  "content": [{ "type": "text", "value": "第一行" }, { "type": "image", "src": "icon.png", "width": 16, "height": 16 }] }
+
+// 隐藏气泡（actorId 可省，省略则 hide 全局）
+{ "type": "dialogueBubble", "atMs": 6200, "action": "hide" }
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `actorId` | string | 目标 NPC（查 `interactables`/`entityPool`）。show 必填；可从 `track.binding.actorId` fallback；hide 可省，省则 hide 全局 |
+| `text` | string | 单行文本（与 `content` 二选一） |
+| `content` | object[] | 富文本片段数组（与 `text` 二选一）：`{ type:"text", value:"..." }` 或 `{ type:"image", src, width, height, alt, style }` |
+| `action` | string | `"show"`（默认） / `"hide"` |
+
+**行为细节**：
+- `show` 调 `bubble.show(actor)` + `setText`/`setContent`；随后**立即调一次 `bubble.update(scene)`** 算初始投影坐标，避免 sequencer 期间气泡 `left`/`top` 为空导致 CSS auto 定位偏移出屏幕
+- `hide` 调 `bubble.hide()`
+- **DialogueBubble 是单例**：同时只能显示一个气泡，多 NPC 同时 show 会覆盖前一个
+- **视锥剔除照常生效**：气泡位置每帧由 `ExploreMode.#updateDialogueBubblePosition` 更新，NPC 出相机视锥时气泡 `display:none` 自动隐藏（详见§9.2 sequencer 期间气泡说明）
+- **sequencer busy 期间 ExploreMode 不接管气泡生命周期**：`#updateDialogueBubble` 加了 sequencer busy 守卫，避免 ExploreMode 的 hide 把 sequencer 显式 show 的气泡误关；气泡显隐完全由 `dialogueBubble` clip 控制
+
+**依赖**：`ctx.dialogueBubble` 必须存在（`sharedContext.dialogueBubble`，Game.bootstrap 实例化）；通常只在 ExploreMode 期间可用（BattleMode 未注入）。
 
 ## 6. Track 并行与重叠
 
@@ -334,13 +367,13 @@ sceneSequencer.stop();    // 强制停
 
 ## 8. 完整示例
 
-### 8.1 简单 cutscene（prop 演出 + 回调链）
+### 8.1 简单 cutscene（prop 演出 + 气泡 + 回调链）
 
 见 [prologue_cs_rabble_flee.json](file:///e:/se/BlindDuel/Data/Sequences/prologue_cs_rabble_flee.json)：
 - prop 走 idle → fall（moveActorTo 下落）→ land → run（moveActorTo 跑开）
 - 4000ms callback `disposeProp` 销毁 prop
-- 4200ms callback `showCompanionBubble` → wait 2000ms → `hideCompanionBubble`
-- 6400ms callback `enterCompanionFollowing` 切跟随态
+- 4500ms `dialogueBubble` clip show → 2500ms 后 hide（替代旧的 showCompanionBubble/hideCompanionBubble callback）
+- 末尾 callback `enterCompanionFollowing` 切跟随态
 
 ### 8.2 进战斗序列（cameraBlend + switchMode）
 
@@ -393,8 +426,10 @@ sceneSequencer.stop();    // 强制停
 1. `moveActorTo.speed` 字段未实现，实际按 `durationMs` 线性插值
 2. `easing` 只有 `linear`，无缓动函数库
 3. callback handler 只能注册在 ExploreMode（BattleMode 未注册）—— 战斗内 sequence 不能用 callback
-4. 同一时刻多个 cameraEffect 叠播靠 CameraManager 内部队列，无显式优先级
-5. `wait` clip 目前几乎无实际用途（多 track 已并行），保留作语义占位
+4. `dialogueBubble` clip 依赖 `ctx.dialogueBubble`，通常只在 ExploreMode 期间可用（与 callback handler 同样限制）
+5. 同一时刻多个 cameraEffect 叠播靠 CameraManager 内部队列，无显式优先级
+6. `wait` clip 目前几乎无实际用途（多 track 已并行），保留作语义占位
+7. DialogueBubble 是单例，同时只能显示一个气泡
 
 ## 11. 扩展指南
 

@@ -1,5 +1,6 @@
 # Sequencer 期间门控修复计划
 
+> **状态：已完成并归档（2026-07-15）。**
 > 关联文档：[docs/TimelineSequencer User Guide.md](../docs/TimelineSequencer%20User%20Guide.md)
 > 关联 issue：intro 播放期间 Charlotte 对话气泡误触；intro/outro walkArea clamp 行为不对称
 
@@ -278,4 +279,42 @@ dialogueBubble: {
 
 ## 8. 实施记录
 
-待阶段 1 完成后在此追加。
+### 阶段 1（walkArea clamp 门控）— 完成
+- 改动：[ExploreCollisionSystem.resolveMovement](../scripts/Systems/ExploreCollisionSystem.js#L6) 开头加 `if (entity.controlledBySequence) return;`
+- 效果：intro 期间 hero 不再被 walkArea clamp（y=1 不被钳到 0.7），与 Charlotte 对称
+- 额外发现：hero 出生在 `pos:[-26,0]` 但 walkArea minX=-16，sequencer 启动前 fetch 空窗期 hero 被首帧 clamp 拉到 -16。补丁：给 `moveActorTo` 加可选 `startPos` 字段，start 时先写 position 再设 controlledBySequence，把 hero 拉回 -26
+- prologue_intro.json 两个 moveActorTo clip 加 `startPos`：hero `[-26,0]`、companion `[-24,0]`
+
+### 阶段 2（sequencer busy 门控 NPC greeting）— 完成
+- 改动 1：[ExploreMode.fixedUpdate](../scripts/Systems/Modes/ExploreMode.js#L41-L52) NPC 循环 context 透传 `sequencerBusy`
+- 改动 2：[NpcController.update](../scripts/Systems/NpcController.js#L64-L72) idle→greeting 触发分支加 `!sequencerBusy` 守卫，greeting 计时推进也加同样守卫
+- 保留：`_behavior` 路径（FollowingBehavior.update 等）不受影响，sequence callback 仍能调 `enterCompanionFollowing`/`enterCompanionIdle`
+- 效果：intro/cutscene 期间 hero 走过 Charlotte 不触发气泡
+
+### 阶段 3（dialogueBubble clip）— 完成，与原计划有偏差
+- 改动 1：[TimelineSequencer ACTION_HANDLERS](../scripts/Systems/TimelineSequencer.js) 加 `dialogueBubble` handler（show/hide 双分支，actorId 从 clip 或 track.binding 取）
+- 改动 2：[ExploreMode._registerSequenceHandlers](../scripts/Systems/Modes/ExploreMode.js) 删 `showCompanionBubble`/`hideCompanionBubble` 两个 set，`_unregisterSequenceHandlers` 删两个 delete，删两个 #handleXxx 方法体
+- 改动 3：[prologue_cs_rabble_flee.json](../Data/Sequences/prologue_cs_rabble_flee.json) 迁移：`callback fn:showCompanionBubble` → `dialogueBubble text:!`；`callback fn:hideCompanionBubble` → `dialogueBubble action:hide`
+
+### 阶段 3 调试期发现（原计划未涵盖）
+
+气泡最初能 show 但肉眼不可见，三层根因逐一定位：
+
+1. **`ExploreMode.#updateDialogueBubble` 误 hide**：sequencer 期间每帧循环 NPC 找 greeting 态找不到 → 调 `dialogueBubble.hide()` 把 sequencer 显式 show 的气泡关掉。**修复**：`#updateDialogueBubble` 加 sequencer busy 守卫，sequencer 期间 ExploreMode 不接管气泡生命周期
+2. **`#updateDialogueBubblePosition` SKIP 后 left/top 为空**：原想加守卫跳过位置更新避免视锥剔除关掉气泡，但 `bubble.show(actor)` 只设 targetNpc + display:block，没设 left/top，导致 CSS auto + `translate(-50%,-100%)` 把气泡偏移出屏幕。**修复**：取消 `#updateDialogueBubblePosition` 守卫（让视锥剔除正常工作），改在 dialogueBubble handler show 分支里 `bubble.show(actor)` 后立即调一次 `bubble.update(ctx.babylonScene)` 算初始 left/top
+3. **视锥剔除的预期行为**：scripted 相机期间 Charlotte 出视野（scripted orthoWidth=20，center=-1.2，Charlotte 在 x=-23.2 距中心 22 远超半宽 10），气泡 `display:none` 自动隐藏——这是正确的物理直觉（相机看不到 NPC 也看不到气泡）
+
+### 最终行为
+
+| 时间 | 行为 |
+|------|------|
+| t=0~1000ms（explore 相机） | 气泡在 Charlotte 头顶显示，位置随相机插值变化 |
+| t=1000~2000ms（cameraBlend 过渡） | 气泡位置跟随相机插值 |
+| t=2000ms 后（scripted 相机对准 prop） | Charlotte 出视锥 → 气泡自动隐藏 |
+| sequencer 结束 | Charlotte 重进 explore 视野 → 气泡可再次显示 |
+
+### 不在本计划范围（保留）
+- per-actor 多气泡（DialogueBubble 单例改造）
+- sequencer 期间其他子系统门控（pickable 拾取、sceneSwitch trigger）
+- BattleMode 期间 callback handler / dialogueBubble clip 注册
+- Charlotte 战斗内 idle/following 的更深层解耦

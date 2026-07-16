@@ -45,12 +45,14 @@ export class NpcController {
             return;
         }
 
+        const sequencerBusy = context.sequencerBusy;
         const dx = player.root.position.x - npc.root.position.x;
         const dy = player.root.position.y - npc.root.position.y;
         const distSq = dx * dx + dy * dy;
         const inGreetingRange = distSq <= this.greetingRadius * this.greetingRadius;
 
-        if (this.state === "idle" && inGreetingRange && !this.hasGreetedInRange) {
+        // sequencer 期间不触发 greeting（避免 intro 中 hero 路过 Charlotte 误弹气泡）
+        if (this.state === "idle" && inGreetingRange && !this.hasGreetedInRange && !sequencerBusy) {
             if (this._isQuestCompleted()) {
                 this.hasGreetedInRange = true;
                 return;
@@ -60,7 +62,8 @@ export class NpcController {
             return;
         }
 
-        if (this.state === "greeting") {
+        // sequencer 期间不推进 greeting 计时（避免气泡计时与 sequencer 冲突）
+        if (this.state === "greeting" && !sequencerBusy) {
             this._dialogueTimerMs += dtMs;
             if (this._dialogueTimerMs >= this._dialogueDurationMs) {
                 this._triggerAction(context.questManager);

@@ -4,6 +4,14 @@
 
 ---
 
+## 最近归档（2026-07-15）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/Sequencer 期间门控修复（NPC 气泡 + walkArea clamp）.MD](archived/Sequencer%20期间门控修复（NPC%20气泡%20+%20walkArea%20clamp）.MD) | sequencer 期间 ExploreMode 子系统门控不一致 | ①`ExploreCollisionSystem.resolveMovement` 加 `controlledBySequence` 守卫跳过 walkArea clamp（含 `moveActorTo.startPos` 可选字段修补 fetch 空窗期 hero 被首帧 clamp 的问题）②`NpcController.update` 与 `ExploreMode.#updateDialogueBubble` 加 sequencer busy 守卫，避免 greeting 误触与气泡被 ExploreMode hide 误杀 ③新增通用 `dialogueBubble` clip 取代 `showCompanionBubble`/`hideCompanionBubble` 两个写死 Charlotte 的 callback；调试期发现并修复气泡 `left/top` 初始为空导致 CSS auto 偏移出屏幕的问题（handler show 分支立即调一次 `bubble.update` 算初始位置）；视锥剔除照常生效（NPC 出相机视野时气泡自然隐藏） |
+| [archived/Prologue 内容与演出流程实施计划.MD](archived/Prologue%20内容与演出流程实施计划.MD) | Prologue 完整流程落地（intro→拾取→交任务→prop 演出→同伴跟随→战斗→outro） | Step 1-9 主体已全部落地，详录在 `commits_detailed/26.7.4 ~ 26.7.14` 各份提交文档；`dialogueBubble` clip 迁移在 Sequencer 期间门控修复归档中 |
+| [archived/祭坛状态物件设计.MD](archived/祭坛状态物件设计.MD) | PropEntity 扩展为状态物件（可挡路 + 可遮挡 + scenario/flag 驱动切 clip），首个用例 prologue 祭坛 | 设计与实施一体，§1-§10 为设计参考；实施记录见 `commits_detailed/26.7.13 Altar added` 与 `26.7.14 Altar Quest`。落地内容：PropEntity 加 `blocker`/`depthMask`/`stateMap`/`initialClip` + 单文件多 tag clip 模式；Scene 加 `_applyStateMap`/`_applyWalkArea` + WorldState 变化重评估；ExploreMode `_buildIndices` 收 `kind==="prop"` 的 blocker；stencil occluder 工具函数抽取；Charlotte 收物链路 item 从 `dagger` 迁为 `altar_gem`（D1-D3 决策落地）；prologue.json 配 altar entity + walkAreas 动态扩展右侧区域 |
+
 ## 最近归档（2026-07-12）
 
 | 计划 | 目标 | 完成内容 |
@@ -44,9 +52,7 @@
 
 ## 进行中
 
-| 计划 | 目标 | 进度 |
-|------|------|------|
-| [COMBAT_RULES_REDESIGN_PLAN.md](COMBAT_RULES_REDESIGN_PLAN.md) | 战斗判定规则重设计：从"剑身强弱"转向"招式轻重+轨迹" | Step 0 进行中（mask 重绘） |
+无进行中计划。
 
 ## 待办入口
 
@@ -130,13 +136,22 @@
 - **PropEntity**：过场动画道具实体，hold/loop 双模式，不进 NpcController/staticBlockers/interactables
 - **同伴 NPC**：Charlotte + FollowingBehavior，基于距离的动态速度调整，cutscene 末尾 callback 激活跟随
 - **cutsceneInvokers**：SceneDef 数据驱动 cutscene 触发（condition + sequenceUrl + flagOnPlay），替代硬编码
-- **TimelineSequencer**：多 track + 10 种 clip 类型 + callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer.md`
+- **TimelineSequencer**：多 track + 12 种 clip 类型（command/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
+- **sequencer 期间 ExploreMode 门控**：`isBusy()` 期间 NpcController greeting 不触发、`#updateDialogueBubble` 不接管气泡生命周期、`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp；气泡显隐完全由 `dialogueBubble` clip 控制
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
 - `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通
 - Character 解耦已完成：`CharacterBase / CombatCharacter / NpcCharacter`
 - NPC 最小链路已通：`NpcFrameComponent + NpcController(idle/greeting/following) + occupancy`
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
+
+## Update Log (2026-07-15)
+- 2 个计划文档完成并归档：`Sequencer 期间门控修复（NPC 气泡 + walkArea clamp）`、`Prologue 内容与演出流程实施计划`
+- sequencer 期间 ExploreMode 子系统门控统一：`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp + blockers 推开；`sceneSequencer.isBusy()` 让 NpcController greeting 不触发、ExploreMode.#updateDialogueBubble 不接管气泡生命周期
+- 新增 `dialogueBubble` clip（TimelineSequencer ACTION_HANDLERS）：支持 `actorId`/`text`/`content`/`action` 字段，取代写死 Charlotte 的 `showCompanionBubble`/`hideCompanionBubble` callback
+- 调试期发现：`bubble.show(actor)` 后未调 `bubble.update` 算初始投影坐标，导致 DOM `left`/`top` 为空被 CSS auto + `translate(-50%,-100%)` 偏移出屏幕；修复方式是 handler show 分支立即调一次 `bubble.update`
+- moveActorTo 新增可选 `startPos: [x, y]` 字段：start 时先写 position 再设 controlledBySequence，修补 sequencer 启动 fetch 空窗期 hero 被首帧 walkArea clamp 拉走的问题
+- 文档同步：`docs/TimelineSequencer User Guide.md` §5 新增 dialogueBubble 类型说明、§5.10 callback 表删除旧气泡 callback、§8.1 示例改用 dialogueBubble、§10 已知限制更新；`PROJECT_CONTEXT.md` §3 修正文档名引用、§6.14 补充守卫说明、§6.15 新增 sequencer 期间 ExploreMode 子系统门控约定
 
 ## Update Log (2026-07-12)
 - Prologue 收尾三项全部完成并归档：`Prologue 收尾三项设计.MD`

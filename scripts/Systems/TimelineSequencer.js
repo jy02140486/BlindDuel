@@ -364,7 +364,6 @@ const ACTION_HANDLERS = {
             if (Array.isArray(clip.startPos)) {
                 actor.root.position.x = clip.startPos[0];
                 actor.root.position.y = clip.startPos[1];
-                console.log(`[TimelineSeq] moveActorTo startPos override to (${clip.startPos[0]}, ${clip.startPos[1]})`);
             }
             state.startX = actor.root.position.x;
             state.startY = actor.root.position.y;
@@ -511,6 +510,45 @@ const ACTION_HANDLERS = {
                 return;
             }
             gameModeManager.switchMode(clip.modeId, clip.payload);
+        }
+    },
+
+    dialogueBubble: {
+        start(ctx, clip, track) {
+            const bubble = ctx.dialogueBubble;
+            if (!bubble) {
+                console.warn("[TimelineSequencer] dialogueBubble: no bubble in ctx");
+                return;
+            }
+
+            if (clip.action === "hide") {
+                bubble.hide();
+                return;
+            }
+
+            // show 分支：需 actorId（默认从 track.binding.actorId 取，支持显式 clip.actorId 覆盖）
+            const actorId = clip.actorId ?? track.binding?.actorId;
+            if (!actorId) {
+                console.warn("[TimelineSeq] dialogueBubble show: missing actorId");
+                return;
+            }
+            const actor = _resolveActor(ctx, { actorId });
+            if (!actor) {
+                console.warn(`[TimelineSeq] dialogueBubble: actor not found: ${actorId}`);
+                return;
+            }
+
+            if (Array.isArray(clip.content)) {
+                bubble.setContent(clip.content);
+            } else {
+                bubble.setText(clip.text ?? "");
+            }
+            bubble.show(actor);
+            // 立即算一次初始位置：sequencer 期间 #updateDialogueBubblePosition 被守卫跳过，
+            // 若不初始化 left/top，CSS auto 会把气泡定位到容器左上角 + translate 偏移出屏幕外
+            if (ctx.babylonScene) {
+                bubble.update(ctx.babylonScene);
+            }
         }
     },
 

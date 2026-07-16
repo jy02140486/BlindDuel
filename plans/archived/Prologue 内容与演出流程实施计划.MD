@@ -1,5 +1,6 @@
 # Prologue 内容与演出流程实施计划
 
+> **状态：已完成并归档（2026-07-15）。** 主体 Step 1-9 均已实施，详录在 `commits_detailed/26.7.4 ~ 26.7.14` 各份提交文档。后续补丁另立归档：[Sequencer 期间门控修复（NPC 气泡 + walkArea clamp）.MD](./Sequencer%20期间门控修复（NPC%20气泡%20+%20walkArea%20clamp）.MD) 覆盖本计划 §1.10（clamp 旁路）与 sequencer 期间 ExploreMode 子系统门控的最终方案。
 > 目标：在 prologue 场景落地完整流程——intro 演出 → 捡道具 → 交 NPC（派/交任务）→ prop 播片 → 同伴气泡 → 同伴跟随 → 战斗 → outro 演出 → 切 outdoor_village。
 > 范围：场景切换 fade 包裹、intro/outro sequence 触发机制、同伴跟随 NPC、PropEntity（一次性播片角色）、QuestManager 数据化 directives、prologue.json 配置、prologue 专用 BattleDef。
 > 不在范围：同伴 NPC 美术资源（待补，先用 traveller 占位）、prop 人物美术（待补，先用 traveller 占位）、bard 现有 action 字符串迁移（留下一章处理）、第一章另两场景的 intro/outro（不做）。

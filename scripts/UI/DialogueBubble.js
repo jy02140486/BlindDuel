@@ -84,7 +84,8 @@ export class DialogueBubble {
             scene.activeCamera.viewport.toGlobal(canvas.width, canvas.height)
         );
 
-        if (projected.z > 0 && projected.z < 1) {
+        const inView = projected.z > 0 && projected.z < 1;
+        if (inView) {
             this._bubble.style.display = "block";
             this._bubble.style.left = `${projected.x}px`;
             this._bubble.style.top = `${projected.y}px`;

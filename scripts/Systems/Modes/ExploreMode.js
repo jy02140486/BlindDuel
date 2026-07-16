@@ -37,6 +37,7 @@ export class ExploreMode extends BaseMode {
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
 
+        const sequencerBusy = !!this.context.sceneSequencer?.isBusy();
         for (const npc of this.interactables) {
             npc.fixedUpdate(dtMs, tickCount);
             const controller = npc.npcController;
@@ -46,6 +47,7 @@ export class ExploreMode extends BaseMode {
                     questManager: this.context.questManager,
                     inventoryManager: this.context.inventoryManager,
                     dialogueBubble: this.context.dialogueBubble,
+                    sequencerBusy,
                 });
             }
         }
@@ -309,8 +311,6 @@ export class ExploreMode extends BaseMode {
         const handlers = this.context.sequenceHandlers;
         if (!handlers) return;
         handlers.set("disposeProp", (ctx, clip) => this.#handleDisposeProp(ctx, clip));
-        handlers.set("showCompanionBubble", (ctx, clip) => this.#handleShowCompanionBubble(ctx, clip));
-        handlers.set("hideCompanionBubble", (ctx, clip) => this.#handleHideCompanionBubble(ctx, clip));
         handlers.set("enterCompanionFollowing", (ctx, clip) => this.#handleEnterCompanionFollowing(ctx, clip));
         handlers.set("enterCompanionIdle", (ctx, clip) => this.#handleEnterCompanionIdle(ctx, clip));
     }
@@ -319,8 +319,6 @@ export class ExploreMode extends BaseMode {
         const handlers = this.context.sequenceHandlers;
         if (!handlers) return;
         handlers.delete("disposeProp");
-        handlers.delete("showCompanionBubble");
-        handlers.delete("hideCompanionBubble");
         handlers.delete("enterCompanionFollowing");
         handlers.delete("enterCompanionIdle");
     }
@@ -397,18 +395,6 @@ export class ExploreMode extends BaseMode {
                 }
             }
         }
-    }
-
-    #handleShowCompanionBubble(_ctx, _clip) {
-        const companion = this.interactables.find(n => n.id === "companion");
-        const bubble = this.context.dialogueBubble;
-        if (!companion || !bubble) return;
-        bubble.setText("!");
-        bubble.show(companion);
-    }
-
-    #handleHideCompanionBubble(_ctx, _clip) {
-        this.context.dialogueBubble?.hide();
     }
 
     #handleEnterCompanionFollowing(_ctx, _clip) {
@@ -873,10 +859,13 @@ export class ExploreMode extends BaseMode {
     }
 
     #updateDialogueBubble() {
-        const { dialogueBubble } = this.context;
+        const { dialogueBubble, sceneSequencer } = this.context;
         if (!dialogueBubble) return;
 
         if (this._giveSequence) return;
+
+        // sequencer 期间不接管气泡生命周期：让 dialogueBubble clip 显式管理 show/hide
+        if (sceneSequencer?.isBusy()) return;
 
         for (const npc of this.interactables) {
             const controller = npc.npcController;

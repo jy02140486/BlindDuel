@@ -72,22 +72,23 @@
     {
       "id": "companion.bubble_show",
       "kind": "callback",
+      "binding": { "actorId": "companion" },
       "clips": [
-        { "type": "callback", "atMs": 4500, "fn": "showCompanionBubble" }
+        { "type": "dialogueBubble", "atMs": 800, "actorId": "companion", "text": "!" }
       ]
     },
     {
       "id": "companion.bubble_wait",
       "kind": "wait",
       "clips": [
-        { "type": "wait", "atMs": 5200, "durationMs": 2000 }
+        { "type": "wait", "atMs": 800, "durationMs": 2000 }
       ]
     },
     {
       "id": "companion.bubble_hide",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 7200, "fn": "hideCompanionBubble" }
+        { "type": "dialogueBubble", "atMs": 2500, "action": "hide" }
       ]
     },
     {

@@ -50,7 +50,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）
 - 时间轴序列器：`scripts/Systems/TimelineSequencer.js`（多 track + clip + callback handler，文档见 `docs/TimelineSequencer.md`）
 - 过场序列文件：`Data/Sequences/*.json`（prologue_intro / prologue_outro / prologue_cs_rabble_flee）
-- TimelineSequencer 用户文档：`docs/TimelineSequencer.md`
+- TimelineSequencer 用户文档：`docs/TimelineSequencer User Guide.md`
 - 相机管理器：`scripts/Systems/CameraManager.js`
 - 决斗相机：`scripts/DuelCameraRig.js`
 - 探索相机：`scripts/ExploreCameraRig.js`
@@ -118,7 +118,8 @@ py -m http.server 9000 --bind 127.0.0.1
 11. AABBTrigger debug 网格使用 `renderingGroupId = 3` 确保渲染在最上层，不被场景元素遮挡。
 12. `pickable` 的 sceneStates 持久化（`markPickableCollected`）已就绪，拾取时写入 + 加载时 spawnIf 过滤均已实现。
 13. Scene 不再持有稳定对象别名字段（cameraManager/cameraRig/playerController 等），业务方法统一通过 `this._game.xxx` 或 `this.sharedContext.xxx` 访问；稳定对象生命周期归 Game。
-14. CharacterBase 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估，同时 `_applyMovement` 开头加守卫跳过 frameSpeeds/stateSpeed/moveIntent 三个位移分支，确保 sequencer 期间 position 写入来源唯一（只有 moveActorTo 的绝对设置），消除位置双写。NpcCharacter/PropEntity 不需要该标记（无 transition 覆盖问题），但 NpcCharacter 的 idle/following 行为由 IdleBehavior/FollowingBehavior 数据驱动（idle clip 配置在 NpcDef）。
+14. CharacterBase 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估，同时 `_applyMovement` 开头加守卫跳过 frameSpeeds/stateSpeed/moveIntent 三个位移分支，确保 sequencer 期间 position 写入来源唯一（只有 moveActorTo 的绝对设置），消除位置双写。`ExploreCollisionSystem.resolveMovement` 也加同样守卫，sequencer 期间跳过 staticBlockers 推开 + walkArea clamp（避免 moveActorTo 走到 walkArea 边界外被钳回）。NpcCharacter/PropEntity 不需要该标记（无 transition 覆盖问题），但 NpcCharacter 的 idle/following 行为由 IdleBehavior/FollowingBehavior 数据驱动（idle clip 配置在 NpcDef）。
+15. sequencer 期间 ExploreMode 子系统门控：`sceneSequencer.isBusy()` 期间，①`NpcController.update` 的 idle→greeting 转换跳过（避免气泡误触）②`ExploreMode.#updateDialogueBubble` 跳过（避免把 sequencer 显式 show 的气泡误 hide）③`moveActorTo` 的 `controlledBySequence` 标记让 ExploreCollisionSystem 早退。气泡的显隐完全由 `dialogueBubble` clip 控制（见 TimelineSequencer 文档 §5.12），位置更新照常跑（视锥剔除正常生效，NPC 出相机视野时气泡自动隐藏）。
 
 ## 7. 当前文件结构
 > 文件清单见 §3「当前目录与关键文件」（含职责说明），不再单独维护树形结构，避免双份不同步。
