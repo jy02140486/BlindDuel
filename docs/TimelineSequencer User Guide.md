@@ -121,9 +121,13 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 - `to: "explore"` 时自动用 hero 当前位置作为 target
 - `to: "scripted"` 时需配合 `setCameraFrame` 设定画面框
 
+**实现细节（重要）**：`cameraBlend` 在 `start` 时**一次性快照**目标 rig 的 `compute()` 结果作为 `toState`，整个 `durationMs` 期间不再重算，仅 lerp `fromState→toState`。同 track 内 clip 按数组顺序处理，因此当 `to: "scripted"` 时：
+- `setCameraFrame` **必须写在 `cameraBlend` 之前**（同 tick 内），否则 blend 启动快照到的 `_center` 是 rig 残留的脏值，相机会先朝错误方向漂移再瞬移到正确位置
+- blend 期间目标 rig 已 active，但 `_center` 不会被实时刷新；想"blend 期间目标跟随 actor 移动"做不到，应改用 `setCameraFollow` 接管后再让 `_center` 自己 lerp
+
 ### 5.4 setCameraFrame（scripted 相机框）
 
-设定 scripted rig 的正交画面框。
+设定 scripted rig 的正交画面框（静态框，相机看向固定点）。
 
 ```jsonc
 { "type": "setCameraFrame", "atMs": 0, "center": [0, 0, 0], "height": 4.5, "orthoWidth": 20 }
@@ -131,14 +135,42 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `center` | [x,y,z] | 画面中心世界坐标 |
-| `height` | number | 相机高度偏移 |
+| `center` | [x,y,z] | 画面中心世界坐标；`x/z` 决定相机看向的水平位置，`y` 决定 target 的 Y 高度（影响仰俯角） |
+| `height` | number | **相机自身**的 Y 高度（写入 `pos.y`），与 `center.y` 独立 |
 | `orthoWidth` | number | 正交视口宽度（世界单位） |
-| `zOffset` | number | 可选，Z 轴偏移 |
+| `zOffset` | number | 可选，Z 轴偏移（默认 -25） |
 
-**前置**：需先 `cameraBlend to: "scripted"` 切到 scripted rig。
+**`center.y` 与 `height` 的区别（易混淆）**：
+- `height` → `pos.y`（相机自己的高度）
+- `center.y` → `target.y`（相机看向的 Y）
+- 想让相机 Y 上下移动改 `height`，**不是** `center.y`；`center.y` 只影响俯仰角
+- `pos.y > target.y` 时呈俯视，相等时平视
 
-### 5.5 cameraEffect（相机特效）
+**前置**：目标 rig 需为 scripted。从其它 rig 切过来时，`setCameraFrame` 要写在 `cameraBlend to:"scripted"` **之前**（见 §5.3 实现细节）。
+
+### 5.5 setCameraFollow（scripted 相机跟随）
+
+让 scripted rig 的 `_center` lerp 跟随某个 actor 的 `root.position`（X/Y/Z 三轴都跟），用于横版跟拍。
+
+```jsonc
+{ "type": "setCameraFollow", "atMs": 1400, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 4.5, "orthoWidth": 20 }
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `actorId` | string | 跟随目标（clip 直填，不依赖 track.binding） |
+| `offsetX/Y/Z` | number | 目标位置偏移：`_center` lerp 到 `actor.pos + offset` |
+| `lerp` | number | 每帧 lerp 系数（默认 0.12），越大跟得越紧 |
+| `height` | number | 相机自身 Y 高度（同 §5.4） |
+| `orthoWidth` | number | 正交视口宽度 |
+
+**行为细节**：
+- 触发后 `_center` 按帧 lerp 到 `actor.root.position + offset`，X/Z 自然平滑过渡；这是从 `setCameraFrame` 接力到 follow 的关键——X/Z 不需要额外 blend
+- `_height` 是**瞬间赋值**（不平滑），所以 `setCameraFrame` 终点的 `height` 应与 `setCameraFollow` 的 `height` 对齐，否则相机 Y 会瞬跳
+- `center.y` 在 follow 期间被 `actor.y + offsetY` 接管覆盖，setFrame 写的 `center.y` 失效
+- `setCameraFollow` 不影响 blend 队列；它只是改 rig 内部状态，下一帧 `compute()` 自然应用
+
+### 5.6 cameraEffect（相机特效）
 
 入队一个相机特效（fade / letterbox / shake / flash）。
 
@@ -162,7 +194,7 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **注意**：`letterbox` 和 `fade` 在 clip `end` 时会调 `clearEffects` 清掉同类特效；`shake` / `flash` 不会主动清（到 durationMs 自然结束）。
 
-### 5.6 inputLock（输入锁）
+### 5.7 inputLock（输入锁）
 
 锁定/解锁玩家输入。
 
@@ -178,7 +210,7 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **与 controlledBySequence 的关系**：`inputLock` 锁 controller.enabled，`controlledBySequence` 标记让 controller.applyToCharacter 早退。两者作用相似但层次不同：moveActorTo 期间自动设 controlledBySequence（细粒度，仅禁 moveIntent 写入和 transition 评估），inputLock 是粗粒度全锁（含 command 队列）。多数 sequencer 场景只需 moveActorTo 自带的 controlledBySequence，无需再配 inputLock。
 
-### 5.7 faceWorldX（朝向）
+### 5.8 faceWorldX（朝向）
 
 设置 actor 朝向。
 
@@ -192,7 +224,7 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **行为**：考虑 actor 的 `nativeFacingX`（默认 1），自动转成 sprite facing。
 
-### 5.8 switchMode（模式切换）
+### 5.9 switchMode（模式切换）
 
 切换 GameMode（explore ↔ battle）。
 
@@ -205,7 +237,7 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `modeId` | string | `"battle"` / `"explore"` |
 | `payload` | object | 传给 mode.enter() 的 payload（battle 需带 `battleDef`） |
 
-### 5.9 callback（自定义回调）
+### 5.10 callback（自定义回调）
 
 调一个注册在 `sharedContext.sequenceHandlers` 里的具名函数。
 
@@ -230,7 +262,7 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **扩展新 handler**：在 ExploreMode `_registerSequenceHandlers()` 里加 `handlers.set("yourFn", (ctx, clip) => this.#handleYourFn(ctx, clip))`。
 
-### 5.10 wait（占位等待）
+### 5.11 wait（占位等待）
 
 无副作用，仅占用时间。用于在 track 里制造等待间隔（让同 track 后续 clip 的 atMs 拉开距离）。
 

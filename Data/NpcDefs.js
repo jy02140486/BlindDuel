@@ -24,7 +24,7 @@ export const NPC_DEFS = {
                 condition: {},
                 text: "🗡️",
                 content: [
-                    { type: "text", value: "🗡️ " },
+                    { type: "text", value: "👉 " },
                     { type: "image", src: "./Art/Sprite/items/altar_gem.png", width: 20, height: 20, alt: "altar_gem" }
                 ],
                 action: [

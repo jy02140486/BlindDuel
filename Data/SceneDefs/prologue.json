@@ -24,7 +24,7 @@
             "id": "hero",
             "name": "hero",
             "kind": "player",
-            "pos": [-26, 0],
+            "pos": [-32, 0],
             "controller": "player"
         },
         {
@@ -32,7 +32,7 @@
             "id": "companion",
             "name": "Charlotte",
             "kind": "npc",
-            "pos": [-24, 0, 0],
+            "pos": [-30, 0, 0],
             "controller": "npc"
         },
         {
@@ -59,7 +59,7 @@
             "id": "altar_gem_01",
             "name": "altar_gem",
             "kind": "pickable",
-            "pos": [-3.0, -1.5],
+            "pos": [-18.0, -1.5],
             "controller": "none",
             "visualYOffset": 0,
             "itemDef": {
@@ -73,7 +73,7 @@
   "archetype": "prop",
   "id": "altar",
   "kind": "prop",
-  "pos": [-8, 0.5, 0],
+  "pos": [-24, 0.5, 0],
   "controller": "none",
   "blocksMovement": true,
   "blocker": { "halfW": 1.9, "halfH": 0.6, "centerY": 1.4 },
@@ -94,8 +94,8 @@
 }
     ],
 "walkAreas": [
-  { "if": { "scenarioMin": 105 },"minX": -10, "maxX": 9, "minY": -1, "maxY": 0.7},
-  { "if": {},  "minX": -32, "maxX": -7, "minY": -1, "maxY": 0.7  }
+  { "if": { "scenarioMin": 105 },"minX": -22, "maxX": 9, "minY": -1, "maxY": 0.7},
+  { "if": {},  "minX": -32, "maxX": -18, "minY": -1, "maxY": 0.7  }
 ],
     "spawns": {
         "house_door": [-1, -1, 0],
@@ -162,7 +162,7 @@
                         "y": 3.7,
                         "width": 16,
                         "height": 6,
-                        "alphaIndex": 4
+                        "alphaIndex": 14
                     },
                     {
                         "id": "ruin_layer2",
@@ -172,7 +172,7 @@
                         "y": 3.7,
                         "width": 16,
                         "height": 6,
-                        "alphaIndex": 3
+                        "alphaIndex": 13
                     }
                 ]
             },
@@ -189,7 +189,7 @@
                     "kind": "tile",
                     "tileSize": { "width": 24, "height": 16 },
                     "x": -16,
-                    "y": 7.2,
+                    "y": 7.4,
                     "width": 32,
                     "height": 12.8,
                     "alphaIndex": 8
@@ -201,7 +201,7 @@
                         "y": 1.6,
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
-                        "height": 1,
+                        "height": 1.6,
                         "alphaIndex": 7
                     }
                 ]
@@ -218,9 +218,9 @@
                     "kind": "tile",
                     "tileSize": { "width": 19.6, "height": 14.4 },
                     "x": -16,
-                    "y": 6.4,
+                    "y": 7.2,
                     "width": 32,
-                    "height": 9.6,
+                    "height": 9.8,
                     "alphaIndex": 6
                 },{
                         "id": "ground_treeline_2",
@@ -230,7 +230,7 @@
                         "y": 2.4,
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
-                        "height": 1,
+                        "height": 1.6,
                         "alphaIndex": 5
                     }
                 ]
@@ -247,7 +247,7 @@
                     "kind": "tile",
                     "tileSize": { "width": 16, "height": 12 },
                     "x": -16,
-                    "y": 7.2,
+                    "y": 8.2,
                     "width": 32,
                     "height": 9.6,
                     "alphaIndex": 4
@@ -256,10 +256,10 @@
                         "texture": "Art/Environment/dirt_base.png",
                         "kind": "tile",
                         "x": 0,
-                        "y": 2.4,
+                        "y": 2.8,
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
-                        "height": 1,
+                        "height": 1.6,
                         "alphaIndex": 3
                     }
                 ]
@@ -278,7 +278,7 @@
                         "y": 3.2,
                         "tileSize": { "width": 1.28, "height": 1.28 },
                         "width": 64,
-                        "height": 1,
+                        "height": 1.6,
                         "alphaIndex": 1
                     }
                 ]
@@ -332,7 +332,7 @@
                         "y": 6,
                         "width": 16,
                         "height": 10,
-                        "alphaIndex": 4
+                        "alphaIndex": 24
                     }, {
                         "id": "ruin_floor",
                         "texture": "Art/Environment/floor.png",

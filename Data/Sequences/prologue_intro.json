@@ -1,6 +1,6 @@
 {
   "id": "prologue_intro",
-  "durationMs": 6000,
+  "durationMs": 6100,
   "tracks": [
     {
       "id": "fx.fadein",
@@ -37,7 +37,7 @@
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -18, "y": 1, "speed": 1.4 },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -24, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
         { "type": "inputLock", "atMs": 5500, "locked": false }
       ]
     },
@@ -48,7 +48,9 @@
       "channel": "movement",
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 600, "durationMs": 3000, "x": -18, "y": 0, "speed": 1.4 },
+        { "type": "moveActorTo", "startMs": 400, "durationMs": 2600, "x": -22.5, "y": 0, "speed": 1.4 },
+        { "type": "faceWorldX", "atMs": 3000, "direction": -1 },
+        { "type": "moveActorTo", "startMs": 3000, "durationMs": 500, "x": -23, "y": 0.4, "speed": 1.4 },
         { "type": "callback", "atMs": 3600, "fn": "enterCompanionIdle" }
       ]
     },

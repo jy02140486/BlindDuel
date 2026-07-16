@@ -360,6 +360,12 @@ const ACTION_HANDLERS = {
                 return;
             }
             state.actor = actor;
+            // 可选 startPos：override 起始位置（在设 controlledBySequence 之前写，避免被 walkArea clamp）
+            if (Array.isArray(clip.startPos)) {
+                actor.root.position.x = clip.startPos[0];
+                actor.root.position.y = clip.startPos[1];
+                console.log(`[TimelineSeq] moveActorTo startPos override to (${clip.startPos[0]}, ${clip.startPos[1]})`);
+            }
             state.startX = actor.root.position.x;
             state.startY = actor.root.position.y;
             state.targetX = clip.x ?? state.startX;

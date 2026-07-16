@@ -1,6 +1,6 @@
 {
   "id": "prologue_prop_and_follow",
-  "durationMs": 7000,
+  "durationMs": 8000,
   "tracks": [
     {
       "id": "camera.cutscene",
@@ -8,9 +8,11 @@
       "binding": { "cameraId": "scripted" },
       "channel": "frame",
       "clips": [
-        { "type": "cameraBlend", "startMs": 0, "durationMs": 1100, "to": "scripted" },
-        { "type": "setCameraFrame", "atMs": 0, "center": [-1.2, 0, 0], "height": 4.5, "orthoWidth": 20 },
-        { "type": "setCameraFollow", "atMs": 1200, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 4.5, "orthoWidth": 20 }
+        { "type": "setCameraFrame", "atMs": 1000, "center": [-1.2, 0, 0], "height": 2.5, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 1000, "durationMs": 1000, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 3000, "center": [-1, -1, 0], "height": 1, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 3000, "durationMs": 1000, "to": "scripted" },
+        { "type": "setCameraFollow", "atMs": 3000, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1, "orthoWidth": 20 }
       ]
     },
     {
@@ -19,7 +21,7 @@
       "binding": { "cameraId": "explore" },
       "channel": "blend",
       "clips": [
-        { "type": "cameraBlend", "startMs": 2500, "durationMs": 1500, "to": "explore" }
+        { "type": "cameraBlend", "startMs": 6500, "durationMs": 1500, "to": "explore" }
       ]
     },
     {
@@ -37,8 +39,8 @@
       "binding": { "actorId": "prop_faller" },
       "channel": "command",
       "clips": [
-        { "type": "command", "atMs": 500, "command": "fall" },
-        { "type": "moveActorTo", "startMs": 500, "durationMs": 400, "x": -1.2, "y": -1.25, "speed": 4 }
+        { "type": "command", "atMs": 3500, "command": "fall" },
+        { "type": "moveActorTo", "startMs": 3500, "durationMs": 400, "x": -1.2, "y": -1.25, "speed": 4 }
       ]
     },
     {
@@ -47,7 +49,7 @@
       "binding": { "actorId": "prop_faller" },
       "channel": "command",
       "clips": [
-        { "type": "command", "atMs": 900, "command": "land" }
+        { "type": "command", "atMs": 3900, "command": "land" }
       ]
     },
     {
@@ -56,43 +58,43 @@
       "binding": { "actorId": "prop_faller" },
       "channel": "command",
       "clips": [
-        { "type": "command", "atMs": 1200, "command": "run" },
-        { "type": "moveActorTo", "startMs": 1200, "durationMs": 2000, "x": 15, "y": 0, "speed": 4 }
+        { "type": "command", "atMs": 4200, "command": "run" },
+        { "type": "moveActorTo", "startMs": 4200, "durationMs": 3000, "x": 25, "y": 0, "speed": 4 }
       ]
     },
     {
       "id": "prop.dispose",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 4000, "fn": "disposeProp", "actorId": "prop_faller" }
+        { "type": "callback", "atMs": 7800, "fn": "disposeProp", "actorId": "prop_faller" }
       ]
     },
     {
       "id": "companion.bubble_show",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 4200, "fn": "showCompanionBubble" }
+        { "type": "callback", "atMs": 4500, "fn": "showCompanionBubble" }
       ]
     },
     {
       "id": "companion.bubble_wait",
       "kind": "wait",
       "clips": [
-        { "type": "wait", "atMs": 4200, "durationMs": 2000 }
+        { "type": "wait", "atMs": 5200, "durationMs": 2000 }
       ]
     },
     {
       "id": "companion.bubble_hide",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 6200, "fn": "hideCompanionBubble" }
+        { "type": "callback", "atMs": 7200, "fn": "hideCompanionBubble" }
       ]
     },
     {
       "id": "companion.follow",
       "kind": "callback",
       "clips": [
-        { "type": "callback", "atMs": 6400, "fn": "enterCompanionFollowing" }
+        { "type": "callback", "atMs": 7400, "fn": "enterCompanionFollowing" }
       ]
     },
     {
@@ -100,7 +102,19 @@
       "kind": "camera",
       "channel": "fx",
       "clips": [
-        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 5500, "height": 72, "speed": 240 }
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 6500, "height": 72, "speed": 240 }
+      ]
+    },
+    {
+      "id": "companion.attention",
+      "kind": "actor",
+      "binding": { "actorId": "companion" },
+      "channel": "movement",
+      "clips": [
+          { "type": "command", "atMs": 0, "command": "walk" },
+           { "type": "faceWorldX", "atMs": 100, "direction": 1 },
+           { "type": "moveActorTo", "startMs": 0, "durationMs": 500, "x": -23.2, "y": 0.4, "speed": 1.4 },
+            { "type": "callback", "atMs": 600, "fn": "enterCompanionIdle" }
       ]
     }
   ]

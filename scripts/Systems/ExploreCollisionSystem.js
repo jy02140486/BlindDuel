@@ -4,6 +4,8 @@ export class ExploreCollisionSystem {
     }
 
     resolveMovement(entity, blockers, walkArea) {
+        if (entity.controlledBySequence) return;
+
         const pos = entity.root.position;
 
         for (const blocker of blockers) {
