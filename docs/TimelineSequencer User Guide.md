@@ -118,6 +118,12 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **特殊处理**：
 - `to: "duel"` 时自动算 hero+enemy 中点 + fighterDistance 作为 frameCtx
+
+**时序约定（重要）**：
+- clip 的 `endMs = startMs + durationMs` 必须 ≤同 track 上后续依赖此 blend 结果的 clip 的 `atMs`/`startMs`
+- 特别是切战斗场景：`cameraBlend(to=duel)` 的 `endMs` 应 ≤ `switchMode(modeId=battle)` 的 `atMs`，否则 blend 未完成就被 BattleMode.enter 打断，触发 `cameraBlend clip ended but CameraManager.isBlending()=true` 警告
+- `timeline.durationMs` 必须 ≥ 所有 clip 的 `endMs`，否则触发 `sequence durationMs reached, but N clip(s) still active` 警告
+- blend 期间角色位置会变化，`toState` 是 `startBlend` 时的静态快照，不要指望 blend 自动追踪实时位置；blend 时长越长，快照越过时
 - `to: "explore"` 时自动用 hero 当前位置作为 target
 - `to: "scripted"` 时需配合 `setCameraFrame` 设定画面框
 
@@ -236,6 +242,11 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 |------|------|------|
 | `modeId` | string | `"battle"` / `"explore"` |
 | `payload` | object | 传给 mode.enter() 的 payload（battle 需带 `battleDef`） |
+
+**自动注入字段（modeId=battle）**：
+- handler 会自动算 `character` 与 `rabbleStick` 的 x 距离，作为 `fighterDistance` 注入 payload
+- `BattleMode.enter` 会用这个值初始化 `smoothedFighterDistance`，避免第一帧从 0 开始追导致相机 zoom drift
+- 如果 `character` 或 `rabbleStick` 在 ctx 中缺失，会触发 `switchMode to "battle" but character=... rabbleStick=MISSING` 警告，且 fighterDistance 不会被注入
 
 ### 5.10 callback（自定义回调）
 
@@ -411,6 +422,7 @@ sceneSequencer.stop();    // 强制停
 | sequencer 结束后角色不能控制 | controlledBySequence 未被清——检查是否走了 stop 路径（兜底清标记）|
 | cameraBlend 卡住 | 目标 rig 没注册——看 `unknown rig` warn |
 | 短命 clip 漏调 | 不会漏，sequencer 有 same-frame start+end 容错 |
+| 进战斗相机抖缩放 | ① 检查 `cameraBlend(to=duel)` 的 `endMs` 是否 ≤ `switchMode(modeId=battle)` 的 `atMs`，看是否有 `cameraBlend clip ended but isBlending()=true` 警告；② 检查 `timeline.durationMs` 是否 ≥ 所有 clip endMs，看是否有 `sequence durationMs reached, but N clip(s) still active` 警告；③ 检查 character/rabbleStick 是否在 ctx 中，看是否有 `switchMode to "battle" but ... MISSING` 警告 |
 
 ### 9.3 校验
 
@@ -420,6 +432,62 @@ sceneSequencer.stop();    // 强制停
 - 同 binding+channel 的 interval clip 重叠会 warn
 
 写完 sequence 后看控制台有无 warn 即可。
+
+## 9.4 编写规范
+
+本节是写 sequence JSON 时容易踩坑的点，结合实际调试经验总结。
+
+### 规范 1：`durationMs` 必须覆盖所有 clip
+
+`timeline.durationMs` 必须 ≥ 所有 clip 的 `endMs`（`startMs + durationMs` 或 `atMs`）。
+
+**反例**：
+```jsonc
+{
+  "durationMs": 2000,
+  "tracks": [{
+    "clips": [
+      { "type": "cameraBlend", "startMs": 900, "durationMs": 1800 }  // endMs=2700 > 2000!
+    ]
+  }]
+}
+```
+后果：seq 2000ms 触发 `_onComplete`，cameraBlend 被 force-end，blend 中断在 t=0.6，相机跳变。会触发警告：
+`sequence durationMs reached, but 1 clip(s) still active: cameraBlend([900, 2700] dur=1800)`
+
+### 规范 2：`cameraBlend` 与 `switchMode` 时序对齐
+
+进战斗场景里，`cameraBlend(to=duel)` 的 `endMs` 应 ≤ `switchMode(modeId=battle)` 的 `atMs`。
+
+**反例**（switchMode 早于 blend end）：
+```jsonc
+{ "type": "cameraBlend", "startMs": 500, "durationMs": 1800 }  // endMs=2300
+// ...
+{ "type": "switchMode", "atMs": 1800 }  // 早于 2300！
+```
+后果：seq 1800ms BattleMode.enter → switchRig(duel) already active skip，但 blend 仍在 tick，frameCtx 被 BattleMode 写入，状态分裂。会触发警告：
+`cameraBlend clip ended but CameraManager.isBlending()=true`
+
+**推荐**：让 `cameraBlend.endMs === switchMode.atMs`，blend 刚完成立即切模式，无冻结窗口。
+
+### 规范 3：`switchMode(modeId=battle)` 依赖 `character` + `rabbleStick`
+
+handler 会自动算 fighterDistance 注入 payload，但前提是 ctx 里有 `character` 和 `rabbleStick`。
+
+**检查方法**：看控制台是否有 `switchMode to "battle" but character=ok rabbleStick=MISSING` 警告。如果有，说明 actor 未注册到 ctx，fighterDistance 未传入，BattleMode 第一帧会从 0 开始追 smoothedFighterDistance，导致相机 zoom drift。
+
+### 规范 4：`cameraBlend` 的 `toState` 是静态快照
+
+`toState` 在 `startBlend` 时用 `targetRig.compute(1000, frameCtx, fromState)` 算一次，之后 blend 期间不再更新。
+
+**含义**：
+- blend 期间角色位置变化，`toState` 不会追踪
+- blend 时长越长，`toState` 越过时，switchRig 后首帧 compute 与 `toState` 差距越大
+- 如果 blend 期间角色会显著移动，考虑缩短 blend 时长，或拆成多段 blend
+
+### 规范 5：多 track 时序独立
+
+不同 track 的 clip 时序互相独立，`_onComplete` 同时检查所有 track 的 active clip。如果一个 track 的 clip 超出 `durationMs`，不影响其他 track，但整个 sequence 会被 force-end。
 
 ## 10. 已知限制
 

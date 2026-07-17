@@ -112,7 +112,7 @@ export const BATTLE_FIELD_1 = {
     },
     enterSequence: (battleDef) => ({
         id: "enter_battle",
-        durationMs: 2000,
+        durationMs: 3000,
         tracks: [
             {
                 id: "hero.command",
@@ -120,7 +120,9 @@ export const BATTLE_FIELD_1 = {
                 binding: { actorId: "hero" },
                 channel: "command",
                 clips: [
-                    { type: "command", atMs: 0, command: "draw" }
+                    { type: "inputLock", atMs: 0, locked: true },
+                    { type: "command", atMs: 0, command: "draw" },
+                    { type: "inputLock", atMs: 3000, locked: false }
                 ]
             },
             {
@@ -129,14 +131,17 @@ export const BATTLE_FIELD_1 = {
                 binding: { cameraId: "duel" },
                 channel: "blend",
                 clips: [
-                    { type: "cameraBlend", startMs: 0, durationMs: 1800, to: "duel" }
+                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 2, orthoWidth: 20 },
+                   { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
+                   
+                   { type: "cameraBlend", startMs: 500, durationMs: 1800, to: "duel" }
                 ]
             },
             {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 2000, modeId: "battle", payload: { battleDef } }
+                    { type: "switchMode", atMs: 3000, modeId: "battle", payload: { battleDef } }
                 ]
             }
         ]
@@ -167,7 +172,7 @@ export const BATTLE_FIELD_1 = {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 6500, modeId: "explore" }
+                    { type: "switchMode", atMs: 6400, modeId: "explore" }
                 ]
             }
         ]
@@ -537,7 +542,7 @@ export const BATTLE_FIELD_2 = {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 2000, modeId: "battle", payload: { battleDef } }
+                    { type: "switchMode", atMs: 1800, modeId: "battle", payload: { battleDef } }
                 ]
             }
         ]
@@ -582,7 +587,7 @@ export const BATTLE_FIELD_2 = {
 export const PROLOGUE_BATTLE = {
     id: "prologue_battle",
     combatants: ["hero", "enemy_1"],
-    stageBounds: { minX: -4, maxX: 8, minY: -0.05, maxY: 0.05 },
+    stageBounds: { minX: -8, maxX: 4, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
     onVictory: {
         scenario: SCENARIO.BATTLE_1_COMPLETED,

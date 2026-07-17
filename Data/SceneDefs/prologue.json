@@ -117,7 +117,7 @@
         {
             "type": "battle",
             "id": "bt_prologue",
-            "pos": [-4, 0, 0],
+            "pos": [-5, 0, 0],
             "size": [2, 2, 2],
             "battleId": "prologue_battle",
             "condition": { "flagNot": "prologue_battle", "scenarioMin": 105 },

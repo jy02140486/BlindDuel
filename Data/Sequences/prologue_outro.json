@@ -35,7 +35,19 @@
       "channel": "movement",
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "command", "atMs": 0, "command": "walk" },
         { "type": "moveActorTo", "startMs": 0, "durationMs": 1800, "x": 20, "y": 0, "speed": 1.5 }
+
+      ]
+    },
+    {
+      "id": "companion.walk",
+      "kind": "actor",
+      "binding": { "actorId": "companion" },
+      "channel": "movement",
+      "clips": [
+        { "type": "command", "atMs": 0, "command": "walk" },
+        { "type": "moveActorTo", "startMs": 0, "durationMs": 2600, "x": 22.5, "y": 0, "speed": 1.4 }
       ]
     }
   ]

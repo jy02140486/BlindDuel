@@ -12,6 +12,11 @@ export class BattleMode extends BaseMode {
         const { cameraManager, actorRegistry } = this.context;
         const battleDef = payload?.battleDef;
 
+        if (typeof payload?.fighterDistance === "number") {
+            this.context.smoothedFighterDistance = payload.fighterDistance;
+            console.log(`[BattleMode] enter smoothedFighterDistance=${payload.fighterDistance.toFixed(2)}`);
+        }
+
         if (battleDef) {
             this._battleDef = battleDef;
             this._combatants = battleDef.combatants

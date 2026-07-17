@@ -30,6 +30,7 @@ export class DuelCameraRig {
         // 运行时状态
         this.currentBasePosition = new BABYLON.Vector3(0, this.maxCameraHeight, -this.perspMaxDistance);
         this.currentTarget = new BABYLON.Vector3(0, 0, 0);
+        this.currentZoomT = 1;
         this.projection = "orthographic";
 
         // Debug 面板
@@ -41,6 +42,9 @@ export class DuelCameraRig {
         if (state) {
             this.currentBasePosition.copyFrom(state.pos);
             this.currentTarget.copyFrom(state.target);
+            if (typeof state.zoomT === "number") {
+                this.currentZoomT = state.zoomT;
+            }
         }
     }
 
@@ -103,6 +107,7 @@ export class DuelCameraRig {
         const fighterDistance = context?.fighterDistance ?? 0;
 
         if (!basePosition || !target) {
+            // FALLBACK：frameCtx 无 basePosition/target 时返回 prevState 克隆，避免从默认值跳变
             return prevState ? this.#stateFromPrev(prevState) : this.#defaultState();
         }
 
@@ -119,10 +124,12 @@ export class DuelCameraRig {
         this.currentTarget.z += (target.z - this.currentTarget.z) * blend;
 
         // 角色间距 → 归一化 t
-        const zoomT = BABYLON.Scalar.Clamp(
+        const rawZoomT = BABYLON.Scalar.Clamp(
             (fighterDistance - this.zoomMinDistance) / (this.zoomMaxDistance - this.zoomMinDistance),
             0, 1
         );
+        this.currentZoomT += (rawZoomT - this.currentZoomT) * blend;
+        const zoomT = this.currentZoomT;
 
         const desiredHeight = BABYLON.Scalar.Lerp(this.minCameraHeight, this.maxCameraHeight, zoomT);
 
@@ -150,6 +157,7 @@ export class DuelCameraRig {
             this.#renderDebugPanel(fighterDistance, desiredWidth, 0, desiredHeight, zoomT);
         }
 
+        state.zoomT = zoomT;
         return state;
     }
 

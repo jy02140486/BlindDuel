@@ -64,3 +64,6 @@ enemy_1.in_position里的move的command动画没播
 换场景的trigger用
 ## 给出东西的size
 给出时size明显大于放置时size
+## outro
+动画不更新
+## 交任务procedure锁操作

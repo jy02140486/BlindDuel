@@ -131,6 +131,7 @@ export class CameraManager {
     update(dtMs, frameCtx) {
         if (!this.camera) return;
 
+        const _blendActiveAtStart = this._blend.active;
         let baseState;
         if (this._blend.active) {
             baseState = this._updateBlend(dtMs);
@@ -143,6 +144,9 @@ export class CameraManager {
         const finalState = this._applyEffects(baseState, dtMs, frameCtx);
         this._applyToBabylonCamera(finalState);
         this.state = baseState;
+        if (_blendActiveAtStart) {
+            // blend 分支：baseState 是 _updateBlend 返回的 blended state，赋值给 this.state
+        }
     }
 
     startBlend({ toRigId, durationMs, easing, frameCtx }) {
@@ -271,6 +275,8 @@ export class CameraManager {
             if (blend.toRigId) {
                 this.switchRig(blend.toRigId);
             }
+        } else {
+            // blend tick：blended 已计算完成，将在 update() 中赋给 this.state
         }
 
         return blended;

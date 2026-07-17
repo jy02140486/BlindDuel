@@ -119,6 +119,14 @@ export class TimelineSequencer {
 
     _onComplete() {
         console.log(`[TimelineSeq] _onComplete activeClipIds=[${[...this.activeClipStates.keys()].join(", ")}]`);
+        if (this.activeClipStates.size > 0) {
+            const details = [...this.activeClipStates.values()].map(s => {
+                const c = s.clip;
+                const endMs = (c.startMs ?? c.atMs ?? 0) + (c.durationMs ?? 0);
+                return `${c.type}([${c.startMs ?? c.atMs ?? 0}, ${endMs}] dur=${c.durationMs ?? 0})`;
+            });
+            console.warn(`[TimelineSeq] WARN: sequence "${this.timeline.id}" durationMs=${this.timeline.durationMs} reached, but ${this.activeClipStates.size} clip(s) still active: ${details.join(", ")}. They will be force-ended.`);
+        }
         for (const [clipId, state] of this.activeClipStates) {
             const clip = state.clip;
             const handler = this._getHandler(clip.type);
@@ -474,6 +482,10 @@ const ACTION_HANDLERS = {
         },
         end(ctx, clip, state) {
             console.log(`[TimelineSeq] cameraBlend END activeRig=${state.cameraManager?.activeRigId}`);
+            const cm = state.cameraManager;
+            if (cm && typeof cm.isBlending === "function" && cm.isBlending()) {
+                console.warn(`[TimelineSeq] WARN: cameraBlend clip ended but CameraManager.isBlending()=true (blend not COMPLETE). toRig=${clip.to} durationMs=${clip.durationMs}. This usually means clip.durationMs < actual blend duration, or sequence ended before blend finished. Camera will snap on next switchRig.`);
+            }
         }
     },
 
@@ -509,7 +521,20 @@ const ACTION_HANDLERS = {
                 console.warn("[TimelineSequencer] switchMode: gameModeManager not found");
                 return;
             }
-            gameModeManager.switchMode(clip.modeId, clip.payload);
+            let payload = clip.payload;
+            if (clip.modeId === "battle") {
+                const { character, rabbleStick } = ctx;
+                if (character && rabbleStick) {
+                    const heroPos = character.root.position;
+                    const opponentPos = rabbleStick.root.position;
+                    const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
+                    payload = { ...(payload || {}), fighterDistance };
+                    console.log(`[TimelineSeq] switchMode fighterDistance=${fighterDistance.toFixed(2)}`);
+                } else {
+                    console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
+                }
+            }
+            gameModeManager.switchMode(clip.modeId, payload);
         }
     },
 

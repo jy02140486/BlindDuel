@@ -1,6 +1,6 @@
 {
   "id": "prologue_intro",
-  "durationMs": 6100,
+  "durationMs": 6600,
   "tracks": [
     {
       "id": "fx.fadein",
@@ -38,7 +38,7 @@
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
         { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -24, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
-        { "type": "inputLock", "atMs": 5500, "locked": false }
+        { "type": "inputLock", "atMs": 6600, "locked": false }
       ]
     },
     {
@@ -60,7 +60,7 @@
       "binding": { "cameraId": "explore" },
       "channel": "blend",
       "clips": [
-        { "type": "cameraBlend", "startMs": 5000, "durationMs": 1000, "to": "explore" }
+        { "type": "cameraBlend", "startMs": 5500, "durationMs": 1000, "to": "explore" }
       ]
     }
   ]
