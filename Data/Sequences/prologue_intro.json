@@ -7,7 +7,7 @@
       "kind": "camera",
       "channel": "fx",
       "clips": [
-        { "type": "cameraEffect", "atMs": 0, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
       ]
     },
     {
@@ -24,9 +24,9 @@
       "binding": { "cameraId": "scripted" },
       "channel": "blend",
       "clips": [
-        { "type": "cameraBlend", "startMs": 0, "durationMs": 0, "to": "scripted" },
-        { "type": "setCameraFrame", "atMs": 0, "center": [-0, 0, 0], "height": 4.5, "orthoWidth": 8 },
-        { "type": "setCameraFollow", "atMs": 200, "actorId": "companion", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1.6, "orthoWidth": 20 }
+        { "type": "setCameraFrame", "atMs": 0, "center": [-32, 0, 0], "height": 2, "orthoWidth": 8 },
+        { "type": "cameraBlend", "startMs": 50, "durationMs": 100, "to": "scripted" },
+        { "type": "setCameraFollow", "atMs": 200, "actorId": "companion", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 2, "orthoWidth": 20 }
       ]
     },
     {

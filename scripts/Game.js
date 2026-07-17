@@ -143,6 +143,7 @@ export class Game {
         const sceneId = this.worldState.currentSceneId;
         const sceneDef = await resolveSceneDef(sceneId);
         this.scene._loading = true;
+        this.cameraManager.setFadeImmediate("black", 1);
         await this.scene.init(sceneDef, BATTLE_DEFS);
         this.scene._loading = false;
         this._playIntro(sceneDef);
@@ -150,9 +151,21 @@ export class Game {
 
     _playIntro(sceneDef) {
         const url = sceneDef?.introSequenceUrl;
-        if (!url) return;
         const flagKey = `intro_played_${sceneDef.id}`;
-        if (this.worldState.flags[flagKey]) return;
+        const fadeInMs = sceneDef?.transition?.fadeInMs ?? 600;
+
+        const fallbackFadeIn = () => {
+            this.cameraManager.enqueueEffect({
+                type: "fade",
+                durationMs: fadeInMs,
+                params: { from: 1, to: 0, color: "black" }
+            });
+        };
+
+        if (!url || this.worldState.flags[flagKey]) {
+            fallbackFadeIn();
+            return;
+        }
         fetch(url, { cache: "no-cache" })
             .then(r => r.json())
             .then(seq => {
@@ -160,7 +173,10 @@ export class Game {
                 this.sceneSequencer.play(seq, {});
                 this.worldState.flags[flagKey] = true;
             })
-            .catch(err => console.warn("[Game] intro sequence load failed", url, err));
+            .catch(err => {
+                console.warn("[Game] intro sequence load failed", url, err);
+                fallbackFadeIn();
+            });
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -274,7 +290,6 @@ export class Game {
 
         const transition = sceneDef.transition || {};
         const fadeOutMs = transition.fadeOutMs ?? 400;
-        const fadeInMs = transition.fadeInMs ?? 600;
 
         console.log("[Game] _loadSceneInternal begin outro+fadeout, old=", oldSceneId, "new=", sceneDef.id);
         await this._playOutro(oldSceneDef, { fadeOutMs });
@@ -307,12 +322,7 @@ export class Game {
             newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
         }
 
-        console.log("[Game] _loadSceneInternal fadeIn+intro, new=", sceneDef.id);
-        this.cameraManager.enqueueEffect({
-            type: "fade",
-            durationMs: fadeInMs,
-            params: { from: 1, to: 0, color: "black" }
-        });
+        console.log("[Game] _loadSceneInternal intro, new=", sceneDef.id);
         this._playIntro(sceneDef);
 
         newScene._loading = false;

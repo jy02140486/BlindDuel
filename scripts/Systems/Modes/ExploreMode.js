@@ -281,7 +281,11 @@ export class ExploreMode extends BaseMode {
 
     enter(_payload) {
         const { cameraManager, character } = this.context;
-        cameraManager?.switchRig("explore");
+        if (cameraManager?.activeRigId === "explore" && cameraManager.activeRig?.enter) {
+            cameraManager.activeRig.enter(this.context);
+        } else {
+            cameraManager?.switchRig("explore");
+        }
         if (character) {
             character.setFacingMode(FACING_MODE.AUTO_FROM_MOVE);
             // 防御性复位：BattleMode.exit 正常情况下已写回 "walk"；

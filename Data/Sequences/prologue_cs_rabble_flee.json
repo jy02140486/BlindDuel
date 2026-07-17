@@ -105,6 +105,18 @@
       "clips": [
         { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 6500, "height": 72, "speed": 240 }
       ]
+    },{
+      "id": "hero.attention",
+      "kind": "actor",
+      "binding": { "actorId": "hero" },
+      "channel": "movement",
+      "clips": [
+        { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "command", "atMs": 200, "command": "walk" },
+        { "type": "faceWorldX", "atMs": 100, "direction": 1 },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 500, "x": -21.5, "y": 0.4, "speed": 1.4},
+        { "type": "inputLock", "atMs": 8000, "locked": false }
+      ]
     },
     {
       "id": "companion.attention",
@@ -116,6 +128,16 @@
            { "type": "faceWorldX", "atMs": 100, "direction": 1 },
            { "type": "moveActorTo", "startMs": 0, "durationMs": 500, "x": -23.2, "y": 0.4, "speed": 1.4 },
             { "type": "callback", "atMs": 600, "fn": "enterCompanionIdle" }
+      ]
+    },
+    {
+      "id": "enemy_1.in_position",
+      "kind": "actor",
+      "binding": { "actorId": "enemy_1" },
+      "channel": "movement",
+      "clips": [
+          { "type": "command", "atMs": 3700, "command": "move" },
+           { "type": "moveActorTo", "startMs": 3700, "durationMs": 1000, "x": -1.2, "y": -0.4, "speed": 1.4 }
       ]
     }
   ]

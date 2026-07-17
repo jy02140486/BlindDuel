@@ -14,21 +14,18 @@ export class ExploreCameraRig {
     }
 
     enter(ctx) {
-        const state = ctx?.cameraManager?.state;
-        if (state) {
-            this._cameraPosition.copyFrom(state.pos);
-            this._targetPosition.copyFrom(state.target);
+        this.projection = "orthographic";
+        const pos = ctx?.character?.root?.position;
+        if (pos) {
+            this._cameraPosition.set(pos.x, pos.y + this.config.followHeight, pos.z - this.config.followDistance);
+            this._targetPosition.copyFrom(pos);
         } else {
-            const pos = ctx?.character?.root?.position;
-            if (pos) {
-                this._cameraPosition.set(pos.x, pos.y + this.config.followHeight, pos.z - this.config.followDistance);
-                this._targetPosition.copyFrom(pos);
+            const state = ctx?.cameraManager?.state;
+            if (state) {
+                this._cameraPosition.copyFrom(state.pos);
+                this._targetPosition.copyFrom(state.target);
             }
         }
-    }
-
-    enter(ctx) {
-        this.projection = "orthographic";
     }
 
     exit(ctx) {

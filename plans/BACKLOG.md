@@ -50,3 +50,17 @@
 |------|------|--------|------|
 | SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。修复序列中角色朝 -x 移动时不镜像问题。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
 
+# mannual
+## 摄像机rig模式切换抖动
+intro的follow到explore
+explore到prologue_battle
+## prologue_cs_rabble_flee
+enemy_1.in_position里的move的command动画没播
+## 专门的enter_battle
+给prologue的battle，让charlotte走远
+## 全局雾
+指数型，大概在30左右变浓
+## trigger三角形标识
+换场景的trigger用
+## 给出东西的size
+给出时size明显大于放置时size

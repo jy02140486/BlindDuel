@@ -50,7 +50,7 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [6, 0, 0],
+            "pos": [1, 0, 0],
             "controller": "test",
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
         },
@@ -117,7 +117,7 @@
         {
             "type": "battle",
             "id": "bt_prologue",
-            "pos": [4, 0, 0],
+            "pos": [-4, 0, 0],
             "size": [2, 2, 2],
             "battleId": "prologue_battle",
             "condition": { "flagNot": "prologue_battle", "scenarioMin": 105 },
@@ -190,19 +190,19 @@
                     "tileSize": { "width": 24, "height": 16 },
                     "x": -16,
                     "y": 7.4,
-                    "width": 32,
+                    "width": 64,
                     "height": 12.8,
-                    "alphaIndex": 8
+                    "alphaIndex": 7
                 },{
-                        "id": "ground_treeline_1",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_brushline_1",
+                        "texture": "Art/Environment/brushline.png",
                         "kind": "tile",
                         "x": 0,
-                        "y": 1.6,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "y": 2,
+                        "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
-                        "height": 1.6,
-                        "alphaIndex": 7
+                        "height": 2.4,
+                        "alphaIndex": 8
                     }
                 ]
             },{
@@ -219,19 +219,19 @@
                     "tileSize": { "width": 19.6, "height": 14.4 },
                     "x": -16,
                     "y": 7.2,
-                    "width": 32,
+                    "width": 64,
                     "height": 9.8,
-                    "alphaIndex": 6
+                    "alphaIndex": 5
                 },{
-                        "id": "ground_treeline_2",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_brushline_2",
+                        "texture": "Art/Environment/brushline.png",
                         "kind": "tile",
                         "x": 0,
-                        "y": 2.4,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "y": 3.2,
+                       "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
-                        "height": 1.6,
-                        "alphaIndex": 5
+                        "height": 2.4,
+                        "alphaIndex": 6
                     }
                 ]
             },{
@@ -248,19 +248,19 @@
                     "tileSize": { "width": 16, "height": 12 },
                     "x": -16,
                     "y": 8.2,
-                    "width": 32,
+                    "width": 64,
                     "height": 9.6,
-                    "alphaIndex": 4
+                    "alphaIndex": 3
                 },{
-                        "id": "ground_treeline_2",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_brushline_3",
+                        "texture": "Art/Environment/brushline.png", 
                         "kind": "tile",
                         "x": 0,
-                        "y": 2.8,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "y": 4,
+                        "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
-                        "height": 1.6,
-                        "alphaIndex": 3
+                        "height": 2.4,
+                        "alphaIndex": 4
                     }
                 ]
             },{
@@ -271,14 +271,14 @@
                 "loopX": false,
                 "elements": [
                     {
-                        "id": "ground_treeline_far",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_brushline_far",
+                        "texture": "Art/Environment/brushline.png",     
                         "kind": "tile",
                         "x": 0,
-                        "y": 3.2,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "y": 4.4,
+                        "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
-                        "height": 1.6,
+                        "height": 2.4,
                         "alphaIndex": 1
                     }
                 ]
@@ -297,7 +297,7 @@
                         "kind": "animated_tile",
                         "x": 0,
                         "y": 1.2,
-                        "width": 64,
+                        "width": 128,
                         "height": 0.32,
                         "tileSize": { "width": 1.28, "height": 0.32 },
                         "loop": true,
@@ -310,7 +310,7 @@
                         "x": 0,
                         "y": -2.8,
                         "tileSize": { "width": 1.28, "height": 1.28 },
-                        "width": 64,
+                        "width": 128,
                         "height": 8,
                         "alphaIndex": 2
                     },{
@@ -320,7 +320,7 @@
                         "x": 0,
                         "y": -2.9,
                         "tileSize": { "width": 5.12, "height": 2.56 },
-                        "width": 64,
+                        "width": 128,
                         "height": 8,
                         "alphaIndex": 3
                     },
@@ -337,7 +337,7 @@
                         "id": "ruin_floor",
                         "texture": "Art/Environment/floor.png",
                         "kind": "single",
-                        "x": -8,
+                        "x": -24,
                         "y": 0,
                         "width": 14.4,
                         "height": 2.4,

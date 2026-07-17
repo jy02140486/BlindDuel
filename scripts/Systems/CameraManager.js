@@ -249,6 +249,15 @@ export class CameraManager {
         }
     }
 
+    setFadeImmediate(color = "black", opacity = 1) {
+        const el = this._overlay?.fade;
+        if (!el) return;
+        el.style.transition = "none";
+        el.style.background = color;
+        el.style.opacity = String(opacity);
+        el.offsetHeight;
+    }
+
     _updateBlend(dtMs) {
         const blend = this._blend;
         blend.elapsedMs += dtMs;

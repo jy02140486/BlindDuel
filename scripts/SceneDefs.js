@@ -454,10 +454,10 @@ export const HOUSE_INTERIOR = {
             spawnIf: { flagNot: "battle_field_2" },
         },
     ],
-    "walkAreas": [
-    { "if": { "scenarioMin": 105 }, "minX": -24, "maxX": 15, "minY": -1, "maxY": 0.7 },
-    { "if": {}, "minX": -24, "maxX": -7, "minY": -1, "maxY": 0.7 }
-    ],
+    walkArea: {
+        minX: -6.75, maxX: 13.98,
+        minY: -4.77, maxY: -1.65,
+    },
     spawns: {
         house_door: [-2.09, -1, 0],
     },
