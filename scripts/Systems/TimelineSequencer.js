@@ -498,6 +498,19 @@ const ACTION_HANDLERS = {
             } else {
                 console.warn(`[TimelineSequencer] inputLock: controller not found`);
             }
+            // 设置 inputLocked 标志，阻止状态自带的移动（如攻击动作的 frameSpeeds）
+            // 注意：不使用 controlledBySequence，因为它会阻止状态转换
+            const actor = _resolveActor(ctx, track.binding);
+            if (actor && "inputLocked" in actor) {
+                actor.inputLocked = clip.locked;
+                console.log(`[TimelineSeq] inputLock locked=${clip.locked} actor.inputLocked=${actor.inputLocked}`);
+            }
+            // 锁定输入时清空 moveIntent，防止残留的输入导致状态转换（如 standing→walk）
+            // 这会阻止角色在 sequence 期间响应之前的移动输入
+            if (clip.locked && actor && typeof actor.setMoveIntent === "function") {
+                actor.setMoveIntent({ x: 0, y: 0 });
+                console.log(`[TimelineSeq] inputLock locked, cleared moveIntent`);
+            }
         }
     },
 

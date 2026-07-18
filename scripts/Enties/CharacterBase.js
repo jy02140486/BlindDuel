@@ -23,6 +23,7 @@ export class CharacterBase {
         this.pendingCommands = [];
         this.moveIntent = { x: 0, y: 0 };
         this.controlledBySequence = false;
+        this.inputLocked = false;
         this.rootDebugVisible = this.showCollision;
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
         this.baseWalkSpeed = config.walkSpeed ?? 2.4;
@@ -327,8 +328,10 @@ export class CharacterBase {
             return;
         }
 
-        const stateSpeed = this.currentStateDef?.speed;
-        const frameSpeeds = this.currentStateDef?.frameSpeeds;
+        // inputLocked 时阻止状态自带的移动（如攻击动作的 frameSpeeds）
+        // 但允许通过 moveIntent 控制的移动（如 sequencer 的 moveActorTo）
+        const stateSpeed = this.inputLocked ? null : this.currentStateDef?.speed;
+        const frameSpeeds = this.inputLocked ? null : this.currentStateDef?.frameSpeeds;
 
         if (frameSpeeds && frameSpeeds.length > 0) {
             const frameIndex = this.animation.currentFrameIndex;

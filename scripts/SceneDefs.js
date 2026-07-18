@@ -148,7 +148,7 @@ export const BATTLE_FIELD_1 = {
     }),
     exitSequence: {
         id: "exit_battle",
-        durationMs: 8000,
+        durationMs: 6000,
         tracks: [
             {
                 id: "hero.command",
@@ -156,7 +156,9 @@ export const BATTLE_FIELD_1 = {
                 binding: { actorId: "hero" },
                 channel: "command",
                 clips: [
-                    { type: "command", atMs: 2500, command: "sheath" }
+                    { type: "inputLock", atMs: 0, locked: true },
+                    { type: "command", atMs: 2500, command: "sheath" },
+                    { type: "inputLock", atMs: 6000, locked: false }
                 ]
             },
             {
@@ -165,14 +167,17 @@ export const BATTLE_FIELD_1 = {
                 binding: { cameraId: "explore" },
                 channel: "blend",
                 clips: [
-                    { type: "cameraBlend", startMs: 1000, durationMs: 5400, to: "explore" }
+                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 2, orthoWidth: 20 },
+                   { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
+                   
+                   { type: "cameraBlend", startMs: 500, durationMs: 5500, to: "explore" }
                 ]
             },
             {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 6400, modeId: "explore" }
+                    { type: "switchMode", atMs: 6000, modeId: "explore" }
                 ]
             }
         ]
