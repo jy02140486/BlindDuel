@@ -197,12 +197,22 @@
                         "id": "ground_brushline_1",
                         "texture": "Art/Environment/brushline.png",
                         "kind": "tile",
-                        "x": 0,
+                        "x": -16,
                         "y": 2,
                         "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
                         "height": 2.4,
                         "alphaIndex": 8
+                    },{
+                        "id": "ground",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": -16,
+                        "y": 1.6,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 128,
+                        "height": 1.6,
+                        "alphaIndex": 2
                     }
                 ]
             },{
@@ -224,7 +234,7 @@
                     "alphaIndex": 5
                 },{
                         "id": "ground_brushline_2",
-                        "texture": "Art/Environment/brushline.png",
+                        "texture": "Art/Environment/brushline_dark.png",
                         "kind": "tile",
                         "x": 0,
                         "y": 3.2,
@@ -232,6 +242,16 @@
                         "width": 64,
                         "height": 2.4,
                         "alphaIndex": 6
+                    },{
+                        "id": "ground",
+                        "texture": "Art/Environment/dirt_base.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 3.2,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "width": 128,
+                        "height": 1.6,
+                        "alphaIndex": 2
                     }
                 ]
             },{
@@ -253,10 +273,10 @@
                     "alphaIndex": 3
                 },{
                         "id": "ground_brushline_3",
-                        "texture": "Art/Environment/brushline.png", 
+                        "texture": "Art/Environment/brushline_dark.png", 
                         "kind": "tile",
                         "x": 0,
-                        "y": 4,
+                        "y": 4.4,
                         "tileSize": { "width":7.2, "height":2.4},
                         "width": 64,
                         "height": 2.4,
@@ -272,7 +292,7 @@
                 "elements": [
                     {
                         "id": "ground_brushline_far",
-                        "texture": "Art/Environment/brushline.png",     
+                        "texture": "Art/Environment/brushline_dark.png",     
                         "kind": "tile",
                         "x": 0,
                         "y": 4.4,
@@ -280,6 +300,17 @@
                         "width": 64,
                         "height": 2.4,
                         "alphaIndex": 1
+                    } ,
+                    {
+                    "id": "treeline",
+                    "texture": "Art/Environment/treeline.png",
+                    "kind": "single",
+                    "x": 0,
+                    "y": 6.4,
+                    "width": 64,
+                    "height": 4.8,
+                    "alphaIndex": 1,
+                    "parallaxFactor": 1.6
                     }
                 ]
             },
@@ -344,7 +375,27 @@
                         "alphaIndex": 5
                     }
                 ]
-            }
+            },
+        {
+            "id": "FG_DECOR",
+            "z": -10,
+            "parallaxFactor": 1.35,
+            "renderingGroupId": 2,
+            "loopX": false,
+            "elements": [
+                {
+                        "id": "ground_brushline_far",
+                        "texture": "Art/Environment/brushline_dark.png",     
+                        "kind": "tile",
+                        "x": -42,
+                        "y": 0.4,
+                        "tileSize": { "width":19.2, "height":4.8},
+                        "width": 19.2,
+                        "height": 4.8,
+                        "alphaIndex": 1
+                } 
+            ]
+        }
         ]
     }
 }
