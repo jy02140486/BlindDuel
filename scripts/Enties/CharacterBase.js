@@ -108,6 +108,16 @@ export class CharacterBase {
 
         this.timedTags = new Map();
 
+        // [JITTER_DEBUG] 抖动检测相关字段初始化
+        this._prevRootPos = new BABYLON.Vector3(0, 0, 0);
+        this._jitterLogCount = 0;
+        this._jitterLogInterval = 3000; // 每3秒最多记录一次
+        this._lastJitterLogTime = 0;
+        this._jitterThreshold = 0.2; // 超过这个距离认为是抖动
+        this._posHistory = [];
+        this._posHistoryMaxLen = 5;
+        this._oscillationThreshold = 2; // 5帧内方向反转超过2次认为是振荡
+
         this.capabilities = config.capabilities ?? { combat: true, interaction: false };
         this.tickCount = 0;
     }
@@ -542,6 +552,80 @@ export class CharacterBase {
 
         this._applyMovement(dtMs);
         this._updateDebugPanel();
+    }
+
+    // [JITTER_DEBUG] 检测位置突变（抖动）和振荡
+    _checkJitter(tickCount) {
+        const now = performance.now();
+
+        const dx = this.root.position.x - this._prevRootPos.x;
+        const dy = this.root.position.y - this._prevRootPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 保存当前位置用于下一帧对比（始终执行，包括提前返回路径）
+        this._prevRootPos.copyFrom(this.root.position);
+
+        // [JITTER_DEBUG] sequencer 控制期间的大位置变化是预期的，跳过 delta 检测
+        // 但仍检测振荡（来回抖动），因为 sequencer 也不应该产生振荡
+        const isSeqControlled = this.controlledBySequence;
+        const effectiveThreshold = isSeqControlled ? this._jitterThreshold * 5 : this._jitterThreshold;
+
+        // 振荡检测：记录位置变化方向
+        const dirX = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+        const dirY = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+        this._posHistory.push({ dx, dy, dirX, dirY });
+        if (this._posHistory.length > this._posHistoryMaxLen) {
+            this._posHistory.shift();
+        }
+
+        // 检测方向反转次数
+        let reversals = 0;
+        for (let i = 1; i < this._posHistory.length; i++) {
+            const prev = this._posHistory[i - 1];
+            const curr = this._posHistory[i];
+            if (prev.dirX !== 0 && prev.dirX !== curr.dirX) reversals++;
+            if (prev.dirY !== 0 && prev.dirY !== curr.dirY) reversals++;
+        }
+
+        const hasOscillation = reversals >= this._oscillationThreshold;
+
+        // delta 检测：非 sequencer 期间且超过阈值
+        // 振荡检测：始终检测（sequencer 也不应该来回抖动）
+        const shouldLogDelta = !isSeqControlled && dist > effectiveThreshold;
+        const shouldLogOscillation = hasOscillation;
+
+        if ((shouldLogDelta || shouldLogOscillation) && now - this._lastJitterLogTime >= this._jitterLogInterval) {
+            this._lastJitterLogTime = now;
+            this._jitterLogCount++;
+
+            const ctx = this.scene?.getEngine?.()?.getRenderingCanvas?.() ? this.scene : null;
+            const camPos = ctx?.activeCamera?.position;
+            const camTarget = ctx?.activeCamera?.target;
+
+            console.warn(
+                `[JITTER_DETECTED] actor=${this.id ?? this.name} tick=${tickCount} ` +
+                `type=${hasOscillation ? 'OSCILLATION' : 'DELTA'} ` +
+                `posDelta=(${dx.toFixed(4)},${dy.toFixed(4)}) dist=${dist.toFixed(4)} ` +
+                `controlledBySequence=${this.controlledBySequence} ` +
+                `state=${this.currentStateName} moveIntent=(${this.moveIntent.x.toFixed(2)},${this.moveIntent.y.toFixed(2)}) ` +
+                `speedMode=${this.activeSpeedMode} currentSpd=${this.currentSpd.toFixed(2)} ` +
+                `reversals=${reversals}`
+            );
+            console.warn(
+                `[JITTER_CONTEXT] prevPos=(${this._prevRootPos.x.toFixed(4)},${this._prevRootPos.y.toFixed(4)}) ` +
+                `currPos=(${this.root.position.x.toFixed(4)},${this.root.position.y.toFixed(4)}) ` +
+                `camPos=${camPos ? `(${camPos.x.toFixed(2)},${camPos.y.toFixed(2)},${camPos.z.toFixed(2)})` : 'N/A'} ` +
+                `camTarget=${camTarget ? `(${camTarget.x.toFixed(2)},${camTarget.y.toFixed(2)},${camTarget.z.toFixed(2)})` : 'N/A'}`
+            );
+
+            // 打印位置历史用于分析
+            if (hasOscillation) {
+                const histStr = this._posHistory.map((h, i) => 
+                    `[${i}] dx=${h.dx.toFixed(4)} dy=${h.dy.toFixed(4)}`
+                ).join(' | ');
+                console.warn(`[JITTER_HISTORY] ${histStr}`);
+            }
+        }
     }
 
     dispose() {

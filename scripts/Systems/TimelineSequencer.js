@@ -404,11 +404,24 @@ const ACTION_HANDLERS = {
         end(ctx, clip, state) {
             if (state.invalid) return;
             const actor = state.actor;
+            const beforeX = actor.root.position.x;
             const beforeY = actor.root.position.y;
             actor.root.position.x = state.targetX;
             actor.root.position.y = state.targetY;
-            console.log(`[TimelineSeq] moveActorTo END snap to (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) yDelta=${(state.targetY - beforeY).toFixed(3)}`);
+
+            const snapDx = state.targetX - beforeX;
+            const snapDy = state.targetY - beforeY;
+            const snapDist = Math.sqrt(snapDx * snapDx + snapDy * snapDy);
+
+            console.log(`[TimelineSeq] moveActorTo END snap to (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) snapDelta=(${snapDx.toFixed(4)},${snapDy.toFixed(4)}) dist=${snapDist.toFixed(4)}`);
+
+            // [JITTER_DEBUG] 如果 snap 距离过大，记录警告
+            if (snapDist > 0.1) {
+                console.warn(`[TimelineSeq] moveActorTo WARN: large snap distance ${snapDist.toFixed(4)} actor=${actor.id ?? actor.name} - this may cause visual jitter. Consider increasing durationMs or adding easing.`);
+            }
+
             if ("controlledBySequence" in actor) {
+                console.log(`[TimelineSeq] moveActorTo END: controlledBySequence=false for ${actor.id ?? actor.name}`);
                 actor.controlledBySequence = false;
             }
             if (typeof actor.setMoveIntent === "function") {

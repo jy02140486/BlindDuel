@@ -26,6 +26,19 @@ function _cloneState(s) {
     };
 }
 
+// [JITTER_DEBUG] 复制状态（用于保存上一帧状态）
+function _copyState(dest, src) {
+    dest.pos.copyFrom(src.pos);
+    dest.target.copyFrom(src.target);
+    dest.projection = src.projection;
+    dest.orthoLeft = src.orthoLeft;
+    dest.orthoRight = src.orthoRight;
+    dest.orthoTop = src.orthoTop;
+    dest.orthoBottom = src.orthoBottom;
+    dest.fov = src.fov;
+    dest.aspect = src.aspect;
+}
+
 function _lerpState(a, b, t) {
     return {
         pos: BABYLON.Vector3.Lerp(a.pos, b.pos, t),
@@ -63,6 +76,12 @@ export class CameraManager {
             toRigId: null
         };
         this._effects = [];
+
+        // [JITTER_DEBUG] 相机抖动检测
+        this._prevCameraState = null; // 延迟初始化，避免第一帧误报
+        this._camJitterThreshold = 0.3;
+        this._camJitterLogInterval = 3000;
+        this._lastCamJitterLog = 0;
     }
 
     init(scene, canvas, options = {}) {
@@ -142,10 +161,67 @@ export class CameraManager {
         }
 
         const finalState = this._applyEffects(baseState, dtMs, frameCtx);
+
+        // [JITTER_DEBUG] 检测相机状态突变（跳过第一帧初始化）
+        if (this._prevCameraState) {
+            this.#checkCameraJitter(baseState, _blendActiveAtStart);
+        } else {
+            this._prevCameraState = _cloneState(baseState);
+        }
+
         this._applyToBabylonCamera(finalState);
         this.state = baseState;
-        if (_blendActiveAtStart) {
-            // blend 分支：baseState 是 _updateBlend 返回的 blended state，赋值给 this.state
+
+        // [JITTER_DEBUG] 保存当前状态用于下一帧对比
+        _copyState(this._prevCameraState, baseState);
+    }
+
+    // [JITTER_DEBUG] 检测相机状态突变
+    #checkCameraJitter(currentState, isBlending) {
+        const now = performance.now();
+        if (now - this._lastCamJitterLog < this._camJitterLogInterval) return;
+
+        const prev = this._prevCameraState;
+        const dx = currentState.pos.x - prev.pos.x;
+        const dy = currentState.pos.y - prev.pos.y;
+        const dz = currentState.pos.z - prev.pos.z;
+        const posDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        const tdx = currentState.target.x - prev.target.x;
+        const tdy = currentState.target.y - prev.target.y;
+        const tdz = currentState.target.z - prev.target.z;
+        const targetDist = Math.sqrt(tdx * tdx + tdy * tdy + tdz * tdz);
+
+        if (posDist > this._camJitterThreshold || targetDist > this._camJitterThreshold) {
+            this._lastCamJitterLog = now;
+
+            const seqBusy = this.context.sceneSequencer?.isBusy?.() ?? false;
+            const activeClipNames = this.context.sceneSequencer?.activeClipStates ?
+                [...this.context.sceneSequencer.activeClipStates.values()].map(s => s.clip.type) : [];
+
+            console.warn(
+                `[CAM_JITTER_DETECTED] activeRig=${this.activeRigId} blending=${isBlending} ` +
+                `seqBusy=${seqBusy} activeClips=[${activeClipNames.join(',')}]`
+            );
+            console.warn(
+                `[CAM_JITTER_POS] delta=(${dx.toFixed(4)},${dy.toFixed(4)},${dz.toFixed(4)}) dist=${posDist.toFixed(4)} ` +
+                `prev=(${prev.pos.x.toFixed(4)},${prev.pos.y.toFixed(4)},${prev.pos.z.toFixed(4)}) ` +
+                `curr=(${currentState.pos.x.toFixed(4)},${currentState.pos.y.toFixed(4)},${currentState.pos.z.toFixed(4)})`
+            );
+            console.warn(
+                `[CAM_JITTER_TARGET] delta=(${tdx.toFixed(4)},${tdy.toFixed(4)},${tdz.toFixed(4)}) dist=${targetDist.toFixed(4)} ` +
+                `prev=(${prev.target.x.toFixed(4)},${prev.target.y.toFixed(4)},${prev.target.z.toFixed(4)}) ` +
+                `curr=(${currentState.target.x.toFixed(4)},${currentState.target.y.toFixed(4)},${currentState.target.z.toFixed(4)})`
+            );
+
+            if (isBlending && this._blend.toState) {
+                console.warn(
+                    `[CAM_JITTER_BLEND] elapsed=${this._blend.elapsedMs.toFixed(1)}ms ` +
+                    `duration=${this._blend.durationMs}ms ` +
+                    `toRig=${this._blend.toRigId} ` +
+                    `toStatePos=(${this._blend.toState.pos.x.toFixed(4)},${this._blend.toState.pos.y.toFixed(4)},${this._blend.toState.pos.z.toFixed(4)})`
+                );
+            }
         }
     }
 

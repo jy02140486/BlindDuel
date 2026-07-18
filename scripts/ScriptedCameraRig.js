@@ -75,7 +75,7 @@ export class ScriptedCameraRig {
         const halfWidth = this._orthoWidth / 2;
         const halfHeight = (this._orthoWidth / aspect) / 2;
 
-        console.log(`[ScriptedCameraRig] compute center=(${this._center.x.toFixed(2)},${this._center.y.toFixed(2)},${this._center.z.toFixed(2)}) height=${this._height.toFixed(2)}`);
+        // [JITTER_DEBUG] disabled: too verbose during normal operation
 
         return {
             pos: new BABYLON.Vector3(

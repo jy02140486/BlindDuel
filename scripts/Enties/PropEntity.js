@@ -34,12 +34,46 @@ export class PropEntity {
         this.currentStateName = null;
         this.currentSpd = 0;
 
+        // [FLICKER_FIX] 预加载所有 clip 纹理，避免切换时异步重载造成的闪烁
+        this._clipTextures = new Map(); // url → BABYLON.Texture
+
         this._buildSpritePlane(config);
+        this._preloadAllTextures();
 
         const initialClip = config.initialClip ?? Object.keys(this.clips)[0];
         if (initialClip) {
             this._setClip(initialClip);
         }
+    }
+
+    // [FLICKER_FIX] 预加载所有 clip 的纹理（并行），sequence 播放时零延迟切换
+    _preloadAllTextures() {
+        for (const [clipName, clip] of Object.entries(this.clips)) {
+            const url = clip.spriteSheetUrl;
+            if (!url) continue; // 共享纹理或无纹理的 clip 跳过
+            if (this._clipTextures.has(url)) continue; // 同 url 只预加载一次
+            const tex = new BABYLON.Texture(
+                url,
+                this.scene,
+                false,
+                false,
+                BABYLON.Texture.NEAREST_SAMPLINGMODE
+            );
+            tex.hasAlpha = true;
+            tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+            this._clipTextures.set(url, tex);
+        }
+    }
+
+    // [FLICKER_FIX] sequence 结束后统一释放所有预加载纹理
+    disposeAllTextures() {
+        for (const [url, tex] of this._clipTextures) {
+            if (tex && tex !== this._sharedTexture) {
+                tex.dispose();
+            }
+        }
+        this._clipTextures.clear();
     }
 
     _buildSpritePlane(config) {
@@ -89,7 +123,6 @@ export class PropEntity {
         const useShared = this._sharedTexture && !clip.spriteSheetUrl;
         const atlas = useShared ? this._sharedAtlasData : clip.atlasData;
         if (!atlas?.frames) {
-            console.warn(`[PropEntity] clip ${clipName} has no atlas.frames`);
             return;
         }
 
@@ -129,20 +162,25 @@ export class PropEntity {
         this._currentClip = { ...clip, atlas, frameTag };
 
         if (!useShared) {
-            if (this.material.diffuseTexture) {
-                this.material.diffuseTexture.dispose();
+            const url = clip.spriteSheetUrl;
+            const tex = this._clipTextures.get(url);
+            if (!tex) {
+                console.warn(`[JDBG:FLICKER] ${this.id} clip=${clipName} url=${url} NOT_PRELOADED - falling back to sync load (may flicker)`);
+                const fallbackTex = new BABYLON.Texture(
+                    url,
+                    this.scene,
+                    false,
+                    false,
+                    BABYLON.Texture.NEAREST_SAMPLINGMODE
+                );
+                fallbackTex.hasAlpha = true;
+                fallbackTex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+                fallbackTex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+                this._clipTextures.set(url, fallbackTex);
+                this.material.diffuseTexture = fallbackTex;
+            } else {
+                this.material.diffuseTexture = tex;
             }
-            const tex = new BABYLON.Texture(
-                clip.spriteSheetUrl,
-                this.scene,
-                false,
-                false,
-                BABYLON.Texture.NEAREST_SAMPLINGMODE
-            );
-            tex.hasAlpha = true;
-            tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-            tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-            this.material.diffuseTexture = tex;
         }
 
         this._applyFrame(this._currentFrameIndex);
@@ -157,6 +195,14 @@ export class PropEntity {
         const atlasW = atlas.meta.size.w;
         const atlasH = atlas.meta.size.h;
         const tex = this.material.diffuseTexture;
+
+        // [FLICKER_DEBUG] 检测纹理未就绪——这是 clip 切换瞬间 prop 消失的真正原因
+        if (!tex) {
+            console.warn(`[JDBG:FLICKER] ${this.id} clip=${this._currentClipName} frame=${idx} TEX_NULL - diffuseTexture is null`);
+        } else if (!tex.isReady()) {
+            console.warn(`[JDBG:FLICKER] ${this.id} clip=${this._currentClipName} frame=${idx} TEX_NOT_READY - texture still loading, prop will be invisible`);
+        }
+
         if (tex) {
             tex.uScale = frame.w / atlasW;
             tex.uOffset = frame.x / atlasW;
@@ -197,6 +243,7 @@ export class PropEntity {
     enterState(name) { this._setClip(name); }
     pushCommand(name) { this._setClip(name); return true; }
     hasState(name) { return Boolean(this.clips[name]); }
+
     setMoveIntent(_intent) { /* prop 不用 intent 驱动，sequence 直接写 root.position */ }
     setFacing(facing) {
         const next = facing >= 0 ? 1 : -1;
@@ -221,6 +268,8 @@ export class PropEntity {
     getVisualBottomY() { return this.root.position.y; }
 
     dispose() {
+        // [FLICKER_FIX] 先释放所有预加载的 clip 纹理
+        this.disposeAllTextures?.();
         if (this.material?.diffuseTexture) this.material.diffuseTexture.dispose();
         this.material?.dispose?.();
         this.spritePlane?.dispose?.();
@@ -230,6 +279,7 @@ export class PropEntity {
         this.root = null;
         this._sharedTexture = null;
         this._sharedAtlasData = null;
+        this._clipTextures?.clear();
     }
 
     get isDisposed() { return !this.root && !this.spritePlane; }

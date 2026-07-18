@@ -325,6 +325,9 @@ export class CombatCharacter extends CharacterBase {
     }
 
     fixedUpdate(dtMs, tickCount) {
+        // [JITTER_DEBUG] 记录位置突变（CombatCharacter 覆盖了父类 fixedUpdate，需单独调用）
+        this._checkJitter(tickCount);
+
         this.tickCount = tickCount;
 
         if (this.combat.isDead) {
@@ -413,6 +416,9 @@ export class CombatCharacter extends CharacterBase {
         }
 
         this._updateDebugPanel();
+
+        // [JITTER_DEBUG] 保存当前位置用于下一帧对比
+        this._prevRootPos.copyFrom(this.root.position);
     }
 
     _consumeTransition() {
