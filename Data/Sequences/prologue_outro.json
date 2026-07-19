@@ -1,13 +1,13 @@
 {
   "id": "prologue_outro",
-  "durationMs": 3000,
+  "durationMs": 4000,
   "tracks": [
     {
       "id": "fx.letterbox",
       "kind": "camera",
       "channel": "fx",
       "clips": [
-        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 2000, "height": 72, "speed": 240 }
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 6000, "height": 72, "speed": 240 }
       ]
     },
     {
@@ -36,7 +36,7 @@
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 0, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 0, "durationMs": 1800, "x": 20, "y": 0, "speed": 1.5 }
+        { "type": "moveActorTo", "startMs": 0, "durationMs": 3800, "x": 20, "y": 0, "speed": 1.5 }
 
       ]
     },
@@ -47,7 +47,7 @@
       "channel": "movement",
       "clips": [
         { "type": "command", "atMs": 0, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 0, "durationMs": 2600, "x": 22.5, "y": 0, "speed": 1.4 }
+        { "type": "moveActorTo", "startMs": 0, "durationMs": 3800, "x": 22.5, "y": 0, "speed": 1.4 }
       ]
     }
   ]

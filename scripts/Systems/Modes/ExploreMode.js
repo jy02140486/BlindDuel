@@ -17,6 +17,7 @@ export class ExploreMode extends BaseMode {
         this.renderables = [];
         this.pickables = [];
         this.props = [];
+        this.enemies = [];
         this._playedCutsceneIds = new Set();
         this._cutsceneTimers = new Map();
         this._collisionSystem = new ExploreCollisionSystem();
@@ -26,18 +27,22 @@ export class ExploreMode extends BaseMode {
 
     fixedUpdate(dtMs, tickCount) {
         const { inputSystem, playerController, character, sceneSequencer } = this.context;
+        const sequencerBusy = !!sceneSequencer?.isBusy();
 
-        this.#updateCutsceneInvokers(dtMs);
-        this.#syncTriggerEnabled();
-        this.#updateSceneSwitchTrigger(character, tickCount);
-        this.#checkBattleTrigger(character, sceneSequencer);
-        this.#checkScriptedCameraTrigger(character, sceneSequencer);
+        // sequencer 播放 outro/intro/cutscene 期间跳过 trigger 检查，
+        // 避免误触场景切换/战斗/相机 trigger 中断序列
+        if (!sequencerBusy) {
+            this.#updateCutsceneInvokers(dtMs);
+            this.#syncTriggerEnabled();
+            this.#updateSceneSwitchTrigger(character, tickCount);
+            this.#checkBattleTrigger(character, sceneSequencer);
+            this.#checkScriptedCameraTrigger(character, sceneSequencer);
+        }
 
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
         character.fixedUpdate(dtMs, tickCount);
 
-        const sequencerBusy = !!this.context.sceneSequencer?.isBusy();
         for (const npc of this.interactables) {
             npc.fixedUpdate(dtMs, tickCount);
             const controller = npc.npcController;
@@ -52,15 +57,25 @@ export class ExploreMode extends BaseMode {
             }
         }
 
-        this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
+        // sequencer 期间跳过 walkArea clamp 与交互，避免 moveActorTo 结束后
+        // controlledBySequence=false 时 hero 被钳回 trigger 位置
+        if (!sequencerBusy) {
+            this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
+            this.#checkInteraction(character, tickCount);
+            this.#updatePickupSequence(character);
+            this.#updateGiveSequence(character, dtMs);
+        }
 
-        this.#checkInteraction(character, tickCount);
-        this.#updatePickupSequence(character);
-        this.#updateGiveSequence(character, dtMs);
         this.#updateDialogueBubble();
 
         for (const prop of this.props) {
             prop.fixedUpdate(dtMs);
+        }
+
+        // enemy 在 ExploreMode 期间作为待战斗实体需推进动画帧
+        // sequencer 期间 controlledBySequence=true 守卫已防止 _applyMovement 双写位置
+        for (const enemy of this.enemies) {
+            enemy.fixedUpdate(dtMs, tickCount);
         }
     }
 
@@ -427,10 +442,14 @@ export class ExploreMode extends BaseMode {
         this.renderables.length = 0;
         this.pickables.length = 0;
         this.props.length = 0;
+        this.enemies.length = 0;
 
         for (const entity of entityPool) {
             if (entity.kind === "player") {
                 this.dynamicActors.push(entity);
+            }
+            if (entity.kind === "enemy") {
+                this.enemies.push(entity);
             }
             if ((entity.kind === "npc" || entity.kind === "prop")
                 && entity.blocksMovement

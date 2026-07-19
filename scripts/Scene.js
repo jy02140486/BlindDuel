@@ -334,6 +334,12 @@ export class Scene {
         const sceneSequencer = this._game.sceneSequencer;
         if (this._loading) {
             if (sceneSequencer) sceneSequencer.fixedUpdate(dtMs, tickCount);
+            // sequencer 播放 outro/intro 期间需要推进 entity.fixedUpdate，否则
+            // moveActorTo 写了位置但 animation.fixedUpdate 不跑 → 单帧平移
+            // newScene.init 期间 sequencer 不 busy，跳过避免访问已 dispose 的旧 entity
+            if (sceneSequencer?.isBusy() && this._game?.gameModeManager) {
+                this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
+            }
             return;
         }
 
