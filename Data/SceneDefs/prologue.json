@@ -478,10 +478,10 @@
                         "texture": "Art/Environment/brushline_dark.png",     
                         "kind": "tile",
                         "x": -42,
-                        "y": 0.4,
-                        "tileSize": { "width":19.2, "height":4.8},
+                        "y": -0.64,
+                        "tileSize": { "width":19.2, "height":5.6},
                         "width": 19.2,
-                        "height": 4.8,
+                        "height": 5.6,
                         "alphaIndex": 1
                 } 
             ]

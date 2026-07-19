@@ -316,6 +316,54 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **依赖**：`ctx.dialogueBubble` 必须存在（`sharedContext.dialogueBubble`，Game.bootstrap 实例化）；通常只在 ExploreMode 期间可用（BattleMode 未注入）。
 
+### 5.13 moveActorByDirection（方向驱动移动）
+
+给 actor 一个归一化方向 + 时长，让其按该方向移动一段时间。与 `moveActorTo`（目标点驱动）对偶：距离由 `speed × duration` 决定，**不预设终点**。
+
+```jsonc
+{ "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [1, 0] }
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `dir` | `[number, number]` | 是 | 方向向量 `[x, y]`，不要求归一化；clip 内部再 normalize，非归一化输入也能用 |
+| `durationMs` | number | 是 | 持续时长（ms） |
+| `speed` | number | 否 | 速度覆盖值（世界单位/秒）；省略则每帧用 `actor.getEffectiveSpeed()`，buff / `moveSpeedBonus` 自动生效 |
+
+**行为**：
+- `start`：解析 actor；归一化 `dir`（`mag <= 0.0001` 时 warn 并 invalid）；设 `actor.controlledBySequence = true`（与 `moveActorTo` 同机制）。
+- `update`：每帧 `pos += dir × effectiveSpeed × dtSec` 累加位移；同步写 `moveIntent = dir`（驱动 walk 动画）；返回 `true` 保持 active。
+- `end`：清 `moveIntent = {0,0}`；设 `controlledBySequence = false`；**不切回 idle**，动画状态切换由编排者负责（同 `moveActorTo` 约定）。
+
+**速度来源**：
+- 默认用 `actor.getEffectiveSpeed()`（数据驱动，buff / 速度模式自动生效；**距离不可预测**）。
+- 若传 `clip.speed`，距离 = `clip.speed × durationMs / 1000`（精确可控）。
+
+**动画同步**：
+- **CombatCharacter**（hero/rabble）：walk 动画靠 `moveMagnitude > 0.2` 触发，sequencer 写 moveIntent 自动驱动，无需额外 command clip。
+- **NpcCharacter / PropEntity**：无 transition，需额外配 `command: "walk"` clip 直接 enterState（与 `moveActorTo` 同约定）。
+
+**与 moveActorTo 的区别**：
+
+| 维度 | moveActorTo | moveActorByDirection |
+|------|------------|---------------------|
+| 输入 | `(x, y)` 绝对目标点 | `dir` 方向向量 |
+| 距离决定 | 几何距离（与速度无关） | `speed × duration`（受 buff 影响，除非 override） |
+| `startPos` override | 支持 | 不支持（无目标点，起点即当前位置） |
+| 碰撞 | 不走（同设 `controlledBySequence`） | 不走 |
+
+**示例**（hero 朝右走 2 秒）：
+```jsonc
+{ "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [1, 0] }
+```
+
+**速度 override 示例**（45° 方向，距离 = 3.0 × 1.5 = 4.5 世界单位）：
+```jsonc
+{ "type": "moveActorByDirection", "startMs": 500, "durationMs": 1500, "dir": [0.707, 0.707], "speed": 3.0 }
+```
+
+**已知限制**：不走碰撞（穿 staticBlockers / 超 walkArea 不 clamp）；`dir = [0,0]` 会在 start 阶段 warn 并 invalid；不自动切回 idle。
+
 ## 6. Track 并行与重叠
 
 **多 track 天然并行**：每个 track 独立推进，互不阻塞。
@@ -422,6 +470,7 @@ sceneSequencer.stop();    // 强制停
 | sequencer 结束后角色不能控制 | controlledBySequence 未被清——检查是否走了 stop 路径（兜底清标记）|
 | cameraBlend 卡住 | 目标 rig 没注册——看 `unknown rig` warn |
 | 短命 clip 漏调 | 不会漏，sequencer 有 same-frame start+end 容错 |
+| moveActorByDirection 不动 | ① 看 `dir is zero or near-zero` warn（`dir=[0,0]` 或未填）；② 看 `actor not found`（binding.actorId 找不到）；③ 看 `INTERVAL START` 未打（startMs 超 durationMs） |
 | 进战斗相机抖缩放 | ① 检查 `cameraBlend(to=duel)` 的 `endMs` 是否 ≤ `switchMode(modeId=battle)` 的 `atMs`，看是否有 `cameraBlend clip ended but isBlending()=true` 警告；② 检查 `timeline.durationMs` 是否 ≥ 所有 clip endMs，看是否有 `sequence durationMs reached, but N clip(s) still active` 警告；③ 检查 character/rabbleStick 是否在 ctx 中，看是否有 `switchMode to "battle" but ... MISSING` 警告 |
 
 ### 9.3 校验

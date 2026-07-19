@@ -430,6 +430,61 @@ const ACTION_HANDLERS = {
         }
     },
 
+    moveActorByDirection: {
+        start(ctx, clip, state) {
+            const actor = _resolveActor(ctx, state.track.binding);
+            if (!actor || !actor.root) {
+                console.warn(`[TimelineSequencer] moveActorByDirection: actor not found`);
+                state.invalid = true;
+                return;
+            }
+            const dir = Array.isArray(clip.dir) ? clip.dir : [0, 0];
+            const mag = Math.hypot(dir[0], dir[1]);
+            if (mag <= 0.0001) {
+                console.warn(`[TimelineSequencer] moveActorByDirection: dir is zero or near-zero`);
+                state.invalid = true;
+                return;
+            }
+            state.actor = actor;
+            state.nx = dir[0] / mag;
+            state.ny = dir[1] / mag;
+            state.useClipSpeed = typeof clip.speed === "number";
+            state.clipSpeed = state.useClipSpeed ? clip.speed : 0;
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = true;
+            }
+            const speedSource = state.useClipSpeed ? `clip(${state.clipSpeed})` : "actor.getEffectiveSpeed";
+            console.log(`[TimelineSeq] moveActorByDirection START dir=(${state.nx.toFixed(3)},${state.ny.toFixed(3)}) durationMs=${clip.durationMs} speedSource=${speedSource}`);
+        },
+        update(ctx, clip, state, localMs, dtMs) {
+            if (state.invalid) return false;
+            const actor = state.actor;
+            const dtSec = dtMs / 1000;
+            const effectiveSpeed = state.useClipSpeed
+                ? state.clipSpeed
+                : (typeof actor.getEffectiveSpeed === "function" ? actor.getEffectiveSpeed() : 0);
+            actor.root.position.x += state.nx * effectiveSpeed * dtSec;
+            actor.root.position.y += state.ny * effectiveSpeed * dtSec;
+            if (typeof actor.setMoveIntent === "function") {
+                actor.setMoveIntent({ x: state.nx, y: state.ny });
+            }
+            return true;
+        },
+        end(ctx, clip, state) {
+            if (state.invalid) return;
+            const actor = state.actor;
+            const finalX = actor.root.position.x;
+            const finalY = actor.root.position.y;
+            if (typeof actor.setMoveIntent === "function") {
+                actor.setMoveIntent({ x: 0, y: 0 });
+            }
+            if ("controlledBySequence" in actor) {
+                actor.controlledBySequence = false;
+            }
+            console.log(`[TimelineSeq] moveActorByDirection END finalPos=(${finalX.toFixed(2)},${finalY.toFixed(2)})`);
+        }
+    },
+
     cameraBlend: {
         start(ctx, clip, state) {
             const cameraManager = ctx.cameraManager;

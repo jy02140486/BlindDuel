@@ -145,6 +145,14 @@
 - 战斗 HP 系统已完成：角色血量、死亡状态动画、战斗结束自动切回探索模式
 - 当前下一阶段重点：待从 BACKLOG 中选取
 
+## Update Log (2026-07-19)
+- TimelineSequencer 新增第 13 种 clip 类型 `moveActorByDirection`：基于「归一化方向 + 时长」驱动的角色移动，与 `moveActorTo`（目标点驱动）对偶，覆盖「朝某方向走一段时间」场景
+- clip 字段：`dir: [x, y]`（必填，内部再 normalize，非归一化输入也能用）+ `durationMs`（必填）+ `speed`（可选，覆盖 `actor.getEffectiveSpeed()`）；默认走角色自身速度，buff / `moveSpeedBonus` 自动生效，但距离不可预测
+- 实现复用 `controlledBySequence` 标记的 4 处早退 + 3 处兜底清标记机制（stop / _onComplete / _onLoop），零新增早退点；`CharacterBase` / `ExploreCollisionSystem` / `BaseController` / `ExploreMode` 全不动
+- 行为约定：不走碰撞（穿 staticBlockers / 超 walkArea 不 clamp，同 moveActorTo）；`end` 不切回 idle，动画状态切换由编排者负责；`dir=[0,0]` 时 warn 并 invalid
+- CombatCharacter walk 动画靠 moveIntent 自动驱动，NpcCharacter / PropEntity 需额外配 `command: "walk"` clip（同 moveActorTo 约定）
+- 文档同步：`docs/TimelineSequencer User Guide.md` §5 新增 §5.13（字段表 + 三段式行为 + 与 moveActorTo 对比表 + 示例 + 已知限制）、§9.2 常见问题表加 `moveActorByDirection 不动` 排查行；设计参考见 `plans/moveActorByDirection clip 设计.MD`
+
 ## Update Log (2026-07-15)
 - 2 个计划文档完成并归档：`Sequencer 期间门控修复（NPC 气泡 + walkArea clamp）`、`Prologue 内容与演出流程实施计划`
 - sequencer 期间 ExploreMode 子系统门控统一：`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp + blockers 推开；`sceneSequencer.isBusy()` 让 NpcController greeting 不触发、ExploreMode.#updateDialogueBubble 不接管气泡生命周期

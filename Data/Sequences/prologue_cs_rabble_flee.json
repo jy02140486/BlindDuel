@@ -103,7 +103,7 @@
       "kind": "camera",
       "channel": "fx",
       "clips": [
-        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 6500, "height": 72, "speed": 240 }
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 7800, "height": 72, "speed": 240 }
       ]
     },{
       "id": "hero.attention",
@@ -114,7 +114,7 @@
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
         { "type": "faceWorldX", "atMs": 100, "direction": 1 },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 500, "x": -21.5, "y": 0.4, "speed": 1.4},
+        { "type": "moveActorByDirection", "startMs": 200, "durationMs": 500,"dir": [1, 0]},
         { "type": "inputLock", "atMs": 8000, "locked": false }
       ]
     },
