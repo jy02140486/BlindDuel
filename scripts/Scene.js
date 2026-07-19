@@ -232,6 +232,7 @@ export class Scene {
         sharedContext.walkArea = this.walkArea;
         sharedContext.sceneVisualSystem = this.sceneVisualSystem;
         sharedContext.entityPool = this.entityPool;
+        sharedContext.assets = this._sceneAssets;
         sharedContext.cameraBasePosition = this._cameraBasePosition;
         sharedContext.cameraTarget = this._cameraTarget;
         sharedContext.smoothedFighterDistance = this._smoothedFighterDistance;
