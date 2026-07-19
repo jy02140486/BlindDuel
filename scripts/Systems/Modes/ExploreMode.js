@@ -186,28 +186,41 @@ export class ExploreMode extends BaseMode {
         }
         if (!this._battleTriggerFired || !pendingBattleDef) return;
 
-        const enterBattleSequence = pendingBattleDef.enterSequence?.(pendingBattleDef) ?? {
-            id: "enter_battle_fallback",
-            durationMs: 1000,
-            tracks: [
-                {
-                    id: "camera",
-                    kind: "camera",
-                    binding: { cameraId: "duel" },
-                    channel: "blend",
-                    clips: [
-                        { type: "cameraBlend", startMs: 0, durationMs: 800, to: "duel" }
-                    ]
-                },
-                {
-                    id: "mode",
-                    kind: "mode",
-                    clips: [
-                        { type: "switchMode", atMs: 800, modeId: "battle", payload: { battleDef: pendingBattleDef } }
-                    ]
+        let enterBattleSequence;
+        const inlineSeq = this.context.sceneDef?.enterBattleSequence;
+        if (inlineSeq) {
+            enterBattleSequence = JSON.parse(JSON.stringify(inlineSeq));
+            for (const track of enterBattleSequence.tracks) {
+                for (const clip of track.clips) {
+                    if (clip.type === "switchMode" && clip.modeId === "battle") {
+                        clip.payload = { ...(clip.payload || {}), battleDef: pendingBattleDef };
+                    }
                 }
-            ]
-        };
+            }
+        } else {
+            enterBattleSequence = pendingBattleDef.enterSequence?.(pendingBattleDef) ?? {
+                id: "enter_battle_fallback",
+                durationMs: 1000,
+                tracks: [
+                    {
+                        id: "camera",
+                        kind: "camera",
+                        binding: { cameraId: "duel" },
+                        channel: "blend",
+                        clips: [
+                            { type: "cameraBlend", startMs: 0, durationMs: 800, to: "duel" }
+                        ]
+                    },
+                    {
+                        id: "mode",
+                        kind: "mode",
+                        clips: [
+                            { type: "switchMode", atMs: 800, modeId: "battle", payload: { battleDef: pendingBattleDef } }
+                        ]
+                    }
+                ]
+            };
+        }
 
         const { game, sceneDef } = this.context;
         if (game) {
@@ -575,6 +588,7 @@ export class ExploreMode extends BaseMode {
 
                 const pos = entity.root.position;
                 let needMask = false;
+                let hitMaskId = null;
                 for (const mesh of masks) {
                     const aabb = mesh._maskAabb;
                     if (!aabb) continue;
@@ -589,6 +603,7 @@ export class ExploreMode extends BaseMode {
                             if (blocker.maxX < worldLeft || blocker.minX > worldRight) continue;
                             if (blocker.maxY < worldBottom || blocker.minY > worldTop) continue;
                             needMask = true;
+                            hitMaskId = mesh.name || mesh.id || '?';
                             break;
                         }
                     }
@@ -596,6 +611,7 @@ export class ExploreMode extends BaseMode {
                     if (pos.x < worldLeft - 1.0 || pos.x > worldRight + 1.0) continue;
                     if (pos.y >= worldBottom && pos.y <= worldTop) {
                         needMask = true;
+                        hitMaskId = mesh.name || mesh.id || '?';
                         break;
                     }
                 }
@@ -781,9 +797,20 @@ export class ExploreMode extends BaseMode {
             return;
         }
 
-        const pxToWorld = character.pxToWorld ?? 0.03;
-        const planeW = 32 * pxToWorld;
-        const planeH = 32 * pxToWorld;
+        const assets = this.context.assets ?? {};
+        const atlas = assets.items?.[itemDef.atlasKey ?? "ham"];
+        let frameWidth = 32;
+        let frameHeight = 32;
+        if (atlas?.frames) {
+            const firstFrame = Object.values(atlas.frames)[0];
+            if (firstFrame?.frame) {
+                frameWidth = firstFrame.frame.w;
+                frameHeight = firstFrame.frame.h;
+            }
+        }
+        const pxToWorld = 0.02;
+        const planeW = frameWidth * pxToWorld;
+        const planeH = frameHeight * pxToWorld;
 
         const plane = BABYLON.MeshBuilder.CreatePlane("give_item", {
             width: planeW, height: planeH

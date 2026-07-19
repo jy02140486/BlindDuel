@@ -6,6 +6,96 @@
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",
     "outroSequenceUrl": "Data/Sequences/prologue_outro.json",
+    "enterBattleSequence": {
+        "id": "enter_battle_prologue",
+        "durationMs": 3000,
+        "tracks": [
+            {
+                "id": "hero.command",
+                "kind": "actor",
+                "binding": { "actorId": "hero" },
+                "channel": "command",
+                "clips": [
+                    { "type": "inputLock", "atMs": 0, "locked": true },
+                    { "type": "command", "atMs": 0, "command": "draw" },
+                    { "type": "inputLock", "atMs": 3000, "locked": false }
+                ]
+            },
+            {
+                "id": "companion.retreat",
+                "kind": "actor",
+                "binding": { "actorId": "companion" },
+                "channel": "movement",
+                "clips": [
+                    { "type": "callback", "atMs": 0, "fn": "enterCompanionIdle" },
+                    { "type": "command", "atMs": 0, "command": "walk" },
+                    { "type": "faceWorldX", "atMs": 0, "direction": 1 },
+                    { "type": "moveActorTo", "startMs": 0, "durationMs": 1000, "x": -9, "y": 0, "speed": 1.4 },
+                    { "type": "command", "atMs": 1800, "command": "idle" }
+                ]
+            },
+            {
+                "id": "camera",
+                "kind": "camera",
+                "binding": { "cameraId": "duel" },
+                "channel": "blend",
+                "clips": [
+                    { "type": "setCameraFollow", "atMs": 0, "actorId": "hero", "offsetX": 0, "offsetY": 0, "offset": 0, "lerp": 0.12, "height": 2, "orthoWidth": 20 },
+                    { "type": "cameraBlend", "startMs": 0, "durationMs": 500, "to": "scripted" },
+                    { "type": "cameraBlend", "startMs": 500, "durationMs": 1800, "to": "duel" }
+                ]
+            },
+            {
+                "id": "mode",
+                "kind": "mode",
+                "clips": [
+                    { "type": "switchMode", "atMs": 3000, "modeId": "battle" }
+                ]
+            }
+        ]
+    },
+    "exitBattleSequence": {
+        "id": "exit_battle_prologue",
+        "durationMs": 6500,
+        "tracks": [
+            {
+                "id": "hero.command",
+                "kind": "actor",
+                "binding": { "actorId": "hero" },
+                "channel": "command",
+                "clips": [
+                    { "type": "inputLock", "atMs": 0, "locked": true },
+                    { "type": "command", "atMs": 2500, "command": "sheath" },
+                    { "type": "inputLock", "atMs": 6500, "locked": false }
+                ]
+            },
+            {
+                "id": "companion.follow",
+                "kind": "callback",
+                "clips": [
+                    { "type": "callback", "atMs": 6200, "fn": "enterCompanionFollowing" }
+                ]
+            },
+            {
+                "id": "camera",
+                "kind": "camera",
+                "binding": { "cameraId": "explore" },
+                "channel": "blend",
+                "clips": [
+                    { "type": "setCameraFollow", "atMs": 0, "actorId": "hero", "offsetX": 0, "offsetY": 0, "offset": 0, "lerp": 0.12, "height": 2, "orthoWidth": 20 },
+                    { "type": "cameraBlend", "startMs": 0, "durationMs": 500, "to": "scripted" },
+                    { "type": "cameraBlend", "startMs": 500, "durationMs": 5500, "to": "explore" }
+                ]
+            },
+            {
+                "id": "mode",
+                "kind": "mode",
+                "clips": [
+                    { "type": "switchMode", "atMs": 6000, "modeId": "explore" }
+                ]
+            }
+        ]
+    },
     "cutsceneInvokers": [
         {
             "id": "prologue_prop_and_follow",

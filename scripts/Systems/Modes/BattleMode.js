@@ -105,29 +105,32 @@ export class BattleMode extends BaseMode {
             return;
         }
 
-        // 如果 battleDef 未定义 exitSequence，使用最小默认退场序列保证不会卡死
-        const exitBattleSequence = this._battleDef?.exitSequence ?? {
-            id: "exit_battle_fallback",
-            durationMs: 1000,
-            tracks: [
-                {
-                    id: "camera",
-                    kind: "camera",
-                    binding: { cameraId: "explore" },
-                    channel: "blend",
-                    clips: [
-                        { type: "cameraBlend", startMs: 0, durationMs: 800, to: "explore" }
-                    ]
-                },
-                {
-                    id: "mode",
-                    kind: "mode",
-                    clips: [
-                        { type: "switchMode", atMs: 800, modeId: "explore" }
-                    ]
-                }
-            ]
-        };
+        // 优先使用 sceneDef 中内联的 exitBattleSequence（数据驱动）；否则 fallback 到 battleDef.exitSequence
+        const inlineExitSeq = this.context.sceneDef?.exitBattleSequence;
+        const exitBattleSequence = inlineExitSeq
+            ? JSON.parse(JSON.stringify(inlineExitSeq))
+            : (this._battleDef?.exitSequence ?? {
+                id: "exit_battle_fallback",
+                durationMs: 1000,
+                tracks: [
+                    {
+                        id: "camera",
+                        kind: "camera",
+                        binding: { cameraId: "explore" },
+                        channel: "blend",
+                        clips: [
+                            { type: "cameraBlend", startMs: 0, durationMs: 800, to: "explore" }
+                        ]
+                    },
+                    {
+                        id: "mode",
+                        kind: "mode",
+                        clips: [
+                            { type: "switchMode", atMs: 800, modeId: "explore" }
+                        ]
+                    }
+                ]
+            });
 
         const { questManager } = this.context;
         if (questManager && this._battleDef?.onVictory) {
