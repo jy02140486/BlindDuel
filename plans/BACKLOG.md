@@ -53,6 +53,4 @@
 # mannual
 ## 全局雾
 指数型，大概在30左右变浓
-## trigger三角形标识
-换场景的trigger用
-## sequence中角色基于方向移动
+

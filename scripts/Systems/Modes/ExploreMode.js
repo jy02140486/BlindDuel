@@ -66,6 +66,9 @@ export class ExploreMode extends BaseMode {
             this.#updateGiveSequence(character, dtMs);
         }
 
+        // 箭头显隐放在 sequencer 门控之外：sequencer 期间需强制隐藏箭头，
+        // 避免玩家在 trigger 内时箭头亮起后穿过整个 cutscene
+        this.#updateTriggerArrows(character, dtMs, sequencerBusy);
         this.#updateDialogueBubble();
 
         for (const prop of this.props) {
@@ -160,6 +163,23 @@ export class ExploreMode extends BaseMode {
 
             const enabled = scene._evaluateCondition(triggerDef.condition, worldState);
             trigger.setEnabled(enabled);
+        }
+    }
+
+    #updateTriggerArrows(character, dtMs, sequencerBusy) {
+        const { sceneDef, scene } = this.context;
+        if (!sceneDef?.triggers || !scene?.triggers) return;
+
+        for (const triggerDef of sceneDef.triggers) {
+            if (!triggerDef.arrow) continue;
+            const trigger = scene.triggers.get(triggerDef.id);
+            if (!trigger?.updateArrow) continue;
+
+            const visible = !sequencerBusy
+                && trigger._enabled
+                && trigger.checkOverlap(character);
+
+            trigger.updateArrow(visible, dtMs);
         }
     }
 

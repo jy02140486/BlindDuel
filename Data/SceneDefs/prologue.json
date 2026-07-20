@@ -202,8 +202,16 @@
             "targetScene": "outdoor_village",
             "targetSpawn": "house_door",
             "debugColor": [1, 0.5, 0],
-            "debugVisible": true
-        },
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,           
+                "edge": "right",         
+                "direction": "right",         
+                "offset": 0.3,            
+                "scale": 0.4,             
+                "frameMs": 250             
+            }
+        },         
         {
             "type": "battle",
             "id": "bt_prologue",

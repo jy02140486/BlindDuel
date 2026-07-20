@@ -111,6 +111,13 @@ export class Scene {
                     debugVisible: triggerDef.debugVisible ?? false,
                 }
             );
+            if (triggerDef.arrow) {
+                trigger.setupArrow({
+                    ...triggerDef.arrow,
+                    id: triggerDef.id,
+                    atlasUrl: triggerDef.arrow.atlasUrl ?? "./Art/Sprite/UI/arrow.png"
+                });
+            }
             this.triggers.set(triggerDef.id, trigger);
         }
         // 向后兼容：scriptedCameraTrigger 仍硬编码（后续可改为遍历）
