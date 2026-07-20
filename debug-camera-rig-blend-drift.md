@@ -308,3 +308,9 @@ exitSequence（battle→explore）可能有反向问题：
 
 - exitSequence（battle→explore）可能有反向问题：blend 期间角色位置变化，但 explore rig 不依赖 fighterDistance，只用 target（角色位置），可能问题较小，需复现确认
 - 其他 SceneDefs（BATTLE_FIELD_2 等）的 enterSequence 配置需检查 clip 时序是否对齐 switchMode atMs
+
+### 新检查项
+intro里charlotte抖动时能看到log
+[CAM_JITTER_DETECTED] activeRig=scripted blending=false seqBusy=true activeClips=[] CameraManager.js:202:21
+[CAM_JITTER_POS] delta=(0.6060,0.0000,0.0000) dist=0.6060 prev=(-27.2408,2.0000,-25.0000) curr=(-26.6349,2.0000,-25.0000) CameraManager.js:206:21
+[CAM_JITTER_TARGET] delta=(0.6060,0.0000,0.0000) dist=0.6060 prev=(-27.2408,0.0000,0.0000) curr=(-26.6349,0.0000,0.0000)

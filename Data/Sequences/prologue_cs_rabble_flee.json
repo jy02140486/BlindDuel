@@ -8,8 +8,8 @@
       "binding": { "cameraId": "scripted" },
       "channel": "frame",
       "clips": [
-        { "type": "setCameraFrame", "atMs": 1000, "center": [-1.2, 0, 0], "height": 2.5, "orthoWidth": 20 },
-        { "type": "cameraBlend", "startMs": 1000, "durationMs": 1000, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 2000, "center": [-1.2, 0, 0], "height": 2.5, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 2000, "durationMs": 1000, "to": "scripted" },
         { "type": "setCameraFrame", "atMs": 3000, "center": [-1, -1, 0], "height": 1, "orthoWidth": 20 },
         { "type": "cameraBlend", "startMs": 3000, "durationMs": 1000, "to": "scripted" },
         { "type": "setCameraFollow", "atMs": 3000, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1, "orthoWidth": 20 }

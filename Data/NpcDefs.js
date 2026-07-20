@@ -14,6 +14,7 @@ export const NPC_DEFS = {
                 condition: { quest: "prologue_pickup_quest", stage: 1, hasItem: "altar_gem" },
                 text: "👍",
                 giveItem: "altar_gem",
+                completeText: "👍",
                 action: [
                     { type: "removeItem", item: "altar_gem" },
                     { type: "advanceScenario", value: 105 }
