@@ -46,6 +46,7 @@ export class Scene {
         this.entityPool = [];
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
+        this._game?.audioManager?.attachScene(this.scene);
 
         // 添加调试层（按Ctrl+Shift+I打开）
         await this.scene.debugLayer.show({
@@ -369,6 +370,7 @@ export class Scene {
             cameraManager.update(dtMs, this.sharedContext);
         }
         this._smoothedFighterDistance = this.battleMode.context.smoothedFighterDistance;
+        this._game?.audioManager?.update(dtMs);
     }
 
     render() {
@@ -387,6 +389,7 @@ export class Scene {
             }
         }
         if (this.scene) {
+            this._game?.audioManager?.detachScene();
             this.scene.debugLayer.hide();
             this.scene.dispose();
         }

@@ -1,0 +1,7 @@
+{
+    "pickup": {
+        "clips": ["./Audio/sfx/player/pickup_01.wav"],
+        "volume": 0.8,
+        "pitch": [0.96, 1.04]
+    }
+}

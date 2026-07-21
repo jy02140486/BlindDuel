@@ -69,7 +69,14 @@ py -m http.server 9000 --bind 127.0.0.1
 - 玩家控制器：`scripts/Systems/PlayerController.js`（输入 → 移动 + 指令队列 + buff 管理）
 - 可拾取实体：`scripts/Enties/PickableEntity.js`（轻量实体，不继承 CharacterBase）
 - UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`
-- 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / Scene 的顶层组装）
+- 音频系统入口：`scripts/Systems/AudioManager.js`（Game 持有，Scene 通过 `this._game.audioManager` 访问）
+- 音频数据库：`scripts/Systems/Audio/AudioDatabase.js`（AudioId → Clip Definition）
+- 音频池：`scripts/Systems/Audio/AudioPool.js`（基于 `BABYLON.Sound` 的缓存与复用）
+- 音频播放器：`scripts/Systems/Audio/AudioPlayer.js`（随机 Clip + 音量 + Pitch + 频率限制）
+- 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射）+ `Data/Audio/audio_buses.json`（总线）
+- 音频设计稿：`plans/AudioSystemDesign.MD`（v0.2，含 §13 与现有系统集成 + §14 切片工具）
+- 音频工具用户文档：`docs/Audio Tools User Guide.MD`
+- 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
@@ -78,10 +85,16 @@ py -m http.server 9000 --bind 127.0.0.1
 - 根运动数据：`Data/RootMotion/longswordman/`、`Data/RootMotion/rabble_stick/`、`Data/RootMotion/NPCs/`
 - NPC 占用盒数据：`Data/RootMotion/NPCs/*.occupancy.json`
 - 碰撞扫描输出：`Data/CollisionMask/**/*.collider.json`
+- 音频原始合包：`Audio/sfx/_raw/*.wav` + `sliceinfo.txt`（不入 AssetManifest）
+- 音频切片中间产物：`Audio/sfx/<合包名>/slice_NN.wav`（仍为源格式）
+- 音乐资源：`Audio/music/*.wav`（待定）
+- 运行时 sfx 资源：`Audio/sfx/combat/*.wav`、`Audio/sfx/<分类>/`（入 AssetManifest `audio.sfx` 分组）
 
 离线工具：
 - 碰撞扫描脚本：`scripts/tools/extract_collision_boxes.ps1`
 - NPC 占用盒提取脚本：`scripts/tools/extract_rootmotion_occupancy.ps1`
+- 音频切片脚本：`scripts/tools/slice_audio_pack.ps1`（Mode: Scan / Slice / EvenSplit / EvenSplitBatch）
+- 音频格式转换脚本：`scripts/tools/convert_audio_format.ps1`（采样率/位深/声道转换）
 - 注意：旧路径 `scripts/extract_collision_boxes.ps1` 可能仍存在（文件锁），后续可再清理
 
 ## 4. 动态状态
@@ -110,6 +123,11 @@ py -m http.server 9000 --bind 127.0.0.1
 3. 直接执行 `.ps1` 可能被本机 PowerShell `ExecutionPolicy` 拦截；必要时可通过 `powershell -ExecutionPolicy Bypass -File ...` 运行离线扫描脚本。
 4. `weaponbox` 的 debug 显示由 `CollisionComponent` 负责；`root` 点的 debug 显示由 `Character` 负责，二者统一跟随 `C` 键显隐。
 5. 当前项目尚未在 sprite 资源中增加额外"方向数据"字段；阶段性约定建议以运行时 `facing` 为主，默认资源原始朝向视为"面向右"，左向优先通过镜像获得。
+6. PowerShell 脚本需兼容 Windows 自带的 PowerShell 5.x：
+   - 不支持 `?.` null 条件运算符（PS7+ 语法），需用 `if ($x) { ... $x.Prop }` 等价实现
+   - 不支持 `::new()` 直接调用（部分场景），优先用 `New-Object`
+   - UTF-8 无 BOM 的中文注释会被 PS5 按 GBK 解码导致乱码，跨版本脚本统一用英文注释
+   - 运行指令：`powershell -ExecutionPolicy Bypass -File xxx.ps1 [args]`
 6. `ContactResolver` 当前碰撞判定使用 AABB 简化（忽略 OBB 旋转角），属于原型阶段实现。
 7. 攻击结束当前按"当前帧是否仍存在 `attackInstanceId`"隐式判断；若后续出现"中间空帧再出刀"动作，需要改为更显式的生命周期机制。
 8. `ImpactContext` 已增加生命周期守卫（`expectedStateAtResolve` + `stateEntrySerialAtCreate`），用于避免过期 `nextState` 在 `impact` 结束时误跳转。
@@ -137,23 +155,31 @@ py -m http.server 9000 --bind 127.0.0.1
 
 ### 9.1 顶层编排
 ```
-Scene (scripts/Scene.js)
-  -> GameModeManager (scripts/Systems/GameModeManager.js)
-     -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
-     -> BattleMode (scripts/Systems/Modes/BattleMode.js)
-  -> SceneSequencer (scripts/Systems/SceneSequencer.js)
-     -> TimelineSequencer (scripts/Systems/TimelineSequencer.js)
-  -> CameraManager (scripts/Systems/CameraManager.js)
-     -> DuelCameraRig (scripts/DuelCameraRig.js)
-     -> ExploreCameraRig (scripts/ExploreCameraRig.js)
-     -> ScriptedCameraRig (scripts/ScriptedCameraRig.js)
-  -> CombatSystem (scripts/Systems/CombatSystem.js)
-     -> ContactResolver (scripts/Systems/ContactResolver.js)
-     -> PushboxResolver (scripts/Systems/PushboxResolver.js)
-     -> StageBoundary (scripts/Systems/StageBoundary.js)
-  -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+Game (scripts/Game.js)
+  -> WorldState (scripts/WorldState.js)
   -> QuestManager (scripts/Systems/QuestManager.js)
   -> InventoryManager (scripts/Systems/InventoryManager.js)
+  -> AudioManager (scripts/Systems/AudioManager.js)
+     -> AudioDatabase (scripts/Systems/Audio/AudioDatabase.js)
+     -> AudioPool (scripts/Systems/Audio/AudioPool.js)
+     -> AudioPlayer (scripts/Systems/Audio/AudioPlayer.js)
+  -> Scene (scripts/Scene.js)
+     -> GameModeManager (scripts/Systems/GameModeManager.js)
+        -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
+        -> BattleMode (scripts/Systems/Modes/BattleMode.js)
+     -> SceneSequencer (scripts/Systems/SceneSequencer.js)
+        -> TimelineSequencer (scripts/Systems/TimelineSequencer.js)
+     -> CameraManager (scripts/Systems/CameraManager.js)
+        -> DuelCameraRig (scripts/DuelCameraRig.js)
+        -> ExploreCameraRig (scripts/ExploreCameraRig.js)
+        -> ScriptedCameraRig (scripts/ScriptedCameraRig.js)
+     -> CombatSystem (scripts/Systems/CombatSystem.js)
+        -> ContactResolver (scripts/Systems/ContactResolver.js)
+        -> PushboxResolver (scripts/Systems/PushboxResolver.js)
+        -> StageBoundary (scripts/Systems/StageBoundary.js)
+     -> SceneVisualSystem (scripts/Enties/SceneVisualSystem.js)
+     -> QuestManager (scripts/Systems/QuestManager.js)
+     -> InventoryManager (scripts/Systems/InventoryManager.js)
 ```
 
 ### 9.2 主循环
@@ -174,7 +200,9 @@ character_demo.js
      -> CameraManager.update()
         -> activeRig.compute()
         -> _applyToBabylonCamera()
+     -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
 ```
+> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 1：仅 `play()` / `setPaused()` / `attachScene()` / `detachScene()` 生效；`stop` / `playMusic` / `stopMusic` / `setBusVolume` / `update` 为空实现占位，Step 2/4/5 落地。详见 `plans/AudioSystemDesign.MD` §11。
 
 ### 9.3 进入战斗
 ```

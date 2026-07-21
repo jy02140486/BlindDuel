@@ -155,5 +155,9 @@ export const ASSET_MANIFEST = {
         tea: "./Art/Sprite/items/Tea.json",
         dagger: "./Art/Sprite/items/dagger.json",
         altar_gem: "./Art/Sprite/items/altar_gem.json"
+    },
+    audio: {
+        clips: "./Data/Audio/audio_clips.json",
+        buses: "./Data/Audio/audio_buses.json"
     }
 };

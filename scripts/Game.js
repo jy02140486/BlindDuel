@@ -22,6 +22,7 @@ import { HpBar } from "./UI/HpBar.js";
 import { DialogueBubble } from "./UI/DialogueBubble.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
+import { AudioManager } from "./Systems/AudioManager.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -71,6 +72,7 @@ export class Game {
         this.dialogueBubble = null;
         this.sharedContext = null;
         this.assets = null;
+        this.audioManager = null;
     }
 
     async bootstrap() {
@@ -128,6 +130,9 @@ export class Game {
         this.sceneSequencer = new SceneSequencer(this.sharedContext);
         this.sharedContext.sceneSequencer = this.sceneSequencer;
 
+        this.audioManager = new AudioManager(this.assets.audio ?? {});
+        this.sharedContext.audioManager = this.audioManager;
+
         console.log("[Game.bootstrap] B1 done — shadow objects created (not wired into Scene)");
         console.log("[Game.bootstrap] cameraManager=", !!this.cameraManager,
             "inputSystem=", !!this.inputSystem,
@@ -136,6 +141,7 @@ export class Game {
             "ui=", !!this.inventoryBar && !!this.buffBar && !!this.hpBar,
             "gameModeManager=", !!this.gameModeManager,
             "sceneSequencer=", !!this.sceneSequencer,
+            "audioManager=", !!this.audioManager,
             "assets=", !!this.assets);
     }
 
@@ -210,6 +216,8 @@ export class Game {
         this.sceneSequencer = null;
         this.combatSystem = null;
         this.playerController = null;
+        this.audioManager?.dispose();
+        this.audioManager = null;
     }
 
     resetWorldState() {
@@ -371,7 +379,9 @@ export class Game {
     }
 
     togglePause() {
+        const paused = !this.scene.paused;
         this.scene.togglePause();
+        this.audioManager?.setPaused(paused);
     }
 
     toggleCameraProjection() {

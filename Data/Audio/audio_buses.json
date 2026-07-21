@@ -1,0 +1,7 @@
+{
+    "master":  { "volume": 1.0 },
+    "music":   { "volume": 0.8 },
+    "sfx":     { "volume": 1.0 },
+    "ui":      { "volume": 1.0 },
+    "ambient": { "volume": 0.6 }
+}
