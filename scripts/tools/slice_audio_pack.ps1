@@ -53,7 +53,13 @@ param(
     # [Scan only] Sample step. Read 1 sample out of every N for amplitude detection.
     # N=1 is most accurate but slowest. Raise it (e.g. 10, 100) for speed on large files
     # at the cost of precision (may miss very short silence).
-    [int]$SampleStep = 1
+    [int]$SampleStep = 1,
+
+    # [EvenSplitBatch / ScanBatch / SliceBatch] Force. By default these modes
+    # skip wavs whose slice.json already exists (to protect hand-edited slice.json).
+    # -Force overrides: EvenSplitBatch/ScanBatch regenerate slice.json (OVERWRITE hand edits!);
+    # SliceBatch clears each outputDir's *.wav before slicing (removes stale files).
+    [switch]$Force
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -261,7 +267,7 @@ function Write-BatchLog($logPath, $mode, $batchDir, $sliceInfoPath, $records, $p
     Write-Host "[${mode}] log written: $logPath"
 }
 
-function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
+function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath, $force) {
     if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
     $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
     $batchAbs = (Resolve-Path $batchDir).Path
@@ -288,6 +294,14 @@ function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
             continue
         }
         $cnt = $parsed.Entries[$fname]
+        $wavBase = [System.IO.Path]::GetFileNameWithoutExtension($fname)
+        $jsonPath = [System.IO.Path]::Combine($batchAbs, "$wavBase.slice.json")
+        if (-not $force -and (Test-Path $jsonPath)) {
+            Write-Warning "[EvenSplitBatch] SKIP: '$fname' - slice.json already exists (use -Force to regenerate, will overwrite hand edits)"
+            $skipped++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="slice.json already exists" })
+            continue
+        }
         Write-Host ""
         Write-Host "[EvenSplitBatch] processing $fname (count=$cnt)"
         try {
@@ -309,7 +323,7 @@ function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
     }
 }
 
-function Invoke-ScanBatch($batchDir, $sliceInfoPath, $silenceThreshold, $minSilenceMs, $minSliceMs, $headTrimMs, $tailTrimMs, $sampleStep) {
+function Invoke-ScanBatch($batchDir, $sliceInfoPath, $force, $silenceThreshold, $minSilenceMs, $minSliceMs, $headTrimMs, $tailTrimMs, $sampleStep) {
     if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
     $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
     $batchAbs = (Resolve-Path $batchDir).Path
@@ -336,6 +350,14 @@ function Invoke-ScanBatch($batchDir, $sliceInfoPath, $silenceThreshold, $minSile
             [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="not in sliceinfo.txt" })
             continue
         }
+        $wavBase = [System.IO.Path]::GetFileNameWithoutExtension($fname)
+        $jsonPath = [System.IO.Path]::Combine($batchAbs, "$wavBase.slice.json")
+        if (-not $force -and (Test-Path $jsonPath)) {
+            Write-Warning "[ScanBatch] SKIP: '$fname' - slice.json already exists (use -Force to regenerate, will overwrite hand edits)"
+            $skipped++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="slice.json already exists" })
+            continue
+        }
         Write-Host ""
         Write-Host "[ScanBatch] processing $fname"
         try {
@@ -357,7 +379,7 @@ function Invoke-ScanBatch($batchDir, $sliceInfoPath, $silenceThreshold, $minSile
     }
 }
 
-function Invoke-SliceBatch($batchDir, $sliceInfoPath) {
+function Invoke-SliceBatch($batchDir, $sliceInfoPath, $force) {
     if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
     $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
     $batchAbs = (Resolve-Path $batchDir).Path
@@ -388,6 +410,22 @@ function Invoke-SliceBatch($batchDir, $sliceInfoPath) {
             $skipped++
             [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="not in sliceinfo.txt" })
             continue
+        }
+        if ($force) {
+            try {
+                $cfg = [System.IO.File]::ReadAllText($json) | ConvertFrom-Json
+                $jsonDir = [System.IO.Path]::GetDirectoryName($json)
+                $outDir = [System.IO.Path]::Combine($jsonDir, $cfg.outputDir)
+                if (Test-Path $outDir) {
+                    $oldWavs = [System.IO.Directory]::GetFiles($outDir, "*.wav", [System.IO.SearchOption]::TopDirectoryOnly)
+                    foreach ($old in $oldWavs) {
+                        try { Remove-Item -Path $old -Force } catch { Write-Warning "[SliceBatch] failed to delete $old : $($_.Exception.Message)" }
+                    }
+                    Write-Host "[SliceBatch] -Force: removed $($oldWavs.Count) old wav(s) in $outDir"
+                }
+            } catch {
+                Write-Warning "[SliceBatch] -Force prep failed for $fname : $($_.Exception.Message)"
+            }
         }
         Write-Host ""
         Write-Host "[SliceBatch] processing $fname"
@@ -656,13 +694,13 @@ if ($Mode -eq "Scan") {
 } elseif ($Mode -eq "EvenSplitBatch") {
     if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "EvenSplitBatch mode requires -BatchDir <dir>" }
     if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "EvenSplitBatch mode requires -SliceInfo <txt path>" }
-    Invoke-EvenSplitBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo
+    Invoke-EvenSplitBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo -force $Force.IsPresent
 } elseif ($Mode -eq "ScanBatch") {
     if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "ScanBatch mode requires -BatchDir <dir>" }
     if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "ScanBatch mode requires -SliceInfo <txt path>" }
-    Invoke-ScanBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo -silenceThreshold $SilenceThreshold -minSilenceMs $MinSilenceMs -minSliceMs $MinSliceMs -headTrimMs $HeadTrimMs -tailTrimMs $TailTrimMs -sampleStep $SampleStep
+    Invoke-ScanBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo -force $Force.IsPresent -silenceThreshold $SilenceThreshold -minSilenceMs $MinSilenceMs -minSliceMs $MinSliceMs -headTrimMs $HeadTrimMs -tailTrimMs $TailTrimMs -sampleStep $SampleStep
 } elseif ($Mode -eq "SliceBatch") {
     if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "SliceBatch mode requires -BatchDir <dir>" }
     if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "SliceBatch mode requires -SliceInfo <txt path>" }
-    Invoke-SliceBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo
+    Invoke-SliceBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo -force $Force.IsPresent
 }

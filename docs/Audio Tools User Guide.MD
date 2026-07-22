@@ -193,12 +193,23 @@ powershell -ExecutionPolicy Bypass -File e:\se\BlindDuel\scripts\tools\slice_aud
 | `-Mode` | ✅ | `EvenSplitBatch` |
 | `-BatchDir` | ✅ | 待处理 wav 所在目录（不递归） |
 | `-SliceInfo` | ✅ | sliceinfo.txt 路径 |
+| `-Force` | ❌ | 强制重生成已存在的 slice.json（**会覆盖人工编辑，慎用**） |
+
+### 参数
+
+| 参数 | 必填 | 说明 |
+|---|---|---|
+| `-Mode` | ✅ | `EvenSplitBatch` |
+| `-BatchDir` | ✅ | 待处理 wav 所在目录（不递归） |
+| `-SliceInfo` | ✅ | sliceinfo.txt 路径 |
+| `-Clean` | ❌ | 强制重生成已存在的 slice.json（默认跳过已存在） |
 
 ### 错误处理
 
 - sliceinfo.txt 找不到 → 抛异常退出
 - sliceinfo.txt 无有效条目 → 抛异常退出
 - BatchDir 下某 wav 不在 sliceinfo.txt → warn + 跳过该 wav
+- 某 wav 的 slice.json 已存在（默认）→ warn + 跳过（保护人工编辑）；加 `-Force` 强制重生成（**覆盖人工编辑**）
 - 单文件处理失败 → warn + 继续处理下一个
 - 末尾汇总 `processed=N skipped=M failed=K`，并写日志到 `<BatchDir>/EvenSplitBatch.log`
 
@@ -249,6 +260,7 @@ powershell -ExecutionPolicy Bypass -File e:\se\BlindDuel\scripts\tools\slice_aud
 | `-Mode` | ✅ | `SliceBatch` |
 | `-BatchDir` | ✅ | 待处理 `*.slice.json` 所在目录（不递归） |
 | `-SliceInfo` | ✅ | sliceinfo.txt 路径（作为白名单，count 值被忽略） |
+| `-Force` | ❌ | 切片前清空各 outputDir 的旧 wav（防残留文件） |
 
 ### 错误处理
 
@@ -256,6 +268,8 @@ powershell -ExecutionPolicy Bypass -File e:\se\BlindDuel\scripts\tools\slice_aud
 - sliceinfo.txt 无有效条目 → 抛异常退出
 - BatchDir 下无 `*.slice.json` → warn + 直接返回
 - 某个 slice.json 对应的 wav 不在 sliceinfo.txt → warn + 跳过
+- 默认覆盖写：编辑 slice.json 后重跑会覆盖同名 wav；若删除了某 slice，旧 wav 会残留
+- 加 `-Force`：切片前先删除各 outputDir 下所有 `*.wav`，避免残留文件
 - 单文件处理失败 → warn + 继续下一个
 - 末尾汇总 `processed=N skipped=M failed=K`，并写日志到 `<BatchDir>/SliceBatch.log`
 
@@ -286,6 +300,7 @@ powershell -ExecutionPolicy Bypass -File e:\se\BlindDuel\scripts\tools\slice_aud
 | `-HeadTrimMs` | ❌ | 20 | 同 Scan |
 | `-TailTrimMs` | ❌ | 30 | 同 Scan |
 | `-SampleStep` | ❌ | 1 | 同 Scan |
+| `-Force` | ❌ | - | 强制重生成已存在的 slice.json（**会覆盖人工编辑，慎用**） |
 
 ### 错误处理
 
@@ -293,6 +308,7 @@ powershell -ExecutionPolicy Bypass -File e:\se\BlindDuel\scripts\tools\slice_aud
 - sliceinfo.txt 无有效条目 → 抛异常退出
 - BatchDir 下无 wav → warn + 直接返回
 - 某个 wav 不在 sliceinfo.txt → warn + 跳过
+- 某 wav 的 slice.json 已存在（默认）→ warn + 跳过（保护人工编辑）；加 `-Force` 强制重生成（**覆盖人工编辑**）
 - 单文件处理失败 → warn + 继续下一个
 - 末尾汇总 `processed=N skipped=M failed=K`，并写日志到 `<BatchDir>/ScanBatch.log`
 
