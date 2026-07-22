@@ -3,5 +3,20 @@
         "clips": ["./Audio/sfx/player/pickup_01.wav"],
         "volume": 0.8,
         "pitch": [0.96, 1.04]
+    },
+    "swing_light": {
+        "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
+        "volume": 0.8,
+        "pitch": [0.96, 1.04]
+    },
+    "swing_heavy": {
+        "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
+        "volume": 0.9,
+        "pitch": [0.93, 1.07]
+    },
+    "footstep": {
+        "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_06.wav"],
+        "volume": 0.7,
+        "pitch": [0.92, 1.08]
     }
 }

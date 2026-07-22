@@ -13,6 +13,36 @@ export class AudioManager {
         this._player = new AudioPlayer(this._database, this._pool);
         this._lastPlayAt = new Map();
         this._paused = false;
+        this._unsubGameplay = null;
+        this._registerUnlock();
+    }
+
+    _registerUnlock() {
+        if (typeof window === "undefined") return;
+        const audioEngine = BABYLON?.Engine?.audioEngine;
+        if (!audioEngine || audioEngine.unlocked) return;
+        const unlock = () => {
+            try {
+                audioEngine.unlock?.();
+                audioEngine.resume?.();
+            } catch (err) {
+                console.warn("[AudioManager] unlock failed", err);
+            }
+        };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+    }
+
+    wireGameplayEvents(bus) {
+        if (this._unsubGameplay) {
+            this._unsubGameplay();
+            this._unsubGameplay = null;
+        }
+        if (!bus) return;
+        this._unsubGameplay = bus.on("play_audio", (e) => {
+            if (!e || typeof e.id !== "string") return;
+            this.play(e.id, e.options ?? {});
+        });
     }
 
     attachScene(babylonScene) {
@@ -53,6 +83,10 @@ export class AudioManager {
     }
 
     dispose() {
+        if (this._unsubGameplay) {
+            this._unsubGameplay();
+            this._unsubGameplay = null;
+        }
         this._pool.detachScene();
         this._lastPlayAt.clear();
     }

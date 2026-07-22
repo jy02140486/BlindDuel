@@ -425,6 +425,7 @@ export class Scene {
         }
         const entity = createEntityFromDef(this.scene, this._sceneAssets, entityDef);
         if (!entity) return null;
+        entity.gameplayEvents = this._game?.sharedContext?.gameplayEvents ?? null;
         this.entityPool.push(entity);
         this._entityById.set(entity.id, entity);
         if (entity.name) this._entityById.set(entity.name, entity);

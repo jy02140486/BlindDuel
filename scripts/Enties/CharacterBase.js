@@ -1,3 +1,5 @@
+const FOOTSTEP_INTERVAL_MS = 380;
+
 export const FACING_MODE = Object.freeze({
     AUTO_FROM_MOVE: "autoFromMove",
     LOCKED: "locked",
@@ -37,6 +39,8 @@ export class CharacterBase {
         this.stateTags = new Set();
         this.stateEnterTick = 0;
         this.debugTrace = config.debugTrace ?? false;
+        this.gameplayEvents = null;
+        this._footstepAccumMs = 0;
 
         this.animation = config._animation;
         this.collision = config._collision ?? null;
@@ -455,6 +459,32 @@ export class CharacterBase {
         return stateDef.timeScale ?? 1.0;
     }
 
+    emitGameplayEvent(event) {
+        if (!this.gameplayEvents || !event || typeof event.type !== "string") return;
+        try {
+            this.gameplayEvents.emit(event);
+        } catch (err) {
+            console.warn(`[CharacterBase] emitGameplayEvent failed for "${event.type}"`, err);
+        }
+    }
+
+    _updateFootstep(dtMs) {
+        if (this.currentStateName !== "walk") {
+            this._footstepAccumMs = 0;
+            return;
+        }
+        const mag = Math.hypot(Number(this.moveIntent?.x ?? 0), Number(this.moveIntent?.y ?? 0));
+        if (mag <= this.moveDeadzone) {
+            this._footstepAccumMs = 0;
+            return;
+        }
+        this._footstepAccumMs += dtMs;
+        if (this._footstepAccumMs >= FOOTSTEP_INTERVAL_MS) {
+            this._footstepAccumMs -= FOOTSTEP_INTERVAL_MS;
+            this.emitGameplayEvent({ type: "play_audio", id: "footstep" });
+        }
+    }
+
     enterState(stateName, tickCount = null) {
         const stateDef = this.stateGraph?.states?.[stateName];
         if (!stateDef) {
@@ -484,6 +514,11 @@ export class CharacterBase {
             const anchor = this._getCurrentRootAnchor(this.animation.currentFrameIndex);
             this._applyRootAlignment(current.w, current.h, anchor);
             this._syncRootDebug(anchor);
+        }
+
+        if (stateDef.attackActive === true) {
+            const audioId = stateDef.attackWeight === "heavy" ? "swing_heavy" : "swing_light";
+            this.emitGameplayEvent({ type: "play_audio", id: audioId });
         }
     }
 

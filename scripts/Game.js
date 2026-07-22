@@ -23,6 +23,7 @@ import { DialogueBubble } from "./UI/DialogueBubble.js";
 import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
 import { AudioManager } from "./Systems/AudioManager.js";
+import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -73,6 +74,7 @@ export class Game {
         this.sharedContext = null;
         this.assets = null;
         this.audioManager = null;
+        this.gameplayEvents = null;
     }
 
     async bootstrap() {
@@ -132,6 +134,10 @@ export class Game {
 
         this.audioManager = new AudioManager(this.assets.audio ?? {});
         this.sharedContext.audioManager = this.audioManager;
+
+        this.gameplayEvents = new GameplayEventBus();
+        this.sharedContext.gameplayEvents = this.gameplayEvents;
+        this.audioManager.wireGameplayEvents(this.gameplayEvents);
 
         console.log("[Game.bootstrap] B1 done — shadow objects created (not wired into Scene)");
         console.log("[Game.bootstrap] cameraManager=", !!this.cameraManager,
@@ -218,6 +224,8 @@ export class Game {
         this.playerController = null;
         this.audioManager?.dispose();
         this.audioManager = null;
+        this.gameplayEvents?.clear();
+        this.gameplayEvents = null;
     }
 
     resetWorldState() {

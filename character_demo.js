@@ -3,7 +3,7 @@ import { SCENARIO } from "./Data/ScenarioMilestones.js";
 
 async function start() {
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true, { stencil: true });
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true, audioEngine: true });
     const game = new Game(engine, canvas);
 
     await game.bootstrap();
