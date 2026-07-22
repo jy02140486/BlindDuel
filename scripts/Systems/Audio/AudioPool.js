@@ -29,7 +29,7 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
         const cached = this._cache.get(url);
         if (cached) return cached;
 
-        const entry = { state: LOAD_STATE.PENDING, sound: null };
+        const entry = { state: LOAD_STATE.PENDING, sound: null, _pendingPlays: [] };
         this._cache.set(url, entry);
 
         try {
@@ -37,13 +37,31 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
                 url,
                 url,
                 this._scene,
-                () => { entry.state = LOAD_STATE.LOADED; },
+                () => {
+                    entry.state = LOAD_STATE.LOADED;
+                    if (entry._pendingPlays && entry._pendingPlays.length > 0) {
+                        const pending = entry._pendingPlays.splice(0);
+                        for (const opts of pending) {
+                            try {
+                                if (typeof opts.volume === "number") entry.sound.setVolume(opts.volume);
+                                entry.sound.setPlaybackRate(opts.pitch ?? 1);
+                                entry.sound.play();
+                            } catch (err) {
+                                console.warn("[AudioPool] flush play failed", url, err);
+                            }
+                        }
+                    }
+                },
                 { autoplay: false, spatialSound: false }
             );
             entry.sound = sound;
         } catch (err) {
             console.warn("[AudioPool] create failed", url, err);
             entry.state = LOAD_STATE.FAILED;
+            if (entry._pendingPlays && entry._pendingPlays.length > 0) {
+                console.warn(`[AudioPool] ${entry._pendingPlays.length} pending play(s) dropped due to load failure: ${url}`);
+                entry._pendingPlays.length = 0;
+            }
         }
         return entry;
     }
@@ -57,9 +75,15 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
     play(url, options) {
         const entry = this._cache.get(url);
         if (!entry || !entry.sound) return false;
+        const opts = options || {};
+
+        if (entry.state === LOAD_STATE.PENDING) {
+            entry._pendingPlays.push(opts);
+            return true;
+        }
         if (entry.state !== LOAD_STATE.LOADED) return false;
+
         try {
-            const opts = options || {};
             if (typeof opts.volume === "number") entry.sound.setVolume(opts.volume);
             entry.sound.setPlaybackRate(opts.pitch ?? 1);
             entry.sound.play();

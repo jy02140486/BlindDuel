@@ -1,7 +1,8 @@
 /*
 - 取随机 clip URL → 触发 lazy load → 设置 volume/pitch → play
 - pitch 支持 number 或 [min,max] （线性随机，设计稿 E 项确认）
-- 第一次 play 会因 lazy load 未完成而静默失败；第二次起开始有声（这是 Step 1 的简化，后续可加预加载）
+- PendingPlays 队列：首次 play 时若 wav 仍在加载，请求入队，loaded 后自动回放
+- 不阻塞游戏启动；第一次播放有 50-200ms 延迟（本地 wav）
 */
 
 export class AudioPlayer {

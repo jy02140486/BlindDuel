@@ -2,9 +2,11 @@ param(
     # Required: working mode. Scan = scan silence regions (legacy, unreliable on high-sample-rate wav);
     # Slice = cut single-file wavs according to slice.json;
     # EvenSplit = split a single wav into N equal parts (count from -Count);
-    # EvenSplitBatch = batch process a directory, read counts from -SliceInfo txt.
+    # EvenSplitBatch = batch EvenSplit a directory, read counts from -SliceInfo txt;
+    # ScanBatch = batch Scan every wav in -BatchDir (top-level only, no info file needed);
+    # SliceBatch = batch Slice every *.slice.json in -BatchDir (top-level only).
     [Parameter(Mandatory=$true)]
-    [ValidateSet("Scan","Slice","EvenSplit","EvenSplitBatch")]
+    [ValidateSet("Scan","Slice","EvenSplit","EvenSplitBatch","ScanBatch","SliceBatch")]
     [string]$Mode,
 
     # Scan/EvenSplit mode required: source wav file path.
@@ -16,13 +18,14 @@ param(
     # EvenSplit mode required: number of equal parts to split the wav into.
     [int]$Count,
 
-    # EvenSplitBatch mode required: path to sliceinfo.txt. Format per line:
-    #   <wav-filename> <count>
+    # EvenSplitBatch / ScanBatch / SliceBatch mode required: path to sliceinfo.txt.
+    # Format per line: <wav-filename> <count>
     # Lines starting with # or empty lines are ignored.
-    # If a wav in BatchDir is not listed, a warning is printed and the file is skipped.
+    # ScanBatch / SliceBatch ignore the count value; sliceinfo.txt serves only as a whitelist
+    # of which files to process. Files in BatchDir not listed here are skipped.
     [string]$SliceInfo,
 
-    # EvenSplitBatch mode required: directory containing wav files to batch process.
+    # EvenSplitBatch / ScanBatch / SliceBatch mode required: directory containing files to batch process.
     [string]$BatchDir,
 
     # [Scan only] Silence threshold (normalized amplitude 0.0~1.0). Samples with peak below
@@ -211,54 +214,61 @@ function Invoke-EvenSplit($wavPath, $count) {
     }
 }
 
-function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
-    if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
+function Parse-SliceInfo($sliceInfoPath) {
     if (-not (Test-Path $sliceInfoPath)) { throw "SliceInfo not found: $sliceInfoPath" }
-    $batchAbs = (Resolve-Path $batchDir).Path
     $infoAbs = (Resolve-Path $sliceInfoPath).Path
-    Write-Host "[EvenSplitBatch] batchDir: $batchAbs"
-    Write-Host "[EvenSplitBatch] sliceInfo: $infoAbs"
-
     $info = @{}
-    $lines = [System.IO.File]::ReadAllLines($infoAbs)
-    foreach ($line in $lines) {
-        $trimmed = $line.Trim()
-        if ($trimmed -eq "" -or $trimmed.StartsWith("#")) { continue }
+    foreach ($line in [System.IO.File]::ReadAllLines($infoAbs)) {
+        $t = $line.Trim()
+        if ($t -eq "" -or $t.StartsWith("#")) { continue }
         $fname = $null; $cnt = 0; $ok = $false
-        if ($trimmed.StartsWith('"')) {
-            # Quoted filename: "file name.wav" 6  (filename may contain spaces)
-            $endQuote = $trimmed.IndexOf('"', 1)
-            if ($endQuote -gt 1) {
-                $fname = $trimmed.Substring(1, $endQuote - 1)
-                $rest = $trimmed.Substring($endQuote + 1).Trim()
-                if ([int]::TryParse($rest, [ref]$cnt)) { $ok = $true }
-            }
-            if (-not $ok) {
-                Write-Warning "[EvenSplitBatch] bad line ignored: '$line' (expected: `"<filename>`" <count>)"
-                continue
+        if ($t.StartsWith('"')) {
+            $eq = $t.IndexOf('"', 1)
+            if ($eq -gt 1) {
+                $fname = $t.Substring(1, $eq - 1)
+                if ([int]::TryParse($t.Substring($eq + 1).Trim(), [ref]$cnt)) { $ok = $true }
             }
         } else {
-            # Unquoted filename: filename.wav 6  (filename must not contain spaces)
-            $parts = $trimmed -split '\s+'
-            if ($parts.Length -lt 2) {
-                Write-Warning "[EvenSplitBatch] bad line ignored: '$line' (expected: `"<filename>`" <count> or <filename> <count>)"
-                continue
+            $parts = $t -split '\s+'
+            if ($parts.Length -ge 2 -and [int]::TryParse($parts[-1], [ref]$cnt)) {
+                $fname = ($parts[0..($parts.Length - 2)] -join ' '); $ok = $true
             }
-            if (-not [int]::TryParse($parts[-1], [ref]$cnt)) {
-                Write-Warning "[EvenSplitBatch] bad count ignored: '$line' (last token must be integer)"
-                continue
-            }
-            $fname = ($parts[0..($parts.Length - 2)] -join ' ')
         }
-        if ($info.ContainsKey($fname)) {
-            Write-Warning "[EvenSplitBatch] duplicate entry for $fname, last value wins"
-        }
+        if (-not $ok) { Write-Warning "[Parse-SliceInfo] bad line ignored: '$line'"; continue }
+        if ($info.ContainsKey($fname)) { Write-Warning "[Parse-SliceInfo] duplicate entry for $fname, last value wins" }
         $info[$fname] = $cnt
     }
-    Write-Host "[EvenSplitBatch] sliceinfo loaded: $($info.Count) entries"
-    if ($info.Count -eq 0) {
-        throw "sliceinfo.txt has no valid entries"
+    return [pscustomobject]@{ Path = $infoAbs; Entries = $info }
+}
+
+function Write-BatchLog($logPath, $mode, $batchDir, $sliceInfoPath, $records, $processed, $skipped, $failed) {
+    $lines = New-Object System.Collections.ArrayList
+    [void]$lines.Add("=== $mode batch log ===")
+    [void]$lines.Add("timestamp: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))")
+    [void]$lines.Add("batchDir: $batchDir")
+    if ($sliceInfoPath) { [void]$lines.Add("sliceInfo: $sliceInfoPath") }
+    [void]$lines.Add("")
+    [void]$lines.Add("--- per-file result ---")
+    foreach ($r in $records) {
+        $reason = if ($r.Reason) { " | $($r.Reason)" } else { "" }
+        [void]$lines.Add("[$($r.Status)] $($r.File)$reason")
     }
+    [void]$lines.Add("")
+    [void]$lines.Add("--- summary ---")
+    [void]$lines.Add("processed=$processed skipped=$skipped failed=$failed")
+    [void]$lines.Add("total=$($processed + $skipped + $failed)")
+    [System.IO.File]::WriteAllLines($logPath, $lines.ToArray(), [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[${mode}] log written: $logPath"
+}
+
+function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
+    if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
+    $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
+    $batchAbs = (Resolve-Path $batchDir).Path
+    Write-Host "[EvenSplitBatch] batchDir: $batchAbs"
+    Write-Host "[EvenSplitBatch] sliceInfo: $($parsed.Path)"
+    Write-Host "[EvenSplitBatch] sliceinfo loaded: $($parsed.Entries.Count) entries"
+    if ($parsed.Entries.Count -eq 0) { throw "sliceinfo.txt has no valid entries" }
 
     $wavFiles = [System.IO.Directory]::GetFiles($batchAbs, "*.wav", [System.IO.SearchOption]::TopDirectoryOnly)
     Write-Host "[EvenSplitBatch] found $($wavFiles.Count) wav file(s) in batchDir"
@@ -267,164 +277,136 @@ function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
         return
     }
 
-    $processed = 0; $skipped = 0
+    $processed = 0; $skipped = 0; $failed = 0
+    $records = New-Object System.Collections.ArrayList
     foreach ($wav in $wavFiles) {
         $fname = [System.IO.Path]::GetFileName($wav)
-        if (-not $info.ContainsKey($fname)) {
+        if (-not $parsed.Entries.ContainsKey($fname)) {
             Write-Warning "[EvenSplitBatch] WARNING: '$fname' not listed in sliceinfo.txt, skipping"
             $skipped++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="not in sliceinfo.txt" })
             continue
         }
-        $cnt = $info[$fname]
+        $cnt = $parsed.Entries[$fname]
         Write-Host ""
         Write-Host "[EvenSplitBatch] processing $fname (count=$cnt)"
         try {
             Invoke-EvenSplit -wavPath $wav -count $cnt
             $processed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="OK"; Reason=$null })
         } catch {
             Write-Warning "[EvenSplitBatch] FAILED on $fname : $($_.Exception.Message)"
-            $skipped++
+            $failed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="FAILED"; Reason=$_.Exception.Message })
         }
     }
     Write-Host ""
-    Write-Host "[EvenSplitBatch] done: processed=$processed skipped=$skipped"
-    if ($skipped -gt 0) {
-        Write-Warning "[EvenSplitBatch] $skipped file(s) skipped. Check warnings above."
+    Write-Host "[EvenSplitBatch] done: processed=$processed skipped=$skipped failed=$failed"
+    $logPath = [System.IO.Path]::Combine($batchAbs, "EvenSplitBatch.log")
+    Write-BatchLog -logPath $logPath -mode "EvenSplitBatch" -batchDir $batchAbs -sliceInfoPath $parsed.Path -records $records -processed $processed -skipped $skipped -failed $failed
+    if ($skipped -gt 0 -or $failed -gt 0) {
+        Write-Warning "[EvenSplitBatch] $skipped skipped, $failed failed. See log: $logPath"
     }
 }
 
-function Invoke-EvenSplit($wavPath, $count) {
-    if ($count -lt 1) { throw "EvenSplit requires -Count >= 1 (got $count)" }
-    $wav = Read-WavHeader -path $wavPath
-    Write-Host "[EvenSplit] wav: $wavPath"
-    Write-Host "[EvenSplit] format=$($wav.AudioFormat) ch=$($wav.Channels) rate=$($wav.SampleRate) bits=$($wav.BitsPerSample) duration=$($wav.DurationSec)s count=$count"
-
-    $totalSamples = [int]($wav.DataLength / ($wav.Channels * $wav.BytesPerSample))
-    $samplesPerPart = [int]([Math]::Floor($totalSamples / [double]$count))
-    if ($samplesPerPart -lt 1) { throw "wav too short: totalSamples=$totalSamples cannot split into $count parts" }
-
-    $slices = New-Object System.Collections.ArrayList
-    for ($i = 0; $i -lt $count; $i++) {
-        $startSample = $i * $samplesPerPart
-        $endSample = if ($i -eq $count - 1) { $totalSamples } else { ($i + 1) * $samplesPerPart }
-        $peak = 0.0
-        $stepProbe = [Math]::Max(1, [int](($endSample - $startSample) / 50))
-        for ($k = $startSample; $k -lt $endSample; $k += $stepProbe) {
-            $a = Get-ChannelAmplitude -wav $wav -sampleIndex $k
-            if ($a -gt $peak) { $peak = $a }
-        }
-        [void]$slices.Add([pscustomobject]@{
-            name = "slice_$($($i + 1).ToString('00'))"
-            start = [Math]::Round($startSample / [double]$wav.SampleRate, 3)
-            end = [Math]::Round($endSample / [double]$wav.SampleRate, 3)
-            _peak = [Math]::Round($peak, 3)
-        })
-    }
-
-    $fileName = [System.IO.Path]::GetFileName($wavPath)
-    $fileBase = [System.IO.Path]::GetFileNameWithoutExtension($wavPath)
-    $jsonPath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($wavPath), "$fileBase.slice.json")
-    $result = [ordered]@{
-        source = $fileName
-        outputDir = "../$fileBase/"
-        _scanMeta = [ordered]@{
-            mode = "EvenSplit"
-            sampleRate = $wav.SampleRate
-            channels = $wav.Channels
-            bitsPerSample = $wav.BitsPerSample
-            duration = $wav.DurationSec
-            count = $count
-        }
-        slices = $slices
-    }
-    $json = $result | ConvertTo-Json -Depth 6
-    [System.IO.File]::WriteAllText($jsonPath, $json, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[EvenSplit] done: $jsonPath"
-    Write-Host "[EvenSplit] slices: $($slices.Count)"
-    foreach ($s in $slices) {
-        Write-Host "  $($s.name)  start=$($s.start)s  end=$($s.end)s  peak=$($s._peak)"
-    }
-}
-
-function Invoke-EvenSplitBatch($batchDir, $sliceInfoPath) {
+function Invoke-ScanBatch($batchDir, $sliceInfoPath, $silenceThreshold, $minSilenceMs, $minSliceMs, $headTrimMs, $tailTrimMs, $sampleStep) {
     if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
-    if (-not (Test-Path $sliceInfoPath)) { throw "SliceInfo not found: $sliceInfoPath" }
+    $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
     $batchAbs = (Resolve-Path $batchDir).Path
-    $infoAbs = (Resolve-Path $sliceInfoPath).Path
-    Write-Host "[EvenSplitBatch] batchDir: $batchAbs"
-    Write-Host "[EvenSplitBatch] sliceInfo: $infoAbs"
-
-    $info = @{}
-    $lines = [System.IO.File]::ReadAllLines($infoAbs)
-    foreach ($line in $lines) {
-        $trimmed = $line.Trim()
-        if ($trimmed -eq "" -or $trimmed.StartsWith("#")) { continue }
-        $fname = $null; $cnt = 0; $ok = $false
-        if ($trimmed.StartsWith('"')) {
-            # Quoted filename: "file name.wav" 6  (filename may contain spaces)
-            $endQuote = $trimmed.IndexOf('"', 1)
-            if ($endQuote -gt 1) {
-                $fname = $trimmed.Substring(1, $endQuote - 1)
-                $rest = $trimmed.Substring($endQuote + 1).Trim()
-                if ([int]::TryParse($rest, [ref]$cnt)) { $ok = $true }
-            }
-            if (-not $ok) {
-                Write-Warning "[EvenSplitBatch] bad line ignored: '$line' (expected: `"<filename>`" <count>)"
-                continue
-            }
-        } else {
-            # Split on whitespace; last token = count, everything before = filename (may contain spaces)
-            $parts = $trimmed -split '\s+'
-            if ($parts.Length -lt 2) {
-                Write-Warning "[EvenSplitBatch] bad line ignored: '$line' (expected: `"<filename>`" <count> or <filename> <count>)"
-                continue
-            }
-            if (-not [int]::TryParse($parts[-1], [ref]$cnt)) {
-                Write-Warning "[EvenSplitBatch] bad count ignored: '$line' (last token must be integer)"
-                continue
-            }
-            $fname = ($parts[0..($parts.Length - 2)] -join ' ')
-        }
-        if ($info.ContainsKey($fname)) {
-            Write-Warning "[EvenSplitBatch] duplicate entry for $fname, last value wins"
-        }
-        $info[$fname] = $cnt
-    }
-    Write-Host "[EvenSplitBatch] sliceinfo loaded: $($info.Count) entries"
-    if ($info.Count -eq 0) {
-        throw "sliceinfo.txt has no valid entries"
-    }
+    Write-Host "[ScanBatch] batchDir: $batchAbs"
+    Write-Host "[ScanBatch] sliceInfo: $($parsed.Path)"
+    Write-Host "[ScanBatch] sliceinfo loaded: $($parsed.Entries.Count) entries (count values ignored by Scan)"
+    Write-Host "[ScanBatch] threshold=$silenceThreshold minSilenceMs=$minSilenceMs minSliceMs=$minSliceMs headTrimMs=$headTrimMs tailTrimMs=$tailTrimMs sampleStep=$sampleStep"
+    if ($parsed.Entries.Count -eq 0) { throw "sliceinfo.txt has no valid entries" }
 
     $wavFiles = [System.IO.Directory]::GetFiles($batchAbs, "*.wav", [System.IO.SearchOption]::TopDirectoryOnly)
-    Write-Host "[EvenSplitBatch] found $($wavFiles.Count) wav file(s) in batchDir"
+    Write-Host "[ScanBatch] found $($wavFiles.Count) wav file(s) in batchDir"
     if ($wavFiles.Count -eq 0) {
-        Write-Warning "[EvenSplitBatch] no wav files in $batchAbs"
+        Write-Warning "[ScanBatch] no wav files in $batchAbs"
         return
     }
 
-    $processed = 0; $skipped = 0
+    $processed = 0; $skipped = 0; $failed = 0
+    $records = New-Object System.Collections.ArrayList
     foreach ($wav in $wavFiles) {
         $fname = [System.IO.Path]::GetFileName($wav)
-        if (-not $info.ContainsKey($fname)) {
-            Write-Warning "[EvenSplitBatch] WARNING: '$fname' not listed in sliceinfo.txt, skipping"
+        if (-not $parsed.Entries.ContainsKey($fname)) {
+            Write-Warning "[ScanBatch] WARNING: '$fname' not listed in sliceinfo.txt, skipping"
             $skipped++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="not in sliceinfo.txt" })
             continue
         }
-        $cnt = $info[$fname]
         Write-Host ""
-        Write-Host "[EvenSplitBatch] processing $fname (count=$cnt)"
+        Write-Host "[ScanBatch] processing $fname"
         try {
-            Invoke-EvenSplit -wavPath $wav -count $cnt
+            Invoke-Scan -wavPath $wav -silenceThreshold $silenceThreshold -minSilenceMs $minSilenceMs -minSliceMs $minSliceMs -headTrimMs $headTrimMs -tailTrimMs $tailTrimMs -sampleStep $sampleStep
             $processed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="OK"; Reason=$null })
         } catch {
-            Write-Warning "[EvenSplitBatch] FAILED on $fname : $($_.Exception.Message)"
-            $skipped++
+            Write-Warning "[ScanBatch] FAILED on $fname : $($_.Exception.Message)"
+            $failed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="FAILED"; Reason=$_.Exception.Message })
         }
     }
     Write-Host ""
-    Write-Host "[EvenSplitBatch] done: processed=$processed skipped=$skipped"
-    if ($skipped -gt 0) {
-        Write-Warning "[EvenSplitBatch] $skipped file(s) skipped. Check warnings above."
+    Write-Host "[ScanBatch] done: processed=$processed skipped=$skipped failed=$failed"
+    $logPath = [System.IO.Path]::Combine($batchAbs, "ScanBatch.log")
+    Write-BatchLog -logPath $logPath -mode "ScanBatch" -batchDir $batchAbs -sliceInfoPath $parsed.Path -records $records -processed $processed -skipped $skipped -failed $failed
+    if ($skipped -gt 0 -or $failed -gt 0) {
+        Write-Warning "[ScanBatch] $skipped skipped, $failed failed. See log: $logPath"
+    }
+}
+
+function Invoke-SliceBatch($batchDir, $sliceInfoPath) {
+    if (-not (Test-Path $batchDir)) { throw "BatchDir not found: $batchDir" }
+    $parsed = Parse-SliceInfo -sliceInfoPath $sliceInfoPath
+    $batchAbs = (Resolve-Path $batchDir).Path
+    Write-Host "[SliceBatch] batchDir: $batchAbs"
+    Write-Host "[SliceBatch] sliceInfo: $($parsed.Path)"
+    Write-Host "[SliceBatch] sliceinfo loaded: $($parsed.Entries.Count) entries"
+    if ($parsed.Entries.Count -eq 0) { throw "sliceinfo.txt has no valid entries" }
+
+    $jsonWhitelist = @{}
+    foreach ($wavName in $parsed.Entries.Keys) {
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($wavName)
+        $jsonWhitelist["$base.slice.json"] = $true
+    }
+
+    $jsonFiles = [System.IO.Directory]::GetFiles($batchAbs, "*.slice.json", [System.IO.SearchOption]::TopDirectoryOnly)
+    Write-Host "[SliceBatch] found $($jsonFiles.Count) slice.json file(s) in batchDir"
+    if ($jsonFiles.Count -eq 0) {
+        Write-Warning "[SliceBatch] no *.slice.json files in $batchAbs"
+        return
+    }
+
+    $processed = 0; $skipped = 0; $failed = 0
+    $records = New-Object System.Collections.ArrayList
+    foreach ($json in $jsonFiles) {
+        $fname = [System.IO.Path]::GetFileName($json)
+        if (-not $jsonWhitelist.ContainsKey($fname)) {
+            Write-Warning "[SliceBatch] WARNING: '$fname' not listed in sliceinfo.txt, skipping"
+            $skipped++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="SKIPPED"; Reason="not in sliceinfo.txt" })
+            continue
+        }
+        Write-Host ""
+        Write-Host "[SliceBatch] processing $fname"
+        try {
+            Invoke-Slice -sliceJsonPath $json
+            $processed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="OK"; Reason=$null })
+        } catch {
+            Write-Warning "[SliceBatch] FAILED on $fname : $($_.Exception.Message)"
+            $failed++
+            [void]$records.Add([pscustomobject]@{ File=$fname; Status="FAILED"; Reason=$_.Exception.Message })
+        }
+    }
+    Write-Host ""
+    Write-Host "[SliceBatch] done: processed=$processed skipped=$skipped failed=$failed"
+    $logPath = [System.IO.Path]::Combine($batchAbs, "SliceBatch.log")
+    Write-BatchLog -logPath $logPath -mode "SliceBatch" -batchDir $batchAbs -sliceInfoPath $parsed.Path -records $records -processed $processed -skipped $skipped -failed $failed
+    if ($skipped -gt 0 -or $failed -gt 0) {
+        Write-Warning "[SliceBatch] $skipped skipped, $failed failed. See log: $logPath"
     }
 }
 
@@ -675,4 +657,12 @@ if ($Mode -eq "Scan") {
     if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "EvenSplitBatch mode requires -BatchDir <dir>" }
     if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "EvenSplitBatch mode requires -SliceInfo <txt path>" }
     Invoke-EvenSplitBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo
+} elseif ($Mode -eq "ScanBatch") {
+    if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "ScanBatch mode requires -BatchDir <dir>" }
+    if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "ScanBatch mode requires -SliceInfo <txt path>" }
+    Invoke-ScanBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo -silenceThreshold $SilenceThreshold -minSilenceMs $MinSilenceMs -minSliceMs $MinSliceMs -headTrimMs $HeadTrimMs -tailTrimMs $TailTrimMs -sampleStep $SampleStep
+} elseif ($Mode -eq "SliceBatch") {
+    if ([string]::IsNullOrWhiteSpace($BatchDir)) { throw "SliceBatch mode requires -BatchDir <dir>" }
+    if ([string]::IsNullOrWhiteSpace($SliceInfo)) { throw "SliceBatch mode requires -SliceInfo <txt path>" }
+    Invoke-SliceBatch -batchDir $BatchDir -sliceInfoPath $SliceInfo
 }
