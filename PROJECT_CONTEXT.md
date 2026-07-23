@@ -73,7 +73,8 @@ py -m http.server 9000 --bind 127.0.0.1
 - 音频数据库：`scripts/Systems/Audio/AudioDatabase.js`（AudioId → Clip Definition）
 - 音频池：`scripts/Systems/Audio/AudioPool.js`（基于 `BABYLON.Sound` 的缓存与复用）
 - 音频播放器：`scripts/Systems/Audio/AudioPlayer.js`（随机 Clip + 音量 + Pitch + 频率限制）
-- 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射）+ `Data/Audio/audio_buses.json`（总线）
+- 音乐播放器：`scripts/Systems/Audio/MusicPlayer.js`（BGM 管理 + crossfade/cut 状态机，lazy load + onload pending play）
+- 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射）+ `Data/Audio/audio_buses.json`（总线）+ `Data/Audio/music_clips.json`（BGM 定义）
 - 音频设计稿：`plans/AudioSystemDesign.MD`（v0.2，含 §13 与现有系统集成 + §14 切片工具）
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
@@ -163,6 +164,7 @@ Game (scripts/Game.js)
      -> AudioDatabase (scripts/Systems/Audio/AudioDatabase.js)
      -> AudioPool (scripts/Systems/Audio/AudioPool.js)
      -> AudioPlayer (scripts/Systems/Audio/AudioPlayer.js)
+     -> MusicPlayer (scripts/Systems/Audio/MusicPlayer.js)
   -> Scene (scripts/Scene.js)
      -> GameModeManager (scripts/Systems/GameModeManager.js)
         -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
@@ -202,7 +204,7 @@ character_demo.js
         -> _applyToBabylonCamera()
      -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
 ```
-> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 1：仅 `play()` / `setPaused()` / `attachScene()` / `detachScene()` 生效；`stop` / `playMusic` / `stopMusic` / `setBusVolume` / `update` 为空实现占位，Step 2/4/5 落地。详见 `plans/AudioSystemDesign.MD` §11。
+> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 4 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`）；SceneDef `music` 字段已读入（Step 4，支持 null/string/array/object 含条件写法）；`setBusVolume` 仍为占位，Step 5 落地。详见 `plans/AudioSystemDesign.MD` §7/§9/§11。
 
 ### 9.3 进入战斗
 ```

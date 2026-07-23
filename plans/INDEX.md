@@ -4,6 +4,13 @@
 
 ---
 
+## Update Log (2026-07-23)
+- Audio System Step 3 完成：TimelineSequencer 新增 `playAudio` event clip（设计稿 §7），与 `dialogueBubble`/`moveActorTo` 同级注册到 ACTION_HANDLERS；字段 `id`（必填）/`volume?`/`pitch?`/`bus?`（默认 sfx，Step 5 生效）；默认 `stopOnInterrupt: true`，sequencer 被打断（stop/loop）时调 `audioManager.stop(id)` 停该 id 所有 clip URL；`_onComplete` 不调 end（自然完成不截断尾音）；sequencer 直接调 audioManager 不走 GameplayEventBus（编排层语义，非 gameplay 业务）
+- Audio System Step 4 完成：新增 `MusicPlayer`（设计稿 §9），BGM 管理 + crossfade(800ms)/cut 状态机；`AudioManager` 填 `playMusic`/`stopMusic`/`switchMusic(id, transition, options)`/`hasMusic`/`update` 实现，attachScene/detachScene/dispose 转发；`Scene.init` 末尾 `_applySceneMusic` 读 `sceneDef.music`，`_resolveMusicConfig` 支持 null（静音）/string/array（条件写法，复用 `_evaluateCondition`）/object 四种写法；`AssetManifest.audio` 加 `music` 入口；`music_clips.json` 定义 BGM id→url/volume/loop
+- Step 4 修复 music 首次播放静默：`BABYLON.Sound` 构造后 wav 异步加载，立即 play() 静默失败（同 Step 2 AudioPool pending plays 问题）；修复方式 `_getOrLoad` 用 onload 回调标 `isReady` + 挂 `_pendingPlay`，loaded 后 flush；`update` fade lerp 加 `isReady` 守卫；附修 `_fade` 漏存 `oldVolume` 字段（crossfade 时会 NaN）
+- 文档同步：`docs/TimelineSequencer User Guide.md` §5.14 新增 playAudio 说明 + §9.2 排查表加两行；`PROJECT_CONTEXT.md` §3 补 MusicPlayer.js/music_clips.json，§9.2 更新 Step 4 状态
+- 设计稿不改动（实现与 `plans/AudioSystemDesign.MD` §7/§9/§11 一致）；`docs/Audio Tools User Guide.MD` 不改动（离线工具文档，与运行时音频无关）
+
 ## 最近归档（2026-07-15）
 
 | 计划 | 目标 | 完成内容 |

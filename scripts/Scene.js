@@ -320,6 +320,44 @@ export class Scene {
         } else {
             console.warn(`[Scene] WorldState subscription skipped: worldState=${!!this.worldState}, onChange=${typeof this.worldState?.onChange}`);
         }
+
+        // 读取 SceneDef.music（含条件写法）→ switchMusic
+        this._applySceneMusic(sceneDef);
+    }
+
+    _applySceneMusic(sceneDef) {
+        const audioManager = this._game?.audioManager;
+        if (!audioManager) return;
+        const config = this._resolveMusicConfig(sceneDef.music);
+        const transition = sceneDef.musicTransition === "cut" ? "cut" : "crossfade";
+        if (config && config.id) {
+            audioManager.switchMusic(config.id, transition, config.options ?? {});
+        } else {
+            audioManager.switchMusic(null, transition);
+        }
+    }
+
+    _resolveMusicConfig(musicField) {
+        if (musicField === null || musicField === undefined) return null;
+        if (typeof musicField === "string") {
+            return { id: musicField };
+        }
+        if (Array.isArray(musicField)) {
+            for (const entry of musicField) {
+                if (!entry || typeof entry !== "object") continue;
+                if (this._evaluateCondition(entry.if, this.worldState)) {
+                    return { id: entry.id, options: { volume: entry.volume } };
+                }
+            }
+            return null;
+        }
+        if (typeof musicField === "object") {
+            if (this._evaluateCondition(musicField.if, this.worldState)) {
+                return { id: musicField.id, options: { volume: musicField.volume } };
+            }
+            return null;
+        }
+        return null;
     }
 
     togglePause() {
@@ -511,6 +549,7 @@ export class Scene {
         }
         return true;
     }
+
 
     _applyStateMap(entity) {
         if (!entity?.stateMap?.length) return;
