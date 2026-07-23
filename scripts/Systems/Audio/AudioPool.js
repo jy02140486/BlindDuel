@@ -93,6 +93,20 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
             return false;
         }
     }
+
+    stop(url) {
+        const entry = this._cache.get(url);
+        if (!entry) return;
+        if (entry._pendingPlays && entry._pendingPlays.length > 0) {
+            entry._pendingPlays.length = 0;
+        }
+        if (entry.state !== LOAD_STATE.LOADED || !entry.sound) return;
+        try {
+            entry.sound.stop();
+        } catch (err) {
+            console.warn("[AudioPool] stop failed", url, err);
+        }
+    }
 }
 
 export { LOAD_STATE };

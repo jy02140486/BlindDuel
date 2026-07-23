@@ -6,6 +6,7 @@ export class TimelineSequencer {
         this.busy = false;
         this.activeClipStates = new Map();
         this.firedEventClipIds = new Set();
+        this._firedAudioClips = new Map();
         this._clipIdCounter = 0;
     }
 
@@ -26,6 +27,7 @@ export class TimelineSequencer {
         this.busy = true;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
+        this._firedAudioClips.clear();
         this._clipIdCounter = 0;
 
         console.log(`[TimelineSequencer] start timeline: ${timeline.id}`);
@@ -52,6 +54,8 @@ export class TimelineSequencer {
             }
         }
 
+        this._endFiredAudioClips();
+
         this._resetControlledActors();
         console.log("[TimelineSequencer] stop");
         this.busy = false;
@@ -59,6 +63,7 @@ export class TimelineSequencer {
         this.currentTimeMs = 0;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
+        this._firedAudioClips.clear();
     }
 
     _resetControlledActors() {
@@ -66,6 +71,19 @@ export class TimelineSequencer {
             const actor = state.actor;
             if (actor && "controlledBySequence" in actor) {
                 actor.controlledBySequence = false;
+            }
+        }
+    }
+
+    _endFiredAudioClips() {
+        for (const [clipId, clip] of this._firedAudioClips) {
+            const handler = this._getHandler(clip.type);
+            if (handler && typeof handler.end === "function") {
+                try {
+                    handler.end(this.context, clip, {});
+                } catch (e) {
+                    console.error(`[TimelineSequencer] fired-audio end error for clip ${clipId}:`, e);
+                }
             }
         }
     }
@@ -110,9 +128,12 @@ export class TimelineSequencer {
                 }
             }
         }
+        this._endFiredAudioClips();
+
         this._resetControlledActors();
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
+        this._firedAudioClips.clear();
         this.currentTimeMs = 0;
         console.log(`[TimelineSequencer] loop: ${this.timeline.id}`);
     }
@@ -146,6 +167,7 @@ export class TimelineSequencer {
         this.currentTimeMs = 0;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
+        this._firedAudioClips.clear();
     }
 
     _updateClip(clip, track, prevTimeMs, currentTimeMs, dtMs) {
@@ -170,6 +192,9 @@ export class TimelineSequencer {
                     } catch (e) {
                         console.error(`[TimelineSequencer] event error for clip ${clipId}:`, e);
                     }
+                }
+                if (clip.type === "playAudio") {
+                    this._firedAudioClips.set(clipId, clip);
                 }
             }
             return;
@@ -744,6 +769,39 @@ const ACTION_HANDLERS = {
                 state.cm?.clearEffects(fx => fx.type === "fade");
             }
             console.log(`[TimelineSeq] cameraEffect END type=${state.effectType}`);
+        }
+    },
+
+    playAudio: {
+        start(ctx, clip, track) {
+            const audioManager = ctx.audioManager;
+            if (!audioManager) {
+                console.warn("[TimelineSequencer] playAudio: audioManager not found in ctx");
+                return;
+            }
+            const id = clip.id;
+            if (!id || typeof id !== "string") {
+                console.warn("[TimelineSequencer] playAudio: missing or invalid 'id'");
+                return;
+            }
+            const options = {};
+            if (typeof clip.volume === "number") options.volume = clip.volume;
+            if (clip.pitch !== undefined) options.pitch = clip.pitch;
+            if (typeof clip.bus === "string") options.bus = clip.bus;
+            audioManager.play(id, options);
+            clip._playAudio = {
+                id,
+                stopOnInterrupt: clip.stopOnInterrupt !== false
+            };
+        },
+        end(ctx, clip, state) {
+            const pa = clip._playAudio;
+            if (!pa || !pa.stopOnInterrupt) return;
+            const audioManager = ctx.audioManager;
+            if (audioManager && typeof audioManager.stop === "function") {
+                audioManager.stop(pa.id);
+            }
+            clip._playAudio = null;
         }
     }
 };

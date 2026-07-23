@@ -364,6 +364,42 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **已知限制**：不走碰撞（穿 staticBlockers / 超 walkArea 不 clamp）；`dir = [0,0]` 会在 start 阶段 warn 并 invalid；不自动切回 idle。
 
+### 5.14 playAudio（播放音效）
+
+触发一次音效播放，event clip（用 `atMs`）。与 `dialogueBubble` 同级，走 `audioManager.play(id, options)`。
+
+```jsonc
+{ "type": "playAudio", "atMs": 1200, "id": "swing_light" }
+{ "type": "playAudio", "atMs": 2400, "id": "door_open", "volume": 0.8, "pitch": 1.0, "bus": "sfx" }
+{ "type": "playAudio", "atMs": 5000, "id": "ambient_wind", "stopOnInterrupt": false }
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | string | 是 | AudioId（必须在 `audio_clips.json` 中配置） |
+| `volume` | number | 否 | 0.0 ~ 1.0，覆盖 clip def 的 volume |
+| `pitch` | number \| `[min,max]` | 否 | 固定值或线性随机区间，覆盖 clip def 的 pitch |
+| `bus` | string | 否 | 总线名（默认 `sfx`）；Step 5 AudioBus 落地后生效，当前透传但未应用 |
+| `stopOnInterrupt` | boolean | 否 | 默认 `true`——sequencer 被打断（stop/loop）时随 sequencer 停止该 id 的音频；`false` 则播完即止 |
+
+**行为**：
+- `start`：调 `audioManager.play(id, {volume, pitch, bus})`；在 `clip._playAudio` 记 `{id, stopOnInterrupt}` 供 end 使用
+- `end`（仅 stop/loop 触发，自然 complete 不触发）：若 `stopOnInterrupt !== false`，调 `audioManager.stop(id)` 停止该 id 对应的所有 clip URL
+- **自然完成（`_onComplete`）不调 end**：sequence 跑完 durationMs 属正常结束，音效让其自然播完，不算「被打断」
+
+**stopOnInterrupt 机制**：
+- TimelineSequencer 维护 `_firedAudioClips: Map<clipId, clip>`，playAudio event 触发时登记
+- `stop()`（被打断）与 `_onLoop()`（循环重启）会遍历该 Map 调各 clip 的 end handler
+- `_onComplete()` 仅 clear Map，不调 end（避免截断尾音）
+- `audioManager.stop(id)` 会解析 `audio_clips.json` 中该 id 的所有 clip URL，逐个调 `AudioPool.stop(url)`（`BABYLON.Sound.stop()` + 清 `_pendingPlays` 队列）
+
+**依赖**：`ctx.audioManager`（`sharedContext.audioManager`，Game.bootstrap 实例化），任何模式可用（不限 ExploreMode）。
+
+**已知限制**：
+- `audioManager.stop(id)` 按 AudioId 停止，会停掉该 id 下所有 URL 的播放实例（BABYLON.Sound 同一 URL 只有一个实例，重复 play 是 restart，stop 一次即够）
+- 同一 id 在 50ms 内连续触发会被 AudioManager 节流吞掉（`DEFAULT_THROTTLE_MS`），sequencer 编排密集同 id 音效时需注意时序间隔
+- `bus` 字段当前仅透传，实际总线音量到 Step 5 才生效
+
 ## 6. Track 并行与重叠
 
 **多 track 天然并行**：每个 track 独立推进，互不阻塞。
@@ -471,6 +507,8 @@ sceneSequencer.stop();    // 强制停
 | cameraBlend 卡住 | 目标 rig 没注册——看 `unknown rig` warn |
 | 短命 clip 漏调 | 不会漏，sequencer 有 same-frame start+end 容错 |
 | moveActorByDirection 不动 | ① 看 `dir is zero or near-zero` warn（`dir=[0,0]` 或未填）；② 看 `actor not found`（binding.actorId 找不到）；③ 看 `INTERVAL START` 未打（startMs 超 durationMs） |
+| playAudio 无声 | ① 看 `playAudio: missing or invalid 'id'` warn（id 未填）；② 看 `playAudio: audioManager not found` warn（ctx 未注入）；③ id 不在 `audio_clips.json`——看 `[AudioPlayer] unknown clip id`；④ 浏览器自动播放策略——首次需 pointerdown/keydown 解锁 AudioContext |
+| playAudio 被截断 | 50ms 节流吞掉——同 id 两条 clip 时序太近；或 `stopOnInterrupt` 默认 true，sequencer stop/loop 时被停 |
 | 进战斗相机抖缩放 | ① 检查 `cameraBlend(to=duel)` 的 `endMs` 是否 ≤ `switchMode(modeId=battle)` 的 `atMs`，看是否有 `cameraBlend clip ended but isBlending()=true` 警告；② 检查 `timeline.durationMs` 是否 ≥ 所有 clip endMs，看是否有 `sequence durationMs reached, but N clip(s) still active` 警告；③ 检查 character/rabbleStick 是否在 ctx 中，看是否有 `switchMode to "battle" but ... MISSING` 警告 |
 
 ### 9.3 校验

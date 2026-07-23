@@ -18,5 +18,11 @@
         "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_06.wav"],
         "volume": 0.7,
         "pitch": [0.92, 1.08]
+    },
+    "on_land": {
+        "clips": ["./Audio/sfx/weapon/847838__posdesigndesom__fghtimpt_punch-sounds-strong_guilherme-gabriel-leonardo_dsba/slice_02.wav"],
+        "volume": 0.8,
+        "pitch": [0.96, 1.04]
     }
+    
 }

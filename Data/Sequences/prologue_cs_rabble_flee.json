@@ -49,7 +49,8 @@
       "binding": { "actorId": "prop_faller" },
       "channel": "command",
       "clips": [
-        { "type": "command", "atMs": 3900, "command": "land" }
+        { "type": "command", "atMs": 3900, "command": "land" },
+        { "type": "playAudio", "atMs": 3900, "id": "on_land", "volume": 0.8, "pitch": 1.0, "bus": "sfx" }
       ]
     },
     {

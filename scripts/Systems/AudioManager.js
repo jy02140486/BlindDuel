@@ -64,6 +64,12 @@ export class AudioManager {
     }
 
     stop(id) {
+        if (this._paused) return;
+        const def = this._database.getClipDef(id);
+        if (!def || !Array.isArray(def.clips)) return;
+        for (const url of def.clips) {
+            this._pool.stop(url);
+        }
     }
 
     playMusic(id, options = {}) {
