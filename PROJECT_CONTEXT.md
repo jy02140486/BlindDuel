@@ -76,7 +76,9 @@ py -m http.server 9000 --bind 127.0.0.1
 - 音乐播放器：`scripts/Systems/Audio/MusicPlayer.js`（BGM 管理 + crossfade/cut 状态机，lazy load + onload pending play）
 - 环境音播放器：`scripts/Systems/Audio/AmbientPlayer.js`（多轨 ambient 管理，lazy load + pending play，与 MusicPlayer 模式对称）
 - 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射，每条 def 含 `bus` 字段作为资源属性）+ `Data/Audio/audio_buses.json`（5 条总线 master/music/sfx/ui/ambient）+ `Data/Audio/music_clips.json`（BGM 定义）
-- 音频设计稿：`plans/AudioSystemDesign.MD`（v0.2，含 §13 与现有系统集成 + §14 切片工具）
+- 音频设计稿（已归档）：`plans/archived/AudioSystemDesign.MD`（v0.2，Step 1-5 全部落地；§8「与 Animation 集成」由 AnimationEventSystemDesign 接管）
+- 动画事件系统设计稿：`plans/AnimationEventSystemDesign.MD`（v0.1，三层架构 Animation → AnimationEvent → Presentation Systems，Audio 作为第一阶段唯一消费者）
+- 动画事件资源目录：`Data/AnimationEvents/<char>/*.events.json`（sidecar 模式，与 atlas 对齐；战斗角色每 clip 一文件，NPC 一文件含所有 clip）
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
@@ -206,7 +208,9 @@ character_demo.js
         -> _applyToBabylonCamera()
      -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
 ```
-> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 5 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene`/`setBusVolume`/`switchAmbient`/`stopAllAmbient` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`，`bus` 字段已生效）；SceneDef `music`/`ambient` 字段已读入（Step 4/5，支持 null/string/array/object 含条件写法）；AudioBus 真正生效（`_activeSounds` Map 跟踪在播 Sound，`setBusVolume` 实时回写 `finalVolume = baseVolume × busVolume × masterVolume`，localStorage 持久化 `blinduel_audio_bus_volumes`）；AudioContext 解锁修复（监听 pointerdown/keydown/onUnlock 补播 loop sound，用 `meta.loop` 判断因 `BABYLON.Sound` 无 `isLooping` 公开属性）。详见 `plans/AudioSystemDesign.MD` §7/§9/§11。
+> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 5 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene`/`setBusVolume`/`switchAmbient`/`stopAllAmbient` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`，`bus` 字段已生效）；SceneDef `music`/`ambient` 字段已读入（Step 4/5，支持 null/string/array/object 含条件写法）；AudioBus 真正生效（`_activeSounds` Map 跟踪在播 Sound，`setBusVolume` 实时回写 `finalVolume = baseVolume × busVolume × masterVolume`，localStorage 持久化 `blinduel_audio_bus_volumes`）；AudioContext 解锁修复（监听 pointerdown/keydown/onUnlock 补播 loop sound，用 `meta.loop` 判断因 `BABYLON.Sound` 无 `isLooping` 公开属性）。详见 `plans/archived/AudioSystemDesign.MD` §7/§9/§11。
+>
+> AnimationEvent 链路（Step 6a/6b 待实施）：`FrameAnimationComponent.fixedUpdate()` 帧推进命中事件帧 → `onAnimationEvent` 回调 → `AnimationEventBus.dispatch(payload)` → AudioManager subscribeAll → `audioManager.play(type)`。事件 payload 不携带消费者语义（`type` 直接当 audioId，简化策略 E1）。设计详见 `plans/AnimationEventSystemDesign.MD`。
 
 ### 9.3 进入战斗
 ```

@@ -4,6 +4,11 @@
 
 ---
 
+## Update Log (2026-07-26)
+- Audio System 设计稿归档：`plans/AudioSystemDesign.MD` → `plans/archived/AudioSystemDesign.MD`。Step 1-5 全部实现（AudioManager/AudioDatabase/AudioPool/AudioPlayer/MusicPlayer/AmbientPlayer/AudioBus），无后续 Step；原 §8「与 Animation 集成」由新设计稿接管
+- 新建设计稿 `plans/AnimationEventSystemDesign.MD`：将动画帧事件机制从 Audio 子系统独立为通用 AnimationEvent 系统，采用三层架构（Animation → AnimationEvent → Presentation Systems），Audio 作为第一阶段唯一消费者。决策点已确认：A1 资源组织（Data/AnimationEvents/<char>/*.events.json sidecar 模式，与 atlas 对齐覆盖单 clip 文件与多 clip 文件两种形态）；B1 新建 AnimationEventBus（与 GameplayEventBus 语义边界分离）；C1 字段名 `type`；D1 `id` 仅作 type 参数；E1 第一阶段 `type === audioId` 简化策略；F1 引入 bus；G1 独立文档；H1 Step 6 拆分为 6a（AnimationEvent 系统）+ 6b（Audio 消费接入）；I1 先 footstep + swing 验证。Schema 统一 `clips` 嵌套形态覆盖战斗角色单 clip 文件与 NPC 多 clip 文件；事件 payload 不携带消费者语义；不引入 `enableHitbox`/`disableHitbox` 类型避免与 `attackActiveFrames` 双源真相
+- 文档同步：`PROJECT_CONTEXT.md` §3 音频设计稿路径更新为 `plans/archived/AudioSystemDesign.MD` + 新增 AnimationEventSystemDesign 引用 + 新增 AnimationEvents 资源目录索引；§9.2 链路说明加 AnimationEventBus 节点（待 Step 6a 实施落地）
+
 ## Update Log (2026-07-23)
 - Audio System Step 3 完成：TimelineSequencer 新增 `playAudio` event clip（设计稿 §7），与 `dialogueBubble`/`moveActorTo` 同级注册到 ACTION_HANDLERS；字段 `id`（必填）/`volume?`/`pitch?`/`bus?`（默认 sfx，Step 5 生效）；默认 `stopOnInterrupt: true`，sequencer 被打断（stop/loop）时调 `audioManager.stop(id)` 停该 id 所有 clip URL；`_onComplete` 不调 end（自然完成不截断尾音）；sequencer 直接调 audioManager 不走 GameplayEventBus（编排层语义，非 gameplay 业务）
 - Audio System Step 4 完成：新增 `MusicPlayer`（设计稿 §9），BGM 管理 + crossfade(800ms)/cut 状态机；`AudioManager` 填 `playMusic`/`stopMusic`/`switchMusic(id, transition, options)`/`hasMusic`/`update` 实现，attachScene/detachScene/dispose 转发；`Scene.init` 末尾 `_applySceneMusic` 读 `sceneDef.music`，`_resolveMusicConfig` 支持 null（静音）/string/array（条件写法，复用 `_evaluateCondition`）/object 四种写法；`AssetManifest.audio` 加 `music` 入口；`music_clips.json` 定义 BGM id→url/volume/loop
@@ -14,6 +19,12 @@
 - `convert_audio_format.ps1` bugfix：单文件输入时 `Resolve-Path` 对不存在的 OutputDir 失败导致走默认逻辑生成 `xxx.wav\_converted` 怪路径，且 rel 计算时 `Substring` 越界（startIndex 大于字符串长度）；修复方式 OutputDir 改用 `GetFullPath` 支持不存在目录，rel 计算用 `$inputBase`（单文件取文件所在目录，目录输入就是 inputAbs 本身）
 - 文档同步：`docs/TimelineSequencer User Guide.md` §5.14 新增 playAudio 说明 + §9.2 排查表加两行；`PROJECT_CONTEXT.md` §3 补 MusicPlayer.js/music_clips.json，§9.2 更新 Step 4 状态
 - 设计稿不改动（实现与 `plans/AudioSystemDesign.MD` §7/§9/§11 一致）；`docs/Audio Tools User Guide.MD` 不改动（离线工具文档，与运行时音频无关）
+
+## 最近归档（2026-07-26）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/AudioSystemDesign.MD](archived/AudioSystemDesign.MD) | 音频系统基础架构（5 bus + SFX/Music/Ambient + sequencer playAudio） | Step 1-5 全部实现：AudioManager + AudioDatabase + AudioPool + AudioPlayer + MusicPlayer（crossfade/cut 状态机 + lazy load + onload pending）+ AmbientPlayer（多轨差集算法）+ AudioBus（`_activeSounds` 实时回写 + localStorage 持久化）+ AudioContext 解锁修复 + TimelineSequencer `playAudio` clip + SceneDef `music`/`ambient` 字段。§8「与 Animation 集成」由 `plans/AnimationEventSystemDesign.MD` 接管 |
 
 ## 最近归档（2026-07-15）
 
