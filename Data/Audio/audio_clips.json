@@ -2,27 +2,38 @@
     "pickup": {
         "clips": ["./Audio/sfx/player/pickup_01.wav"],
         "volume": 0.8,
-        "pitch": [0.96, 1.04]
+        "pitch": [0.96, 1.04],
+        "bus": "sfx"
     },
     "swing_light": {
         "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
         "volume": 0.8,
-        "pitch": [0.96, 1.04]
+        "pitch": [0.96, 1.04],
+        "bus": "sfx"
     },
     "swing_heavy": {
         "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
         "volume": 0.9,
-        "pitch": [0.93, 1.07]
+        "pitch": [0.93, 1.07],
+        "bus": "sfx"
     },
     "footstep": {
         "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_06.wav"],
         "volume": 0.7,
-        "pitch": [0.92, 1.08]
+        "pitch": [0.92, 1.08],
+        "bus": "sfx"
     },
     "on_land": {
         "clips": ["./Audio/sfx/weapon/847838__posdesigndesom__fghtimpt_punch-sounds-strong_guilherme-gabriel-leonardo_dsba/slice_02.wav"],
         "volume": 0.8,
-        "pitch": [0.96, 1.04]
+        "pitch": [0.96, 1.04],
+        "bus": "sfx"
+    },
+    "forest_ambient": {
+        "clips": ["./Audio/sfx/ambient/762061__newlocknew__ambforst_a-small-forest-near-the-townbirdsong.ogg"],
+        "volume": 0.7,
+        "pitch": [0.96, 1.04],
+        "bus": "ambient"
     }
     
 }

@@ -74,7 +74,8 @@ py -m http.server 9000 --bind 127.0.0.1
 - 音频池：`scripts/Systems/Audio/AudioPool.js`（基于 `BABYLON.Sound` 的缓存与复用）
 - 音频播放器：`scripts/Systems/Audio/AudioPlayer.js`（随机 Clip + 音量 + Pitch + 频率限制）
 - 音乐播放器：`scripts/Systems/Audio/MusicPlayer.js`（BGM 管理 + crossfade/cut 状态机，lazy load + onload pending play）
-- 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射）+ `Data/Audio/audio_buses.json`（总线）+ `Data/Audio/music_clips.json`（BGM 定义）
+- 环境音播放器：`scripts/Systems/Audio/AmbientPlayer.js`（多轨 ambient 管理，lazy load + pending play，与 MusicPlayer 模式对称）
+- 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射，每条 def 含 `bus` 字段作为资源属性）+ `Data/Audio/audio_buses.json`（5 条总线 master/music/sfx/ui/ambient）+ `Data/Audio/music_clips.json`（BGM 定义）
 - 音频设计稿：`plans/AudioSystemDesign.MD`（v0.2，含 §13 与现有系统集成 + §14 切片工具）
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
@@ -165,6 +166,7 @@ Game (scripts/Game.js)
      -> AudioPool (scripts/Systems/Audio/AudioPool.js)
      -> AudioPlayer (scripts/Systems/Audio/AudioPlayer.js)
      -> MusicPlayer (scripts/Systems/Audio/MusicPlayer.js)
+     -> AmbientPlayer (scripts/Systems/Audio/AmbientPlayer.js)
   -> Scene (scripts/Scene.js)
      -> GameModeManager (scripts/Systems/GameModeManager.js)
         -> ExploreMode (scripts/Systems/Modes/ExploreMode.js)
@@ -204,7 +206,7 @@ character_demo.js
         -> _applyToBabylonCamera()
      -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
 ```
-> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 4 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`）；SceneDef `music` 字段已读入（Step 4，支持 null/string/array/object 含条件写法）；`setBusVolume` 仍为占位，Step 5 落地。详见 `plans/AudioSystemDesign.MD` §7/§9/§11。
+> AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 5 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene`/`setBusVolume`/`switchAmbient`/`stopAllAmbient` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`，`bus` 字段已生效）；SceneDef `music`/`ambient` 字段已读入（Step 4/5，支持 null/string/array/object 含条件写法）；AudioBus 真正生效（`_activeSounds` Map 跟踪在播 Sound，`setBusVolume` 实时回写 `finalVolume = baseVolume × busVolume × masterVolume`，localStorage 持久化 `blinduel_audio_bus_volumes`）；AudioContext 解锁修复（监听 pointerdown/keydown/onUnlock 补播 loop sound，用 `meta.loop` 判断因 `BABYLON.Sound` 无 `isLooping` 公开属性）。详见 `plans/AudioSystemDesign.MD` §7/§9/§11。
 
 ### 9.3 进入战斗
 ```

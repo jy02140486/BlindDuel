@@ -6,6 +6,7 @@
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",
     "outroSequenceUrl": "Data/Sequences/prologue_outro.json",
+    "ambient": ["forest_ambient"],
     "enterBattleSequence": {
         "id": "enter_battle_prologue",
         "durationMs": 3000,

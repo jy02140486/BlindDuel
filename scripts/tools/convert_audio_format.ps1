@@ -231,13 +231,18 @@ function Convert-WavFile($srcPath, $dstPath, $targetSampleRate, $targetBitsPerSa
 if (-not (Test-Path $InputPath)) { throw "InputPath not found: $InputPath" }
 
 $inputAbs = (Resolve-Path $InputPath).Path
+$inputIsFile = Test-Path $inputAbs -PathType Leaf
+$inputBase = if ($inputIsFile) { [System.IO.Path]::GetDirectoryName($inputAbs) } else { $inputAbs }
 $outputAbs = $null
 if ($OutputDir) {
-    $resolved = Resolve-Path -LiteralPath $OutputDir -ErrorAction SilentlyContinue
-    if ($resolved) { $outputAbs = $resolved.Path }
+    try {
+        $outputAbs = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location), $OutputDir))
+    } catch {
+        $outputAbs = $null
+    }
 }
 if (-not $outputAbs) {
-    $outputAbs = [System.IO.Path]::Combine($inputAbs, "_converted")
+    $outputAbs = [System.IO.Path]::Combine($inputBase, "_converted")
     Write-Host "[Convert] OutputDir not provided or invalid. Using default: $outputAbs"
 }
 if (-not (Test-Path $outputAbs)) { New-Item -ItemType Directory -Path $outputAbs -Force | Out-Null }
@@ -261,7 +266,7 @@ $converted = 0; $skipped = 0; $failed = 0
 foreach ($src in $wavFiles) {
     $srcName = [System.IO.Path]::GetFileName($src)
     $srcDir = [System.IO.Path]::GetDirectoryName($src)
-    $rel = if ($srcDir -eq $inputAbs) { "" } else { $srcDir.Substring($inputAbs.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar) }
+    $rel = if ($srcDir -eq $inputBase) { "" } else { $srcDir.Substring($inputBase.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar) }
     $dstDir = if ($rel) { [System.IO.Path]::Combine($outputAbs, $rel) } else { $outputAbs }
     $dst = [System.IO.Path]::Combine($dstDir, $srcName)
     try {

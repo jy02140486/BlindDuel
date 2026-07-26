@@ -9,6 +9,8 @@ export class AudioPlayer {
     constructor(database, pool) {
         this._database = database;
         this._pool = pool;
+        this.getBusVolume = null;
+        this.getMasterVolume = null;
     }
     play(id, options = {}) {
         const def = this._database.getClipDef(id);
@@ -24,12 +26,16 @@ export class AudioPlayer {
         const clipUrl = def.clips[Math.floor(Math.random() * def.clips.length)];
         this._pool.getOrLoad(clipUrl);
 
-        const volume = (typeof options.volume === "number")
+        const baseVolume = (typeof options.volume === "number")
             ? options.volume
             : (def.volume ?? 1.0);
+        const bus = typeof options.bus === "string" ? options.bus : this._database.getClipBus(id);
+        const busVol = this.getBusVolume ? this.getBusVolume(bus) : 1.0;
+        const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
+        const finalVolume = baseVolume * busVol * masterVol;
         const pitch = this._resolvePitch(options.pitch ?? def.pitch);
 
-        return this._pool.play(clipUrl, { volume, pitch });
+        return this._pool.play(clipUrl, { volume: finalVolume, pitch, _meta: { bus, baseVolume } });
     }
 
     _resolvePitch(pitchSpec) {

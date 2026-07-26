@@ -9,6 +9,12 @@ export class AudioDatabase {
         return this._clips[id] ?? null;
     }
 
+    getClipBus(id) {
+        const def = this._clips[id];
+        if (!def) return "sfx";
+        return typeof def.bus === "string" ? def.bus : "sfx";
+    }
+
     getBusVolume(busName) {
         const bus = this._buses[busName];
         if (!bus) return 1.0;

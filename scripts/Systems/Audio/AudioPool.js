@@ -10,6 +10,8 @@ export class AudioPool {
     constructor() {
         this._scene = null;
         this._cache = new Map();
+        this.onSoundPlay = null;
+        this.onSoundStop = null;
     }
 /*
 attachScene / detachScene 跟随 Scene 生命周期
@@ -46,6 +48,7 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
                                 if (typeof opts.volume === "number") entry.sound.setVolume(opts.volume);
                                 entry.sound.setPlaybackRate(opts.pitch ?? 1);
                                 entry.sound.play();
+                                if (this.onSoundPlay) this.onSoundPlay(entry.sound, opts._meta);
                             } catch (err) {
                                 console.warn("[AudioPool] flush play failed", url, err);
                             }
@@ -87,6 +90,7 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
             if (typeof opts.volume === "number") entry.sound.setVolume(opts.volume);
             entry.sound.setPlaybackRate(opts.pitch ?? 1);
             entry.sound.play();
+            if (this.onSoundPlay) this.onSoundPlay(entry.sound, opts._meta);
             return true;
         } catch (err) {
             console.warn("[AudioPool] play failed", url, err);
@@ -102,6 +106,7 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
         }
         if (entry.state !== LOAD_STATE.LOADED || !entry.sound) return;
         try {
+            if (this.onSoundStop) this.onSoundStop(entry.sound);
             entry.sound.stop();
         } catch (err) {
             console.warn("[AudioPool] stop failed", url, err);

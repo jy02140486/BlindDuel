@@ -323,6 +323,32 @@ export class Scene {
 
         // 读取 SceneDef.music（含条件写法）→ switchMusic
         this._applySceneMusic(sceneDef);
+        // 读取 SceneDef.ambient（含条件写法，支持多轨）→ switchAmbient
+        this._applySceneAmbient(sceneDef);
+    }
+
+    _applySceneAmbient(sceneDef) {
+        const audioManager = this._game?.audioManager;
+        if (!audioManager) return;
+        const ids = this._resolveAmbientConfig(sceneDef.ambient);
+        audioManager.switchAmbient(ids);
+    }
+
+    _resolveAmbientConfig(ambientField) {
+        if (ambientField === null || ambientField === undefined) return [];
+        if (typeof ambientField === "string") return [ambientField];
+        if (Array.isArray(ambientField)) {
+            if (ambientField.length > 0 && typeof ambientField[0] === "string") {
+                return ambientField.filter(e => typeof e === "string");
+            }
+            for (const entry of ambientField) {
+                if (entry && typeof entry === "object" && this._evaluateCondition(entry.if, this.worldState)) {
+                    return Array.isArray(entry.ids) ? entry.ids : [];
+                }
+            }
+            return [];
+        }
+        return [];
     }
 
     _applySceneMusic(sceneDef) {

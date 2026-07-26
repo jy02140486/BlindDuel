@@ -6,6 +6,10 @@ export class MusicPlayer {
         this._sounds = new Map();
         this._current = null;
         this._fade = null;
+        this.onSoundPlay = null;
+        this.onSoundStop = null;
+        this.getBusVolume = null;
+        this.getMasterVolume = null;
     }
 
     attachScene(scene) {
@@ -28,16 +32,18 @@ export class MusicPlayer {
         if (!sound) return false;
         this._stopFade();
         if (this._current && this._current.id !== id) {
+            this._unregisterCurrent();
             try { this._current.sound.stop(); } catch (e) {}
         }
-        const volume = (typeof options.volume === "number") ? options.volume : (def.volume ?? 1.0);
-        this._current = { id, sound, volume };
-        this._applyPlay(sound, volume);
+        const baseVolume = (typeof options.volume === "number") ? options.volume : (def.volume ?? 1.0);
+        this._current = { id, sound, baseVolume };
+        this._applyPlay(sound, baseVolume);
         return true;
     }
 
     stop() {
         this._stopFade();
+        this._unregisterCurrent();
         if (this._current) {
             try { this._current.sound.stop(); } catch (e) {}
             this._current = null;
@@ -58,18 +64,19 @@ export class MusicPlayer {
         const newSound = this._getOrLoad(id, def);
         if (!newSound) return false;
 
-        const newVolume = (typeof options.volume === "number") ? options.volume : (def.volume ?? 1.0);
+        const newBaseVolume = (typeof options.volume === "number") ? options.volume : (def.volume ?? 1.0);
         const crossfadeMs = options.crossfadeMs ?? DEFAULT_CROSSFADE_MS;
         this._fade = {
             oldSound: this._current.sound,
-            oldVolume: this._current.volume,
+            oldBaseVolume: this._current.baseVolume,
             newSound,
             newId: id,
-            newVolume,
+            newBaseVolume,
             elapsedMs: 0,
             durationMs: crossfadeMs
         };
-        this._current = { id, sound: newSound, volume: newVolume };
+        this._unregisterCurrent();
+        this._current = { id, sound: newSound, baseVolume: newBaseVolume };
         this._applyPlay(newSound, 0);
         return true;
     }
@@ -78,15 +85,18 @@ export class MusicPlayer {
         if (!this._fade) return;
         this._fade.elapsedMs += dtMs;
         const t = Math.min(this._fade.elapsedMs / this._fade.durationMs, 1);
+        const busVol = this.getBusVolume ? this.getBusVolume("music") : 1.0;
+        const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
         try {
             if (this._fade.oldSound.isReady) {
-                this._fade.oldSound.setVolume(this._fade.oldVolume * (1 - t));
+                this._fade.oldSound.setVolume(this._fade.oldBaseVolume * busVol * masterVol * (1 - t));
             }
             if (this._fade.newSound.isReady) {
-                this._fade.newSound.setVolume(this._fade.newVolume * t);
+                this._fade.newSound.setVolume(this._fade.newBaseVolume * busVol * masterVol * t);
             }
         } catch (e) {}
         if (t >= 1) {
+            if (this.onSoundStop) this.onSoundStop(this._fade.oldSound);
             try { this._fade.oldSound.stop(); } catch (e) {}
             this._fade = null;
         }
@@ -94,22 +104,46 @@ export class MusicPlayer {
 
     _stopFade() {
         if (!this._fade) return;
+        if (this.onSoundStop) this.onSoundStop(this._fade.oldSound);
         try { this._fade.oldSound.stop(); } catch (e) {}
-        try { this._fade.newSound.setVolume(this._fade.newVolume); } catch (e) {}
+        const busVol = this.getBusVolume ? this.getBusVolume("music") : 1.0;
+        const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
+        try { this._fade.newSound.setVolume(this._fade.newBaseVolume * busVol * masterVol); } catch (e) {}
         this._fade = null;
     }
 
-    _applyPlay(sound, initialVolume) {
+    applyBusVolumeChange() {
+        if (!this._current) return;
+        const busVol = this.getBusVolume ? this.getBusVolume("music") : 1.0;
+        const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
+        if (this._current.sound.isReady) {
+            try {
+                this._current.sound.setVolume(this._current.baseVolume * busVol * masterVol);
+            } catch (e) {}
+        }
+    }
+
+    _applyPlay(sound, baseVolume) {
+        const busVol = this.getBusVolume ? this.getBusVolume("music") : 1.0;
+        const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
+        const finalVolume = baseVolume * busVol * masterVol;
         if (sound.isReady) {
             try {
-                sound.setVolume(initialVolume);
+                sound.setVolume(finalVolume);
                 sound.play();
+                if (this.onSoundPlay) this.onSoundPlay(sound, { bus: "music", baseVolume, loop: true });
             } catch (e) {
                 console.warn(`[MusicPlayer] play failed`, e);
             }
             return;
         }
-        sound._pendingPlay = { volume: initialVolume };
+        sound._pendingPlay = { volume: finalVolume, meta: { bus: "music", baseVolume, loop: true } };
+    }
+
+    _unregisterCurrent() {
+        if (this._current && this.onSoundStop) {
+            this.onSoundStop(this._current.sound);
+        }
     }
 
     _getOrLoad(id, def) {
@@ -130,6 +164,7 @@ export class MusicPlayer {
                         try {
                             sound.setVolume(p.volume);
                             sound.play();
+                            if (this.onSoundPlay) this.onSoundPlay(sound, p.meta);
                         } catch (e) {
                             console.warn(`[MusicPlayer] pending play failed: ${id}`, e);
                         }
