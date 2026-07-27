@@ -43,6 +43,7 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_walk.png",
                 atlasData: assets.atlas.hero.walk,
                 colliderData: assets.colliders.hero.walk,
+                eventsData: assets.animationEvents?.hero?.walk,
                 loop: true
             },
             idle: {
@@ -61,6 +62,7 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_thrust.png",
                 atlasData: assets.atlas.hero.thrust,
                 colliderData: assets.colliders.hero.thrust,
+                eventsData: assets.animationEvents?.hero?.thrust,
                 loop: false
             },
             quart: {
@@ -162,12 +164,14 @@ export function createRabbleStickCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_thrust.png",
                 atlasData: assets.atlas.rabble.thrust,
                 colliderData: assets.colliders.rabble.thrust,
+                eventsData: assets.animationEvents?.rabble?.thrust,
                 loop: false
             },
             swing: {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_swing.png",
                 atlasData: assets.atlas.rabble.swing,
                 colliderData: assets.colliders.rabble.swing,
+                eventsData: assets.animationEvents?.rabble?.swing,
                 loop: false
             },
             hit: {

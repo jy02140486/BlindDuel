@@ -24,6 +24,7 @@ import { ASSET_MANIFEST } from "./AssetManifest.js";
 import { loadDataAssets } from "./DataLoader.js";
 import { AudioManager } from "./Systems/AudioManager.js";
 import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
+import { AnimationEventBus } from "./Systems/AnimationEventBus.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -75,6 +76,7 @@ export class Game {
         this.assets = null;
         this.audioManager = null;
         this.gameplayEvents = null;
+        this.animationEventBus = null;
     }
 
     async bootstrap() {
@@ -138,6 +140,10 @@ export class Game {
         this.gameplayEvents = new GameplayEventBus();
         this.sharedContext.gameplayEvents = this.gameplayEvents;
         this.audioManager.wireGameplayEvents(this.gameplayEvents);
+
+        this.animationEventBus = new AnimationEventBus();
+        this.sharedContext.animationEventBus = this.animationEventBus;
+        this.audioManager.wireAnimationEventBus(this.animationEventBus);
 
         console.log("[Game.bootstrap] B1 done — shadow objects created (not wired into Scene)");
         console.log("[Game.bootstrap] cameraManager=", !!this.cameraManager,
@@ -226,6 +232,8 @@ export class Game {
         this.audioManager = null;
         this.gameplayEvents?.clear();
         this.gameplayEvents = null;
+        this.animationEventBus?.clear();
+        this.animationEventBus = null;
     }
 
     resetWorldState() {
@@ -264,7 +272,8 @@ export class Game {
             this._pendingRestore = { hp: 3, maxHp: 3, buffs: [] };
             this.requestSceneSwitch(
                 getSceneDefSync(this.worldState.currentSceneId),
-                this.worldState.currentSpawnId ?? "house_door"
+                this.worldState.currentSpawnId ?? "house_door",
+                { skipTransition: true }
             );
             return;
         }
@@ -276,18 +285,18 @@ export class Game {
         this.inventoryManager.items = JSON.parse(JSON.stringify(cp.inventory));
 
         this._pendingRestore = { hp: cp.hp, maxHp: cp.maxHp, buffs: JSON.parse(JSON.stringify(cp.buffs)) };
-        this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId);
+        this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId, { skipTransition: true });
 
         console.log('[Checkpoint] restored', { sceneId: cp.sceneId, spawnId: cp.spawnId, scenario: cp.scenario, hp: cp.hp });
     }
 
-    async requestSceneSwitch(sceneDef, spawnId) {
+    async requestSceneSwitch(sceneDef, spawnId, opts = {}) {
         console.log("[Game] B9: requestSceneSwitch", sceneDef?.id, "spawn=", spawnId);
         this.scene._loading = true;
-        await this._loadSceneInternal(sceneDef, spawnId);
+        await this._loadSceneInternal(sceneDef, spawnId, opts);
     }
 
-    async _loadSceneInternal(sceneDef, spawnId) {
+    async _loadSceneInternal(sceneDef, spawnId, opts = {}) {
         const oldScene = this.scene;
         const oldSceneId = this.worldState.currentSceneId;
         const oldSceneDef = oldSceneId ? await resolveSceneDef(oldSceneId) : null;
@@ -307,9 +316,11 @@ export class Game {
         const transition = sceneDef.transition || {};
         const fadeOutMs = transition.fadeOutMs ?? 400;
 
-        console.log("[Game] _loadSceneInternal begin outro+fadeout, old=", oldSceneId, "new=", sceneDef.id);
-        await this._playOutro(oldSceneDef, { fadeOutMs });
-        await this._awaitOutroAndFadeComplete();
+        if (!opts.skipTransition) {
+            console.log("[Game] _loadSceneInternal begin outro+fadeout, old=", oldSceneId, "new=", sceneDef.id);
+            await this._playOutro(oldSceneDef, { fadeOutMs });
+            await this._awaitOutroAndFadeComplete();
+        }
 
         this.scene = newScene;
         console.log("[Game] _loadSceneInternal dispose old scene, savedHp=", savedHp);
@@ -338,8 +349,10 @@ export class Game {
             newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
         }
 
-        console.log("[Game] _loadSceneInternal intro, new=", sceneDef.id);
-        this._playIntro(sceneDef);
+        if (!opts.skipTransition) {
+            console.log("[Game] _loadSceneInternal intro, new=", sceneDef.id);
+            this._playIntro(sceneDef);
+        }
 
         newScene._loading = false;
         this.worldState.currentSceneId = sceneDef.id;

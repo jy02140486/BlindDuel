@@ -407,7 +407,6 @@ export class CombatCharacter extends CharacterBase {
         this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
 
         this._applyMovement(effectiveDeltaMs);
-        this._updateFootstep(effectiveDeltaMs);
 
         const newState = this.currentStateName;
         const oldStateDef = oldState ? this.stateGraph?.states?.[oldState] : null;

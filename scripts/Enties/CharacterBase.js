@@ -1,5 +1,3 @@
-const FOOTSTEP_INTERVAL_MS = 380;
-
 export const FACING_MODE = Object.freeze({
     AUTO_FROM_MOVE: "autoFromMove",
     LOCKED: "locked",
@@ -40,10 +38,15 @@ export class CharacterBase {
         this.stateEnterTick = 0;
         this.debugTrace = config.debugTrace ?? false;
         this.gameplayEvents = null;
-        this._footstepAccumMs = 0;
+        this.animationEventBus = null;
 
         this.animation = config._animation;
         this.collision = config._collision ?? null;
+
+        this.animation.onAnimationEvent = (payload) => {
+            if (!this.animationEventBus) return;
+            this.animationEventBus.dispatch({ ...payload, source: this });
+        };
 
         this.texturesByClip = this.#buildTextures(scene, config.clips);
         this.texture = null;
@@ -468,23 +471,6 @@ export class CharacterBase {
         }
     }
 
-    _updateFootstep(dtMs) {
-        if (this.currentStateName !== "walk") {
-            this._footstepAccumMs = 0;
-            return;
-        }
-        const mag = Math.hypot(Number(this.moveIntent?.x ?? 0), Number(this.moveIntent?.y ?? 0));
-        if (mag <= this.moveDeadzone) {
-            this._footstepAccumMs = 0;
-            return;
-        }
-        this._footstepAccumMs += dtMs;
-        if (this._footstepAccumMs >= FOOTSTEP_INTERVAL_MS) {
-            this._footstepAccumMs -= FOOTSTEP_INTERVAL_MS;
-            this.emitGameplayEvent({ type: "play_audio", id: "footstep" });
-        }
-    }
-
     enterState(stateName, tickCount = null) {
         const stateDef = this.stateGraph?.states?.[stateName];
         if (!stateDef) {
@@ -516,10 +502,6 @@ export class CharacterBase {
             this._syncRootDebug(anchor);
         }
 
-        if (stateDef.attackActive === true) {
-            const audioId = stateDef.attackWeight === "heavy" ? "swing_heavy" : "swing_light";
-            this.emitGameplayEvent({ type: "play_audio", id: audioId });
-        }
     }
 
     pushCommand(command) {

@@ -9,6 +9,9 @@ export class FrameAnimationComponent {
         this.loop = true;
         this.finished = false;
         this.timeScale = 1.0;
+        this.onAnimationEvent = null;
+        this._currentClipEvents = [];
+        this._firedEventKeys = new Set();
     }
 
     setTimeScale(scale) {
@@ -63,11 +66,20 @@ export class FrameAnimationComponent {
         this.frames = clip.frames;
         this.loop = clip.loop ?? true;
 
+        this._currentClipEvents = this.#resolveEvents(clipName);
+
         if (restart) {
             this.currentFrameIndex = 0;
             this.timeInFrameMs = 0;
             this.finished = false;
+            this._firedEventKeys = new Set();
         }
+    }
+
+    #resolveEvents(clipName) {
+        const eventsData = this.currentClip?.eventsData;
+        if (!eventsData?.clips?.[clipName]) return [];
+        return eventsData.clips[clipName].events || [];
     }
 
     get frameCount() {
@@ -111,8 +123,11 @@ export class FrameAnimationComponent {
             this.timeInFrameMs -= this.currentFrame.durationMs;
             if (this.currentFrameIndex + 1 < this.frames.length) {
                 this.currentFrameIndex += 1;
+                this.#tryFireEvents(this.currentFrameIndex);
             } else if (this.loop) {
                 this.currentFrameIndex = 0;
+                this._firedEventKeys.clear();
+                this.#tryFireEvents(this.currentFrameIndex);
             } else {
                 this.currentFrameIndex = this.frames.length - 1;
                 this.timeInFrameMs = 0;
@@ -120,5 +135,20 @@ export class FrameAnimationComponent {
                 break;
             }
         }
+    }
+
+    #tryFireEvents(frameIndex) {
+        const key = String(frameIndex);
+        if (this._firedEventKeys.has(key)) return;
+        const events = this._currentClipEvents.filter(e => e.frame === frameIndex);
+        for (const event of events) {
+            this.onAnimationEvent?.({
+                clipName: this.currentClipName,
+                frame: frameIndex,
+                type: event.type,
+                id: event.id
+            });
+        }
+        this._firedEventKeys.add(key);
     }
 }

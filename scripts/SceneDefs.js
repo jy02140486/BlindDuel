@@ -208,7 +208,7 @@ export const OUTDOOR_VILLAGE = {
             name: "rabble_stick",
             kind: "enemy",
             pos: [3.2, 0],
-            controller: "test",
+            controller: "ai",
             spawnIf: { flagNot: "battle_field_1" },
         },
         {

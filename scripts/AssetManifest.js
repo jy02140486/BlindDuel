@@ -108,6 +108,16 @@ export const ASSET_MANIFEST = {
             knockdown: "./Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.collider.json"
         }
     },
+    animationEvents: {
+        hero: {
+            walk: "./Data/AnimationEvents/longswordman/longswordman_walk.events.json",
+            thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json"
+        },
+        rabble: {
+            swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",
+            thrust: "./Data/AnimationEvents/rabble_stick/rabble_stick_thrust.events.json"
+        }
+    },
     rootMotion: {
         hero: {
             eat: "./Data/RootMotion/longswordman/longswordman_eat.occupancy.json",

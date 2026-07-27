@@ -1,6 +1,7 @@
 import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
 import { NpcController } from "./Systems/NpcController.js";
+import { AIController } from "./Systems/AIController.js";
 import { createEntityFromDef } from "./SceneDefs.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 import { AABBTrigger } from "./Enties/AABBTrigger.js";
@@ -132,7 +133,7 @@ export class Scene {
         console.log("[Scene] B8: using game.inputSystem + game.playerController");
         character.buffsProvider = this._game.playerController;
         if (rabbleStick) {
-            this._initRabbleController(sceneDef.entities, rabbleStick);
+            this._initRabbleController(sceneDef.entities, rabbleStick, character);
         } else {
             this.rabbleController = null;
         }
@@ -490,6 +491,7 @@ export class Scene {
         const entity = createEntityFromDef(this.scene, this._sceneAssets, entityDef);
         if (!entity) return null;
         entity.gameplayEvents = this._game?.sharedContext?.gameplayEvents ?? null;
+        entity.animationEventBus = this._game?.sharedContext?.animationEventBus ?? null;
         this.entityPool.push(entity);
         this._entityById.set(entity.id, entity);
         if (entity.name) this._entityById.set(entity.name, entity);
@@ -500,7 +502,7 @@ export class Scene {
 
         // 敌人 controller 绑定（如果还没绑过）
         if ((entityDef.id === "enemy_1" || entityDef.kind === "enemy") && !this._rabbleControllerBound) {
-            this._initRabbleController(this._sceneDef.entities, entity);
+            this._initRabbleController(this._sceneDef.entities, entity, this._entityById.get("hero"));
             // sharedContext 可能在 init 阶段还未赋值，延迟同步到 sharedContext 就绪后做
             if (this.sharedContext) {
                 this.sharedContext.rabbleController = this.rabbleController;
@@ -526,7 +528,7 @@ export class Scene {
         return entity;
     }
 
-    _initRabbleController(entityDefs, rabbleStick) {
+    _initRabbleController(entityDefs, rabbleStick, hero = null) {
         const rabbleDef = entityDefs.find(e => e.id === "enemy_1" || e.kind === "enemy");
         const controllerType = rabbleDef?.controller ?? "dummy";
         if (controllerType === "test") {
@@ -534,6 +536,8 @@ export class Scene {
             const scriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
             const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
             this.rabbleController = new TestController(rabbleStick, scriptConfig);
+        } else if (controllerType === "ai") {
+            this.rabbleController = new AIController(rabbleStick, { opponent: hero });
         } else {
             this.rabbleController = new DummyController(rabbleStick);
         }

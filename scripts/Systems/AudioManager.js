@@ -33,22 +33,28 @@ export class AudioManager {
         const audioEngine = BABYLON?.Engine?.audioEngine;
         if (!audioEngine) return;
         this._audioResumeDone = false;
-        const onResumed = () => {
+        this._ctxStateChangeBound = false;
+        const tryResume = () => {
             if (this._audioResumeDone) return;
-            setTimeout(() => {
-                const ctx = audioEngine.audioContext;
-                if (!ctx || ctx.state !== "running") return;
-                this._audioResumeDone = true;
-                for (const [sound, meta] of this._activeSounds) {
-                    if (!sound.isReady) continue;
-                    if (!meta || !meta.loop) continue;
-                    try { sound.play(); } catch (e) {}
+            const ctx = audioEngine.audioContext;
+            if (!ctx) return;
+            if (ctx.state !== "running") {
+                if (!this._ctxStateChangeBound) {
+                    this._ctxStateChangeBound = true;
+                    try { ctx.addEventListener("statechange", tryResume); } catch (e) {}
                 }
-            }, 0);
+                return;
+            }
+            this._audioResumeDone = true;
+            for (const [sound, meta] of this._activeSounds) {
+                if (!sound.isReady) continue;
+                if (!meta || !meta.loop) continue;
+                try { sound.play(); } catch (e) {}
+            }
         };
-        if (audioEngine.onUnlock) audioEngine.onUnlock.add(onResumed);
-        window.addEventListener("pointerdown", onResumed);
-        window.addEventListener("keydown", onResumed);
+        if (audioEngine.onUnlock) audioEngine.onUnlock.add(tryResume);
+        window.addEventListener("pointerdown", tryResume);
+        window.addEventListener("keydown", tryResume);
     }
 
     _loadBusVolumes(busesConfig) {
@@ -138,6 +144,18 @@ export class AudioManager {
         this._unsubGameplay = bus.on("play_audio", (e) => {
             if (!e || typeof e.id !== "string") return;
             this.play(e.id, e.options ?? {});
+        });
+    }
+
+    wireAnimationEventBus(bus) {
+        if (this._unsubAnimEvent) {
+            this._unsubAnimEvent();
+            this._unsubAnimEvent = null;
+        }
+        if (!bus) return;
+        this._unsubAnimEvent = bus.subscribeAll((payload) => {
+            if (!payload || typeof payload.type !== "string") return;
+            this.play(payload.type, { source: payload.source });
         });
     }
 
@@ -271,6 +289,10 @@ export class AudioManager {
         if (this._unsubGameplay) {
             this._unsubGameplay();
             this._unsubGameplay = null;
+        }
+        if (this._unsubAnimEvent) {
+            this._unsubAnimEvent();
+            this._unsubAnimEvent = null;
         }
         this._music.detachScene();
         this._ambient.detachScene();
