@@ -9,7 +9,10 @@ export class ExploreMode extends BaseMode {
     constructor(context) {
         super("explore", context);
         this._cameraTarget = new BABYLON.Vector3();
-        this._battleTriggerFired = false;
+        // 战斗触发记录：per-trigger id 集合，仅作本次 ExploreMode 期间的运行时锁，
+        // 防止 enterBattleSequence 播放期间同一 trigger 重复触发。
+        // 战斗是否「已发生过」属于情境记录，归 WorldState.flags，不在此处。
+        this._firedBattleTriggerIds = new Set();
         this._scriptedCameraTriggerFired = false;
         this.dynamicActors = [];
         this.staticBlockers = [];
@@ -183,28 +186,24 @@ export class ExploreMode extends BaseMode {
         }
     }
 
-    enter(_payload) {
-        this._battleTriggerFired = false;
-    }
-
     #checkBattleTrigger(character, sceneSequencer) {
-        if (this._battleTriggerFired) {
-            return;
-        }
-
         const battleTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "battle") ?? [];
         let pendingBattleDef = null;
+        let matchedTriggerDef = null;
         const triggers = this.context.scene.triggers;
         if (!triggers) return;
         for (const triggerDef of battleTriggers) {
+            // 跳过本次 ExploreMode 期间已处理过的 trigger
+            if (this._firedBattleTriggerIds.has(triggerDef.id)) continue;
             const trigger = triggers.get(triggerDef.id);
             if (trigger && trigger.check(character)) {
-                this._battleTriggerFired = true;
+                this._firedBattleTriggerIds.add(triggerDef.id);
                 pendingBattleDef = this.context.battleDefs?.[triggerDef.battleId];
+                matchedTriggerDef = triggerDef;
                 break;
             }
         }
-        if (!this._battleTriggerFired || !pendingBattleDef) return;
+        if (!pendingBattleDef) return;
 
         let enterBattleSequence;
         const inlineSeq = this.context.sceneDef?.enterBattleSequence;
@@ -244,8 +243,13 @@ export class ExploreMode extends BaseMode {
 
         const { game, sceneDef } = this.context;
         if (game) {
-            const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
-            game.saveCheckpoint(sceneDef.id, spawnId);
+            // 战斗 trigger 内的位置不安全（重置后会立即再触发），
+            // 用 matchedTriggerDef.checkpointSpawn 指定的安全 spawn 点；未配置时 fallback 到首个 spawn。
+            // 不传 useHeroPos：heroPos=null，_loadSceneInternal 会用 spawnId 对应点。
+            const checkpointSpawn = matchedTriggerDef?.checkpointSpawn
+                ?? Object.keys(sceneDef.spawns)[0]
+                ?? "house_door";
+            game.saveCheckpoint(sceneDef.id, checkpointSpawn);
         }
 
         sceneSequencer.play(enterBattleSequence);
@@ -328,6 +332,9 @@ export class ExploreMode extends BaseMode {
     }
 
     enter(_payload) {
+        // 复位 per-trigger 运行时锁：每次进入 ExploreMode 重新允许触发
+        this._firedBattleTriggerIds.clear();
+
         const { cameraManager, character } = this.context;
         if (cameraManager?.activeRigId === "explore" && cameraManager.activeRig?.enter) {
             cameraManager.activeRig.enter(this.context);

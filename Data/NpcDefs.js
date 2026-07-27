@@ -3,6 +3,13 @@ export const NPC_DEFS = {
         id: "companion",
         name: "Charlotte",
         idle: { clip: "observe" },
+        // 初始状态由 scenario 进度派生（非 cutscene flag）：
+        // scenario >= 105 (PROLOGUE_CHARLOTTE_JOIN) 后跟随，之前 idle。
+        // 重置/跨场景时按当前 scenario 重新评估，与 checkpoint 自然兼容。
+        initialStateMap: [
+            { if: { scenarioMin: 105 }, state: "following" },
+            { if: {}, state: "idle" }
+        ],
         dialogues: [
             {
                 priority: 100,

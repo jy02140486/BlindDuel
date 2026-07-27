@@ -134,6 +134,32 @@ export class NpcController {
         this._behavior.enter(npc, { dialogueBubble: this._dialogueBubble });
     }
 
+    // 根据当前 worldState 评估 initialStateMap，应用初始 behavior state。
+    // state 由 scenario 进度派生，与 checkpoint 恢复后的 worldState 自然兼容。
+    // 应在 NPC 创建后、ExploreMode.enter 之前调用。
+    // hero 用于 following 状态下将 NPC 初始位置设到 hero 旁，避免从远处走过来。
+    applyInitialState(npc, worldState, hero) {
+        const map = this.npcDef?.initialStateMap;
+        if (!Array.isArray(map) || map.length === 0) return;
+        for (const entry of map) {
+            if (this._matchCondition(entry.if, worldState)) {
+                const target = entry.state;
+                if (target === "following") {
+                    this.enterFollowing(npc);
+                    // 进入 following 时立即 teleport 到 hero 旁，避免依赖后续 fixedUpdate 拉回
+                    if (hero) {
+                        const offsetX = this._followingBehavior?.options?.targetOffsetX ?? 1.0;
+                        const heroPos = hero.root.position;
+                        npc.root.position.set(heroPos.x + offsetX, heroPos.y, heroPos.z);
+                    }
+                } else if (target === "idle") {
+                    this.enterIdle(npc);
+                }
+                return;
+            }
+        }
+    }
+
 
     resolve() {
         if (!this.world || !this.npcDef?.dialogues) return null;

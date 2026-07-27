@@ -1,0 +1,10 @@
+{
+    "clips": {
+        "walk": {
+            "events": [
+                { "frame": 0, "type": "footstep" },
+                { "frame": 1, "type": "footstep" }
+            ]
+        }
+    }
+}

@@ -47,7 +47,8 @@ export class Game {
                 const spawnId = this.worldState.currentSpawnId
                     ?? Object.keys(sceneDef.spawns)[0]
                     ?? "house_door";
-                this.saveCheckpoint(sceneDef.id, spawnId);
+                // 任务推进场景：hero 位置安全（不在 battle trigger 内），存 heroPos 供重置时恢复
+                this.saveCheckpoint(sceneDef.id, spawnId, { useHeroPos: true });
             }
         };
         this.scene = new Scene(engine, canvas, {
@@ -246,8 +247,14 @@ export class Game {
         console.log('[Game] WorldState reset to scenario', this.worldState.scenario);
     }
 
-    saveCheckpoint(sceneId, spawnId) {
+    saveCheckpoint(sceneId, spawnId, opts = {}) {
         const hero = this.scene?.entityPool?.find(e => e.id === "hero");
+        // 默认不存 heroPos：战斗 trigger 内的位置不安全，重置后会立即再触发。
+        // 仅任务推进等安全场景传 useHeroPos:true 存实时位置。
+        const useHeroPos = opts.useHeroPos ?? false;
+        const heroPos = useHeroPos && hero
+            ? [hero.root.position.x, hero.root.position.y, hero.root.position.z]
+            : null;
         this._checkpoint = {
             sceneId,
             spawnId,
@@ -257,10 +264,11 @@ export class Game {
             sceneStates: JSON.parse(JSON.stringify(this.worldState.sceneStates)),
             hp: hero?.hp ?? 3,
             maxHp: hero?.maxHp ?? 3,
+            heroPos,
             inventory: JSON.parse(JSON.stringify(this.inventoryManager.items)),
             buffs: JSON.parse(JSON.stringify(this.scene?.playerController?.buffs ?? [])),
         };
-        console.log('[Checkpoint] saved', { sceneId, spawnId, scenario: this._checkpoint.scenario, hp: this._checkpoint.hp, items: this._checkpoint.inventory.length, buffs: this._checkpoint.buffs.length });
+        console.log('[Checkpoint] saved', { sceneId, spawnId, scenario: this._checkpoint.scenario, hp: this._checkpoint.hp, heroPos, items: this._checkpoint.inventory.length, buffs: this._checkpoint.buffs.length });
     }
 
     restoreCheckpoint() {
@@ -269,7 +277,7 @@ export class Game {
             console.log('[Checkpoint] none saved, resetting to initial state');
             this.resetWorldState();
             this.inventoryManager.items = [];
-            this._pendingRestore = { hp: 3, maxHp: 3, buffs: [] };
+            this._pendingRestore = { hp: 3, maxHp: 3, buffs: [], heroPos: null };
             this.requestSceneSwitch(
                 getSceneDefSync(this.worldState.currentSceneId),
                 this.worldState.currentSpawnId ?? "house_door",
@@ -284,7 +292,12 @@ export class Game {
         this.worldState.sceneStates = JSON.parse(JSON.stringify(cp.sceneStates));
         this.inventoryManager.items = JSON.parse(JSON.stringify(cp.inventory));
 
-        this._pendingRestore = { hp: cp.hp, maxHp: cp.maxHp, buffs: JSON.parse(JSON.stringify(cp.buffs)) };
+        this._pendingRestore = {
+            hp: cp.hp,
+            maxHp: cp.maxHp,
+            buffs: JSON.parse(JSON.stringify(cp.buffs)),
+            heroPos: cp.heroPos ? [...cp.heroPos] : null,
+        };
         this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId, { skipTransition: true });
 
         console.log('[Checkpoint] restored', { sceneId: cp.sceneId, spawnId: cp.spawnId, scenario: cp.scenario, hp: cp.hp });
@@ -344,10 +357,15 @@ export class Game {
             this.buffBar.update(this.playerController.buffs);
         }
 
-        const spawnPoint = sceneDef.spawns?.[spawnId];
+        // 优先用存档的英雄位置（战败重置场景）；无存档时 fallback 到 spawnId 对应点
+        const spawnPoint = restoreData?.heroPos ?? sceneDef.spawns?.[spawnId];
         if (spawnPoint && newHero) {
             newHero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
         }
+
+        // hero 位置确定后，应用所有 NPC 初始 behavior state。
+        // following 状态的 NPC 会 teleport 到 hero 旁，避免从远处走过来。
+        newScene.applyNpcInitialStates(this.worldState, newHero);
 
         if (!opts.skipTransition) {
             console.log("[Game] _loadSceneInternal intro, new=", sceneDef.id);

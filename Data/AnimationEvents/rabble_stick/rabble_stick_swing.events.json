@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "swing": {
+            "events": [
+                { "frame": 1, "type": "swing_light" }
+            ]
+        }
+    }
+}

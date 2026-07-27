@@ -147,6 +147,8 @@ export class BattleMode extends BaseMode {
         if (rabbleStick.isDead) {
             const { game, sceneDef } = this.context;
             if (game) {
+                // 胜利后存档：战场位置不安全（可能被其他系统假设为已清理），
+                // 不传 useHeroPos，重置时 fallback 到 spawnId 对应点
                 const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
                 game.saveCheckpoint(sceneDef.id, spawnId);
             }

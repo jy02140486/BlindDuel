@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "thrust": {
+            "events": [
+                { "frame": 1, "type": "swing_light" }
+            ]
+        }
+    }
+}

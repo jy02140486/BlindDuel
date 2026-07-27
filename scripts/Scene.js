@@ -146,6 +146,9 @@ export class Scene {
                     const npcDef = getNpcDef(entityDef.id);
                     npc.npcController = new NpcController(this.worldState, npcDef);
                     npc.npcController.setupDebugVisual(this.scene, npc.root);
+                    // NPC 初始 state 的应用延迟到 applyNpcInitialStates，
+                    // 在 _loadSceneInternal 里 hero 位置确定后调用，
+                    // 避免 following 状态下 teleport 到 hero 初始 spawn 位（被后续覆盖）
                 }
             }
         }
@@ -482,6 +485,18 @@ export class Scene {
         this.entityPool = null;
     }
 
+    // 应用所有 NPC 的初始 behavior state。
+    // 必须在 hero 位置确定后调用（_loadSceneInternal 设置 spawnPoint 后），
+    // 否则 following 状态下 teleport 会用到错误的 hero 位置。
+    applyNpcInitialStates(worldState, hero) {
+        if (!this.entityPool) return;
+        for (const entity of this.entityPool) {
+            if (entity.npcController) {
+                entity.npcController.applyInitialState(entity, worldState, hero);
+            }
+        }
+    }
+
     _spawnEntity(entityDef) {
         // 跳过已拾取的物品
         if (entityDef.kind === "pickable" && this.worldState) {
@@ -516,6 +531,9 @@ export class Scene {
             const npcDef = getNpcDef(entityDef.id);
             entity.npcController = new NpcController(this.worldState, npcDef);
             entity.npcController.setupDebugVisual(this.scene, entity.root);
+            // 传 hero：following 状态下将 NPC 初始位置设到 hero 旁
+            const hero = this._entityById.get("hero");
+            entity.npcController.applyInitialState(entity, this.worldState, hero);
         }
 
         // 通知 ExploreMode 重建 indices（如果在运行中）

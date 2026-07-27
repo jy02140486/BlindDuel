@@ -190,6 +190,7 @@
 ],
     "spawns": {
         "house_door": [-1, -1, 0],
+        "battle_checkpoint": [-7, 0, 0],
         "from_prologue": [6, 0, 0],
         "intro_start": [-20, 0, 0]
     },
@@ -219,6 +220,7 @@
             "pos": [-5, 0, 0],
             "size": [2, 2, 2],
             "battleId": "prologue_battle",
+            "checkpointSpawn": "battle_checkpoint",
             "condition": { "flagNot": "prologue_battle", "scenarioMin": 105 },
             "debugColor": [0, 1, 0],
             "debugVisible": true
