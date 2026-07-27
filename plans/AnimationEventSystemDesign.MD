@@ -1,4 +1,3 @@
-e:\se\BlindDuel\plans\AnimationEventSystemDesign.MD
 # Animation Event System Design
 
 > Version: 0.1
@@ -12,15 +11,19 @@ e:\se\BlindDuel\plans\AnimationEventSystemDesign.MD
 # 1. 设计目标
 
 ## 1.1 三层架构
+
+```
 Animation              // 动画推进
-↓
+  ↓
 Animation Event        // 帧事件抽象层
-↓
+  ↓
 Presentation Systems
-├─ Audio             // 第一阶段唯一消费者
-├─ VFX               // 未来
-├─ Camera            // 未来
-└─ Gameplay          // 极少
+  ├─ Audio             // 第一阶段唯一消费者
+  ├─ VFX               // 未来
+  ├─ Camera            // 未来
+  └─ Gameplay          // 极少
+```
+
 Animation 层只关心「动画推进到第 N 帧了」。
 Animation Event 层只负责「把这件事告诉对此感兴趣的消费者」。
 Presentation 层各自决定「这个事件对我意味着什么」。
@@ -38,10 +41,14 @@ Presentation 层各自决定「这个事件对我意味着什么」。
 ### Sidecar 元数据模式
 
 `events.json` 跟随 `atlas.json` 组织，与 `.collider.json` 对称。一个 AnimationClip 的伴生资源集合：
+
+```
 attack01.png              // 图像
 attack01.json             // atlas
 attack01.collider.json    // 碰撞元数据（工具生成）
 attack01.events.json      // 动画事件（人工维护）
+```
+
 ### 多消费者订阅零侵入
 
 新增消费者（如 VFX）只需 subscribe，不修改 `FrameAnimationComponent` / `AnimationEventBus` / Audio 消费者。
@@ -49,18 +56,22 @@ attack01.events.json      // 动画事件（人工维护）
 ***
 
 # 2. 系统结构
+
+```
 Animation 层
-└─ FrameAnimationComponent / NpcFrameComponent.fixedUpdate()
-└─ 帧推进命中事件帧 → 调用注入的 onAnimationEvent 回调
-↓
+  └─ FrameAnimationComponent / NpcFrameComponent.fixedUpdate()
+       └─ 帧推进命中事件帧 → 调用注入的 onAnimationEvent 回调
+            ↓
 事件层
-└─ AnimationEventBus.dispatch(payload)
-↓ (多消费者订阅)
+  └─ AnimationEventBus.dispatch(payload)
+       ↓ (多消费者订阅)
 Presentation 层
-├─ AudioManager.subscribeAll → audioManager.play(type, options)
-├─ VFXSystem.subscribe("effect") → spawn(id)              [未来]
-├─ CameraSystem.subscribe("camera_shake_heavy") → shake() [未来]
-└─ GameplayNotifier.subscribe("notify") → ...             [极少，未来]
+  ├─ AudioManager.subscribeAll → audioManager.play(type, options)
+  ├─ VFXSystem.subscribe("effect") → spawn(id)              [未来]
+  ├─ CameraSystem.subscribe("camera_shake_heavy") → shake() [未来]
+  └─ GameplayNotifier.subscribe("notify") → ...             [极少，未来]
+```
+
 职责：
 
 ## AnimationEventBus
@@ -88,269 +99,6 @@ clear()                       // 场景切换时清理订阅（按需）
 
 ***
 
-# 3. 资源组织（sidecar 模式）
-
-## 3.1 与 atlas 对齐
-
-`events.json` 跟随 `atlas.json` 而非 `collider.json`——动画的图像载体是 atlas，collider 是工具生成的衍生数据。
-
-| 类型 | atlas 组织 | events.json 组织 |
-|---|---|---|
-| 战斗角色（longswordman / manatarms_sword / rabble_stick） | 每 clip 一个 atlas 文件 | 每 clip 一个 events.json |
-| NPC（traveller / merchant / bard / charlotte 等） | 一个 atlas 文件含所有 clip（用 frameTags 切分） | 一个 events.json 含所有 clip |
-
-## 3.2 目录结构
-Chat
-
-思考过程
-
-好问题，A1 需要适配两种 atlas 组织方式。我先查一下 NPC 类的 atlas 实际结构，再回答能否覆盖。
-
-在工作区搜索 'NPCs|merchant|traveller'
-
-在工作区搜索 'atlasData|clips\s*[:=]'
-
-Data\CollisionMask\longswordman\longswordman_walk.collider.json
-
-Thought
-
-我需要再确认一下 NPC 的 clip 组织方式，看 NpcFrameComponent 是怎么按 clip 切分的。
-
-scripts\Components\NpcFrameComponent.js
-
-在工作区搜索 'Art/Sprite/NPCs/*.json'
-
-Thought
-
-确认完毕。现状是两种 component 并存：
-
-类型 Component atlas 组织 clip 切分方式 战斗角色（longswordman / manatarms_sword / rabble_stick） FrameAnimationComponent 每 clip 一个 png/json（如 longswordman_walk.png ） 整个 atlas 就是一个 clip NPC（traveller / merchant / bard / charlotte 等） NpcFrameComponent 一个 png/json 含所有 clip（如 merchant.png ） 用 atlasData.meta.frameTags 里 name === clipName 的 tag 切 from/to
-
-## A1 能覆盖，但需要两个调整
-### 调整 1：events.json 物理组织跟 atlas.json 对齐（不是跟 collider.json 对齐）
-付费 AI 的核心原则是「一个动画就是一个资源」，而 动画的图像载体是 atlas，不是 collider 。collider 是工具生成的衍生数据，可以独立组织。所以：
-
-- 战斗角色 ：atlas 每 clip 一个文件 → events.json 也每 clip 一个文件（跟 collider.json 顺带也对称）
-- NPC ：atlas 一个文件含所有 clip → events.json 也一个文件含所有 clip
-### 调整 2：Schema 统一为「按 clip 分组」形态
-为了同时覆盖单 clip 文件和多 clip 文件，所有 .events.json 顶层统一用 clips 字段：
-
-战斗角色 Data/AnimationEvents/longswordman/longswordman_walk.events.json ：
-
-（虽然只有一个 clip，但 schema 跟 NPC 统一，避免加载器写两条路径）
-
-NPC Data/AnimationEvents/NPCs/merchant.events.json ：
-
-## 加载链路（跟现有 atlas/collider 完全对称）
-1. AssetManifest 新增 animationEvents 分组：
-2. CharacterFactory clips 配置 新增 eventsData 字段，跟 atlasData / colliderData 平级：
-   
-   NPC 端同理，所有 clip 共享同一个 eventsData （指向 merchant.events.json ），NpcFrameComponent 在 play(clipName) 时按 clipName 查 eventsData.clips[clipName].events 。
-3. FrameAnimationComponent / NpcFrameComponent 接入点统一 ： play(clipName) 时查 eventsData.clips[clipName].events ，缓存到 this._currentClipEvents 。两个 component 的事件触发逻辑可以共用一个 mixin 或基类方法。
-## 需要额外确认的子决策
-# 子决策点 选项 我的倾向 A-1 NPC events.json 里 frame 索引语义 A-1a. 相对于 frameTag.from 的偏移（clip 内 0-based）
- A-1b. atlas 绝对帧索引 A-1a ——跟「一个动画就是一个资源」一致，clip 帧范围调整不影响 events A-2 战斗角色单 clip 文件是否允许简写 {events: [...]} 省略 clips 嵌套 A-2a. 允许，加载器双形态识别
- A-2b. 不允许，统一 clips 嵌套 A-2b ——schema 统一优先，冗余可接受 A-3 eventsData 注入方式 A-3a. CharacterFactory clips 配置加 eventsData 字段
- A-3b. FrameAnimationComponent 自己按 clipName fetch A-3a ——跟 atlasData/colliderData 对称，加载链路统一
-
-确认 A-1 / A-2 / A-3 后 ，A1 方案就完全落地，我可以开始写 plans/AnimationEventSystemDesign.MD 草案。其余决策点 B-I（事件分发机制、type 字段名、id 语义、消费者映射、bus 引入、文档归属、Step 拆分、接入范围）也一并等你拍板。
-
-19:54
-用户6856009908
-
-好，没啥问题，写MD，然后Audio是不是可以archived了
-
-Chat
-
-思考过程
-
-用户要我：
-
-1. 写``plans/AnimationEventSystemDesign.MD`` 设计文档
-2. 询问 AudioSystemDesign.MD 是否可以归档
-这是一个文档撰写任务，不是代码改动。需要先确认归档问题的逻辑，再写 MD。
-
-归档逻辑分析：
-
-- AudioSystemDesign.MD §8 当前包含 frame_events.json 设计——这部分会被 AnimationEventSystemDesign.MD 接管
-- §1-7, §9-14 仍然是 Audio 系统的有效设计——MusicPlayer/AudioBus/Sequencer playAudio 等都已实现
-- AudioSystemDesign.MD 还描述了 §3 Audio Event / §5 推荐事件列表 / §6 调用链 / §7 Sequencer 集成 / §9 Music / §11 开发顺序 / §13 系统集成 / §14 切片工具——这些都是 Audio 自身的设计，仍然有效
-所以归档判断：
-
-- AudioSystemDesign 不能完全归档，因为大部分内容仍有效
-- §8「与 Animation 集成」这一节需要从「主设计」变成「消费者接入说明」，引用 AnimationEventSystemDesign
-但是用户说「Audio 是不是可以 archived 了」——这个判断需要谨慎。
-
-从 Handoff 看，Audio 系统的 Step 1-5 都已完成，并且 Step 6 现在被拆分出去。剩下 Step 6 的 audio 部分变成「Audio 作为 AnimationEvent 消费者接入」，这部分工作量很小。
-
-所以归档的真正含义应该是：Audio 系统作为独立计划已经完成主体设计实现，剩余部分（消费者接入）属于 AnimationEvent 系统的工作。所以可以归档。
-
-但 AudioSystemDesign.MD 是设计文档，不是计划文档。归档通常指计划文档归档到 plans/archived/。设计文档一般保留在 plans/ 作为参考。
-
-让我先看一下 plans/ 目录结构，理解归档惯例。
-
-我应该：
-
-1. 先 LS plans/ 看一下结构
-2. 读 INDEX.md 确认归档惯例
-3. 写 AnimationEventSystemDesign.MD
-4. 决定 AudioSystemDesign 的处理方式（归档 / 保留 / 修订 §8）
-让我并行执行这些任务。
-
-先做规划——
-
-AnimationEventSystemDesign.MD 应该包含：
-
-# Animation Event System Design
-- Version 0.1
-- 目标
-## 1. Design Goals
-- 三层架构
-- Animation → AnimationEvent → Presentation Systems
-- 解耦消费者
-- sidecar 模式
-## 2. 系统结构
-- 三层架构图
-- FrameAnimationComponent / NpcFrameComponent 扩展
-- AnimationEventBus
-- 消费者注册
-## 3. 资源组织（sidecar 模式）
-- 战斗角色 vs NPC 两种 atlas 形态
-- 统一 schema``clips`` 嵌套
-- 加载链路
-## 4. Event Schema
-- ``{frame, type}`` 主形态
-- ``{frame, type, id}`` 参数化形态
-- type 字段规范
-- frame 索引语义
-## 5. AnimationEventBus
-- 接口设计
-- 多消费者订阅
-- payload 结构
-## 6. FrameAnimationComponent 扩展
-- play() 时挂载事件表
-- fixedUpdate 触发判定
-- 防重触发
-- 重置时机
-- 回调注入
-## 7. NpcFrameComponent 扩展
-- 类似 FrameAnimationComponent
-- frame 索引相对 frameTag.from 偏移
-## 8. 消费者接入
-- Audio 消费者（第一阶段）
-- 第一阶段 type === audioId 简化策略
-- 未来武器感知映射
-## 9. 与现有架构关系
-- 与 Sequencer playAudio 的边界
-- 与 attackActiveFrames 的边界
-- 与 GameplayEventBus 的边界
-## 10. 第一阶段不做
-- VFX/Camera/Gameplay 消费者
-- 武器感知映射
-- 事件编辑器
-- 等等
-## 11. 开发步骤
-- Step 6a：AnimationEvent 系统（数据 + 组件扩展 + bus）
-- Step 6b：Audio 消费者接入
-## 12. 与 AudioSystemDesign 的关系
-- §8 由本文档接管
-- AudioSystemDesign §8 改为引用
-关于 Audio 归档判断：
-
-让我先读 INDEX.md 看归档惯例。
-
-实际上用户问「Audio 是不是可以 archived 了」——这是询问，我应该先回答这个判断。
-
-根据 Handoff §3.6「不在 Step 6 范围」和 §4「遗留事项」，Audio 系统的 Step 1-5 都已完成。Step 6 的 Audio 部分会变成 AnimationEvent 系统的消费者接入（Step 6b）。所以：
-
-- AudioSystemDesign.MD 作为整体设计文档，仍需保留作为 Audio 子系统的设计参考
-- 但 §8「与 Animation 集成」这一节的内容会被 AnimationEventSystemDesign.MD 接管
-- 修订方式：§8 改为简短的「Audio 作为 AnimationEvent 消费者，详见 AnimationEventSystemDesign.MD」
-归档（移到 plans/archived/）的判断：
-
-- 如果「归档」是指 plans/INDEX.md 里把 Audio Step 1-5 标记为已完成归档，那应该可以
-- 如果「归档」是指 AudioSystemDesign.MD 文件移到 plans/archived/，那不应该——它仍然是有效设计
-让我先 LS plans/ 看结构再决定。
-
-另外用户说「写MD，然后Audio是不是可以archived了」——分两步：
-
-1. 写 AnimationEventSystemDesign.MD（这是新文件创建，根据规则用 markdown code block 输出，不用 show_diff）
-2. 回答 Audio 是否可以归档
-根据系统提示，新文件创建用 markdown code block，不用 show_diff。
-
-让我先 LS plans/ 看现有结构。
-
-我先看一下 plans/ 目录结构和 INDEX.md 的归档惯例，再决定 Audio 的处理方式。
-
-BlindDuel\plans
-
-plans\INDEX.md
-
-Thought
-
-下面分两步：先输出 AnimationEventSystemDesign.MD 设计文档（新文件，用 code block），再回答 Audio 归档判断与操作。
-
-## 一、新建设计文档
-Animation              // 动画推进
-↓
-Animation Event        // 帧事件抽象层
-↓
-Presentation Systems
-├─ Audio             // 第一阶段唯一消费者
-├─ VFX               // 未来
-├─ Camera            // 未来
-└─ Gameplay          // 极少
-
-attack01.png              // 图像
-attack01.json             // atlas
-attack01.collider.json    // 碰撞元数据（工具生成）
-attack01.events.json      // 动画事件（人工维护）
-
-Animation 层
-└─ FrameAnimationComponent / NpcFrameComponent.fixedUpdate()
-└─ 帧推进命中事件帧 → 调用注入的 onAnimationEvent 回调
-↓
-事件层
-└─ AnimationEventBus.dispatch(payload)
-↓ (多消费者订阅)
-Presentation 层
-├─ AudioManager.subscribeAll → audioManager.play(type, options)
-├─ VFXSystem.subscribe("effect") → spawn(id)              [未来]
-├─ CameraSystem.subscribe("camera_shake_heavy") → shake() [未来]
-└─ GameplayNotifier.subscribe("notify") → ...             [极少，未来]
-
-```
-
-职责：
-
-## AnimationEventBus
-
-事件分发中枢。提供：
-
-```js
-subscribe(type, handler)      // 按 type 订阅
-subscribeAll(handler)         // 订阅所有事件
-dispatch(payload)             // 由 component 触发
-clear()                       // 场景切换时清理订阅（按需）
-```
-
-不维护事件历史，不分发到 `GameplayEventBus`（语义边界不同，见 §5.3）。
-
-## FrameAnimationComponent / NpcFrameComponent
-
-扩展（不改 API 表面）：在 `play(clipName)` 时挂载事件表，在 `fixedUpdate` 帧推进时检
-测命中事件帧，通过注入的 `onAnimationEvent` 回调转发。
-
-不直接发 bus——保持 component 纯粹，由 owner（`CharacterBase` / `NpcCharacter`）注
-入回调并转发，附带 `source` 信息。
-
-## CharacterBase / NpcCharacter
-
-注入 `onAnimationEvent` 给动画组件，转发到 `AnimationEventBus` 时附带 `source: 
-this`。
-
-***
-
 # 3. 资源组织（sidecar 模式）
 
 ## 3.1 与 atlas 对齐
@@ -360,34 +108,34 @@ collider 是工具生成的衍生数据。
 
 | 类型 | atlas 组织 | events.json 组织 |
 |---|---|---|
-| 战斗角色（longswordman / manatarms_sword / rabble_stick） | 每 clip 一个 atlas 
-文件 | 每 clip 一个 events.json |
-| NPC（traveller / merchant / bard / charlotte 等） | 一个 atlas 文件含所有 clip
-（用 frameTags 切分） | 一个 events.json 含所有 clip |
+| 战斗角色（longswordman / manatarms_sword / rabble_stick） | 每 clip 一个 atlas 文件 | 每 clip 一个 events.json |
+| NPC（traveller / merchant / bard / charlotte 等） | 一个 atlas 文件含所有 clip（用 frameTags 切分） | 一个 events.json 含所有 clip |
 
-## 3.2 目录结构
+## 3.2 目录结构
 
 ```
 Data/
-AnimationEvents/
-longswordman/
-longswordman_walk.events.json
-longswordman_thrust.events.json
-longswordman_quart.events.json
-...
-manatarms_sword/
-manatarms_sword_smash.events.json
-...
-rabble_stick/
-rabble_stick_swing.events.json
-...
-NPCs/
-merchant.events.json
-traveller.events.json
-...
-CS_Chars/
-prologue_rabble_flee0.events.json
-...
+  AnimationEvents/
+    longswordman/
+      longswordman_walk.events.json
+      longswordman_thrust.events.json
+      longswordman_quart.events.json
+      ...
+    manatarms_sword/
+      manatarms_sword_smash.events.json
+      ...
+    rabble_stick/
+      rabble_stick_swing.events.json
+      ...
+    NPCs/
+      merchant.events.json
+      traveller.events.json
+      ...
+    CS_Chars/
+      prologue_rabble_flee0.events.json
+      ...
+```
+
 ## 3.3 加载链路
 
 与 atlas / collider 完全对称：
