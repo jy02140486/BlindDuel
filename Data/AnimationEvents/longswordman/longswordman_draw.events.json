@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "draw": {
+            "events": [
+                { "frame": 1, "type": "off_cloaked" }
+            ]
+        }
+    }
+}

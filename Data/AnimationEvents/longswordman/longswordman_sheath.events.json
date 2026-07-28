@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "sheath": {
+            "events": [
+                { "frame": 1, "type": "on_cloaked" }
+            ]
+        }
+    }
+}

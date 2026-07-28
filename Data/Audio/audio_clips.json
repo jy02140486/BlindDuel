@@ -34,6 +34,18 @@
         "volume": 0.7,
         "pitch": [0.96, 1.04],
         "bus": "ambient"
+    },
+    "on_cloaked": {
+        "clips": ["./Audio/sfx/cloth/556758__fmaudio__swirling-velvet-cloak-3.wav"],
+        "volume": 0.9,
+        "pitch": [0.64, 0.72],
+        "bus": "sfx"
+    },
+    "off_cloaked": {
+        "clips": ["./Audio/sfx/cloth/556756__fmaudio__rustling-duvet-6.wav"],
+        "volume": 0.9,
+        "pitch": [0.64, 0.72],
+        "bus": "sfx"
     }
     
 }

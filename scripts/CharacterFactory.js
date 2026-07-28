@@ -31,13 +31,15 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_draw.png",
                 atlasData: assets.atlas.hero.draw,
                 colliderData: assets.colliders.hero.draw,
-                loop: false
+                loop: false,
+                eventsData: assets.animationEvents?.hero?.draw,
             },
             sheath: {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_sheath.png",
                 atlasData: assets.atlas.hero.sheath,
                 colliderData: assets.colliders.hero.sheath,
-                loop: false
+                loop: false,
+                eventsData: assets.animationEvents?.hero?.sheath,
             },
             walk: {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_walk.png",

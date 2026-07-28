@@ -111,7 +111,9 @@ export const ASSET_MANIFEST = {
     animationEvents: {
         hero: {
             walk: "./Data/AnimationEvents/longswordman/longswordman_walk.events.json",
-            thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json"
+            thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json",
+            sheath: "./Data/AnimationEvents/longswordman/longswordman_sheath.events.json",
+            draw: "./Data/AnimationEvents/longswordman/longswordman_draw.events.json"
         },
         rabble: {
             swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",
