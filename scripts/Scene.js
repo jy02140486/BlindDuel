@@ -335,6 +335,7 @@ export class Scene {
         const audioManager = this._game?.audioManager;
         if (!audioManager) return;
         const ids = this._resolveAmbientConfig(sceneDef.ambient);
+        console.log('[Ambient sfx] _applySceneAmbient, sceneId=', sceneDef.id, 'ambientField=', sceneDef.ambient, 'resolvedIds=', ids);
         audioManager.switchAmbient(ids);
     }
 

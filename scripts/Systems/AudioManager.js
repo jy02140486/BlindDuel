@@ -35,6 +35,8 @@ export class AudioManager {
         this._audioResumeDone = false;
         this._ctxStateChangeBound = false;
         const tryResume = () => {
+            const ctx0 = audioEngine.audioContext;
+            console.log('[Ambient sfx] tryResume enter, done=', this._audioResumeDone, 'ctxState=', ctx0?.state, 'activeSounds=', this._activeSounds.size);
             if (this._audioResumeDone) return;
             const ctx = audioEngine.audioContext;
             if (!ctx) return;
@@ -46,11 +48,14 @@ export class AudioManager {
                 return;
             }
             this._audioResumeDone = true;
+            let replayed = 0;
             for (const [sound, meta] of this._activeSounds) {
                 if (!sound.isReady) continue;
                 if (!meta || !meta.loop) continue;
-                try { sound.play(); } catch (e) {}
+                if (sound.isPlaying) continue;
+                try { sound.play(); replayed++; } catch (e) {}
             }
+            console.log('[Ambient sfx] tryResume flushed, replayed=', replayed);
         };
         if (audioEngine.onUnlock) audioEngine.onUnlock.add(tryResume);
         window.addEventListener("pointerdown", tryResume);
@@ -169,6 +174,7 @@ export class AudioManager {
         this._pool.detachScene();
         this._music.detachScene();
         this._ambient.detachScene();
+        this._audioResumeDone = false;
     }
 
     play(id, options = {}) {

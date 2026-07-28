@@ -22,6 +22,11 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
     }
 
     detachScene() {
+        if (this.onSoundStop) {
+            for (const entry of this._cache.values()) {
+                if (entry.sound) this.onSoundStop(entry.sound);
+            }
+        }
         this._scene = null;
         this._cache.clear();
     }

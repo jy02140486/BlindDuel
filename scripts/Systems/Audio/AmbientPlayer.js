@@ -29,6 +29,7 @@ export class AmbientPlayer {
     }
 
     play(id, def, options = {}) {
+        console.log('[Ambient sfx] AmbientPlayer.play enter, id=', id, 'hasScene=', !!this._scene, 'alreadyActive=', this._active.has(id));
         if (!this._scene || !def) return false;
         if (!Array.isArray(def.clips) || def.clips.length === 0) {
             console.warn(`[AmbientPlayer] no clips for ambient id: ${id}`);
@@ -47,6 +48,7 @@ export class AmbientPlayer {
             this._scene,
             () => {
                 sound.isReady = true;
+                console.log('[Ambient sfx] AmbientPlayer onload, id=', id, 'hasPending=', !!sound._pendingPlay);
                 if (sound._pendingPlay) {
                     const p = sound._pendingPlay;
                     sound._pendingPlay = null;
@@ -54,6 +56,7 @@ export class AmbientPlayer {
                         sound.setVolume(p.volume);
                         sound.play();
                         if (this.onSoundPlay) this.onSoundPlay(sound, p.meta);
+                        console.log('[Ambient sfx] AmbientPlayer pending play OK, id=', id);
                     } catch (e) {
                         console.warn(`[AmbientPlayer] pending play failed: ${id}`, e);
                     }
@@ -70,6 +73,7 @@ export class AmbientPlayer {
     stop(id) {
         const entry = this._active.get(id);
         if (!entry) return;
+        console.log('[Ambient sfx] AmbientPlayer.stop, id=', id, 'isReady=', entry.sound.isReady);
         if (this.onSoundStop) this.onSoundStop(entry.sound);
         try { entry.sound.stop(); } catch (e) {}
         try { entry.sound.dispose(); } catch (e) {}
@@ -99,15 +103,18 @@ export class AmbientPlayer {
         const masterVol = this.getMasterVolume ? this.getMasterVolume() : 1.0;
         const finalVolume = baseVolume * busVol * masterVol;
         if (sound.isReady) {
+            console.log('[Ambient sfx] _applyPlay immediate, sound ready');
             try {
                 sound.setVolume(finalVolume);
                 sound.play();
                 if (this.onSoundPlay) this.onSoundPlay(sound, { bus: "ambient", baseVolume, loop: true });
+                console.log('[Ambient sfx] _applyPlay immediate play OK');
             } catch (e) {
                 console.warn(`[AmbientPlayer] play failed`, e);
             }
             return;
         }
+        console.log('[Ambient sfx] _applyPlay set pending (sound not ready)');
         sound._pendingPlay = { volume: finalVolume, meta: { bus: "ambient", baseVolume, loop: true } };
     }
 }

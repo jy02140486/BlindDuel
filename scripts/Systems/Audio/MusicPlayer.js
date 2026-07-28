@@ -18,6 +18,7 @@ export class MusicPlayer {
 
     detachScene() {
         for (const sound of this._sounds.values()) {
+            if (this.onSoundStop) this.onSoundStop(sound);
             try { sound.dispose(); } catch (e) {}
         }
         this._sounds.clear();
