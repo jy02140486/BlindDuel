@@ -204,6 +204,7 @@ export class ExploreMode extends BaseMode {
             }
         }
         if (!pendingBattleDef) return;
+        this.context.pendingBattleDef = pendingBattleDef;
 
         let enterBattleSequence;
         const inlineSeq = this.context.sceneDef?.enterBattleSequence;

@@ -14,7 +14,6 @@ export class BattleMode extends BaseMode {
 
         if (typeof payload?.fighterDistance === "number") {
             this.context.smoothedFighterDistance = payload.fighterDistance;
-            console.log(`[BattleMode] enter smoothedFighterDistance=${payload.fighterDistance.toFixed(2)}`);
         }
 
         if (battleDef) {
@@ -69,6 +68,7 @@ export class BattleMode extends BaseMode {
         this.context.basePosition = null;
         this.context.target = null;
         this.context.fighterDistance = null;
+        this.context.pendingBattleDef = null;
     }
 
     fixedUpdate(dtMs, tickCount) {

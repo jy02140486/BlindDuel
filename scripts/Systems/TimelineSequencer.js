@@ -9,6 +9,10 @@ export class TimelineSequencer {
         this.firedEventClipIds = new Set();
         this._firedAudioClips = new Map();
         this._clipIdCounter = 0;
+        this._sharedData = {};
+        if (this.context) {
+            this.context.sharedData = this._sharedData;
+        }
     }
 
     isBusy() {
@@ -31,6 +35,10 @@ export class TimelineSequencer {
         this.firedEventClipIds.clear();
         this._firedAudioClips.clear();
         this._clipIdCounter = 0;
+        this._sharedData = {};
+        if (this.context) {
+            this.context.sharedData = this._sharedData;
+        }
 
         console.log(`[TimelineSequencer] start timeline: ${timeline.id}`);
 
@@ -585,11 +593,14 @@ const ACTION_HANDLERS = {
                 const opponentPos = rabbleStick.root.position;
                 const centerX = (heroPos.x + opponentPos.x) * 0.5;
                 const centerZ = (heroPos.z + opponentPos.z) * 0.5;
-                const centerY = (heroPos.y + opponentPos.y) * 0.5;
+                const battleYBaseline = ctx.pendingBattleDef?.battleYBaseline ?? opponentPos.y;
                 const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
+                if (ctx.sharedData) {
+                    ctx.sharedData.cameraBlendFighterDistance = fighterDistance;
+                }
                 frameCtx = {
-                    basePosition: new BABYLON.Vector3(centerX, 8, centerZ - 25),
-                    target: new BABYLON.Vector3(centerX, centerY, centerZ),
+                    basePosition: new BABYLON.Vector3(centerX, battleYBaseline + 8, centerZ - 25),
+                    target: new BABYLON.Vector3(centerX, battleYBaseline, centerZ),
                     fighterDistance
                 };
             } else if (toRigId === "explore" && character) {
@@ -675,14 +686,19 @@ const ACTION_HANDLERS = {
             }
             let payload = clip.payload;
             if (clip.modeId === "battle") {
-                const { character, rabbleStick } = ctx;
-                if (character && rabbleStick) {
-                    const heroPos = character.root.position;
-                    const opponentPos = rabbleStick.root.position;
-                    const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
-                    payload = { ...(payload || {}), fighterDistance };
+                const sharedFD = ctx.sharedData?.cameraBlendFighterDistance;
+                if (typeof sharedFD === "number") {
+                    payload = { ...(payload || {}), fighterDistance: sharedFD };
                 } else {
-                    console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
+                    const { character, rabbleStick } = ctx;
+                    if (character && rabbleStick) {
+                        const heroPos = character.root.position;
+                        const opponentPos = rabbleStick.root.position;
+                        const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
+                        payload = { ...(payload || {}), fighterDistance };
+                    } else {
+                        console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
+                    }
                 }
             }
             gameModeManager.switchMode(clip.modeId, payload);

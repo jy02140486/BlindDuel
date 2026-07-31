@@ -101,6 +101,42 @@ export class DuelCameraRig {
         // 正交比例由 CameraManager 统一维护
     }
 
+    // 供 CameraManager.startBlend 生成 toState：直接用 frameCtx 计算稳态目标状态。
+    // 不做 lerp、不修改 this.currentTarget/currentZoomT，避免 compute(1000,...) 只执行一帧 lerp 导致 toState 是中间值。
+    snapshot(context, prevState) {
+        const basePosition = context?.basePosition;
+        const target = context?.target;
+        const fighterDistance = context?.fighterDistance;
+        if (!basePosition || !target || fighterDistance == null) {
+            return prevState ? this.#stateFromPrev(prevState) : this.#defaultState();
+        }
+        const rawZoomT = BABYLON.Scalar.Clamp(
+            (fighterDistance - this.zoomMinDistance) / (this.zoomMaxDistance - this.zoomMinDistance),
+            0, 1
+        );
+        const desiredHeight = BABYLON.Scalar.Lerp(this.minCameraHeight, this.maxCameraHeight, rawZoomT);
+        const cameraY = target.y + desiredHeight;
+        const state = this.#defaultState();
+        state.target = target.clone();
+        state.projection = this.projection;
+        if (this.projection === "perspective") {
+            const desiredDistance = BABYLON.Scalar.Lerp(this.perspMinDistance, this.perspMaxDistance, rawZoomT);
+            state.pos.set(basePosition.x, cameraY, target.z - desiredDistance);
+        } else {
+            const desiredWidth = BABYLON.Scalar.Lerp(this.orthoMinWidth, this.orthoMaxWidth, rawZoomT);
+            state.pos.set(basePosition.x, cameraY, basePosition.z);
+            const windowAspect = window.innerWidth / window.innerHeight;
+            const halfWidth = desiredWidth / 2;
+            const halfHeight = (desiredWidth / windowAspect) / 2;
+            state.orthoLeft = -halfWidth;
+            state.orthoRight = halfWidth;
+            state.orthoTop = halfHeight;
+            state.orthoBottom = -halfHeight;
+        }
+        state.zoomT = rawZoomT;
+        return state;
+    }
+
     compute(dtMs, context, prevState) {
         const basePosition = context?.basePosition;
         const target = context?.target;

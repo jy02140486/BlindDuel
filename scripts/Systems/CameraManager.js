@@ -13,7 +13,7 @@ function _createCameraState() {
 }
 
 function _cloneState(s) {
-    return {
+    const r = {
         pos: s.pos.clone(),
         target: s.target.clone(),
         projection: s.projection,
@@ -24,6 +24,8 @@ function _cloneState(s) {
         fov: s.fov,
         aspect: s.aspect
     };
+    if (typeof s.zoomT === "number") r.zoomT = s.zoomT;
+    return r;
 }
 
 // [JITTER_DEBUG] 复制状态（用于保存上一帧状态）
@@ -37,10 +39,12 @@ function _copyState(dest, src) {
     dest.orthoBottom = src.orthoBottom;
     dest.fov = src.fov;
     dest.aspect = src.aspect;
+    if (typeof src.zoomT === "number") dest.zoomT = src.zoomT;
+    else delete dest.zoomT;
 }
 
 function _lerpState(a, b, t) {
-    return {
+    const result = {
         pos: BABYLON.Vector3.Lerp(a.pos, b.pos, t),
         target: BABYLON.Vector3.Lerp(a.target, b.target, t),
         // 游戏默认始终正交，blend 只处理正交参数，不处理 projection 切换
@@ -52,6 +56,12 @@ function _lerpState(a, b, t) {
         fov: b.fov,
         aspect: a.aspect + (b.aspect - a.aspect) * t
     };
+    if (typeof b.zoomT === "number") {
+        result.zoomT = typeof a.zoomT === "number"
+            ? a.zoomT + (b.zoomT - a.zoomT) * t
+            : b.zoomT;
+    }
+    return result;
 }
 
 function _smoothstep(t) {
@@ -247,7 +257,9 @@ export class CameraManager {
 
         const computeCtx = frameCtx || this.context;
         let toState;
-        if (typeof targetRig.compute === "function") {
+        if (frameCtx && typeof targetRig.snapshot === "function") {
+            toState = targetRig.snapshot(computeCtx, fromState);
+        } else if (typeof targetRig.compute === "function") {
             toState = targetRig.compute(1000, computeCtx, fromState);
         } else {
             toState = _cloneState(fromState);
