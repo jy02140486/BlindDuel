@@ -92,12 +92,12 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `speed` | number | **未使用**，留作未来扩展 |
 | `easing` | string | 可选，目前只有 `"linear"`（默认） |
 
-**行为**：`start` 记录起点并设 `actor.controlledBySequence = true`，`update` 按 `t = localMs / durationMs` 线性插值写 `root.position` + 同步写 `moveIntent`（方向归一化），`end` snap 到目标点、清 `moveIntent`、设 `controlledBySequence = false`。
+**行为**：`start` 记录起点并设 `actor.controlledBySequence = true`、`actor.supportsRenderSampling = true`，`update` 按 `t = localMs / durationMs` 线性插值写 `root.position` + 同步写 `moveIntent`（方向归一化），`end` snap 到目标点、清 `moveIntent`、设 `controlledBySequence = false`、`supportsRenderSampling = false` 并重置 `_renderTransformSynced`。
 
-**controlledBySequence 标记**（CombatCharacter 独有）：
-- sequencer 驱动期间，`BaseController.applyToCharacter` 和 `CombatCharacter._consumeTransition` 检查此标记早退——防止 controller 覆盖 `moveIntent`、防止 moveMagnitude 触发的 walk transition 被切回 standing/idle
-- NpcCharacter / PropEntity 不检查（无 transition 覆盖问题），标记无副作用
-- sequence 被 `stop()` / 正常 `_onComplete` / `_onLoop` 时统一兜底清标记，防残留
+**controlledBySequence / supportsRenderSampling 双标记**（两者配套设/重置，作用层不同）：
+- **controlledBySequence**（CombatCharacter 独有，Phase 2）：控 fixedUpdate 行为。`BaseController.applyToCharacter` 和 `CombatCharacter._consumeTransition` 检查此标记早退——防止 controller 覆盖 `moveIntent`、防止 moveMagnitude 触发的 walk transition 被切回 standing/idle。NpcCharacter / PropEntity 不检查（无 transition 覆盖问题），标记无副作用。
+- **supportsRenderSampling**（所有实体，Phase 3）：控渲染采样路径。设 true 时该 actor 走 `sample(renderTime)` 直采路径，`Scene._interpolateEntities` 跳过它（不双次平滑）；`Scene._snapshotEntityPositions` 也跳过它（sequencer 期间位置由 clip 直接写，不需快照）。`end` 重置 `_renderTransformSynced=false` 是为了让下次 fixedUpdate 的 snapshot 重新对齐 previous=current=root.position，避免从 sequencer 前的过期快照 lerp 跳变。
+- sequence 被 `stop()` / 正常 `_onComplete` / `_onLoop` 时统一兜底清两标记，防残留（`_resetControlledActors` 同步重置）
 
 **动画同步**：
 - **CombatCharacter**（hero/rabble）：walk 动画靠 `moveMagnitude > 0.2` 触发，sequencer 写 moveIntent 自动驱动，无需额外 command clip
@@ -344,9 +344,9 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `speed` | number | 否 | 速度覆盖值（世界单位/秒）；省略则每帧用 `actor.getEffectiveSpeed()`，buff / `moveSpeedBonus` 自动生效 |
 
 **行为**：
-- `start`：解析 actor；归一化 `dir`（`mag <= 0.0001` 时 warn 并 invalid）；设 `actor.controlledBySequence = true`（与 `moveActorTo` 同机制）。
+- `start`：解析 actor；归一化 `dir`（`mag <= 0.0001` 时 warn 并 invalid）；设 `actor.controlledBySequence = true` + `actor.supportsRenderSampling = true`（与 `moveActorTo` 同机制，两标记配套）。
 - `update`：每帧 `pos += dir × effectiveSpeed × dtSec` 累加位移；同步写 `moveIntent = dir`（驱动 walk 动画）；返回 `true` 保持 active。
-- `end`：清 `moveIntent = {0,0}`；设 `controlledBySequence = false`；**不切回 idle**，动画状态切换由编排者负责（同 `moveActorTo` 约定）。
+- `end`：清 `moveIntent = {0,0}`；设 `controlledBySequence = false` + `supportsRenderSampling = false` 并重置 `_renderTransformSynced`（同 `moveActorTo` 机制，避免 sequencer 退出后从过期快照 lerp 跳变）；**不切回 idle**，动画状态切换由编排者负责（同 `moveActorTo` 约定）。
 
 **速度来源**：
 - 默认用 `actor.getEffectiveSpeed()`（数据驱动，buff / 速度模式自动生效；**距离不可预测**）。

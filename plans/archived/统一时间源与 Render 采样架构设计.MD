@@ -495,6 +495,12 @@ for (const entity of this.entities) {
 }
 ```
 
+> **实现注记（2026-07-31 实施时发现）**：上面伪代码示例把 snapshot 写在 `CharacterBase.fixedUpdate` 末尾，但实际实现改放在 `Scene.fixedUpdate` 边界（`gameModeManager.fixedUpdate` 前后配对调 `restoreRenderTransform` / `snapshotRenderTransform`）。原因：`ExploreCollisionSystem.resolveMovement` 的 walkArea clamp 与 `PushboxResolver.resolve` 的 pushback 都在 `character.fixedUpdate()` 返回之后才修改 `root.position`，如果 snapshot 写在 CharacterBase 末尾会漏掉这两类写入，导致 render 阶段 lerp 到 clamp 前的越界位置（角色穿墙）。此外新增 `_renderTransformSynced` 状态位处理两个边界：
+> - **首次 snapshot**：实体构造时 previous/current 都为 (0,0,0)，未同步时 snapshot 把 previous=current=root.position 同步对齐，避免 render 阶段从 (0,0,0) lerp 到 spawn 点的闪烁。
+> - **sequencer 退出**：sequencer 期间 `supportsRenderSampling=true`，snapshot 被跳过，previous/current 停在 sequencer 前的过期值。sequencer end 时若只翻回 `supportsRenderSampling=false` 而不重置 `_renderTransformSynced`，下一帧 snapshot 会把 previous=current (过期) → current=root.position (sequencer 终值)，render 从过期值 lerp 到终值导致跳变。故 `moveActorTo`/`moveActorByDirection` 的 end 阶段必须配套重置 `_renderTransformSynced=false`，让下次 snapshot 重新对齐。
+>
+> 实施详情见 `commits_detailed/26.7.31 统一时间源渲染系统接入.MD`。
+
 ---
 
 ## 9. 迁移清单

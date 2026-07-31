@@ -45,7 +45,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
 - 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
-- 帧时钟（权威时间源）：`scripts/Systems/FrameClock.js`（全游戏唯一时钟，Hybrid 模型 fixedTime + accumulator，详见 `plans/统一时间源与 Render 采样架构设计.MD`）
+- 帧时钟（权威时间源）：`scripts/Systems/FrameClock.js`（全游戏唯一时钟，Hybrid 模型 fixedTime + accumulator，详见 `plans/archived/统一时间源与 Render 采样架构设计.MD`）
 - 时间控制系统：`scripts/Systems/TimeControlSystem.js`
 - 游戏模式管理器：`scripts/Systems/GameModeManager.js`
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）
@@ -78,7 +78,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - 环境音播放器：`scripts/Systems/Audio/AmbientPlayer.js`（多轨 ambient 管理，lazy load + pending play，与 MusicPlayer 模式对称）
 - 音频配置：`Data/Audio/audio_clips.json`（事件→音效映射，每条 def 含 `bus` 字段作为资源属性）+ `Data/Audio/audio_buses.json`（5 条总线 master/music/sfx/ui/ambient）+ `Data/Audio/music_clips.json`（BGM 定义）
 - 音频设计稿（已归档）：`plans/archived/AudioSystemDesign.MD`（v0.2，Step 1-5 全部落地；§8「与 Animation 集成」由 AnimationEventSystemDesign 接管）
-- 动画事件系统设计稿：`plans/AnimationEventSystemDesign.MD`（v0.1，三层架构 Animation → AnimationEvent → Presentation Systems，Audio 作为第一阶段唯一消费者）
+- 动画事件系统设计稿（已归档）：`plans/archived/AnimationEventSystemDesign.MD`（v0.1，三层架构 Animation → AnimationEvent → Presentation Systems；Step 6a/6b 已落地，Step 6c 后置）
 - 动画事件资源目录：`Data/AnimationEvents/<char>/*.events.json`（sidecar 模式，与 atlas 对齐；战斗角色每 clip 一文件，NPC 一文件含所有 clip）
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
@@ -144,7 +144,8 @@ py -m http.server 9000 --bind 127.0.0.1
 14. CharacterBase 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估，同时 `_applyMovement` 开头加守卫跳过 frameSpeeds/stateSpeed/moveIntent 三个位移分支，确保 sequencer 期间 position 写入来源唯一（只有 moveActorTo 的绝对设置），消除位置双写。`ExploreCollisionSystem.resolveMovement` 也加同样守卫，sequencer 期间跳过 staticBlockers 推开 + walkArea clamp（避免 moveActorTo 走到 walkArea 边界外被钳回）。NpcCharacter/PropEntity 不需要该标记（无 transition 覆盖问题），但 NpcCharacter 的 idle/following 行为由 IdleBehavior/FollowingBehavior 数据驱动（idle clip 配置在 NpcDef）。
 15. sequencer 期间 ExploreMode 子系统门控：`sceneSequencer.isBusy()` 期间，①`NpcController.update` 的 idle→greeting 转换跳过（避免气泡误触）②`ExploreMode.#updateDialogueBubble` 跳过（避免把 sequencer 显式 show 的气泡误 hide）③`moveActorTo` 的 `controlledBySequence` 标记让 ExploreCollisionSystem 早退。气泡的显隐完全由 `dialogueBubble` clip 控制（见 TimelineSequencer 文档 §5.12），位置更新照常跑（视锥剔除正常生效，NPC 出相机视野时气泡自动隐藏）。
 16. **Mode 切换 clip 位置规范**（设计文档 §6.5）：涉及 mode 变化的 sequence，`switchMode` clip 必须放在末尾（`atMs == durationMs`），禁止放中间。配套机制：① sequence 期间 `BattleMode.enter` 不调 `switchRig`（由 `cameraBlend` clip 的 endBlend 负责）；② `DuelCameraRig.compute` 在 `fighterDistance==null`（mode 未 enter）时 return prevState hold。三者配套，缺一不可。窗口期（blend.endMs → switchMode.atMs）相机定格在 blend 终值，属 cinematic 定格语义。
-17. **统一时间源架构**（设计文档 §7 阶段 1-2 已落地）：全游戏唯一 `FrameClock` 实例（`scripts/Systems/FrameClock.js`），主循环走 `advance/stepFixed/refreshRender`；TimelineSequencer 与 CameraManager 改造为采样化（`sample(renderTime)` 纯函数求值），moveActorTo/cameraBlend handler 改为 `onEnter/sample/onExit` 三段式。TimeControlSystem 与 FrameClock 正交（参数注入 `clock.fixedDelta`，不读 clock 内部状态）。
+17. **统一时间源架构**（设计文档 §7 阶段 1-3 已落地）：全游戏唯一 `FrameClock` 实例（`scripts/Systems/FrameClock.js`），主循环走 `advance/stepFixed/refreshRender`；TimelineSequencer 与 CameraManager 改造为采样化（`sample(renderTime)` 纯函数求值），moveActorTo/cameraBlend handler 改为 `onEnter/sample/onExit` 三段式。TimeControlSystem 与 FrameClock 正交（参数注入 `clock.fixedDelta`，不读 clock 内部状态）。
+18. **Render 插值架构**（设计文档 §7 阶段 3 已落地）：Simulation Driven 实体（玩家走位、普通 NPC）走 `lerp(previous, current, renderAlpha)` 插值路径；Sampleable 实体（sequencer 控制的 actor、cameraBlend）走 `sample(renderTime)` 直采路径不插值。分流标志为 `supportsRenderSampling`（默认 false），在 `moveActorTo`/`moveActorByDirection` 的 start/end 与 Phase 2 的 `controlledBySequence` 配套设/重置（前者控渲染采样路径，后者控 fixedUpdate 行为，sequencer 期间两者同设 true、结束同设 false）。**实现偏差**：设计稿 §8.7 原写「`CharacterBase.fixedUpdate` 末尾快照」，实际将 snapshot/restore 移到 `Scene.fixedUpdate` 边界（`gameModeManager.fixedUpdate` 前后配对调用），原因是要覆盖 `ExploreCollisionSystem.resolveMovement` 的 walkArea clamp 与 `PushboxResolver.resolve` 的 pushback 这些 `character.fixedUpdate()` 返回之后才执行的后置 position 写入。`_renderTransformSynced` 状态位用于处理两个边界：首次 snapshot 时同步 previous=current=root.position 避免 (0,0,0)→spawn 闪烁；sequencer end 时重置避免从过期快照 lerp 跳变。`Scene.updateRender` 重排为 `sample → _interpolateEntities(renderAlpha) → mode.updateRender → camera.update`，保证相机 target 读到插值后位置（设计文档 §7 阶段 3 要求）。
 
 ## 7. 当前文件结构
 > 文件清单见 §3「当前目录与关键文件」（含职责说明），不再单独维护树形结构，避免双份不同步。
@@ -203,18 +204,28 @@ character_demo.js (主循环: clock.advance → while(stepFixed) fixedUpdate →
            -> CombatSystem.fixedUpdate()
   -> Scene.updateRender(clock)
      -> SceneSequencer.sample(clock.renderTime)   // 采样型 clip 求值（cameraBlend/moveActorTo）
+     -> _interpolateEntities(clock.renderAlpha)   // Phase 3：Simulation Driven 实体走 lerp(previous, current, renderAlpha)，supportsRenderSampling=true 的实体跳过
      -> GameModeManager.updateRender()
         -> ExploreMode/BattleMode.updateRender()
-           -> 写 context.target / basePosition
+           -> 写 context.target / basePosition   // 读插值后位置（Phase 3 重排保证）
            -> SceneVisualSystem.update()
      -> CameraManager.update()
         -> activeRig.compute()  // 或 _blend.sampleDriven 路径（timeline 采样）
         -> _applyToBabylonCamera()
      -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
+
+> **Phase 3 snapshot/restore 配对**（Scene.fixedUpdate 边界）：
+> ```
+> Scene.fixedUpdate(clock)
+>   -> _restoreEntityPositions()         // 将 root.position 还原为上一帧 snapshot.current（清除上一帧 updateRender 的 lerp 残留）
+>   -> GameModeManager.fixedUpdate()     // _applyMovement + walkArea clamp + pushback 等所有 position 写入
+>   -> _snapshotEntityPositions()        // previous ← current, current ← root.position（supportsRenderSampling=true 的实体跳过）
+> ```
+> snapshot/restore 不放在 CharacterBase.fixedUpdate 末尾的原因：walkArea clamp 与 pushback 在 character.fixedUpdate() 返回之后才执行，必须延后到 Scene.fixedUpdate 末尾才能捕获完整 position。详见规范第 18 条。
 ```
 > AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 5 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene`/`setBusVolume`/`switchAmbient`/`stopAllAmbient` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`，`bus` 字段已生效）；SceneDef `music`/`ambient` 字段已读入（Step 4/5，支持 null/string/array/object 含条件写法）；AudioBus 真正生效（`_activeSounds` Map 跟踪在播 Sound，`setBusVolume` 实时回写 `finalVolume = baseVolume × busVolume × masterVolume`，localStorage 持久化 `blinduel_audio_bus_volumes`）；AudioContext 解锁修复（监听 pointerdown/keydown/onUnlock 补播 loop sound，用 `meta.loop` 判断因 `BABYLON.Sound` 无 `isLooping` 公开属性）。详见 `plans/archived/AudioSystemDesign.MD` §7/§9/§11。
 >
-> AnimationEvent 链路（Step 6a/6b 待实施）：`FrameAnimationComponent.fixedUpdate()` 帧推进命中事件帧 → `onAnimationEvent` 回调 → `AnimationEventBus.dispatch(payload)` → AudioManager subscribeAll → `audioManager.play(type)`。事件 payload 不携带消费者语义（`type` 直接当 audioId，简化策略 E1）。设计详见 `plans/AnimationEventSystemDesign.MD`。
+> AnimationEvent 链路（Step 6a/6b 已落地）：`FrameAnimationComponent.fixedUpdate()` 帧推进命中事件帧 → `onAnimationEvent` 回调 → `AnimationEventBus.dispatch(payload)` → AudioManager.wireAnimationEventBus 订阅 → `audioManager.play(type)`。事件 payload 不携带消费者语义（`type` 直接当 audioId，简化策略 E1）。Step 6c（武器感知映射、VFX/Camera/Gameplay 消费者）后置 backlog。设计详见 `plans/archived/AnimationEventSystemDesign.MD`。
 
 ### 9.3 进入战斗
 ```

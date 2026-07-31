@@ -2,14 +2,13 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
----
-
 ## Update Log (2026-07-31)
+- Phase 3（Render 插值）落地：`CharacterBase` 新增 `renderTransform`（previous/current 双快照）+ `supportsRenderSampling` 标志 + `_renderTransformSynced` 状态位 + `snapshotRenderTransform`/`restoreRenderTransform` 方法；`Scene.fixedUpdate` 在 `gameModeManager.fixedUpdate` 前后调 restore/snapshot（覆盖 walkArea clamp + pushback 等后置 position 写入）；`Scene.updateRender` 重排为 `sample → _interpolateEntities(renderAlpha) → mode.updateRender → camera.update`（保证相机读到插值后位置）；`TimelineSequencer` 的 `moveActorTo`/`moveActorByDirection` start/end 配套设 `supportsRenderSampling` + end 重置 `_renderTransformSynced`（避免从 sequencer 前过期快照 lerp 跳变）；`_resetControlledActors` 同步重置两标志位。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，实现偏差见 `commits_detailed/26.7.31 统一时间源渲染系统接入.MD`
 - 统一时间源与 Render 采样架构 Phase 1-2 落地：新增 `FrameClock.js`（全游戏唯一时钟，Hybrid 模型），主循环改用 `advance/stepFixed/refreshRender`；TimelineSequencer + CameraManager 采样化改造（`sample(renderTime)` 纯函数求值，moveActorTo/cameraBlend 改 onEnter/sample/onExit 三段式）；TimeControlSystem 与 FrameClock 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`
 - 相机 Blend 时序 bug 修复：`TimelineSequencer.justCrossedEnd` 边界条件 `>` 改 `>=`，解决相邻 cameraBlend 端点相接（blend1.endMs == blend2.startMs）时 overlap 导致 blend2.sample 失效的问题（prologue enter_battle 第二个 blend 不执行、flee 序列下移有概率丢失的根因）
 - Mode 切换设计规范落地（设计稿 §6.5）：`switchMode` clip 必须放 sequence 末尾；`BattleMode.enter` 在 sequence 期间跳过 `switchRig`（由 cameraBlend clip 的 endBlend 独占）；`DuelCameraRig.compute` 在 `fighterDistance==null` 时 return prevState hold（窗口期防 drift）
 - 文档同步：`docs/TimelineSequencer User Guide.md` §5.3/§5.9 更新时序约定与 switchMode 规范；`PROJECT_CONTEXT.md` §3 加 FrameClock.js、§6 加规范第 16/17 条、§9.2 主循环链路更新
-- Phase 3（Render 插值）暂不实施，等进出战斗 bug 验证通过后再考虑
+- Phase 3（Render 插值）已落地：Simulation Driven 实体走 `lerp(previous, current, renderAlpha)` 插值路径，Sampleable 实体（sequencer 控制）走 `sample(renderTime)` 直采路径不插值；`supportsRenderSampling` 与 Phase 2 的 `controlledBySequence` 配套（前者控渲染路径，后者控 fixedUpdate 行为，sequencer 期间两者同设/重置）
 
 ## Update Log (2026-07-26)
 - Audio System 设计稿归档：`plans/AudioSystemDesign.MD` → `plans/archived/AudioSystemDesign.MD`。Step 1-5 全部实现（AudioManager/AudioDatabase/AudioPool/AudioPlayer/MusicPlayer/AmbientPlayer/AudioBus），无后续 Step；原 §8「与 Animation 集成」由新设计稿接管
@@ -27,11 +26,19 @@
 - 文档同步：`docs/TimelineSequencer User Guide.md` §5.14 新增 playAudio 说明 + §9.2 排查表加两行；`PROJECT_CONTEXT.md` §3 补 MusicPlayer.js/music_clips.json，§9.2 更新 Step 4 状态
 - 设计稿不改动（实现与 `plans/AudioSystemDesign.MD` §7/§9/§11 一致）；`docs/Audio Tools User Guide.MD` 不改动（离线工具文档，与运行时音频无关）
 
+## 最近归档（2026-07-31）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/统一时间源与 Render 采样架构设计.MD](archived/统一时间源与%20Render%20采样架构设计.MD) | 全游戏唯一时钟 + Render 采样架构（Phase 1-3） | Phase 1-3 全部落地：FrameClock（Hybrid fixedTime + accumulator + renderAlpha + renderTime）、主循环改 advance/stepFixed/refreshRender、TimelineSequencer + CameraManager 采样化（sample(renderTime)）、moveActorTo/cameraBlend 改 onEnter/sample/onExit 三段式、TimeControlSystem 与 FrameClock 正交、CharacterBase 加 renderTransform 双快照 + supportsRenderSampling、Scene.fixedUpdate 边界 snapshot/restore、Scene.updateRender 重排 sample→interpolate→mode→camera。Phase 4（完整曲线化）后置 backlog，等需求出现再演进。实施详情见 `commits_detailed/26.7.31 统一时间源渲染系统接入.MD` |
+| [archived/AnimationEventSystemDesign.MD](archived/AnimationEventSystemDesign.MD) | 动画帧事件机制从 Audio 子系统独立为通用 AnimationEvent 系统 | Step 6a/6b 全部落地：AnimationEventBus + FrameAnimationComponent 事件表挂载 + 防重 + 重置 + 回调注入 + CharacterBase.onAnimationEvent 转发 + Game/Scene 持有 bus + AudioManager.wireAnimationEventBus 订阅 + CharacterBase 移除 `_footstepAccumMs`/`FOOTSTEP_INTERVAL_MS` 时间常量 + longswordman_walk/thrust + rabble_stick_swing/thrust events.json 资源。Step 6c（武器感知映射、VFX/Camera/Gameplay 消费者）后置 backlog |
+| [archived/抖动问题诊断备忘录.MD](archived/抖动问题诊断备忘录.MD) | 26.7.19 抖动问题诊断与排查手册 | 根因已由 Phase 3 Render 插值根治（Simulation Driven 实体走 lerp(previous, current, renderAlpha) 消除 144Hz 屏阶梯感）。文档作为诊断手册归档保留，未来如抖动重现仍可参考其日志前缀规范与排查路径 |
+
 ## 最近归档（2026-07-26）
 
 | 计划 | 目标 | 完成内容 |
 |------|------|----------|
-| [archived/AudioSystemDesign.MD](archived/AudioSystemDesign.MD) | 音频系统基础架构（5 bus + SFX/Music/Ambient + sequencer playAudio） | Step 1-5 全部实现：AudioManager + AudioDatabase + AudioPool + AudioPlayer + MusicPlayer（crossfade/cut 状态机 + lazy load + onload pending）+ AmbientPlayer（多轨差集算法）+ AudioBus（`_activeSounds` 实时回写 + localStorage 持久化）+ AudioContext 解锁修复 + TimelineSequencer `playAudio` clip + SceneDef `music`/`ambient` 字段。§8「与 Animation 集成」由 `plans/AnimationEventSystemDesign.MD` 接管 |
+| [archived/AudioSystemDesign.MD](archived/AudioSystemDesign.MD) | 音频系统基础架构（5 bus + SFX/Music/Ambient + sequencer playAudio） | Step 1-5 全部实现：AudioManager + AudioDatabase + AudioPool + AudioPlayer + MusicPlayer（crossfade/cut 状态机 + lazy load + onload pending）+ AmbientPlayer（多轨差集算法）+ AudioBus（`_activeSounds` 实时回写 + localStorage 持久化）+ AudioContext 解锁修复 + TimelineSequencer `playAudio` clip + SceneDef `music`/`ambient` 字段。§8「与 Animation 集成」由 `plans/archived/AnimationEventSystemDesign.MD` 接管 |
 
 ## 最近归档（2026-07-15）
 
@@ -165,7 +172,7 @@
 - **PropEntity**：过场动画道具实体，hold/loop 双模式，不进 NpcController/staticBlockers/interactables
 - **同伴 NPC**：Charlotte + FollowingBehavior，基于距离的动态速度调整，cutscene 末尾 callback 激活跟随
 - **cutsceneInvokers**：SceneDef 数据驱动 cutscene 触发（condition + sequenceUrl + flagOnPlay），替代硬编码
-- **统一时间源架构**：`FrameClock`（全游戏唯一时钟）+ TimelineSequencer/CameraManager 采样化（`sample(renderTime)`）；TimeControlSystem 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，Phase 1-2 已落地，Phase 3（Render 插值）待实施
+- **统一时间源架构**：`FrameClock`（全游戏唯一时钟）+ TimelineSequencer/CameraManager 采样化（`sample(renderTime)`）；TimeControlSystem 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，Phase 1-3 全部落地：Phase 3 Render 插值采用「Scene 层 snapshot/restore + updateRender 重排 + supportsRenderSampling 路径分流」架构（设计稿 §8.7 原写在 CharacterBase.fixedUpdate 末尾快照，实际移到 Scene.fixedUpdate 末尾以覆盖后置 position 写入）
 - **Mode 切换规范**：`switchMode` clip 必须放 sequence 末尾；sequence 期间 mode.enter 不碰 rig（由 cameraBlend clip 负责）；rig.compute 在上下文未就绪时 hold（安全网）。设计稿 §6.5
 - **TimelineSequencer**：多 track + 14 种 clip 类型（command/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble/moveActorByDirection/playAudio）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
 - **sequencer 期间 ExploreMode 门控**：`isBusy()` 期间 NpcController greeting 不触发、`#updateDialogueBubble` 不接管气泡生命周期、`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp；气泡显隐完全由 `dialogueBubble` clip 控制
