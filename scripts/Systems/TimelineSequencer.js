@@ -591,10 +591,6 @@ const ACTION_HANDLERS = {
             const cm = state.cameraManager;
             if (!cm || typeof cm.updateBlend !== "function") return;
             const t = Math.min(time / (clip.durationMs || 1), 1);
-            if (!state._loggedFirstSample) {
-                state._loggedFirstSample = true;
-                console.log(`[CAM_BLEND_DBG] sample FIRST to="${clip.to}" t=${t.toFixed(3)} blendActive=${cm._blend.active} sampleDriven=${cm._blend.sampleDriven}`);
-            }
             cm.updateBlend(t);
         },
         end(ctx, clip, state) {
@@ -661,7 +657,6 @@ const ACTION_HANDLERS = {
                     const opponentPos = rabbleStick.root.position;
                     const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
                     payload = { ...(payload || {}), fighterDistance };
-                    console.log(`[CAM_BLEND_DBG] switchMode fighterDistance=${fighterDistance.toFixed(2)}`);
                 } else {
                     console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
                 }
