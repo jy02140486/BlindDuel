@@ -23,6 +23,12 @@ export class CharacterBase {
         this.pendingCommands = [];
         this.moveIntent = { x: 0, y: 0 };
         this.controlledBySequence = false;
+        this.supportsRenderSampling = false;
+        this.renderTransform = {
+            previous: new BABYLON.Vector3(0, 0, 0),
+            current: new BABYLON.Vector3(0, 0, 0)
+        };
+        this._renderTransformSynced = false;
         this.inputLocked = false;
         this.rootDebugVisible = this.showCollision;
         this.moveDeadzone = config.moveDeadzone ?? 0.2;
@@ -569,6 +575,23 @@ export class CharacterBase {
 
         this._applyMovement(dtMs);
         this._updateDebugPanel();
+    }
+
+    snapshotRenderTransform() {
+        if (!this.renderTransform) return;
+        if (!this._renderTransformSynced) {
+            this.renderTransform.previous.copyFrom(this.root.position);
+            this.renderTransform.current.copyFrom(this.root.position);
+            this._renderTransformSynced = true;
+            return;
+        }
+        this.renderTransform.previous.copyFrom(this.renderTransform.current);
+        this.renderTransform.current.copyFrom(this.root.position);
+    }
+
+    restoreRenderTransform() {
+        if (!this.renderTransform || !this._renderTransformSynced) return;
+        this.root.position.copyFrom(this.renderTransform.current);
     }
 
     // [JITTER_DEBUG] 检测位置突变（抖动）和振荡

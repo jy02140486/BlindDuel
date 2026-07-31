@@ -75,6 +75,12 @@ export class TimelineSequencer {
             if (actor && "controlledBySequence" in actor) {
                 actor.controlledBySequence = false;
             }
+            if (actor && "supportsRenderSampling" in actor) {
+                actor.supportsRenderSampling = false;
+                if ("_renderTransformSynced" in actor) {
+                    actor._renderTransformSynced = false;
+                }
+            }
         }
     }
 
@@ -438,6 +444,9 @@ const ACTION_HANDLERS = {
             if ("controlledBySequence" in actor) {
                 actor.controlledBySequence = true;
             }
+            if ("supportsRenderSampling" in actor) {
+                actor.supportsRenderSampling = true;
+            }
             console.log(`[TimelineSeq] moveActorTo START from (${state.startX.toFixed(2)}, ${state.startY.toFixed(2)}) → (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) durationMs=${clip.durationMs}`);
         },
         sample(ctx, clip, state, time) {
@@ -464,6 +473,12 @@ const ACTION_HANDLERS = {
             if ("controlledBySequence" in actor) {
                 console.log(`[TimelineSeq] moveActorTo END: controlledBySequence=false for ${actor.id ?? actor.name}`);
                 actor.controlledBySequence = false;
+            }
+            if ("supportsRenderSampling" in actor) {
+                actor.supportsRenderSampling = false;
+                if ("_renderTransformSynced" in actor) {
+                    actor._renderTransformSynced = false;
+                }
             }
             if (typeof actor.setMoveIntent === "function") {
                 actor.setMoveIntent({ x: 0, y: 0 });
@@ -494,6 +509,9 @@ const ACTION_HANDLERS = {
             if ("controlledBySequence" in actor) {
                 actor.controlledBySequence = true;
             }
+            if ("supportsRenderSampling" in actor) {
+                actor.supportsRenderSampling = true;
+            }
             const speedSource = state.useClipSpeed ? `clip(${state.clipSpeed})` : "actor.getEffectiveSpeed";
             console.log(`[TimelineSeq] moveActorByDirection START dir=(${state.nx.toFixed(3)},${state.ny.toFixed(3)}) durationMs=${clip.durationMs} speedSource=${speedSource}`);
         },
@@ -521,6 +539,12 @@ const ACTION_HANDLERS = {
             }
             if ("controlledBySequence" in actor) {
                 actor.controlledBySequence = false;
+            }
+            if ("supportsRenderSampling" in actor) {
+                actor.supportsRenderSampling = false;
+                if ("_renderTransformSynced" in actor) {
+                    actor._renderTransformSynced = false;
+                }
             }
             console.log(`[TimelineSeq] moveActorByDirection END finalPos=(${finalX.toFixed(2)},${finalY.toFixed(2)})`);
         }

@@ -142,7 +142,7 @@
             "name": "rabble_stick",
             "kind": "enemy",
             "pos": [1, 0, 0],
-            "controller": "dummy",
+            "controller": "ai",
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
         },
         {

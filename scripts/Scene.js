@@ -421,13 +421,45 @@ export class Scene {
             // moveActorTo 写了位置但 animation.fixedUpdate 不跑 → 单帧平移
             // newScene.init 期间 sequencer 不 busy，跳过避免访问已 dispose 的旧 entity
             if (sceneSequencer?.isBusy() && this._game?.gameModeManager) {
+                this._restoreEntityPositions();
                 this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
+                this._snapshotEntityPositions();
             }
             return;
         }
 
         sceneSequencer.fixedUpdate(clock);
+        this._restoreEntityPositions();
         this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
+        this._snapshotEntityPositions();
+    }
+
+    _restoreEntityPositions() {
+        if (!this.entityPool) return;
+        for (const entity of this.entityPool) {
+            if (!entity?.renderTransform || entity.supportsRenderSampling) continue;
+            entity.restoreRenderTransform?.();
+        }
+    }
+
+    _snapshotEntityPositions() {
+        if (!this.entityPool) return;
+        for (const entity of this.entityPool) {
+            if (!entity?.renderTransform || entity.supportsRenderSampling) continue;
+            entity.snapshotRenderTransform?.();
+        }
+    }
+
+    _interpolateEntities(renderAlpha) {
+        if (!this.entityPool) return;
+        for (const entity of this.entityPool) {
+            if (!entity?.renderTransform || entity.supportsRenderSampling) continue;
+            if (!entity._renderTransformSynced) continue;
+            const prev = entity.renderTransform.previous;
+            const curr = entity.renderTransform.current;
+            entity.root.position.x = prev.x + (curr.x - prev.x) * renderAlpha;
+            entity.root.position.y = prev.y + (curr.y - prev.y) * renderAlpha;
+        }
     }
 
     updateRender(clock) {
@@ -442,8 +474,9 @@ export class Scene {
             if (sceneSequencer) sceneSequencer.updateRender(dtMs);
             return;
         }
-        this._game.gameModeManager.updateRender(dtMs);
         sceneSequencer.sample(clock.renderTime);
+        this._interpolateEntities(clock.renderAlpha);
+        this._game.gameModeManager.updateRender(dtMs);
         sceneSequencer.updateRender(dtMs);
         if (cameraManager) {
             cameraManager.update(dtMs, this.sharedContext);
