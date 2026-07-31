@@ -131,7 +131,7 @@ export const BATTLE_FIELD_1 = {
                 binding: { cameraId: "duel" },
                 channel: "blend",
                 clips: [
-                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 2, orthoWidth: 20 },
+                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offsetZ: 0, lerp: 0.12, height: 2, orthoWidth: 20 },
                    { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
                    
                    { type: "cameraBlend", startMs: 500, durationMs: 1800, to: "duel" }

@@ -10,7 +10,6 @@ export class ScriptedCameraRig {
     }
 
     enter(ctx) {
-        this._followTarget = null;
         const state = ctx?.cameraManager?.state;
         if (state) {
             this._center.copyFrom(state.target);

@@ -1,4 +1,5 @@
 import { Game } from "./scripts/Game.js";
+import { FrameClock } from "./scripts/Systems/FrameClock.js";
 import { SCENARIO } from "./Data/ScenarioMilestones.js";
 
 async function start() {
@@ -23,23 +24,24 @@ async function start() {
         }
     });
 
-    const FIXED_DT = 1000 / 60;
-    let accumulator = 0;
-    let tickCount = 0;
+    const clock = new FrameClock(1000 / 60);
 
     engine.runRenderLoop(() => {
+     try {
         const dtMs = engine.getDeltaTime();
-        accumulator += dtMs;
-        if (accumulator > 100) accumulator = 100;
+        clock.advance(dtMs);
 
-        while (accumulator >= FIXED_DT) {
-            tickCount++;
-            game.fixedUpdate(FIXED_DT, tickCount);
-            accumulator -= FIXED_DT;
+        while (clock.stepFixed()) {
+            game.fixedUpdate(clock);
         }
 
-        game.updateRender(dtMs);
+        clock.refreshRender();
+        game.updateRender(clock);
         game.render();
+
+     } catch (e) {
+        console.error("[runRenderLoop] EXCEPTION:", e);
+     }
     });
 
     await game.init();

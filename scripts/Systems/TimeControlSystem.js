@@ -1,3 +1,17 @@
+/**
+ * TimeControlSystem — Character Temporal Effects（角色级冻结/停滞状态机）
+ *
+ * 职责：管理单个 CombatCharacter 的 hitstop / blockstun / hitstun / impactContext
+ * （整数帧计数），与全局 FrameClock 完全正交。
+ *
+ * 与 FrameClock 的关系：
+ * - 不自己读 clock，通过 tick(character, dtMs, tickCount) 参数注入
+ *   （dtMs 来源 = caller 传入的 clock.fixedDeltaMs）
+ * - 每个 CombatCharacter 实例自己持有一个 TimeControlSystem
+ * - 全局暂停（clock.paused）由 FrameClock 控制，本系统不感知
+ *
+ * 详见 plans/统一时间源与 Render 采样架构设计.MD §5
+ */
 import { ImpactContext } from "../Components/TimeControlComponent.js";
 
 export class TimeControlSystem {

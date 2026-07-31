@@ -4,6 +4,13 @@
 
 ---
 
+## Update Log (2026-07-31)
+- 统一时间源与 Render 采样架构 Phase 1-2 落地：新增 `FrameClock.js`（全游戏唯一时钟，Hybrid 模型），主循环改用 `advance/stepFixed/refreshRender`；TimelineSequencer + CameraManager 采样化改造（`sample(renderTime)` 纯函数求值，moveActorTo/cameraBlend 改 onEnter/sample/onExit 三段式）；TimeControlSystem 与 FrameClock 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`
+- 相机 Blend 时序 bug 修复：`TimelineSequencer.justCrossedEnd` 边界条件 `>` 改 `>=`，解决相邻 cameraBlend 端点相接（blend1.endMs == blend2.startMs）时 overlap 导致 blend2.sample 失效的问题（prologue enter_battle 第二个 blend 不执行、flee 序列下移有概率丢失的根因）
+- Mode 切换设计规范落地（设计稿 §6.5）：`switchMode` clip 必须放 sequence 末尾；`BattleMode.enter` 在 sequence 期间跳过 `switchRig`（由 cameraBlend clip 的 endBlend 独占）；`DuelCameraRig.compute` 在 `fighterDistance==null` 时 return prevState hold（窗口期防 drift）
+- 文档同步：`docs/TimelineSequencer User Guide.md` §5.3/§5.9 更新时序约定与 switchMode 规范；`PROJECT_CONTEXT.md` §3 加 FrameClock.js、§6 加规范第 16/17 条、§9.2 主循环链路更新
+- Phase 3（Render 插值）暂不实施，等进出战斗 bug 验证通过后再考虑
+
 ## Update Log (2026-07-26)
 - Audio System 设计稿归档：`plans/AudioSystemDesign.MD` → `plans/archived/AudioSystemDesign.MD`。Step 1-5 全部实现（AudioManager/AudioDatabase/AudioPool/AudioPlayer/MusicPlayer/AmbientPlayer/AudioBus），无后续 Step；原 §8「与 Animation 集成」由新设计稿接管
 - 新建设计稿 `plans/AnimationEventSystemDesign.MD`：将动画帧事件机制从 Audio 子系统独立为通用 AnimationEvent 系统，采用三层架构（Animation → AnimationEvent → Presentation Systems），Audio 作为第一阶段唯一消费者。决策点已确认：A1 资源组织（Data/AnimationEvents/<char>/*.events.json sidecar 模式，与 atlas 对齐覆盖单 clip 文件与多 clip 文件两种形态）；B1 新建 AnimationEventBus（与 GameplayEventBus 语义边界分离）；C1 字段名 `type`；D1 `id` 仅作 type 参数；E1 第一阶段 `type === audioId` 简化策略；F1 引入 bus；G1 独立文档；H1 Step 6 拆分为 6a（AnimationEvent 系统）+ 6b（Audio 消费接入）；I1 先 footstep + swing 验证。Schema 统一 `clips` 嵌套形态覆盖战斗角色单 clip 文件与 NPC 多 clip 文件；事件 payload 不携带消费者语义；不引入 `enableHitbox`/`disableHitbox` 类型避免与 `attackActiveFrames` 双源真相
@@ -158,7 +165,9 @@
 - **PropEntity**：过场动画道具实体，hold/loop 双模式，不进 NpcController/staticBlockers/interactables
 - **同伴 NPC**：Charlotte + FollowingBehavior，基于距离的动态速度调整，cutscene 末尾 callback 激活跟随
 - **cutsceneInvokers**：SceneDef 数据驱动 cutscene 触发（condition + sequenceUrl + flagOnPlay），替代硬编码
-- **TimelineSequencer**：多 track + 12 种 clip 类型（command/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
+- **统一时间源架构**：`FrameClock`（全游戏唯一时钟）+ TimelineSequencer/CameraManager 采样化（`sample(renderTime)`）；TimeControlSystem 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，Phase 1-2 已落地，Phase 3（Render 插值）待实施
+- **Mode 切换规范**：`switchMode` clip 必须放 sequence 末尾；sequence 期间 mode.enter 不碰 rig（由 cameraBlend clip 负责）；rig.compute 在上下文未就绪时 hold（安全网）。设计稿 §6.5
+- **TimelineSequencer**：多 track + 14 种 clip 类型（command/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble/moveActorByDirection/playAudio）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
 - **sequencer 期间 ExploreMode 门控**：`isBusy()` 期间 NpcController greeting 不触发、`#updateDialogueBubble` 不接管气泡生命周期、`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp；气泡显隐完全由 `dialogueBubble` clip 控制
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
 - `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通

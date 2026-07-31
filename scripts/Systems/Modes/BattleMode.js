@@ -24,7 +24,14 @@ export class BattleMode extends BaseMode {
                 .filter(Boolean);
         }
 
-        cameraManager?.switchRig("duel");
+        // 设计规范（见 plans/统一时间源与 Render 采样架构设计.MD §6.5）：
+        // sequence 期间 rig 切换由 cameraBlend clip 的 endBlend 全权负责，mode.enter 不重复切 rig，
+        // 避免 enter 的 switchRig 与 blend 的 switchRig 互相覆盖。非 sequence 直接进战斗时照常 switchRig。
+        if (this.context.sceneSequencer?.isBusy?.()) {
+            console.log(`[BattleMode] enter during sequence — skip switchRig (cameraBlend clip owns rig switch)`);
+        } else {
+            cameraManager?.switchRig("duel");
+        }
 
         const { stageBoundary } = this.context;
         if (stageBoundary && this._battleDef?.stageBounds) {

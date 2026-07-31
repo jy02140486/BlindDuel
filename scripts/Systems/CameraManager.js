@@ -73,7 +73,8 @@ export class CameraManager {
             durationMs: 0,
             fromState: null,
             toState: null,
-            toRigId: null
+            toRigId: null,
+            sampleDriven: false
         };
         this._effects = [];
 
@@ -127,11 +128,11 @@ export class CameraManager {
             return false;
         }
         if (this.activeRigId === nextRigId) {
-            console.log(`[CameraManager] switchRig "${nextRigId}" — already active, skip`);
+            console.log(`[CAM_BLEND_DBG] switchRig "${nextRigId}" — already active, skip`);
             return true;
         }
 
-        console.log(`[CameraManager] switchRig "${this.activeRigId}" → "${nextRigId}"`);
+        console.log(`[CAM_BLEND_DBG] switchRig "${this.activeRigId}" → "${nextRigId}"`);
 
         if (this.activeRig && typeof this.activeRig.exit === "function") {
             this.activeRig.exit(this.context);
@@ -153,7 +154,14 @@ export class CameraManager {
         const _blendActiveAtStart = this._blend.active;
         let baseState;
         if (this._blend.active) {
-            baseState = this._updateBlend(dtMs);
+            if (this._blend.sampleDriven) {
+                // timeline 路径：sample 已通过 updateBlend(t) 写入 this.state，这里只 clone
+                baseState = _cloneState(this.state);
+            } else {
+                // step-based 路径：无 sample 调用，靠 _updateBlend(dtMs) 推进并写入 this.state
+                this.state = this._updateBlend(dtMs);
+                baseState = _cloneState(this.state);
+            }
         } else if (this.activeRig && typeof this.activeRig.compute === "function") {
             baseState = this.activeRig.compute(dtMs, frameCtx, this.state);
         } else {
@@ -240,7 +248,7 @@ export class CameraManager {
 
         const fromState = _cloneState(this.state);
 
-        console.log(`[CameraManager] startBlend to="${toRigId}" durationMs=${durationMs} fromPos=(${fromState.pos.x.toFixed(2)},${fromState.pos.y.toFixed(2)},${fromState.pos.z.toFixed(2)}) fromTarget=(${fromState.target.x.toFixed(2)},${fromState.target.y.toFixed(2)},${fromState.target.z.toFixed(2)})`);
+        console.log(`[CAM_BLEND_DBG] startBlend to="${toRigId}" durationMs=${durationMs} fromPos=(${fromState.pos.x.toFixed(2)},${fromState.pos.y.toFixed(2)},${fromState.pos.z.toFixed(2)}) fromActiveRig=${this.activeRigId}`);
 
         const computeCtx = frameCtx || this.context;
         let toState;
@@ -250,7 +258,7 @@ export class CameraManager {
             toState = _cloneState(fromState);
         }
 
-        console.log(`[CameraManager] startBlend toPos=(${toState.pos.x.toFixed(2)},${toState.pos.y.toFixed(2)},${toState.pos.z.toFixed(2)}) toTarget=(${toState.target.x.toFixed(2)},${toState.target.y.toFixed(2)},${toState.target.z.toFixed(2)})`);
+        console.log(`[CAM_BLEND_DBG] startBlend toPos=(${toState.pos.x.toFixed(2)},${toState.pos.y.toFixed(2)},${toState.pos.z.toFixed(2)}) toTarget=(${toState.target.x.toFixed(2)},${toState.target.y.toFixed(2)},${toState.target.z.toFixed(2)})`);
 
         const blend = this._blend;
         blend.active = true;
@@ -266,6 +274,23 @@ export class CameraManager {
 
     isBlending() {
         return this._blend.active;
+    }
+
+    updateBlend(t) {
+        if (!this._blend.active) return;
+        this._blend.sampleDriven = true;
+        const s = this._blend.easing(Math.min(t, 1));
+        this.state = _lerpState(this._blend.fromState, this._blend.toState, s);
+    }
+
+    endBlend() {
+        if (!this._blend.active) return;
+        console.log(`[CAM_BLEND_DBG] endBlend → switchRig "${this._blend.toRigId}"`);
+        this._blend.active = false;
+        this._blend.sampleDriven = false;
+        if (this._blend.toRigId) {
+            this.switchRig(this._blend.toRigId);
+        }
     }
 
     toggleProjection() {

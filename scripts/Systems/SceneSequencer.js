@@ -83,14 +83,16 @@ export class SceneSequencer {
         this._timelineSequencer.clear();
     }
 
-    fixedUpdate(dtMs, tickCount) {
+    fixedUpdate(clock) {
         if (this._timelineSequencer.isBusy()) {
-            this._timelineSequencer.fixedUpdate(dtMs, tickCount);
+            this._timelineSequencer.fixedUpdate(clock);
             return;
         }
 
         if (!this._busy) return;
 
+        const dtMs = clock.fixedDeltaMs;
+        const tickCount = clock.tick;
         const step = this._sequence.steps[this._stepIndex];
         const done = this._updateStep(step, dtMs, tickCount);
 
@@ -111,6 +113,12 @@ export class SceneSequencer {
 
     updateRender(dtMs) {
         // blend 更新已合并到 CameraManager.update()，由 Scene.updateRender() 统一调用
+    }
+
+    sample(renderTimeMs) {
+        if (this._timelineSequencer.isBusy()) {
+            this._timelineSequencer.sample(renderTimeMs);
+        }
     }
 
     _startCurrentStep(payload) {

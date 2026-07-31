@@ -4,6 +4,7 @@ export class TimelineSequencer {
         this.timeline = null;
         this.currentTimeMs = 0;
         this.busy = false;
+        this.sequenceStartGameTime = null;
         this.activeClipStates = new Map();
         this.firedEventClipIds = new Set();
         this._firedAudioClips = new Map();
@@ -25,6 +26,7 @@ export class TimelineSequencer {
         this.timeline = timeline;
         this.currentTimeMs = 0;
         this.busy = true;
+        this.sequenceStartGameTime = null;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
         this._firedAudioClips.clear();
@@ -61,6 +63,7 @@ export class TimelineSequencer {
         this.busy = false;
         this.timeline = null;
         this.currentTimeMs = 0;
+        this.sequenceStartGameTime = null;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
         this._firedAudioClips.clear();
@@ -92,14 +95,17 @@ export class TimelineSequencer {
         this.stop();
     }
 
-    fixedUpdate(dtMs, tickCount) {
+    fixedUpdate(clock) {
         if (!this.busy) return;
 
-        const timeline = this.timeline;
-        const prevTimeMs = this.currentTimeMs;
-        this.currentTimeMs += dtMs;
+        if (this.sequenceStartGameTime === null) {
+            this.sequenceStartGameTime = clock.fixedTime;
+        }
 
-        //console.log(`[TimelineSeq] tick prev=${prevTimeMs.toFixed(1)} cur=${this.currentTimeMs.toFixed(1)} dt=${dtMs.toFixed(2)} activeClips=${this.activeClipStates.size}`);
+        const timeline = this.timeline;
+        const dtMs = clock.fixedDeltaMs;
+        const prevTimeMs = this.currentTimeMs;
+        this.currentTimeMs = clock.fixedTime - this.sequenceStartGameTime;
 
         for (const track of timeline.tracks) {
             for (const clip of track.clips) {
@@ -112,6 +118,27 @@ export class TimelineSequencer {
                 this._onLoop();
             } else {
                 this._onComplete();
+            }
+        }
+    }
+
+    sample(renderTimeMs) {
+        if (!this.busy || this.sequenceStartGameTime === null) return;
+        const localTime = renderTimeMs - this.sequenceStartGameTime;
+
+        for (const [clipId, state] of this.activeClipStates) {
+            const clip = state.clip;
+            const handler = this._getHandler(clip.type);
+            if (handler && typeof handler.sample === "function") {
+                const isEvent = "atMs" in clip;
+                const startMs = isEvent ? clip.atMs : clip.startMs;
+                const clipLocalTime = localTime - startMs;
+                if (clipLocalTime < 0) continue;
+                try {
+                    handler.sample(this.context, clip, state, clipLocalTime);
+                } catch (e) {
+                    console.error(`[TimelineSequencer] sample error for clip ${clipId}:`, e);
+                }
             }
         }
     }
@@ -135,6 +162,7 @@ export class TimelineSequencer {
         this.firedEventClipIds.clear();
         this._firedAudioClips.clear();
         this.currentTimeMs = 0;
+        this.sequenceStartGameTime = null;
         console.log(`[TimelineSequencer] loop: ${this.timeline.id}`);
     }
 
@@ -165,6 +193,7 @@ export class TimelineSequencer {
         this.busy = false;
         this.timeline = null;
         this.currentTimeMs = 0;
+        this.sequenceStartGameTime = null;
         this.activeClipStates.clear();
         this.firedEventClipIds.clear();
         this._firedAudioClips.clear();
@@ -178,8 +207,10 @@ export class TimelineSequencer {
 
         const wasActive = this.activeClipStates.has(clipId);
         const isNowActive = currentTimeMs >= startMs && currentTimeMs < endMs;
-        const justCrossedStart = prevTimeMs <= startMs && currentTimeMs > startMs;
-        const justCrossedEnd = prevTimeMs <= endMs && currentTimeMs > endMs;
+        const justCrossedStart = prevTimeMs <= startMs && currentTimeMs >= startMs;
+        // 边界含等号：确保 blend1.endMs == blend2.startMs 时 blend1 在该帧 END、blend2 同帧 START，
+        // 避免两者 overlap 后 blend1.endBlend 误关 _blend.active 导致 blend2.sample 失效
+        const justCrossedEnd = prevTimeMs <= endMs && currentTimeMs >= endMs;
 
         if (isEvent) {
             if (justCrossedStart && !this.firedEventClipIds.has(clipId)) {
@@ -236,7 +267,7 @@ export class TimelineSequencer {
             const state = this.activeClipStates.get(clipId);
             const localMs = currentTimeMs - startMs;
             const handler = this._getHandler(clip.type);
-            if (handler && typeof handler.update === "function") {
+            if (handler && typeof handler.update === "function" && typeof handler.sample !== "function") {
                 try {
                     const keepActive = handler.update(this.context, clip, state, localMs, dtMs);
                     if (keepActive === false) {
@@ -393,13 +424,15 @@ const ACTION_HANDLERS = {
                 return;
             }
             state.actor = actor;
-            // 可选 startPos：override 起始位置（在设 controlledBySequence 之前写，避免被 walkArea clamp）
+            // onEnter 不写 actor.position（即使是 startPos override 也不写）
+            // startPos 作为 sample(t=0) 的起点，由 sample 写入，避免 start 时序跳变
             if (Array.isArray(clip.startPos)) {
-                actor.root.position.x = clip.startPos[0];
-                actor.root.position.y = clip.startPos[1];
+                state.startX = clip.startPos[0];
+                state.startY = clip.startPos[1];
+            } else {
+                state.startX = actor.root.position.x;
+                state.startY = actor.root.position.y;
             }
-            state.startX = actor.root.position.x;
-            state.startY = actor.root.position.y;
             state.targetX = clip.x ?? state.startX;
             state.targetY = clip.y ?? state.startY;
             if ("controlledBySequence" in actor) {
@@ -407,12 +440,12 @@ const ACTION_HANDLERS = {
             }
             console.log(`[TimelineSeq] moveActorTo START from (${state.startX.toFixed(2)}, ${state.startY.toFixed(2)}) → (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) durationMs=${clip.durationMs}`);
         },
-        update(ctx, clip, state, localMs, dtMs) {
-            if (state.invalid) return false;
+        sample(ctx, clip, state, time) {
+            if (state.invalid) return;
             const actor = state.actor;
             const durationMs = clip.durationMs || 1;
-            const t = Math.min(localMs / durationMs, 1);
-            const easedT = clip.easing === "linear" ? t : t;
+            const t = Math.min(time / durationMs, 1);
+            const easedT = t;
 
             actor.root.position.x = state.startX + (state.targetX - state.startX) * easedT;
             actor.root.position.y = state.startY + (state.targetY - state.startY) * easedT;
@@ -423,28 +456,11 @@ const ACTION_HANDLERS = {
             if (dist > 0.001 && typeof actor.setMoveIntent === "function") {
                 actor.setMoveIntent({ x: dx / dist, y: dy / dist });
             }
-
-            return t < 1;
         },
         end(ctx, clip, state) {
             if (state.invalid) return;
             const actor = state.actor;
-            const beforeX = actor.root.position.x;
-            const beforeY = actor.root.position.y;
-            actor.root.position.x = state.targetX;
-            actor.root.position.y = state.targetY;
-
-            const snapDx = state.targetX - beforeX;
-            const snapDy = state.targetY - beforeY;
-            const snapDist = Math.sqrt(snapDx * snapDx + snapDy * snapDy);
-
-            console.log(`[TimelineSeq] moveActorTo END snap to (${state.targetX.toFixed(2)}, ${state.targetY.toFixed(2)}) snapDelta=(${snapDx.toFixed(4)},${snapDy.toFixed(4)}) dist=${snapDist.toFixed(4)}`);
-
-            // [JITTER_DEBUG] 如果 snap 距离过大，记录警告
-            if (snapDist > 0.1) {
-                console.warn(`[TimelineSeq] moveActorTo WARN: large snap distance ${snapDist.toFixed(4)} actor=${actor.id ?? actor.name} - this may cause visual jitter. Consider increasing durationMs or adding easing.`);
-            }
-
+            // onExit 不 snap（sample 在 time=duration 时已算到 target）
             if ("controlledBySequence" in actor) {
                 console.log(`[TimelineSeq] moveActorTo END: controlledBySequence=false for ${actor.id ?? actor.name}`);
                 actor.controlledBySequence = false;
@@ -532,7 +548,10 @@ const ACTION_HANDLERS = {
                 return;
             }
 
-            console.log(`[TimelineSeq] cameraBlend START to="${toRigId}" durationMs=${clip.durationMs} activeRig=${cameraManager.activeRigId}`);
+            // 用 fixedTime 而非 renderTime，避免 blend 起点因子帧小数漂移
+            state.startGameTime = ctx.clock ? ctx.clock.fixedTime : 0;
+
+            console.log(`[TimelineSeq] cameraBlend START to="${toRigId}" durationMs=${clip.durationMs} activeRig=${cameraManager.activeRigId} startGameTime=${state.startGameTime.toFixed(1)}`);
 
             const { character, rabbleStick } = ctx;
             let frameCtx = null;
@@ -567,17 +586,24 @@ const ACTION_HANDLERS = {
             state.cameraManager = cameraManager;
             state.invalid = !ok;
         },
-        update(ctx, clip, state, localMs, dtMs) {
-            if (state.invalid) return false;
-            const blending = state.cameraManager?.isBlending() ?? false;
-            //console.log(`[TimelineSeq] cameraBlend UPDATE localMs=${localMs.toFixed(1)} isBlending=${blending} activeRig=${state.cameraManager?.activeRigId}`);
-            return blending;
+        sample(ctx, clip, state, time) {
+            if (state.invalid) return;
+            const cm = state.cameraManager;
+            if (!cm || typeof cm.updateBlend !== "function") return;
+            const t = Math.min(time / (clip.durationMs || 1), 1);
+            if (!state._loggedFirstSample) {
+                state._loggedFirstSample = true;
+                console.log(`[CAM_BLEND_DBG] sample FIRST to="${clip.to}" t=${t.toFixed(3)} blendActive=${cm._blend.active} sampleDriven=${cm._blend.sampleDriven}`);
+            }
+            cm.updateBlend(t);
         },
         end(ctx, clip, state) {
             console.log(`[TimelineSeq] cameraBlend END activeRig=${state.cameraManager?.activeRigId}`);
             const cm = state.cameraManager;
-            if (cm && typeof cm.isBlending === "function" && cm.isBlending()) {
-                console.warn(`[TimelineSeq] WARN: cameraBlend clip ended but CameraManager.isBlending()=true (blend not COMPLETE). toRig=${clip.to} durationMs=${clip.durationMs}. This usually means clip.durationMs < actual blend duration, or sequence ended before blend finished. Camera will snap on next switchRig.`);
+            if (cm && typeof cm.endBlend === "function") {
+                cm.endBlend();
+            } else if (cm && typeof cm.isBlending === "function" && cm.isBlending()) {
+                console.warn(`[TimelineSeq] WARN: cameraBlend clip ended but CameraManager.isBlending()=true. Camera will snap on next switchRig.`);
             }
         }
     },
@@ -635,7 +661,7 @@ const ACTION_HANDLERS = {
                     const opponentPos = rabbleStick.root.position;
                     const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
                     payload = { ...(payload || {}), fighterDistance };
-                    console.log(`[TimelineSeq] switchMode fighterDistance=${fighterDistance.toFixed(2)}`);
+                    console.log(`[CAM_BLEND_DBG] switchMode fighterDistance=${fighterDistance.toFixed(2)}`);
                 } else {
                     console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
                 }

@@ -45,6 +45,7 @@ py -m http.server 9000 --bind 127.0.0.1
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
 - 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
+- 帧时钟（权威时间源）：`scripts/Systems/FrameClock.js`（全游戏唯一时钟，Hybrid 模型 fixedTime + accumulator，详见 `plans/统一时间源与 Render 采样架构设计.MD`）
 - 时间控制系统：`scripts/Systems/TimeControlSystem.js`
 - 游戏模式管理器：`scripts/Systems/GameModeManager.js`
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）
@@ -142,6 +143,8 @@ py -m http.server 9000 --bind 127.0.0.1
 13. Scene 不再持有稳定对象别名字段（cameraManager/cameraRig/playerController 等），业务方法统一通过 `this._game.xxx` 或 `this.sharedContext.xxx` 访问；稳定对象生命周期归 Game。
 14. CharacterBase 有 `controlledBySequence` 标记：sequencer 的 moveActorTo 期间设 true，阻止 controller 覆盖 moveIntent 和 transition 评估，同时 `_applyMovement` 开头加守卫跳过 frameSpeeds/stateSpeed/moveIntent 三个位移分支，确保 sequencer 期间 position 写入来源唯一（只有 moveActorTo 的绝对设置），消除位置双写。`ExploreCollisionSystem.resolveMovement` 也加同样守卫，sequencer 期间跳过 staticBlockers 推开 + walkArea clamp（避免 moveActorTo 走到 walkArea 边界外被钳回）。NpcCharacter/PropEntity 不需要该标记（无 transition 覆盖问题），但 NpcCharacter 的 idle/following 行为由 IdleBehavior/FollowingBehavior 数据驱动（idle clip 配置在 NpcDef）。
 15. sequencer 期间 ExploreMode 子系统门控：`sceneSequencer.isBusy()` 期间，①`NpcController.update` 的 idle→greeting 转换跳过（避免气泡误触）②`ExploreMode.#updateDialogueBubble` 跳过（避免把 sequencer 显式 show 的气泡误 hide）③`moveActorTo` 的 `controlledBySequence` 标记让 ExploreCollisionSystem 早退。气泡的显隐完全由 `dialogueBubble` clip 控制（见 TimelineSequencer 文档 §5.12），位置更新照常跑（视锥剔除正常生效，NPC 出相机视野时气泡自动隐藏）。
+16. **Mode 切换 clip 位置规范**（设计文档 §6.5）：涉及 mode 变化的 sequence，`switchMode` clip 必须放在末尾（`atMs == durationMs`），禁止放中间。配套机制：① sequence 期间 `BattleMode.enter` 不调 `switchRig`（由 `cameraBlend` clip 的 endBlend 负责）；② `DuelCameraRig.compute` 在 `fighterDistance==null`（mode 未 enter）时 return prevState hold。三者配套，缺一不可。窗口期（blend.endMs → switchMode.atMs）相机定格在 blend 终值，属 cinematic 定格语义。
+17. **统一时间源架构**（设计文档 §7 阶段 1-2 已落地）：全游戏唯一 `FrameClock` 实例（`scripts/Systems/FrameClock.js`），主循环走 `advance/stepFixed/refreshRender`；TimelineSequencer 与 CameraManager 改造为采样化（`sample(renderTime)` 纯函数求值），moveActorTo/cameraBlend handler 改为 `onEnter/sample/onExit` 三段式。TimeControlSystem 与 FrameClock 正交（参数注入 `clock.fixedDelta`，不读 clock 内部状态）。
 
 ## 7. 当前文件结构
 > 文件清单见 §3「当前目录与关键文件」（含职责说明），不再单独维护树形结构，避免双份不同步。
@@ -190,21 +193,22 @@ Game (scripts/Game.js)
 
 ### 9.2 主循环
 ```
-character_demo.js
-  -> Scene.fixedUpdate()
-     -> SceneSequencer.fixedUpdate()
-     -> GameModeManager.fixedUpdate()
+character_demo.js (主循环: clock.advance → while(stepFixed) fixedUpdate → refreshRender → updateRender)
+  -> Scene.fixedUpdate(clock)
+     -> SceneSequencer.fixedUpdate(clock)   // 内部 TimelineSequencer 读 clock.fixedTime 推进
+     -> GameModeManager.fixedUpdate(dtMs, tickCount)   // surgical: Scene 从 clock 提取后转传
         -> ExploreMode/BattleMode.fixedUpdate()
            -> InputSystem (scripts/Systems/InputSystem.js)
            -> PlayerController / AIController / NpcController
            -> CombatSystem.fixedUpdate()
-  -> Scene.updateRender()
+  -> Scene.updateRender(clock)
+     -> SceneSequencer.sample(clock.renderTime)   // 采样型 clip 求值（cameraBlend/moveActorTo）
      -> GameModeManager.updateRender()
         -> ExploreMode/BattleMode.updateRender()
            -> 写 context.target / basePosition
            -> SceneVisualSystem.update()
      -> CameraManager.update()
-        -> activeRig.compute()
+        -> activeRig.compute()  // 或 _blend.sampleDriven 路径（timeline 采样）
         -> _applyToBabylonCamera()
      -> audioManager.update(deltaTime)  // Game 持有，Scene 调用；第一阶段空实现（设计稿 C1）
 ```

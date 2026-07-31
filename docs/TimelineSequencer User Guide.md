@@ -121,7 +121,8 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **时序约定（重要）**：
 - clip 的 `endMs = startMs + durationMs` 必须 ≤同 track 上后续依赖此 blend 结果的 clip 的 `atMs`/`startMs`
-- 特别是切战斗场景：`cameraBlend(to=duel)` 的 `endMs` 应 ≤ `switchMode(modeId=battle)` 的 `atMs`，否则 blend 未完成就被 BattleMode.enter 打断，触发 `cameraBlend clip ended but CameraManager.isBlending()=true` 警告
+- 切战斗场景的 switchMode 位置规范见 §5.9（必须放 sequence 末尾）；`BattleMode.enter` 已解耦，sequence 期间不调 `switchRig`，不会打断进行中的 blend
+- 相邻 cameraBlend 端点相接（`blend1.endMs == blend2.startMs`）能正常交接，无需刻意留 gap；同帧内 blend1 先 END、blend2 后 START（clip 按 track 内数组顺序处理）
 - `timeline.durationMs` 必须 ≥ 所有 clip 的 `endMs`，否则触发 `sequence durationMs reached, but N clip(s) still active` 警告
 - blend 期间角色位置会变化，`toState` 是 `startBlend` 时的静态快照，不要指望 blend 自动追踪实时位置；blend 时长越长，快照越过时
 - `to: "explore"` 时自动用 hero 当前位置作为 target
@@ -242,6 +243,18 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 |------|------|------|
 | `modeId` | string | `"battle"` / `"explore"` |
 | `payload` | object | 传给 mode.enter() 的 payload（battle 需带 `battleDef`） |
+
+**设计规范（重要）：switchMode 必须放在 sequence 末尾**
+- `atMs` 应等于 `timeline.durationMs`，禁止放在 sequence 中间
+- 理由：mode 变化意味着 gameplay 语义切换（探索↔战斗），放末尾 = “先演再打”，cinematic 期间 gameplay 语义保持旧 mode，语义清晰
+- 放中间会引入“上下文未就绪窗口”：新 mode 的 `rig.compute` 依赖新 mode 写入的 context（如 BattleMode 的 `fighterDistance`），但 `mode.enter` 在 switchMode 触发时才执行，窗口期 `rig.compute` 拿到缺失值导致相机 drift
+
+**配套支撑机制**（确保末尾规范稳定，不依赖跨 track 精确数值对齐）：
+1. **mode.enter 解耦**：sequence 期间 `BattleMode.enter` 检查 `sceneSequencer.isBusy()`，busy 时跳过 `switchRig`（rig 切换由 `cameraBlend` clip 的 `endBlend` 独占），消除 enter 与 blend 互相覆盖
+2. **rig.compute 安全网**：`DuelCameraRig.compute` 在 `fighterDistance == null`（mode 未 enter）时 return prevState 克隆 hold，窗口期相机定格在 blend 终值，不 drift
+3. **窗口期语义**：`blend.endMs` → `switchMode.atMs` 之间相机 hold（不跟随角色），属于 cinematic 定格语义，不是 bug；switchMode fire 后 mode.enter 写上下文，`rig.compute` 恢复正常 follow
+
+详见 `plans/统一时间源与 Render 采样架构设计.MD` §6.5。
 
 **自动注入字段（modeId=battle）**：
 - handler 会自动算 `character` 与 `rabbleStick` 的 x 距离，作为 `fighterDistance` 注入 payload

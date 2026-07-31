@@ -104,10 +104,11 @@ export class DuelCameraRig {
     compute(dtMs, context, prevState) {
         const basePosition = context?.basePosition;
         const target = context?.target;
-        const fighterDistance = context?.fighterDistance ?? 0;
+        const fighterDistance = context?.fighterDistance;
 
-        if (!basePosition || !target) {
-            // FALLBACK：frameCtx 无 basePosition/target 时返回 prevState 克隆，避免从默认值跳变
+        // 安全网（设计文档 §6.5）：mode 上下文未就绪时（BattleMode 未 enter，fighterDistance 未写入）
+        // hold 上一帧状态，不 fallback 到 0 导致 zoomT→0 漂移。窗口期相机定格在 blend 终值。
+        if (!basePosition || !target || fighterDistance == null) {
             return prevState ? this.#stateFromPrev(prevState) : this.#defaultState();
         }
 

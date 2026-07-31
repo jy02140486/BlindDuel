@@ -38,6 +38,7 @@ export class Game {
     constructor(engine, canvas) {
         this.engine = engine;
         this.canvas = canvas;
+        this.clock = null;
         this.worldState = new WorldState();
         this.inventoryManager = new InventoryManager();
         this.questManager = new QuestManager(this.worldState, this.inventoryManager);
@@ -198,12 +199,14 @@ export class Game {
             });
     }
 
-    fixedUpdate(dtMs, tickCount) {
-        this.scene.fixedUpdate(dtMs, tickCount);
+    fixedUpdate(clock) {
+        this.clock = clock;
+        this.scene.fixedUpdate(clock);
     }
 
-    updateRender(dtMs) {
-        this.scene.updateRender(dtMs);
+    updateRender(clock) {
+        this.clock = clock;
+        this.scene.updateRender(clock);
     }
 
     render() {
@@ -420,6 +423,7 @@ export class Game {
     togglePause() {
         const paused = !this.scene.paused;
         this.scene.togglePause();
+        if (this.clock) this.clock.paused = paused;
         this.audioManager?.setPaused(paused);
     }
 

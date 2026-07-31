@@ -19,6 +19,7 @@ export class Scene {
     constructor(engine, canvas, gameContext = {}) {
         this.engine = engine;
         this.canvas = canvas;
+        this.clock = null;
         this.worldState = gameContext.worldState ?? null;
         this.questManager = gameContext.questManager ?? null;
         this.inventoryManager = gameContext.inventoryManager ?? new InventoryManager();
@@ -404,14 +405,18 @@ export class Scene {
         this._game.cameraManager?.onResize();
     }
 
-    fixedUpdate(dtMs, tickCount) {
+    fixedUpdate(clock) {
+        this.clock = clock;
+        if (this.sharedContext) this.sharedContext.clock = clock;
+        const dtMs = clock.fixedDeltaMs;
+        const tickCount = clock.tick;
         this.tickCount = tickCount;
 
         if (this.paused) return;
 
         const sceneSequencer = this._game.sceneSequencer;
         if (this._loading) {
-            if (sceneSequencer) sceneSequencer.fixedUpdate(dtMs, tickCount);
+            if (sceneSequencer) sceneSequencer.fixedUpdate(clock);
             // sequencer 播放 outro/intro 期间需要推进 entity.fixedUpdate，否则
             // moveActorTo 写了位置但 animation.fixedUpdate 不跑 → 单帧平移
             // newScene.init 期间 sequencer 不 busy，跳过避免访问已 dispose 的旧 entity
@@ -421,19 +426,24 @@ export class Scene {
             return;
         }
 
-        sceneSequencer.fixedUpdate(dtMs, tickCount);
+        sceneSequencer.fixedUpdate(clock);
         this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
     }
 
-    updateRender(dtMs) {
+    updateRender(clock) {
+        this.clock = clock;
+        if (this.sharedContext) this.sharedContext.clock = clock;
+        const dtMs = clock.realDtMs;
         const cameraManager = this._game.cameraManager;
         const sceneSequencer = this._game.sceneSequencer;
         if (this._loading) {
+            if (sceneSequencer) sceneSequencer.sample(clock.renderTime);
             if (cameraManager) cameraManager.update(dtMs, this.sharedContext);
             if (sceneSequencer) sceneSequencer.updateRender(dtMs);
             return;
         }
         this._game.gameModeManager.updateRender(dtMs);
+        sceneSequencer.sample(clock.renderTime);
         sceneSequencer.updateRender(dtMs);
         if (cameraManager) {
             cameraManager.update(dtMs, this.sharedContext);
