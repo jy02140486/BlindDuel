@@ -275,6 +275,21 @@ export class Game {
     }
 
     restoreCheckpoint() {
+        const currentMode = this.gameModeManager?.currentMode;
+        // 检查点重置的统一清理入口（职责划分）：
+        //   - AudioManager 内部状态（_audioResumeDone/_activeSounds）由 detachScene 自清
+        //     （见 plans/commits_detailed/26.7.28 战败重置后 ambient 不响修复）
+        //   - GameMode 的 context 残留由此处显式调 currentMode.exit() 清
+        //     原因：战败路径 defeatSequence → restoreCheckpoint → 新 Scene.init → start("explore")，
+        //     start() 语义为首次启动、不调 prevMode.exit()（与 switchMode 不同），
+        //     若不在此处补调，上一场 BattleMode.exit 会被跳过，
+        //     context.basePosition/target/fighterDistance 残留上一场战斗的值，
+        //     下一轮 enterBattleSequence blend 期间 DuelCameraRig.compute 读残值，
+        //     安全网失效 → zoomT 被残值拉偏 → switchMode 后新值突跳 → "blend 后朝主人公缩放"。
+        // 跳过 explore→explore 的无意义 exit/enter。
+        if (currentMode && typeof currentMode.exit === "function" && currentMode.id !== "explore") {
+            currentMode.exit();
+        }
         const cp = this._checkpoint;
         if (!cp) {
             console.log('[Checkpoint] none saved, resetting to initial state');

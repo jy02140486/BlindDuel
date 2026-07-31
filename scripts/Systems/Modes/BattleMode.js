@@ -61,6 +61,14 @@ export class BattleMode extends BaseMode {
                 combatant.activeSpeedMode = "walk";
             }
         }
+        // 清理 BattleMode 独占的相机上下文，避免跨场景/跨战斗残留：
+        // 下一轮 enterBattleSequence 的 2000~3000ms 窗口期（blend 已结束、mode 尚未 switchTo battle）
+        // DuelCameraRig.compute 会读 sharedContext，若 fighterDistance/basePosition 为上次战斗残值，
+        // 安全网（!basePosition || !target || fighterDistance==null）失效，镜头会朝主人公漂移缩放。
+        // 触发路径：战败 defeatSequence → restoreCheckpoint 显式调 currentMode.exit()（见 Game.restoreCheckpoint）
+        this.context.basePosition = null;
+        this.context.target = null;
+        this.context.fighterDistance = null;
     }
 
     fixedUpdate(dtMs, tickCount) {
