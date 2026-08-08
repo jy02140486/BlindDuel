@@ -131,7 +131,7 @@
             "id": "prop_faller",
             "name": "prop_faller",
             "kind": "prop",
-            "pos": [-1.2, 1, 0],
+            "pos": [-1.2, 1.25, 0],
             "controller": "none",
             "initialClip": "idle",
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_prop_played" }
@@ -231,20 +231,65 @@
             {
                 "id": "BG_FAR",
                 "z": 40,
-                "parallaxFactor": 0.15,
+                "parallaxFactor": 0.45,
                 "renderingGroupId": 0,
                 "loopX": true,
                 "loopWidth": 40,
                 "elements": [
                     {
-                        "id": "sky_1",
-                        "texture": "Art/Environment/skybase.png",
+                        "id": "sky_bg",
+                        "texture": "Art/Environment/forest_bg.png",
                         "kind": "tile",
-                        "x": 0,
-                        "y": 8,
-                        "width": 48,
-                        "height": 32,
-                        "alphaIndex": 0
+                        "tileSize": { "width": 19.2, "height": 10.02 },
+                        "x": -2,
+                        "y": 7.6,
+                        "width": 40.96,
+                        "height": 10.02
+                    },{
+                        "id": "tree_bg",
+                        "texture": "Art/Environment/Tree_BG.png",
+                        "kind": "single",
+                        "x": -2,
+                        "y": 4.4,
+                        "width": 20.48,
+                        "height": 10.42
+                    }
+                ]
+            },
+            {
+                "id": "mid_treeline_1",
+                "z": 24,
+                "parallaxFactor": 0.84,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                   {
+                    "id": " treeline_pine_1",
+                    "texture": "Art/Environment/treeline_pine_mid.png",
+                    "kind": "tile",
+                    "tileSize": { "width": 25.6, "height": 10 },
+                    "x": -14,
+                    "y": 8.8,
+                    "width": 64,
+                    "height": 12.8
+                },{
+                        "id": "brushline_mid_1",
+                        "texture": "Art/Environment/brush_mid.png",
+                        "kind": "tile",
+                        "x": -16,
+                        "y": 3.4,
+                        "tileSize": { "width":17.8, "height":1.79},
+                        "width": 58.7,
+                        "height": 1.79
+                    },{
+                        "id": "brushline_mid_2",
+                        "texture": "Art/Environment/brush_mid.png",
+                        "kind": "tile",
+                        "x": -10,
+                        "y": 3.2,
+                        "tileSize": { "width":17.8, "height":1.79},
+                        "width": 58.7,
+                        "height": 1.79
                     }
                 ]
             },
@@ -256,162 +301,76 @@
                 "loopX": false,
                 "elements": [
                     {
-                        "id": "ruin_layer1",
-                        "texture": "Art/Environment/AcientRuin_layer1.png",
-                        "kind": "single",
-                        "x": -10,
-                        "y": 3.7,
-                        "width": 16,
-                        "height": 6,
-                        "alphaIndex": 14
-                    },
-                    {
-                        "id": "ruin_layer2",
-                        "texture": "Art/Environment/AcientRuin_layer2.png",
-                        "kind": "single",
-                        "x": 12,
-                        "y": 3.7,
-                        "width": 16,
-                        "height": 6,
-                        "alphaIndex": 13
-                    }
-                ]
-            },
-            {
-                "id": "mid_treeline_1",
-                "z": 24,
-                "parallaxFactor": 0.86,
-                "renderingGroupId": 0,
-                "loopX": false,
-                "elements": [
-                    {
+                        "id": "ground",
+                        "texture": "Art/Environment/ground_far.png",
+                        "kind": "tile",
+                        "x": -16,
+                        "y": 1.7,
+                        "tileSize": { "width": 26.3, "height": 3 },
+                        "width": 128,
+                        "height": 2
+                    }, {
                     "id": " treeline_pine_1",
                     "texture": "Art/Environment/treeline_pine.png",
                     "kind": "tile",
-                    "tileSize": { "width": 24, "height": 16 },
+                    "tileSize": { "width": 24, "height": 12 },
                     "x": -16,
-                    "y": 7.4,
+                    "y": 8.5,
                     "width": 64,
-                    "height": 12.8,
-                    "alphaIndex": 7
+                    "height": 12.8
                 },{
-                        "id": "ground_brushline_1",
-                        "texture": "Art/Environment/brushline.png",
+                        "id": "ground_brushline_near_1",
+                        "texture": "Art/Environment/brush.png",
                         "kind": "tile",
                         "x": -16,
-                        "y": 2,
-                        "tileSize": { "width":7.2, "height":2.4},
-                        "width": 64,
-                        "height": 2.4,
-                        "alphaIndex": 8
+                        "y": 2.7,
+                        "tileSize": { "width":14.68, "height":2},
+                        "width": 58.7,
+                        "height": 2
                     },{
-                        "id": "ground",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_brushline_near_2",
+                        "texture": "Art/Environment/brush.png",
                         "kind": "tile",
-                        "x": -16,
-                        "y": 1.6,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
-                        "width": 128,
-                        "height": 1.6,
-                        "alphaIndex": 2
-                    }
-                ]
-            },{
-                "id": "mid_treeline_2",
-                "z": 32,
-                "parallaxFactor": 0.72,
-                "renderingGroupId": 0,
-                "loopX": false,
-                "elements": [
-                    {
-                    "id": " treeline_pine",
-                    "texture": "Art/Environment/treeline_pine.png",
-                    "kind": "tile",
-                    "tileSize": { "width": 19.6, "height": 14.4 },
-                    "x": -16,
-                    "y": 7.2,
-                    "width": 64,
-                    "height": 9.8,
-                    "alphaIndex": 5
-                },{
-                        "id": "ground_brushline_2",
-                        "texture": "Art/Environment/brushline_dark.png",
+                        "x": -13,
+                        "y": 2.7,
+                        "tileSize": { "width":18.35, "height":2.5},
+                        "width": 58.7,
+                        "height": 2.5
+                    },                    {
+                        "id": "ground_patch4ruin_inside",
+                        "texture": "Art/Environment/ground_far.png",
                         "kind": "tile",
-                        "x": 0,
-                        "y": 3.2,
-                       "tileSize": { "width":7.2, "height":2.4},
-                        "width": 64,
-                        "height": 2.4,
-                        "alphaIndex": 6
+                        "x": -12,
+                        "y": 1.7,
+                        "tileSize": { "width": 26.3, "height": 3 },
+                        "width": 4,
+                        "height": 2
                     },{
-                        "id": "ground",
-                        "texture": "Art/Environment/dirt_base.png",
+                        "id": "ground_patch4ruin_inside_2",
+                        "texture": "Art/Environment/ground_far.png",
                         "kind": "tile",
-                        "x": 0,
-                        "y": 3.2,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
-                        "width": 128,
-                        "height": 1.6,
-                        "alphaIndex": 2
-                    }
-                ]
-            },{
-                "id": "mid_treeline_3",
-                "z": 32,
-                "parallaxFactor": 0.64,
-                "renderingGroupId": 0,
-                "loopX": false,
-                "elements": [
-                    {
-                    "id": " treeline_pine",
-                    "texture": "Art/Environment/treeline_pine.png",
-                    "kind": "tile",
-                    "tileSize": { "width": 16, "height": 12 },
-                    "x": -16,
-                    "y": 8.2,
-                    "width": 64,
-                    "height": 9.6,
-                    "alphaIndex": 3
-                },{
-                        "id": "ground_brushline_3",
-                        "texture": "Art/Environment/brushline_dark.png", 
+                        "x": 5.2,
+                        "y": 1.4,
+                        "tileSize": { "width": 26.3, "height": 3 },
+                        "width": 4,
+                        "height": 2
+                    },{
+                        "id": "ruin_layer1",
+                        "texture": "Art/Environment/ruins_building.png",
+                        "kind": "single",
+                        "x": -5.7,
+                        "y": 3,
+                        "width": 25.97,
+                        "height": 3.5
+                    },{
+                        "id": "ground_brushline_near_2",
+                        "texture": "Art/Environment/brush.png",
                         "kind": "tile",
-                        "x": 0,
-                        "y": 4.4,
-                        "tileSize": { "width":7.2, "height":2.4},
-                        "width": 64,
-                        "height": 2.4,
-                        "alphaIndex": 4
-                    }
-                ]
-            },{
-                "id": "mid_ground_far",
-                "z": 32,
-                "parallaxFactor": 0.48,
-                "renderingGroupId": 0,
-                "loopX": false,
-                "elements": [
-                    {
-                        "id": "ground_brushline_far",
-                        "texture": "Art/Environment/brushline_dark.png",     
-                        "kind": "tile",
-                        "x": 0,
-                        "y": 4.4,
-                        "tileSize": { "width":7.2, "height":2.4},
-                        "width": 64,
-                        "height": 2.4,
-                        "alphaIndex": 1
-                    } ,
-                    {
-                    "id": "treeline",
-                    "texture": "Art/Environment/treeline.png",
-                    "kind": "single",
-                    "x": 0,
-                    "y": 6.4,
-                    "width": 64,
-                    "height": 4.8,
-                    "alphaIndex": 1,
-                    "parallaxFactor": 1.6
+                        "x": 21,
+                        "y": 2.24,
+                        "tileSize": { "width":18.35, "height":2.5},
+                        "width": 32,
+                        "height": 2.5
                     }
                 ]
             },
@@ -423,58 +382,52 @@
                 "loopX": false,
                 "elements": [
                     {
-                        "id": "ground_2",
-                        "texture": "Art/Environment/grasstop.png",
-                        "atlas": "Art/Environment/grasstop.json",
-                        "kind": "animated_tile",
-                        "x": 0,
-                        "y": 1.2,
-                        "width": 128,
-                        "height": 0.32,
-                        "tileSize": { "width": 1.28, "height": 0.32 },
-                        "loop": true,
-                        "alphaIndex": 2
-                    },
-                    {
                         "id": "ground",
                         "texture": "Art/Environment/dirt_base.png",
                         "kind": "tile",
                         "x": 0,
                         "y": -2.8,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "tileSize": { "width": 5.12, "height": 5.12 },
                         "width": 128,
-                        "height": 8,
-                        "alphaIndex": 2
-                    },{
-                        "id": "grass_deco",
-                        "texture": "Art/Environment/grass_deco.png",
-                        "kind": "tile",
-                        "x": 0,
-                        "y": -2.9,
-                        "tileSize": { "width": 5.12, "height": 2.56 },
-                        "width": 128,
-                        "height": 8,
-                        "alphaIndex": 3
+                        "height": 8
                     },
                     {
                         "id": "ruin_main",
-                        "texture": "Art/Environment/AcientRuin.png",
+                        "texture": "Art/Environment/AcientRuin_Statue_v2.png",
                         "kind": "single",
-                        "x": 0,
-                        "y": 6,
+                        "x": -6.67,
+                        "y": 4.4,
                         "width": 16,
-                        "height": 10,
-                        "alphaIndex": 24
-                    }, {
-                        "id": "ruin_floor",
-                        "texture": "Art/Environment/floor.png",
+                        "height": 8
+                    },
+                    {
+                        "id": "grass_deco",
+                        "texture": "Art/Environment/grass_deco.png",
                         "kind": "single",
-                        "x": -24,
-                        "y": 0,
-                        "width": 14.4,
-                        "height": 2.4,
-                        "alphaIndex": 5
+                        "x": -24.671,
+                        "y": -0.27,
+                        "width": 16,
+                        "height": 2
+                    },
+                    {
+                        "id": "grass_deco2",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "single",
+                        "x": -7.671,
+                        "y": -0.4,
+                        "width": 16,
+                        "height": 2
+                    },
+                    {
+                        "id": "grass_deco3",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "single",
+                        "x": -17.671,
+                        "y": 0.4,
+                        "width": 16,
+                        "height": 2
                     }
+
                 ]
             },
         {
@@ -492,8 +445,7 @@
                         "y": -0.64,
                         "tileSize": { "width":19.2, "height":5.6},
                         "width": 19.2,
-                        "height": 5.6,
-                        "alphaIndex": 1
+                        "height": 5.6
                 } 
             ]
         }
