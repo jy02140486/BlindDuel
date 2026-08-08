@@ -7,10 +7,15 @@ export class ExploreCameraRig {
             orthoWidth: 20,
             ...config
         };
+        this._defaultConfig = { ...this.config };
 
         this.projection = "perspective";
         this._targetPosition = new BABYLON.Vector3(0, 0, 0);
         this._cameraPosition = new BABYLON.Vector3(0, 0, 0);
+    }
+
+    resetConfig() {
+        this.config = { ...this._defaultConfig };
     }
 
     enter(ctx) {

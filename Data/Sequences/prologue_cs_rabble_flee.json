@@ -12,7 +12,8 @@
         { "type": "cameraBlend", "startMs": 2000, "durationMs": 1000, "to": "scripted" },
         { "type": "setCameraFrame", "atMs": 3000, "center": [-1, -1, 0], "height": 1, "orthoWidth": 20 },
         { "type": "cameraBlend", "startMs": 3000, "durationMs": 1000, "to": "scripted" },
-        { "type": "setCameraFollow", "atMs": 3000, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1, "orthoWidth": 20 }
+        { "type": "setCameraFollow", "atMs": 3000, "actorId": "prop_faller", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1, "orthoWidth": 20 },
+        { "type": "setCameraFollow", "atMs": 5000, "actorId": "rabble_stick", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 1, "orthoWidth": 20 }
       ]
     },
     {
@@ -137,8 +138,8 @@
       "binding": { "actorId": "enemy_1" },
       "channel": "movement",
       "clips": [
-          { "type": "command", "atMs": 3700, "command": "move" },
-           { "type": "moveActorTo", "startMs": 3700, "durationMs": 1000, "x": -1.2, "y": -0.4, "speed": 1.4 }
+          { "type": "command", "atMs": 5200, "command": "move" },
+           { "type": "moveActorTo", "startMs": 5200, "durationMs": 1000, "x": -1.2, "y": -0.4, "speed": 1.4 }
       ]
     }
   ]

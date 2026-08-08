@@ -212,6 +212,13 @@ export class Scene {
             targetAspect: duelCameraCfg.targetAspect,
         });
 
+        // --- explore rig 场景级参数（无声明则用默认）---
+        exploreCameraRig.resetConfig();
+        const exploreCfg = sceneDef.exploreCamera;
+        if (exploreCfg) {
+            Object.assign(exploreCameraRig.config, exploreCfg);
+        }
+
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = this._game.sharedContext.cameraBasePosition;
         this._cameraTarget = this._game.sharedContext.cameraTarget;

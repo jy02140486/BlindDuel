@@ -1,7 +1,10 @@
 {
     "id": "prologue",
-    "camera": {
-        "defaultRig": "explore"
+    "exploreCamera": {
+        "followDistance": 17,
+        "followHeight": 4.5,
+        "smoothing": 0.12,
+        "orthoWidth": 30
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",

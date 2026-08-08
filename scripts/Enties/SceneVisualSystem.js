@@ -18,6 +18,7 @@ export class SceneVisualSystem {
      */
     async init(config) {
         this.config = config;
+        this._nextAlphaIndex = 0;
 
         // 创建各层根节点
         for (const layerConfig of config.layers) {
@@ -25,6 +26,18 @@ export class SceneVisualSystem {
         }
 
         console.log('SceneVisualSystem initialized with', this.layers.size, 'layers');
+    }
+
+    /**
+     * 解析元素 alphaIndex：未显式声明时按全局扁平游标自增（先写=远/先绘制，后写=近/后绘制）
+     * 显式声明时使用声明值并同步推进游标，确保后续元素续接不穿模
+     */
+    _resolveAlphaIndex(elementConfig) {
+        if (elementConfig.alphaIndex !== undefined) {
+            this._nextAlphaIndex = elementConfig.alphaIndex + 1;
+            return elementConfig.alphaIndex;
+        }
+        return this._nextAlphaIndex++;
     }
 
     /**
@@ -254,8 +267,19 @@ export class SceneVisualSystem {
         // 创建材质
         const material = new BABYLON.StandardMaterial(`mat_${elementConfig.id}`, this.scene);
         
-        // 加载贴图
-        const texture = new BABYLON.Texture(elementConfig.texture, this.scene);
+        // 加载贴图（默认 NEAREST，与角色精灵一致；可配 samplingMode: 'linear' 覆盖）
+        // 参数：noMipmap=false / invertY=true / samplingMode=NEAREST(默认)
+        //   - invertY 必须为 true：Plane 的 UV 原点在左下，PNG 数据原点在左上，
+        //     翻转后才能正向显示；与 CharacterBase/PropEntity 的 invertY=false 不同，
+        //     那边用 spritesheet atlas + UV 偏移自洽，本处是整张贴图直铺，必须靠 invertY 翻转
+        const samplingMode = this.#resolveSamplingMode(elementConfig);
+        const texture = new BABYLON.Texture(
+            elementConfig.texture,
+            this.scene,
+            false,
+            true,
+            samplingMode
+        );
         material.diffuseTexture = texture;
 
         // tileSize 支持：无动画平铺
@@ -281,10 +305,8 @@ export class SceneVisualSystem {
         // 设置渲染组（必须在 mesh 上，不是 material 上）
         plane.renderingGroupId = layer.config.renderingGroupId;
 
-        // alphaIndex：同层内精细排序（数值大的在前）
-        if (elementConfig.alphaIndex !== undefined) {
-            plane.alphaIndex = elementConfig.alphaIndex;
-        }
+        // alphaIndex：未声明时按数组顺序全局扁平自增（远→近），显式声明则 override
+        plane.alphaIndex = this._resolveAlphaIndex(elementConfig);
 
         // 水平翻转
         if (elementConfig.flipX) {
@@ -328,7 +350,13 @@ export class SceneVisualSystem {
 
         // 创建材质
         const material = new BABYLON.StandardMaterial(`mat_${elementConfig.id}`, this.scene);
-        const texture = new BABYLON.Texture(elementConfig.texture, this.scene);
+        const texture = new BABYLON.Texture(
+            elementConfig.texture,
+            this.scene,
+            false,
+            true,
+            this.#resolveSamplingMode(elementConfig)
+        );
 
         // 设置 wrap 模式以支持 tile 重复
         texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
@@ -346,10 +374,8 @@ export class SceneVisualSystem {
         // 设置渲染组（必须在 mesh 上，不是 material 上）
         plane.renderingGroupId = layer.config.renderingGroupId;
 
-        // alphaIndex：同层内精细排序（数值大的在前）
-        if (elementConfig.alphaIndex !== undefined) {
-            plane.alphaIndex = elementConfig.alphaIndex;
-        }
+        // alphaIndex：未声明时按数组顺序全局扁平自增（远→近），显式声明则 override
+        plane.alphaIndex = this._resolveAlphaIndex(elementConfig);
 
         // 计算 tile 重复次数
         const atlasW = atlasData.meta.size.w;
@@ -389,6 +415,13 @@ export class SceneVisualSystem {
         };
 
         layer.elements.push(element);
+    }
+
+    #resolveSamplingMode(elementConfig) {
+        if (elementConfig.samplingMode === 'linear') {
+            return BABYLON.Texture.BILINEAR_SAMPLINGMODE;
+        }
+        return BABYLON.Texture.NEAREST_SAMPLINGMODE;
     }
 
     #applyAnimatedTileFrame(texture, frame, atlasW, atlasH) {
