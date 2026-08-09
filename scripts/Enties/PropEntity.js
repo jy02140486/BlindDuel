@@ -28,6 +28,7 @@ export class PropEntity {
         this._sharedAtlasData = null;
         this.stateMap = config.stateMap ?? null;
         this._initialClip = config.initialClip ?? null;
+        this._playing = config.autoPlay !== false;
 
         this.facing = 1;
         this.facingMode = "locked";
@@ -216,6 +217,7 @@ export class PropEntity {
 
     fixedUpdate(dtMs) {
         if (this.isDisposed) return;
+        if (!this._playing) return;
         if (!this._currentClip || !this._frames.length) return;
 
         const tag = this._currentClip.frameTag;
@@ -240,8 +242,8 @@ export class PropEntity {
         }
     }
 
-    enterState(name) { this._setClip(name); }
-    pushCommand(name) { this._setClip(name); return true; }
+    enterState(name) { this._playing = true; this._setClip(name); }
+    pushCommand(name) { this._playing = true; this._setClip(name); return true; }
     hasState(name) { return Boolean(this.clips[name]); }
 
     setMoveIntent(_intent) { /* prop 不用 intent 驱动，sequence 直接写 root.position */ }

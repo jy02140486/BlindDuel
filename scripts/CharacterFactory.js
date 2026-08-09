@@ -488,6 +488,7 @@ export function createPropEntity(scene, assets, entityDef) {
         frameWidth: 3.84,
         frameHeight: 3.84,
         initialClip: entityDef?.initialClip ?? "idle",
+        autoPlay: entityDef?.autoPlay,
         clips: {
             idle: buildClip(0, "hold"),
             fall: buildClip(1, "loop"),
@@ -514,6 +515,7 @@ export function createPropEntity(scene, assets, entityDef) {
         if (entityDef.frameHeight !== undefined) cfg.frameHeight = entityDef.frameHeight;
         if (entityDef.pxToWorld !== undefined) cfg.pxToWorld = entityDef.pxToWorld;
         if (entityDef.initialClip !== undefined) cfg.initialClip = entityDef.initialClip;
+        if (entityDef.autoPlay !== undefined) cfg.autoPlay = entityDef.autoPlay;
         if (entityDef.blocker !== undefined) cfg.blocker = entityDef.blocker;
         // 暂不采用：prop depthMask 方案搁置，靠 blocker + y-sort/alphaIndex 即可
         // if (entityDef.depthMask !== undefined) cfg.depthMask = entityDef.depthMask;

@@ -134,9 +134,10 @@
             "id": "prop_faller",
             "name": "prop_faller",
             "kind": "prop",
-            "pos": [-0.5, 2.75, 0],
+            "pos": [0.5, 2.75, 0],
             "controller": "none",
             "initialClip": "idle",
+            "autoPlay": false,
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_prop_played" }
         },
         {
