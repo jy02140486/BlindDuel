@@ -219,6 +219,11 @@ export class Scene {
             Object.assign(exploreCameraRig.config, exploreCfg);
         }
 
+        // --- explore 相机边界（无声明则无约束）---
+        this._cameraBoundaryDefs = Array.isArray(sceneDef.cameraBoundaries)
+            ? sceneDef.cameraBoundaries : [];
+        this._applyCameraBoundary();
+
         // 复用 Vector3 避免每帧创建对象
         this._cameraBasePosition = this._game.sharedContext.cameraBasePosition;
         this._cameraTarget = this._game.sharedContext.cameraTarget;
@@ -312,6 +317,7 @@ export class Scene {
                 if (this.walkArea) {
                     this.walkArea.setVisible(nextVisible);
                 }
+                this._game?.exploreCameraRig?.setDebugVisible?.(nextVisible);
                 if (this.triggers) {
                     for (const trigger of this.triggers.values()) {
                         trigger.setDebugVisible(nextVisible);
@@ -632,6 +638,7 @@ export class Scene {
         }
 
         this._applyWalkArea();
+        this._applyCameraBoundary();
     }
 
     _evaluateCondition(cond, worldState) {
@@ -691,5 +698,21 @@ export class Scene {
                 return;
             }
         }
+    }
+
+    _applyCameraBoundary() {
+        const rig = this._game?.exploreCameraRig;
+        if (!rig) return;
+        if (!this._cameraBoundaryDefs?.length) {
+            rig.setBoundary(null);
+            return;
+        }
+        for (const def of this._cameraBoundaryDefs) {
+            if (this._evaluateCondition(def.if, this.worldState)) {
+                rig.setBoundary(def);
+                return;
+            }
+        }
+        rig.setBoundary(null);
     }
 }

@@ -189,8 +189,12 @@
 }
     ],
 "walkAreas": [
-  { "if": { "scenarioMin": 105 },"minX": -22, "maxX": 9, "minY": -1, "maxY": 0.7},
-  { "if": {},  "minX": -32, "maxX": -18, "minY": -1, "maxY": 0.7  }
+  { "if": { "scenarioMin": 105 },"minX": -27, "maxX": 9, "minY": -1, "maxY": 0.7},
+  { "if": {},  "minX": -32, "maxX": -16, "minY": -1, "maxY": 0.7  }
+],
+"cameraBoundaries": [
+  { "if": { "scenarioMin": 105 }, "minX": -32, "minY": -2.56},
+  { "if": {}, "minX": -36, "maxX": -10 , "minY": -2.56}
 ],
     "spawns": {
         "house_door": [-1, -1, 0],

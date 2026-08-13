@@ -608,6 +608,7 @@ const ACTION_HANDLERS = {
                 frameCtx = {
                     target: new BABYLON.Vector3(pos.x, pos.y, pos.z)
                 };
+                ctx.game?.exploreCameraRig?.setClampEnabled?.(true, clip.durationMs);
             }
 
             const ok = cameraManager.startBlend({

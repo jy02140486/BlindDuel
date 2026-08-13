@@ -55,3 +55,5 @@
 指数型，大概在30左右变浓
 give item 锁操作 移动到固定位置
 战败需要procedure化
+prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
+companion避障

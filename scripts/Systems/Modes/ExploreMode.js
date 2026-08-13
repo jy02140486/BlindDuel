@@ -868,6 +868,8 @@ export class ExploreMode extends BaseMode {
             timerMs: 0,
             bubbleDurationMs: 2000,
         };
+
+        this.context.game?.exploreCameraRig?.setClampEnabled?.(false, 400);
     }
 
     #updateGiveSequence(character, dtMs) {
