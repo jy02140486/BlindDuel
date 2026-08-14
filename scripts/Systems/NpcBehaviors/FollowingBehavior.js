@@ -8,20 +8,29 @@ export class FollowingBehavior extends NpcBehavior {
     constructor(options = {}) {
         super({
             targetOffsetX: 1.0,
+            targetOffsetY: 0,
             followStart: 0.4,
             followStop: 0.1,
+            followDeadbandY: 0.15,
+            followStopY: 0.05,
             speedMin: 0.7,
             speedMax: 1.4,
             baseSpeed: 1.1,
             speedMapSpan: 1.5,
-            speedMapAnchor: 1.0,
-            ...options
-        });
-        this._moving = false;
-    }
+        speedMapAnchor: 1.0,
+        separationRadius: 0.6,
+        separationStrength: 1.0,
+        ...options
+    });
+    this._moving = false;
+    this._movingY = false;
+    this._sepDirY = 1;
+}
 
     enter(npc, context) {
         this._moving = false;
+        this._movingY = false;
+        this._sepDirY = 1;
         if (context?.dialogueBubble) context.dialogueBubble.hide();
         if (npc.hasState("walk")) {
             npc.enterState("walk");
@@ -34,21 +43,49 @@ export class FollowingBehavior extends NpcBehavior {
         const player = context.player;
         if (!player) return;
 
-        const targetX = player.root.position.x + this.options.targetOffsetX;
-        const dx = targetX - npc.root.position.x;
+        const playerPos = player.root.position;
+        const npcPos = npc.root.position;
+
+        const targetX = playerPos.x + this.options.targetOffsetX;
+        const dx = targetX - npcPos.x;
         const absDx = Math.abs(dx);
 
-        const moving = this._moving
+        const movingX = this._moving
             ? absDx > this.options.followStop
             : absDx > this.options.followStart;
-        this._moving = moving;
+        this._moving = movingX;
 
-        npc.setFacing(dx >= 0 ? 1 : -1);
+        const targetY = playerPos.y + this.options.targetOffsetY;
+        const dy = targetY - npcPos.y;
+        const absDy = Math.abs(dy);
+        const movingY = this._movingY
+            ? absDy > this.options.followStopY
+            : absDy > this.options.followDeadbandY;
+        this._movingY = movingY;
 
-        if (!moving) {
-            npc.setMoveIntent({ x: 0, y: 0 });
-            const playerDx = player.root.position.x - npc.root.position.x;
+        if (movingX) {
+            npc.setFacing(dx >= 0 ? 1 : -1);
+        } else {
+            const playerDx = playerPos.x - npcPos.x;
             npc.setFacing(playerDx >= 0 ? 1 : -1);
+        }
+
+        // Separation：靠近 player 时 Y 方向避让（不影响 X，保留引路 seek）
+        const sepDx = npcPos.x - playerPos.x;
+        const sepDy = npcPos.y - playerPos.y;
+        const sepDist = Math.hypot(sepDx, sepDy);
+        let sepForce = 0;
+        let sepIy = 0;
+        if (sepDist < this.options.separationRadius && sepDist > 0.0001) {
+            sepForce = (1 - sepDist / this.options.separationRadius) * this.options.separationStrength;
+            if (Math.abs(sepDy) > 0.0001) {
+                this._sepDirY = Math.sign(sepDy);
+            }
+            sepIy = this._sepDirY * sepForce;
+        }
+
+        if (!movingX && !movingY && sepForce === 0) {
+            npc.setMoveIntent({ x: 0, y: 0 });
             const idleClip = this.options.idleClip ?? "idle";
             if (npc.currentStateName !== idleClip && npc.hasState(idleClip)) {
                 npc.enterState(idleClip);
@@ -56,10 +93,23 @@ export class FollowingBehavior extends NpcBehavior {
             return;
         }
 
+        let ix = movingX ? Math.sign(dx) : 0;
+        let iy;
+        if (sepForce > 0) {
+            iy = sepIy;
+        } else {
+            iy = movingY ? Math.sign(dy) : 0;
+        }
+        const len = Math.hypot(ix, iy);
+        if (len > 0) {
+            ix /= len;
+            iy /= len;
+        }
+
         const o = this.options;
         const m = clamp((absDx - o.speedMapAnchor) / o.speedMapSpan, o.speedMin, o.speedMax);
         npc.baseWalkSpeed = o.baseSpeed * m;
-        npc.setMoveIntent({ x: Math.sign(dx), y: 0 });
+        npc.setMoveIntent({ x: ix, y: iy });
         if (npc.currentStateName !== "walk" && npc.hasState("walk")) {
             npc.enterState("walk");
         }

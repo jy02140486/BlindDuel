@@ -119,6 +119,7 @@ export class NpcController {
         this.state = "idle";
         this.stateElapsedMs = 0;
         this._behavior = null;
+        if (typeof npc.setFollowing === "function") npc.setFollowing(false);
         if (this._dialogueBubble) {
             this._dialogueBubble.hide();
         }
@@ -131,6 +132,7 @@ export class NpcController {
             this._followingBehavior = new FollowingBehavior();
         }
         this._behavior = this._followingBehavior;
+        if (typeof npc.setFollowing === "function") npc.setFollowing(true);
         this._behavior.enter(npc, { dialogueBubble: this._dialogueBubble });
     }
 

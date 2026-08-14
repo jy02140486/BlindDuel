@@ -12,6 +12,18 @@ export class NpcCharacter extends CharacterBase {
 
         this.rootMotion = config.rootMotion ?? null;
         this.occupancy = config.occupancy ?? null;
+        this.isCompanion = config.isCompanion ?? false;
+        this._isFollowing = false;
+    }
+
+    setFollowing(value) {
+        this._isFollowing = !!value;
+    }
+
+    isBlockingNow() {
+        if (!this.blocksMovement) return false;
+        if (this._isFollowing) return false;
+        return true;
     }
 
     _getCurrentRootAnchor(frameIndex) {

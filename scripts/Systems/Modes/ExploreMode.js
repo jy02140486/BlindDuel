@@ -63,7 +63,9 @@ export class ExploreMode extends BaseMode {
         // sequencer 期间跳过 walkArea clamp 与交互，避免 moveActorTo 结束后
         // controlledBySequence=false 时 hero 被钳回 trigger 位置
         if (!sequencerBusy) {
-            this._collisionSystem.resolveMovement(character, this.staticBlockers, this.context.walkArea);
+            for (const actor of this.dynamicActors) {
+                this._collisionSystem.resolveMovement(actor, this.staticBlockers, this.context.walkArea);
+            }
             this.#checkInteraction(character, tickCount);
             this.#updatePickupSequence(character);
             this.#updateGiveSequence(character, dtMs);
@@ -487,6 +489,8 @@ export class ExploreMode extends BaseMode {
 
         for (const entity of entityPool) {
             if (entity.kind === "player") {
+                this.dynamicActors.push(entity);
+            } else if (entity.kind === "npc" && entity.isCompanion && typeof entity.getBlockerAabb === "function") {
                 this.dynamicActors.push(entity);
             }
             if (entity.kind === "enemy") {

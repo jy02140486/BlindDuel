@@ -1,12 +1,12 @@
 ﻿{
     "source":  {
-                   "rootAtlasJson":  "Data/RootMotion/NPCs/Charlotte.json",
-                   "rootAtlasPng":  "Data/RootMotion/NPCs/Charlotte.png",
+                   "rootAtlasJson":  "Data\\RootMotion\\NPCs\\Charlotte.json",
+                   "rootAtlasPng":  "Data\\RootMotion\\NPCs\\Charlotte.png",
                    "rootColor":  "#7082C1",
                    "actionAnchorColor":  "#00FF00",
                    "occupancyWidthPx":  40,
-                   "occupancyHeightPx":  24,
-                   "generatedAtUtc":  "2026-07-05T05:10:29.4260061Z"
+                   "occupancyHeightPx":  16,
+                   "generatedAtUtc":  "2026-08-14T10:14:22.3746241Z"
                },
     "frames":  [
                    {
@@ -33,7 +33,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -60,7 +60,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -87,7 +87,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -114,7 +114,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -141,7 +141,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -168,7 +168,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -195,7 +195,7 @@
                                          "cx":  61.5,
                                          "cy":  117.5,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -222,7 +222,7 @@
                                          "cx":  64,
                                          "cy":  102.4,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    },
                    {
@@ -249,7 +249,7 @@
                                          "cx":  64,
                                          "cy":  102.4,
                                          "w":  40,
-                                         "h":  24
+                                         "h":  16
                                      }
                    }
                ]

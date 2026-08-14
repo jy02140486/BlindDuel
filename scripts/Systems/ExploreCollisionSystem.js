@@ -1,6 +1,7 @@
 export class ExploreCollisionSystem {
     constructor() {
         this._debugMeshes = [];
+        this._debugMeshByEntity = new Map();
     }
 
     resolveMovement(entity, blockers, walkArea) {
@@ -9,6 +10,10 @@ export class ExploreCollisionSystem {
         const pos = entity.root.position;
 
         for (const blocker of blockers) {
+            if (blocker === entity) continue;
+            if (typeof blocker.isBlockingNow === "function" && !blocker.isBlockingNow()) {
+                continue;
+            }
             const blockerAabb = blocker.getBlockerAabb();
             if (!blockerAabb) continue;
 
@@ -50,15 +55,37 @@ export class ExploreCollisionSystem {
 
     createDebugMeshes(blockers, scene, dynamicActors) {
         this.disposeDebugMeshes();
+        const actorSet = new Set(dynamicActors || []);
         for (const actor of (dynamicActors || [])) {
             const aabb = actor.getBlockerAabb?.();
             if (!aabb) continue;
-            this._debugMeshes.push(this._createAabbWireframe(aabb, scene, new BABYLON.Color3(0, 1, 0)));
+            const isAlsoBlocker = blockers && blockers.includes(actor);
+            const color = isAlsoBlocker
+                ? new BABYLON.Color3(1, 1, 0)
+                : new BABYLON.Color3(0, 1, 0);
+            const mesh = this._createAabbWireframe(aabb, scene, color);
+            if (actor.root) {
+                mesh.parent = actor.root;
+                mesh.position.x = (aabb.minX + aabb.maxX) / 2 - actor.root.position.x;
+                mesh.position.y = (aabb.minY + aabb.maxY) / 2 - actor.root.position.y;
+                mesh.position.z = 0;
+            }
+            this._debugMeshes.push(mesh);
+            this._debugMeshByEntity.set(actor, mesh);
         }
         for (const blocker of (blockers || [])) {
+            if (actorSet.has(blocker)) continue;
             const aabb = blocker.getBlockerAabb();
             if (!aabb) continue;
-            this._debugMeshes.push(this._createAabbWireframe(aabb, scene, new BABYLON.Color3(1, 0, 0)));
+            const mesh = this._createAabbWireframe(aabb, scene, new BABYLON.Color3(1, 0, 0));
+            if (blocker.root) {
+                mesh.parent = blocker.root;
+                mesh.position.x = (aabb.minX + aabb.maxX) / 2 - blocker.root.position.x;
+                mesh.position.y = (aabb.minY + aabb.maxY) / 2 - blocker.root.position.y;
+                mesh.position.z = 0;
+            }
+            this._debugMeshes.push(mesh);
+            this._debugMeshByEntity.set(blocker, mesh);
         }
     }
 
@@ -84,6 +111,7 @@ export class ExploreCollisionSystem {
             mesh.dispose();
         }
         this._debugMeshes.length = 0;
+        this._debugMeshByEntity.clear();
     }
 
     _createAabbWireframe(aabb, scene, color) {

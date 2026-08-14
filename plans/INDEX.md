@@ -2,6 +2,9 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-08-14)
+- Companion 碰撞与避障设计归档：`plans/Companion 碰撞与避障设计.MD` → `plans/archived/Companion 碰撞与避障设计.MD`。Step 1-4 全部实现：Charlotte 同时进 `dynamicActors` + `staticBlockers`（`isBlockingNow()` 基于 `_isFollowing` 动态控制）、`resolveMovement` 加 self-exclusion 防自阻、`FollowingBehavior` 双轴 (X+Y) 跟随 + Y 轴 Separation（`sepDirY` 带 hysteresis）、debug mesh 挂 `entity.root` 跟随移动、occupancy `h` 由 24 调为 16 + `extract_rootmotion_occupancy.ps1` 加诊断日志并修正扫描路径为 `Data/RootMotion`。遗留 §10.3「Charlotte following 移动中被玩家挡」未实现（player 未进 blockers）。详见 `commits_detailed/26.8.14 companion避障行为.MD`
+
 ## Update Log (2026-07-31)
 - Phase 3（Render 插值）落地：`CharacterBase` 新增 `renderTransform`（previous/current 双快照）+ `supportsRenderSampling` 标志 + `_renderTransformSynced` 状态位 + `snapshotRenderTransform`/`restoreRenderTransform` 方法；`Scene.fixedUpdate` 在 `gameModeManager.fixedUpdate` 前后调 restore/snapshot（覆盖 walkArea clamp + pushback 等后置 position 写入）；`Scene.updateRender` 重排为 `sample → _interpolateEntities(renderAlpha) → mode.updateRender → camera.update`（保证相机读到插值后位置）；`TimelineSequencer` 的 `moveActorTo`/`moveActorByDirection` start/end 配套设 `supportsRenderSampling` + end 重置 `_renderTransformSynced`（避免从 sequencer 前过期快照 lerp 跳变）；`_resetControlledActors` 同步重置两标志位。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，实现偏差见 `commits_detailed/26.7.31 统一时间源渲染系统接入.MD`
 - 统一时间源与 Render 采样架构 Phase 1-2 落地：新增 `FrameClock.js`（全游戏唯一时钟，Hybrid 模型），主循环改用 `advance/stepFixed/refreshRender`；TimelineSequencer + CameraManager 采样化改造（`sample(renderTime)` 纯函数求值，moveActorTo/cameraBlend 改 onEnter/sample/onExit 三段式）；TimeControlSystem 与 FrameClock 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`
@@ -25,6 +28,12 @@
 - `convert_audio_format.ps1` bugfix：单文件输入时 `Resolve-Path` 对不存在的 OutputDir 失败导致走默认逻辑生成 `xxx.wav\_converted` 怪路径，且 rel 计算时 `Substring` 越界（startIndex 大于字符串长度）；修复方式 OutputDir 改用 `GetFullPath` 支持不存在目录，rel 计算用 `$inputBase`（单文件取文件所在目录，目录输入就是 inputAbs 本身）
 - 文档同步：`docs/TimelineSequencer User Guide.md` §5.14 新增 playAudio 说明 + §9.2 排查表加两行；`PROJECT_CONTEXT.md` §3 补 MusicPlayer.js/music_clips.json，§9.2 更新 Step 4 状态
 - 设计稿不改动（实现与 `plans/AudioSystemDesign.MD` §7/§9/§11 一致）；`docs/Audio Tools User Guide.MD` 不改动（离线工具文档，与运行时音频无关）
+
+## 最近归档（2026-08-14）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/Companion 碰撞与避障设计.MD](archived/Companion%20碰撞与避障设计.MD) | Companion（Charlotte）碰撞与避障；其它 NPC 不受影响 | Step 1-4 全部落地：Charlotte 进 `dynamicActors` + `staticBlockers`（`isBlockingNow()` 基于 `_isFollowing` 动态控制）、`resolveMovement` 加 self-exclusion 避免自阻、`FollowingBehavior` 双轴跟随 + Y 轴 Separation（`sepDirY` hysteresis）、debug mesh 挂 `entity.root`、occupancy `h=16` + 工具诊断日志 + 扫描路径修正为 `Data/RootMotion`。Beat'em up 风格 2.5D，无跳跃，walkArea 通常狭长矩形。详见 `commits_detailed/26.8.14 companion避障行为.MD` |
 
 ## 最近归档（2026-07-31）
 

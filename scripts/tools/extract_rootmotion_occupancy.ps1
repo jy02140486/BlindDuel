@@ -60,20 +60,42 @@ function Extract-Regions($bmp, $fr, $target) {
   return $regions
 }
 
-function Extract-Root($bmp, $fr, $target, $prevRoot) {
+function Write-Diag([string]$msg) {
+  if ($script:DiagWriter) { $script:DiagWriter.WriteLine($msg) }
+}
+
+function Extract-Root($bmp, $fr, $target, $prevRoot, $frameName, $colorName) {
+  Write-Diag "=== Frame '$frameName' color='$colorName' ==="
+  Write-Diag "  frameRect: x=$($fr.x) y=$($fr.y) w=$($fr.w) h=$($fr.h)"
+  Write-Diag "  target: R=$($target.R) G=$($target.G) B=$($target.B)"
   $regions = @(Extract-Regions $bmp $fr $target | Where-Object { $_.Count -ge 1 })
+  Write-Diag "  regions found: $($regions.Count)"
+  for ($ri = 0; $ri -lt $regions.Count; $ri++) {
+    $reg = $regions[$ri]
+    Write-Diag "  region[$ri]: $($reg.Count) pixels"
+    $coords = ($reg | ForEach-Object { "($($_.X),$($_.Y))" }) -join " "
+    Write-Diag "    pixels: $coords"
+    $sx = 0.0; $sy = 0.0
+    foreach ($p in $reg) { $sx += [double]$p.X; $sy += [double]$p.Y }
+    Write-Diag "    centroid: ($([Math]::Round($sx / $reg.Count, 3)), $([Math]::Round($sy / $reg.Count, 3)))"
+  }
   if ($regions.Count -eq 0) {
+    Write-Diag "  -> no regions, fallback"
     if ($prevRoot) {
-      Write-Warning "Frame '$($fr)' has no matching pixels, reusing previous frame anchor."
+      Write-Warning "Frame '$frameName' has no matching pixels, reusing previous frame anchor."
       return $prevRoot
     }
-    Write-Warning "Frame '$($fr)' has no matching pixels, using default fallback."
+    Write-Warning "Frame '$frameName' has no matching pixels, using default fallback."
     return [pscustomobject]@{ cx = [Math]::Round($fr.w / 2.0, 3); cy = [Math]::Round($fr.h * 0.8, 3) }
   }
   $best = $regions[0]
+  Write-Diag "  -> selected region[0], $($best.Count) pixels"
   $sumX = 0.0; $sumY = 0.0
   foreach ($p in $best) { $sumX += [double]$p.X; $sumY += [double]$p.Y }
-  return [pscustomobject]@{ cx = [Math]::Round($sumX / $best.Count, 3); cy = [Math]::Round($sumY / $best.Count, 3) }
+  $cx = [Math]::Round($sumX / $best.Count, 3)
+  $cy = [Math]::Round($sumY / $best.Count, 3)
+  Write-Diag "  -> final anchor: ($cx, $cy)"
+  return [pscustomobject]@{ cx = $cx; cy = $cy }
 }
 
 $ANCHOR_COLORS = @{
@@ -81,7 +103,7 @@ $ANCHOR_COLORS = @{
     action = '#00FF00'
 }
 $OCCUPANCY_W = 40
-$OCCUPANCY_H = 24
+$OCCUPANCY_H = 16
 
 $rootAtlas = Get-Content -Raw $RootAtlasJson | ConvertFrom-Json
 $rootFrames = Get-OrderedFrames $rootAtlas
@@ -92,6 +114,10 @@ if (@($rootFrames).Count -eq 0) {
 }
 
 $rootBmp = [System.Drawing.Bitmap]::new($RootAtlasPng)
+$diagPath = "$OutJson.diag.log"
+$script:DiagWriter = [System.IO.StreamWriter]::new($diagPath, $false)
+$script:DiagWriter.AutoFlush = $true
+Write-Host "Diag log: $diagPath"
 
 try {
   $outFrames = @()
@@ -99,13 +125,14 @@ try {
 
   for ($i=0; $i -lt @($rootFrames).Count; $i++) {
     $fr = $rootFrames[$i].data.frame
+    $frameName = $rootFrames[$i].name
 
     $anchors = @{}
     $prevRoot = $null
     foreach ($colorName in $ANCHOR_COLORS.Keys) {
       $target = Parse-HexColor $ANCHOR_COLORS[$colorName]
       $prev = $null
-      $anchor = Extract-Root $rootBmp $fr $target $prev
+      $anchor = Extract-Root $rootBmp $fr $target $prev $frameName $colorName
       $anchors[$colorName] = $anchor
       if ($colorName -eq 'root') { $prevRoot = $anchor }
     }
@@ -143,4 +170,5 @@ try {
   Write-Host "OK: wrote $($outFrames.Count) frames to $OutJson"
 } finally {
   $rootBmp.Dispose()
+  if ($script:DiagWriter) { $script:DiagWriter.Close(); $script:DiagWriter = $null }
 }

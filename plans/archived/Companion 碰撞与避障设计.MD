@@ -1,6 +1,13 @@
-> **状态**: 📐 设计中（待实施）
+> **状态**: ✅ Step 1-4 已实施并验证通过（基本功能正常）
 > **范围**: Companion（Charlotte）的碰撞与避障；其它 NPC 不受影响
 > **依赖**: [CompanionNPC steering-collision guideline by GPT.MD](./CompanionNPC%20steering-collision%20guideline%20by%20GPT.MD)、[EXPLORE_MOVEMENT_DESIGN.md](./archived/EXPLORE_MOVEMENT_DESIGN.md)
+>
+> **实施记录**：
+> - Step 1-4 已完成（2026-08-14）
+> - 额外完成：debug mesh 跟随 entity（parent 挂载）、occupancy 工具诊断日志、occupancy h 从 24 调为 16
+> - 修正：§4.2 `isBlockingNow()` 实际用 `_isFollowing` 标志而非 `currentBehavior` getter（§5.4 已删）
+> - 修正：§10.5 X 键不切换 blocker AABB 框，另说明其真实作用
+> - 遗留：§10.3「Charlotte following 移动中被玩家挡」未实现（player 未进 blockers），见 §11.5
 
 # Companion 碰撞与避障设计
 
@@ -95,22 +102,43 @@ interactable: true,
 ### 4.2 动态阻挡接口 `isBlockingNow()`
 `blocksMovement` 是 `_buildIndices` 时一次性读的静态配置，无法表达"idle 挡、following 不挡"。引入运行时方法：
 
-**NpcCharacter 新增**：
+**实际实现（NpcCharacter）**：
 ```javascript
+// 构造里新增字段
+this.isCompanion = !!config.isCompanion;
+this._isFollowing = false;
+
+setFollowing(value) {
+    this._isFollowing = value;
+}
+
 isBlockingNow() {
     // 默认遵循静态配置
     if (!this.blocksMovement) return false;
     // companion 在 following 行为期间不挡玩家（可被穿过）
-    if (this._controller?.currentBehavior instanceof FollowingBehavior) {
-        return false;
-    }
+    if (this._isFollowing) return false;
     return true;
 }
 ```
 
-**ExploreCollisionSystem.resolveMovement 调整**：
+NpcController 在 `enterIdle` / `enterFollowing` 中同步设置标志：
+```javascript
+enterIdle(npc) {
+    this._behavior = null;
+    if (typeof npc.setFollowing === "function") npc.setFollowing(false);
+    ...
+}
+enterFollowing(npc) {
+    this._behavior = this._followingBehavior;
+    if (typeof npc.setFollowing === "function") npc.setFollowing(true);
+    ...
+}
+```
+
+**ExploreCollisionSystem.resolveMovement 调整**（含自推防护）：
 ```javascript
 for (const blocker of blockers) {
+    if (blocker === entity) continue;  // 防止 entity 自推
     if (typeof blocker.isBlockingNow === "function" && !blocker.isBlockingNow()) {
         continue;
     }
@@ -118,6 +146,8 @@ for (const blocker of blockers) {
     ...
 }
 ```
+
+> **设计修正**：原方案用 `_controller?.currentBehavior instanceof FollowingBehavior`，但 NpcCharacter 没有 controller 引用。改为 NpcCharacter 自维护 `_isFollowing` 标志 + NpcController 同步设置，解耦更彻底，且 greeting 状态天然 `_isFollowing=false → isBlockingNow=true`（站定挡路），符合预期。
 
 **语义**：
 | Charlotte 状态 | blocksMovement | isBlockingNow() | 效果 |
@@ -349,31 +379,36 @@ update(dtMs, npc, context) {
 - **归一化 intent**：斜向移动时 (1,1) 归一化为 (0.707, 0.707)，避免斜向比直线快 41%
 - **速度仍按 X 映射**：X 是主轴，Y 跟随不单独提速
 
-### 5.4 NpcController 接口暴露 currentBehavior
-`isBlockingNow()` 需要判断 Charlotte 当前是否在 following 行为。[NpcController](file:///e:/se/BlindDuel/scripts/Systems/NpcController.js) 需暴露：
+### 5.4 [已删除] NpcController currentBehavior getter
 
-```javascript
-get currentBehavior() {
-    return this._behavior;
-}
-```
+原设计要暴露 `currentBehavior` getter 给 `isBlockingNow()` 判断 following 状态。实际改用 `_isFollowing` 标志后（见 §4.2），NpcController 不需要暴露此 getter。NpcCharacter 直接读自身 `_isFollowing`，与 controller 解耦。
 
 ## 6. occupancy 与碰撞框
 
 ### 6.1 现状
-[Charlotte.occupancy.json](file:///e:/se/BlindDuel/Data/RootMotion/NPCs/Charlotte.occupancy.json) 有 9 帧（frameIndex 0-8），每帧 40×24 px。frame 7-8 未完工（无 tag 覆盖，不会播放），实际有效帧 0-6。
+[Charlotte.occupancy.json](file:///e:/se/BlindDuel/Data/RootMotion/NPCs/Charlotte.occupancy.json) 有 9 帧（frameIndex 0-8），每帧 40×16 px（h 已从 24 调为 16）。frame 7-8 未完工（无 tag 覆盖，不会播放），实际有效帧 0-6。
 
 [NpcCharacter.getBlockerAabb](file:///e:/se/BlindDuel/scripts/Enties/NpcCharacter.js#L50-L68) 用 `animation.currentFrameIndex` 索引，[:55](file:///e:/se/BlindDuel/scripts/Enties/NpcCharacter.js#L55) 有边界检查兜底（越界返回 null，该帧无碰撞）。
 
 ### 6.2 尺度核对
-- Charlotte occupancy：40×24 px
+- Charlotte occupancy：40×16 px → 0.8×0.32 world unit
 - greetingRadius：1.6 world unit
-- 按 [EXPLORE_MOVEMENT_DESIGN](file:///e:/se/BlindDuel/plans/archived/EXPLORE_MOVEMENT_DESIGN.md) 的 pxToWorld 推算，40px ≈ 0.4 world unit
+- 按 [EXPLORE_MOVEMENT_DESIGN](file:///e:/se/BlindDuel/plans/archived/EXPLORE_MOVEMENT_DESIGN.md) 的 pxToWorld=0.02 推算
 
-**结论**：occupancy 碰撞框(~0.4) 远小于 greetingRadius(1.6)，玩家停在 Charlotte 身侧时仍能触发 greeting。✅ 无冲突。
+**结论**：occupancy 碰撞框(0.8) 远小于 greetingRadius(1.6)，玩家停在 Charlotte 身侧时仍能触发 greeting。✅ 无冲突。
 
 ### 6.3 未完工帧的影响
 frame 7-8 未完工但不会被 tag 触发播放，无需处理。等动画完工后重新跑 occupancy 生成工具即可。
+
+### 6.4 occupancy h 从 24 调为 16（实施时调整）
+原工具常量 `$OCCUPANCY_H = 24` 导致 Charlotte 碰撞框高 0.48 world unit（上下各 0.24），视觉上"脚下一大片都 block"。调整 `$OCCUPANCY_H = 16`（[extract_rootmotion_occupancy.ps1:70](file:///e:/se/BlindDuel/scripts/tools/extract_rootmotion_occupancy.ps1#L70)），碰撞框变为 0.32 高（上下各 0.16），更符合实际占地。
+
+### 6.5 occupancy 工具诊断日志（额外实施）
+实施中发现 Charlotte walk 动画有 Y 抖动，调查期间给 [extract_rootmotion_occupancy.ps1](file:///e:/se/BlindDuel/scripts/tools/extract_rootmotion_occupancy.ps1) 加了诊断日志，输出到 `OutJson.diag.log`。每帧记录：frameRect、扫描区域数、每个区域的像素坐标列表和质心、最终选中的区域。
+
+> 根因最终定位为**工具输入路径错误**（应扫 `Data\RootMotion\NPCs\Charlotte.png`，不是 `Art\Sprite\NPCs\Charlotte.png`，见 [COLLIDER_UPDATE_SKILL.md](file:///e:/se/BlindDuel/COLLIDER_UPDATE_SKILL.md) 路线 B）。Art 下的是合成后 sprite atlas，root 标记被角色绘画遮盖，导致扫描到残缺像素。用正确路径重跑后 frame 2 root anchor 恢复正常。
+>
+> 诊断日志功能保留，未来调 bug 有用，运行时成本可忽略。
 
 ## 7. sequencer 衔接
 
@@ -406,57 +441,60 @@ intro 期间 scenario < 105，生效第二条。Charlotte 的 moveActorTo 终点
 
 ## 8. 调试可视化
 
-[ExploreCollisionSystem.createDebugMeshes](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L51-L62) 当前（[ExploreMode.enter](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L357) 时调用一次，常驻显示）：
-- dynamicActors → 绿色
-- blockers → 红色
+### 8.1 三色分类（已在 createDebugMeshes 实施）
+[ExploreCollisionSystem.createDebugMeshes](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L51-L62) 在 [ExploreMode.enter:359](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L359) 调用一次：
+- dynamicActors 且同时在 blockers → **黄色**（actor + blocker）
+- 纯 dynamicActors → **绿色**
+- 纯 blockers → **红色**
 
-Charlotte 同时在两个列表，会被画两遍（绿+红重叠）。
+Charlotte 同时在两个列表，显示黄色框。player 绿色，prop 红色。
 
-> 注：`updateDebugMeshes` 是 dead code（全项目无调用方），三色改造落在 `createDebugMeshes` 上。
+> 注：`updateDebugMeshes`（[:63-78](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L63-L78)）是 dead code，三色改造落在 `createDebugMeshes` 上。未来清理时可直接删除 `updateDebugMeshes`。
 
-**调整**：引入第三色（黄色）表示"既是 actor 又是 blocker"：
+### 8.2 debug mesh 跟随 entity（额外实施）
+原 `createDebugMeshes` 只在 enter 时创建一次，位置不随 entity 移动，框停在 spawn 位置不可见。
+
+**修复**：mesh 挂到 `entity.root` 下做 parent，借鉴 [CollisionComponent:86](file:///e:/se/BlindDuel/scripts/Components/CollisionComponent.js#L86) 做法：
 ```javascript
-createDebugMeshes(blockers, scene, dynamicActors) {
-    this.disposeDebugMeshes();
-    const actorSet = new Set(dynamicActors || []);
-    for (const actor of (dynamicActors || [])) {
-        const aabb = actor.getBlockerAabb?.();
-        if (!aabb) continue;
-        const isAlsoBlocker = blockers.includes(actor);
-        const color = isAlsoBlocker
-            ? new BABYLON.Color3(1, 1, 0)   // 黄：actor + blocker
-            : new BABYLON.Color3(0, 1, 0);  // 绿：纯 actor
-        this._debugMeshes.push(this._createAabbWireframe(aabb, scene, color));
-    }
-    for (const blocker of (blockers || [])) {
-        if (actorSet.has(blocker)) continue;  // 已作为 actor 画过
-        const aabb = blocker.getBlockerAabb();
-        if (!aabb) continue;
-        this._debugMeshes.push(this._createAabbWireframe(aabb, scene, new BABYLON.Color3(1, 0, 0)));
-    }
+if (actor.root) {
+    mesh.parent = actor.root;
+    mesh.position.x = (aabb.minX + aabb.maxX) / 2 - actor.root.position.x;
+    mesh.position.y = (aabb.minY + aabb.maxY) / 2 - actor.root.position.y;
+    mesh.position.z = 0;
 }
 ```
+mesh 用相对 root 的局部坐标，root.position 更新时 mesh 自动同步。prop 同样处理（prop 有 root）。
+
+构造函数新增 `_debugMeshByEntity` Map 持有映射，便于后续按 entity 刷新单个 mesh。
 
 ## 9. 实施步骤（按顺序）
 
-### Step 1：数据层
-- [ ] [CharacterFactory.js](file:///e:/se/BlindDuel/scripts/CharacterFactory.js#L432-L462) Charlotte 配置：`blocksMovement: true`，新增 `isCompanion: true`
-- [ ] [NpcCharacter.js](file:///e:/se/BlindDuel/scripts/Enties/NpcCharacter.js) 新增 `isBlockingNow()` 方法
+### Step 1：数据层 ✅
+- [x] [CharacterFactory.js](file:///e:/se/BlindDuel/scripts/CharacterFactory.js#L432-L462) Charlotte 配置：`blocksMovement: true`，新增 `isCompanion: true`
+- [x] [NpcCharacter.js](file:///e:/se/BlindDuel/scripts/Enties/NpcCharacter.js) 新增 `isBlockingNow()` + `setFollowing()` 方法
+- [x] [NpcController.js](file:///e:/se/BlindDuel/scripts/Systems/NpcController.js) `enterIdle`/`enterFollowing` 调用 `setFollowing`
 
-### Step 2：碰撞系统
-- [ ] [ExploreCollisionSystem.resolveMovement](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L6-L48) 增加 `isBlockingNow()` 检查
-- [ ] [ExploreCollisionSystem.updateDebugMeshes](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L63-L78) 三色可视化
+### Step 2：碰撞系统 ✅
+- [x] [ExploreCollisionSystem.resolveMovement](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L6-L48) 增加 `isBlockingNow()` 检查 + `blocker === entity` 自推防护
+- [x] [createDebugMeshes](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L51-L62) 三色可视化 + mesh.parent 跟随 entity
 
-### Step 3：索引构建
-- [ ] [ExploreMode._buildIndices](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L488-L504) companion 进 dynamicActors
-- [ ] [ExploreMode.fixedUpdate](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L62-L66) 合并 resolveMovement 循环
+### Step 3：索引构建 ✅
+- [x] [ExploreMode._buildIndices](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L488-L504) companion 进 dynamicActors
+- [x] [ExploreMode.fixedUpdate](file:///e:/se/BlindDuel/scripts/Systems/Modes/ExploreMode.js#L62-L66) 合并 resolveMovement 循环
 
-### Step 4：Y 轴跟随
-- [ ] [FollowingBehavior.js](file:///e:/se/BlindDuel/scripts/Systems/NpcBehaviors/FollowingBehavior.js) 增加 Y 轴判断 + 归一化 intent
-- [ ] [NpcController.js](file:///e:/se/BlindDuel/scripts/Systems/NpcController.js) 暴露 `currentBehavior` getter
+### Step 4：Y 轴跟随 ✅
+- [x] [FollowingBehavior.js](file:///e:/se/BlindDuel/scripts/Systems/NpcBehaviors/FollowingBehavior.js) 增加 Y 轴判断 + 归一化 intent
+- [x] ~~NpcController 暴露 `currentBehavior` getter~~（改用 `_isFollowing` 标志，不需要）
 
-### Step 5：验证
-- [ ] 见第 10 节验证用例
+### Step 5：验证 ✅（基本功能正常）
+- [x] 基础跟随、Y 轴跟随、碰撞、sequencer 衔接、debug 可视化均通过
+- [ ] §10.3「Charlotte following 移动中被玩家挡」未实现（见 §11.5）
+
+### 额外完成（计划外）
+- [x] debug mesh 跟随 entity（原 createDebugMeshes 不跟随，框停在 spawn 位置）
+- [x] occupancy 工具诊断日志（调查 Y 抖动时加）
+- [x] occupancy h 从 24 调为 16（原值导致碰撞框过大）
+- [x] resolveMovement 自推防护（`blocker === entity` continue）
 
 ## 10. 验证用例
 
@@ -496,13 +534,32 @@ createDebugMeshes(blockers, scene, dynamicActors) {
 if (entity.lastMoveMagnitude < EPSILON) return;
 ```
 
+**当前状态**：因 §11.5 未实现（player 未进 blockers），player 和 companion 之间无双向解算，暂无抖动风险。若 §11.5 实现后出现抖动，再评估此方案。
+
 ### 11.2 Y 轴数值调优
 `followDeadbandY: 0.15` 是初始值，跑起来后根据实际体验调整。若 Charlotte 跟随 Y 时抖动，加大死区；若反应迟钝，减小死区。
 
+**当前状态**：0.15/0.05 实测基本正常，暂不调整。
+
 ### 11.3 命名重构
 `staticBlockers → blockers` 延后到本设计跑通后。当前文档中 `blockers` 与代码 `staticBlockers` 同义。
+
+**当前状态**：Step 1-4 跑通，可择机重构。建议同时清理 `updateDebugMeshes` dead code。
 
 ### 11.4 未来扩展（不在本设计范围）
 - A* / NavMesh：当 Companion 需要绕障寻路时引入
 - NPC 间 crowd separation：当多个自主移动 NPC 共存时引入
 - 普通NPC 接入碰撞：sequence 驱动的 NPC 当前不需要
+
+### 11.5 Charlotte following 移动中被玩家挡（未实现）
+**问题**：[resolveMovement](file:///e:/se/BlindDuel/scripts/Systems/ExploreCollisionSystem.js#L6-L48) 解算 Charlotte 时遍历 `staticBlockers`，但 **player 不在 staticBlockers 里**（player 的 `blocksMovement` 是 false）。所以 Charlotte following 移动撞玩家时，玩家不在她的 blocker 列表，**她会穿过玩家**。
+
+**当前影响**：X 方向有 `targetOffsetX: 1.0`，Charlotte 正常跟随时停在玩家身侧 1.0 处，不会重叠。只有玩家主动回头撞 Charlotte 才会穿过她。
+
+**候选方案 A（推荐）**：player 也设 `blocksMovement: true`，进 staticBlockers。resolveMovement 已有 `if (blocker === entity) continue;` 自推防护，player 解算时跳过自己。Charlotte 解算时 player 是她的 blocker，撞上会被挡。
+- 优点：一行配置改动，无需新代码
+- 风险：player 进 blockers 后，所有 dynamicActor 解算都会遍历到 player，需确认无副作用（比如 enemy 未来接入碰撞时）
+
+**候选方案 B**：dynamicActors 之间互相作为 blocker 传入。resolveMovement 解算 Charlotte 时，传 `blockers = staticBlockers + dynamicActors`（排除自己）。复杂度高，暂不采用。
+
+**决策**：待玩家体验反馈。如果"玩家撞 Charlotte 穿过她"影响体验，再实施方案 A。
