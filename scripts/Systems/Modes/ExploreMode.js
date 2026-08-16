@@ -56,6 +56,8 @@ export class ExploreMode extends BaseMode {
                     inventoryManager: this.context.inventoryManager,
                     dialogueBubble: this.context.dialogueBubble,
                     sequencerBusy,
+                    walkArea: this.context.walkArea,
+                    blockers: this.staticBlockers,
                 });
             }
         }

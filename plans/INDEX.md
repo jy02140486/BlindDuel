@@ -2,6 +2,9 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-08-15)
+- Companion 目标采样落地：新建 `scripts/Systems/WalkAreaSampler.js`（静态 `sample(x,y,walkArea,blockers,{padding,agentX,agentY})`，三步算法：walkArea clamp + blocker 迭代推离 + 二次 clamp），对标 Unity `NavMesh.SamplePosition`。解决两个现象：①玩家紧贴障碍物左侧时 raw target 落在障碍物 AABB 内 → companion 走过去被 resolveMovement 推开 → 永远 `absDx > followStop` 卡在 walk 状态；②玩家走到 walkArea 右端时 raw target 超出 `walkArea.maxX` → companion 被 clamp 回边界 → 同样永远到不了 target。`FollowingBehavior.update` 在算 dx/dy 前对 raw target 走一次 sample；`ExploreMode.fixedUpdate` 把 `walkArea` 和 `staticBlockers` 塞进 controller context。player 不进 `staticBlockers`（不改 §10.3 物理推开行为），只在 sample 阶段临时拼进 `sampleBlockers` 软处理，避免 target 落在 player 身上。padding 取 npc 自身 AABB 半宽，保证到达 target 时 AABB 不重叠。实施期发现并修复震荡 bug：sample 推离时若某轴正负方向穿透距离并列（player 在 walkArea 右墙 + rawTargetY = player.y 居中），固定推到一侧会让 Charlotte 需穿越 player 走到另一侧，与 Separation 软避让冲突导致原地在 Y 方向踏步；修复方式是 sample 接受 `agentX/agentY` 参数，并列时按 agent 当前所在侧选推离方向。设计稿 `plans/Companion 目标采样（WalkAreaSampler）设计.MD`。遗留 §7.1 auto-braking（路径阻断卡死）、§7.2 双向跟随方向校验未做
+
 ## Update Log (2026-08-14)
 - Companion 碰撞与避障设计归档：`plans/Companion 碰撞与避障设计.MD` → `plans/archived/Companion 碰撞与避障设计.MD`。Step 1-4 全部实现：Charlotte 同时进 `dynamicActors` + `staticBlockers`（`isBlockingNow()` 基于 `_isFollowing` 动态控制）、`resolveMovement` 加 self-exclusion 防自阻、`FollowingBehavior` 双轴 (X+Y) 跟随 + Y 轴 Separation（`sepDirY` 带 hysteresis）、debug mesh 挂 `entity.root` 跟随移动、occupancy `h` 由 24 调为 16 + `extract_rootmotion_occupancy.ps1` 加诊断日志并修正扫描路径为 `Data/RootMotion`。遗留 §10.3「Charlotte following 移动中被玩家挡」未实现（player 未进 blockers）。详见 `commits_detailed/26.8.14 companion避障行为.MD`
 

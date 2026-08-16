@@ -1,4 +1,5 @@
 import { NpcBehavior } from "./NpcBehavior.js";
+import { WalkAreaSampler } from "../WalkAreaSampler.js";
 
 function clamp(v, lo, hi) {
     return v < lo ? lo : (v > hi ? hi : v);
@@ -46,7 +47,19 @@ export class FollowingBehavior extends NpcBehavior {
         const playerPos = player.root.position;
         const npcPos = npc.root.position;
 
-        const targetX = playerPos.x + this.options.targetOffsetX;
+        const rawTargetX = playerPos.x + this.options.targetOffsetX;
+        const rawTargetY = playerPos.y + this.options.targetOffsetY;
+        const sampleBlockers = [...(context.blockers ?? [])];
+        if (typeof player.getBlockerAabb === "function") sampleBlockers.push(player);
+        const npcAabb = npc.getBlockerAabb?.();
+        const padX = npcAabb ? (npcAabb.maxX - npcAabb.minX) * 0.5 : 0;
+        const padY = npcAabb ? (npcAabb.maxY - npcAabb.minY) * 0.5 : 0;
+        const sampled = WalkAreaSampler.sample(
+            rawTargetX, rawTargetY,
+            context.walkArea ?? null, sampleBlockers,
+            { padding: Math.max(padX, padY), agentX: npcPos.x, agentY: npcPos.y }
+        );
+        const targetX = sampled.x;
         const dx = targetX - npcPos.x;
         const absDx = Math.abs(dx);
 
@@ -55,7 +68,7 @@ export class FollowingBehavior extends NpcBehavior {
             : absDx > this.options.followStart;
         this._moving = movingX;
 
-        const targetY = playerPos.y + this.options.targetOffsetY;
+        const targetY = sampled.y;
         const dy = targetY - npcPos.y;
         const absDy = Math.abs(dy);
         const movingY = this._movingY
