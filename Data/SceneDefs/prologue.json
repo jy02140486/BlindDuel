@@ -145,7 +145,7 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [1, 0, 0],
+            "pos": [3, 0, 0],
             "controller": "ai",
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
         },
@@ -425,7 +425,7 @@
                         "texture": "Art/Environment/brush.png",
                         "kind": "tile",
                         "x": 26,
-                        "y": 2.7,
+                        "y": 2.6,
                         "tileSize": { "width":18.35, "height":2.5},
                         "width": 32,
                         "height": 2.5
@@ -452,7 +452,7 @@
                         "texture": "Art/Environment/dirt_base.png",
                         "kind": "tile",
                         "x": 0,
-                        "y": -2.8,
+                        "y": -2.7,
                         "tileSize": { "width": 5.12, "height": 5.12 },
                         "width": 128,
                         "height": 8
@@ -470,8 +470,8 @@
                         "id": "grass_deco",
                         "texture": "Art/Environment/grass_deco.png",
                         "kind": "single",
-                        "x": -24.671,
-                        "y": -0.27,
+                        "x": -10,
+                        "y": -0.96,
                         "width": 16,
                         "height": 2
                     },
@@ -488,8 +488,26 @@
                         "id": "grass_deco3",
                         "texture": "Art/Environment/grass_deco.png",
                         "kind": "single",
-                        "x": -17.671,
+                        "x": -20,
+                        "y": 0,
+                        "width": 16,
+                        "height": 2
+                    },
+                    {
+                        "id": "grass_deco4",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "single",
+                        "x": 7.6,
                         "y": 0.4,
+                        "width": 16,
+                        "height": 2
+                    },
+                    {
+                        "id": "grass_deco5",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "single",
+                        "x": 2,
+                        "y": -2,
                         "width": 16,
                         "height": 2
                     }

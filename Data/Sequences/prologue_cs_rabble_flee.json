@@ -109,7 +109,7 @@
       "channel": "movement",
       "clips": [
           { "type": "command", "atMs": 6000, "command": "move" },
-           { "type": "moveActorTo", "startMs": 6000, "durationMs": 1000, "x": 0.7, "y": -0.4, "speed": 1.4 }
+           { "type": "moveActorTo", "startMs": 6000, "durationMs": 1000, "x": 1.7, "y": -0.4, "speed": 1.4 }
       ]
     }
   ]
