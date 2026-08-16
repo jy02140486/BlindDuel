@@ -51,7 +51,6 @@
 | SceneSequencer 收敛 | 补充 `timeout/cancel/fail` 回调，条件 step 数据化。修复序列中角色朝 -x 移动时不镜像问题。 | 中 | 当前仅实现基础 step，缺少错误处理与条件判断扩展 |
 
 # mannual
-give item 锁操作 移动到固定位置
 战败读checkpoint需要procedure化
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 配音，格挡成功攻方播还是守方播，是不是跟动画播

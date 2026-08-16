@@ -1,5 +1,6 @@
 import { BaseMode } from "./BaseMode.js";
 import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
+import { WalkAreaSampler } from "../WalkAreaSampler.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { getItemDef } from "../../../Data/ItemDefs.js";
 import { getSceneDefSync } from "../../SceneDefRegistry.js";
@@ -93,6 +94,9 @@ export class ExploreMode extends BaseMode {
         const { inputSystem } = this.context;
 
         if (!inputSystem.consumeAction("interact", tickCount)) return;
+
+        // give 流程进行中（含 approach）禁止重复触发，避免 approach 期间按 J 重入
+        if (this._giveSequence) return;
 
         // 检查 give-item NPC
         for (const npc of this.interactables) {
@@ -831,6 +835,56 @@ export class ExploreMode extends BaseMode {
             return;
         }
 
+        // 算 approach 目标点：NPC 同侧下方约一个 NPC block 高，两人 AABB 刚好不接触
+        const heroPos = character.root.position;
+        const npcPos = npc.root.position;
+        const side = heroPos.x < npcPos.x ? -1 : 1; // hero 在左 → target 在左（同侧）
+
+        const npcAabb = npc.getBlockerAabb?.();
+        const heroAabb = character.getBlockerAabb?.();
+        const npcHalfW = npcAabb ? (npcAabb.maxX - npcAabb.minX) * 0.5 : 0.4;
+        const heroHalfW = heroAabb ? (heroAabb.maxX - heroAabb.minX) * 0.5 : 0.4;
+        const npcFullH = npcAabb ? (npcAabb.maxY - npcAabb.minY) : 0.48; // NPC block 面积高
+
+        const EPS = 0.02;
+        const rawTargetX = npcPos.x + side * (npcHalfW + heroHalfW + EPS);
+        const rawTargetY = npcPos.y - npcFullH; // NPC 下方约一个 block 高
+
+        // sample：hero 自己不进 blockers（不能挡自己 target）；padding 取 hero 半宽保证 AABB 不与 blocker 重叠
+        const padding = heroAabb
+            ? Math.max((heroAabb.maxX - heroAabb.minX) * 0.5, (heroAabb.maxY - heroAabb.minY) * 0.5)
+            : 0.4;
+        const sampled = WalkAreaSampler.sample(
+            rawTargetX, rawTargetY,
+            this.context.walkArea ?? null, this.staticBlockers,
+            { padding, agentX: heroPos.x, agentY: heroPos.y }
+        );
+
+        // approach 期间锁 controller，跳过 resolveMovement clamp+推离（target 已 sample 保证可达）
+        character.controlledBySequence = true;
+        // 进 walk 态以播放走动画（controlledBySequence 不影响 enterState/动画推进，只拦 _applyMovement 位移）
+        if (character.hasState("walk")) {
+            character.enterState("walk");
+        }
+
+        this._giveSequence = {
+            phase: "approach",
+            itemDef, // 延后创建 plane 时用
+            controller,
+            npc,
+            timerMs: 0,
+            bubbleDurationMs: 1000,
+            targetX: sampled.x,
+            targetY: sampled.y,
+            npcSide: side, // approach 结束转 give 时朝 NPC 转向
+            plane: null,
+        };
+
+        this.context.game?.exploreCameraRig?.setClampEnabled?.(false, 400);
+    }
+
+    // approach 结束转 give 时创建 plane（延后创建，避免 approach 期间 plane 跟着 hero 跑）
+    #createGivePlane(character, itemDef) {
         const assets = this.context.assets ?? {};
         const atlas = assets.items?.[itemDef.atlasKey ?? "ham"];
         let frameWidth = 32;
@@ -843,11 +897,8 @@ export class ExploreMode extends BaseMode {
             }
         }
         const pxToWorld = 0.02;
-        const planeW = frameWidth * pxToWorld;
-        const planeH = frameHeight * pxToWorld;
-
         const plane = BABYLON.MeshBuilder.CreatePlane("give_item", {
-            width: planeW, height: planeH
+            width: frameWidth * pxToWorld, height: frameHeight * pxToWorld
         }, this.context.babylonScene);
         const texture = new BABYLON.Texture(itemDef.textureUrl, this.context.babylonScene);
         const material = new BABYLON.StandardMaterial("give_item_mat", this.context.babylonScene);
@@ -863,19 +914,7 @@ export class ExploreMode extends BaseMode {
         plane.parent = character.root;
         plane.position.z = -0.01;
         plane.renderingGroupId = 1;
-
-        character.enterState("give");
-
-        this._giveSequence = {
-            phase: "give",
-            plane,
-            controller,
-            npc,
-            timerMs: 0,
-            bubbleDurationMs: 2000,
-        };
-
-        this.context.game?.exploreCameraRig?.setClampEnabled?.(false, 400);
+        return plane;
     }
 
     #updateGiveSequence(character, dtMs) {
@@ -884,6 +923,36 @@ export class ExploreMode extends BaseMode {
 
         const pxToWorld = character.pxToWorld ?? 0.03;
         const { dialogueBubble } = this.context;
+
+        // approach phase：hero 走向采样后的 target，到位后转 give
+        if (seq.phase === "approach") {
+            const dx = seq.targetX - character.root.position.x;
+            const dy = seq.targetY - character.root.position.y;
+            const dist = Math.hypot(dx, dy);
+            const ARRIVAL = 0.05;
+            if (dist <= ARRIVAL) {
+                // 到位：释放 controller 锁，朝 NPC 转向（NPC 在 hero 对侧：hero 在 NPC 左 → NPC 在 hero 右 → 朝右）
+                character.controlledBySequence = false;
+                character.setFacing(-seq.npcSide);
+                seq.plane = this.#createGivePlane(character, seq.itemDef);
+                character.enterState("give");
+                seq.phase = "give";
+            } else {
+                // 保持 walk 态（controlledBySequence 拦 transition，但防御性确保动画不丢）
+                if (character.currentStateName !== "walk" && character.hasState("walk")) {
+                    character.enterState("walk");
+                }
+                const speed = character.baseWalkSpeed ?? 1.4;
+                const dtSec = dtMs / 1000;
+                const step = speed * dtSec;
+                // 防止最后一帧越过 target
+                const moveDist = Math.min(step, dist);
+                character.root.position.x += (dx / dist) * moveDist;
+                character.root.position.y += (dy / dist) * moveDist;
+                character.setFacing(dx >= 0 ? 1 : -1);
+            }
+            return;
+        }
 
         if (seq.phase === "give") {
             if (seq.plane && !seq.plane.isDisposed()) {
