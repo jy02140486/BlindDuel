@@ -2,6 +2,7 @@ export class ExploreCollisionSystem {
     constructor() {
         this._debugMeshes = [];
         this._debugMeshByEntity = new Map();
+        this._debugVisible = true;
     }
 
     resolveMovement(entity, blockers, walkArea) {
@@ -86,6 +87,18 @@ export class ExploreCollisionSystem {
             }
             this._debugMeshes.push(mesh);
             this._debugMeshByEntity.set(blocker, mesh);
+        }
+        this._applyDebugVisible();
+    }
+
+    setDebugVisible(value) {
+        this._debugVisible = !!value;
+        this._applyDebugVisible();
+    }
+
+    _applyDebugVisible() {
+        for (const mesh of this._debugMeshes) {
+            if (mesh) mesh.setEnabled(this._debugVisible);
         }
     }
 

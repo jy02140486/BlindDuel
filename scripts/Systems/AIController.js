@@ -31,12 +31,14 @@ export class AIController extends BaseController {
         // 当前行为状态
         this.currentBehavior = "idle";
 
-        // 知识库档案（延迟加载）
-        this.kbProfile = null;
+        // 知识库档案（构造时立即加载，避免 ExploreMode 不调 fixedUpdate 时 mesh scaling=0 不可见）
+        this.kbProfile = AIKnowledgeRegistry.getProfile(this.character);
 
         // Debug 可视化
         this.debugVisible = options.debugVisible ?? true;
         this.#initDebugVisuals();
+        // mesh 创建后立即更新一次 scaling（基于 KB profile 的 maxReach/minReach）
+        this.#updateDebugVisuals();
     }
 
     setOpponent(opponent) {
@@ -56,11 +58,6 @@ export class AIController extends BaseController {
         if (!this.character || !this.opponent) {
             this.applyToCharacter();
             return;
-        }
-
-        // 延迟加载知识库
-        if (!this.kbProfile) {
-            this.kbProfile = AIKnowledgeRegistry.getProfile(this.character);
         }
 
         // 累积决策时间
@@ -236,6 +233,11 @@ export class AIController extends BaseController {
             }, scene);
             disc.material = material;
             disc.rotation.x = Math.PI / 2;
+            // parent 到 character.root：ExploreMode 不调 rabbleController.fixedUpdate，
+            // #updateDebugVisuals 不会被调用，mesh 必须靠 parent 自动跟随 enemy_1 位置
+            if (this.character?.root) {
+                disc.parent = this.character.root;
+            }
             disc.setEnabled(this.debugVisible);
 
             this.debugMeshes.push(disc);
@@ -245,7 +247,6 @@ export class AIController extends BaseController {
     #updateDebugVisuals() {
         if (!this.character || !this.debugMeshes || this.debugMeshes.length === 0) return;
 
-        const pos = this.character.root.position;
         const maxReach = this.#getMaxReach();
         const minReach = this.#getMinReach();
 
@@ -260,9 +261,10 @@ export class AIController extends BaseController {
             const mesh = this.debugMeshes[i];
             if (!mesh) continue;
 
-            mesh.position.x = pos.x;
-            mesh.position.y = pos.y + 0.01;
-            mesh.position.z = pos.z;
+            // mesh 已 parent 到 character.root，只需更新 local 偏移（贴地）和 scaling
+            mesh.position.x = 0;
+            mesh.position.y = 0.01;
+            mesh.position.z = 0;
             mesh.scaling.x = radii[i];
             mesh.scaling.y = radii[i];
             mesh.setEnabled(this.debugVisible);

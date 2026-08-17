@@ -358,6 +358,7 @@ export class Game {
             inventoryManager: this.inventoryManager,
             game: this,
         });
+        newScene._debugVisible = oldScene?._debugVisible ?? this.scene?._debugVisible ?? true;
         newScene._loading = true;
 
         const transition = sceneDef.transition || {};

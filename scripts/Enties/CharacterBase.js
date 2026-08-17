@@ -291,6 +291,10 @@ export class CharacterBase {
 
     _updateDebugPanel() {
         if (!this.debugPanel) return;
+        if (!this.rootDebugVisible) {
+            this.debugPanel.style.display = "none";
+            return;
+        }
 
         const canvas = this.scene.getEngine().getRenderingCanvas();
         if (!canvas) return;

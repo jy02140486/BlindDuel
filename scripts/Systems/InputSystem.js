@@ -301,6 +301,12 @@ export class InputSystem {
         };
     }
 
+    setDebugVisible(value) {
+        if (this.debugPanel) {
+            this.debugPanel.style.display = value ? "block" : "none";
+        }
+    }
+
     dispose() {
         window.removeEventListener("keydown", this._onKeyDown);
         window.removeEventListener("keyup", this._onKeyUp);

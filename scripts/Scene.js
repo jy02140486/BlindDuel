@@ -41,6 +41,7 @@ export class Scene {
         this._sceneAssets = null;
         this._sceneDef = null;
         this._rabbleControllerBound = false;
+        this._debugVisible = true;
     }
 
     async init(sceneDef, battleDefs = {}) {
@@ -139,20 +140,11 @@ export class Scene {
             this.rabbleController = null;
         }
 
-        // NPC 控制器
-        for (const entityDef of sceneDef.entities) {
-            if (entityDef.controller === "npc") {
-                const npc = this._entityById.get(entityDef.id);
-                if (npc) {
-                    const npcDef = getNpcDef(entityDef.id);
-                    npc.npcController = new NpcController(this.worldState, npcDef);
-                    npc.npcController.setupDebugVisual(this.scene, npc.root);
-                    // NPC 初始 state 的应用延迟到 applyNpcInitialStates，
-                    // 在 _loadSceneInternal 里 hero 位置确定后调用，
-                    // 避免 following 状态下 teleport 到 hero 初始 spawn 位（被后续覆盖）
-                }
-            }
-        }
+        // NPC 控制器：NpcController + setupDebugVisual + applyInitialState
+        // 已在 _spawnEntity 内部完成，此处无需重复创建。
+        // applyInitialState 的“正确 hero 位置”版本由 applyNpcInitialStates 在
+        // _loadSceneInternal 应用 spawnPoint 后再调一次覆盖（初始 spawn 路径）；
+        // 动态 spawn 路径则直接用 _spawnEntity 里的那次调用。
 
         // --- 战斗系统与边界 ---
         // combatSystem/cameraRig 等 Game 稳定对象直接经 this._game 访问，不再存别名
@@ -306,28 +298,8 @@ export class Scene {
 
         this._onKeyDown = (e) => {
             if (e.key.toLowerCase() === "x") {
-                const first = this.entityPool[0];
-                const nextVisible = !first?.collision?.visible;
-                for (const entity of this.entityPool) {
-                    if (typeof entity.setCollisionVisible === "function") {
-                        entity.setCollisionVisible(nextVisible);
-                    }
-                }
-                this.stageBoundary.setVisible(nextVisible);
-                if (this.walkArea) {
-                    this.walkArea.setVisible(nextVisible);
-                }
-                this._game?.exploreCameraRig?.setDebugVisible?.(nextVisible);
-                if (this.triggers) {
-                    for (const trigger of this.triggers.values()) {
-                        trigger.setDebugVisible(nextVisible);
-                    }
-                }
-                for (const entity of this.entityPool) {
-                    if (entity.npcController) {
-                        entity.npcController.setDebugVisible(nextVisible);
-                    }
-                }
+                this._debugVisible = !this._debugVisible;
+                this._applyDebugVisible();
             }
         };
         window.addEventListener("keydown", this._onKeyDown);
@@ -343,6 +315,36 @@ export class Scene {
         this._applySceneMusic(sceneDef);
         // 读取 SceneDef.ambient（含条件写法，支持多轨）→ switchAmbient
         this._applySceneAmbient(sceneDef);
+        // 初始应用全局 debug 可见性（统一所有 debug 元素开关）
+        this._applyDebugVisible();
+    }
+
+    _applyDebugVisible() {
+        const v = this._debugVisible;
+        for (const entity of this.entityPool) {
+            if (typeof entity.setCollisionVisible === "function") {
+                entity.setCollisionVisible(v);
+            }
+            if (entity.npcController) {
+                entity.npcController.setDebugVisible(v);
+            }
+        }
+        this.stageBoundary?.setVisible(v);
+        if (this.walkArea) {
+            this.walkArea.setVisible(v);
+        }
+        this._game?.exploreCameraRig?.setDebugVisible?.(v);
+        this._game?.cameraRig?.setDebugVisible?.(v);
+        this._game?.inputSystem?.setDebugVisible?.(v);
+        if (this.triggers) {
+            for (const trigger of this.triggers.values()) {
+                trigger.setDebugVisible(v);
+            }
+        }
+        this.exploreMode?._collisionSystem?.setDebugVisible?.(v);
+        if (this.rabbleController?.setDebugVisible) {
+            this.rabbleController.setDebugVisible(v);
+        }
     }
 
     _applySceneAmbient(sceneDef) {
@@ -581,13 +583,18 @@ export class Scene {
                 this.sharedContext.rabbleStick = entity;
             }
             if (this._actorRegistry) this._actorRegistry.set("enemy", entity);
+            // 同步 root disc + CollisionComponent boxes 与全局 _debugVisible
+            // AIController 三色环已在 _initRabbleController 构造时通过 debugVisible 选项同步
+            if (typeof entity.setCollisionVisible === "function") {
+                entity.setCollisionVisible(this._debugVisible);
+            }
         }
 
         // NPC controller
         if (entityDef.controller === "npc") {
             const npcDef = getNpcDef(entityDef.id);
             entity.npcController = new NpcController(this.worldState, npcDef);
-            entity.npcController.setupDebugVisual(this.scene, entity.root);
+            entity.npcController.setupDebugVisual(this.scene, entity.root, this._debugVisible);
             // 传 hero：following 状态下将 NPC 初始位置设到 hero 旁
             const hero = this._entityById.get("hero");
             entity.npcController.applyInitialState(entity, this.worldState, hero);
@@ -612,7 +619,7 @@ export class Scene {
             const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
             this.rabbleController = new TestController(rabbleStick, scriptConfig);
         } else if (controllerType === "ai") {
-            this.rabbleController = new AIController(rabbleStick, { opponent: hero });
+            this.rabbleController = new AIController(rabbleStick, { opponent: hero, debugVisible: this._debugVisible });
         } else {
             this.rabbleController = new DummyController(rabbleStick);
         }
@@ -689,7 +696,7 @@ export class Scene {
                     this.walkArea = new WalkArea(this.scene, {
                         minX: def.minX, maxX: def.maxX,
                         minY: def.minY, maxY: def.maxY,
-                        visible: true
+                        visible: this._debugVisible
                     });
                     if (this.sharedContext) {
                         this.sharedContext.walkArea = this.walkArea;

@@ -219,8 +219,9 @@ export class NpcController {
         }
     }
 
-    setupDebugVisual(scene, rootNode) {
-        this._debugDisc = BABYLON.MeshBuilder.CreateDisc("npc_greeting_disc", {
+    setupDebugVisual(scene, rootNode, debugVisible = true) {
+        const ownerName = rootNode?.name ?? "unknown_npc";
+        this._debugDisc = BABYLON.MeshBuilder.CreateDisc(`npc_greeting_disc[${ownerName}]`, {
             radius: this.greetingRadius,
             tessellation: 32,
             sideOrientation: BABYLON.Mesh.DOUBLESIDE
@@ -229,14 +230,19 @@ export class NpcController {
         this._debugDisc.rotation.z = Math.PI / 2;
         this._debugDisc.position.z = -0.01;
         this._debugDisc.renderingGroupId = 2;
+        this._debugDisc.metadata = {
+            owner: ownerName,
+            kind: "npc_greeting_disc",
+            greetingRadius: this.greetingRadius
+        };
 
-        this._debugMaterial = new BABYLON.StandardMaterial("npc_greeting_mat", scene);
+        this._debugMaterial = new BABYLON.StandardMaterial(`npc_greeting_mat[${ownerName}]`, scene);
         this._debugMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.9, 0.3);
         this._debugMaterial.alpha = 0.2;
         this._debugMaterial.backFaceCulling = false;
         this._debugMaterial.disableLighting = true;
         this._debugDisc.material = this._debugMaterial;
-        this._debugDisc.setEnabled(false);
+        this._debugDisc.setEnabled(debugVisible);
     }
 
     setDebugVisible(value) {

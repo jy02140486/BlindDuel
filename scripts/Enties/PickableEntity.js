@@ -91,6 +91,10 @@ export class PickableEntity {
 
     _updateDebugPanel() {
         if (!this.debugPanel || !this.spritePlane) return;
+        if (!this._debugVisible) {
+            this.debugPanel.style.display = "none";
+            return;
+        }
         const canvas = this.scene.getEngine().getRenderingCanvas();
         if (!canvas) return;
         const anchor = this.root.position.clone();

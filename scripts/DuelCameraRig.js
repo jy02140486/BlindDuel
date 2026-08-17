@@ -198,6 +198,12 @@ export class DuelCameraRig {
         return state;
     }
 
+    setDebugVisible(value) {
+        if (this.debugPanel) {
+            this.debugPanel.style.display = value ? "block" : "none";
+        }
+    }
+
     dispose() {
         this.debugPanel?.remove();
         this.debugPanel = null;

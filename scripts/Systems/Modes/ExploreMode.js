@@ -363,6 +363,7 @@ export class ExploreMode extends BaseMode {
         this._setupDrawOrderDebug();
         this._setupPerCharacterStencil();
         this._collisionSystem.createDebugMeshes(this.staticBlockers, this.context.babylonScene, this.dynamicActors);
+        this._collisionSystem.setDebugVisible(this.context.scene?._debugVisible ?? true);
         this._registerSequenceHandlers();
     }
 
