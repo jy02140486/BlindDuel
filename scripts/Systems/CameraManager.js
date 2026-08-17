@@ -407,6 +407,9 @@ export class CameraManager {
                 if (fx.type === "flash") {
                     this._clearFlash();
                 }
+                if (fx.type === "fade") {
+                    console.log(`[Fade] expired elapsed=${fx.elapsedMs.toFixed(0)} dur=${fx.durationMs} — splice only, CSS opacity retained (no _clearFade call)`);
+                }
                 expired.push(i);
                 continue;
             }
@@ -511,17 +514,68 @@ export class CameraManager {
         const el = this._overlay?.fade;
         if (!el) return;
         const params = fx.params || {};
+        const fromVal = params.from ?? 0;
+        const toVal = params.to ?? 1;
+        const dur = fx.durationMs;
+        const triggerT = performance.now();
+
         el.style.background = params.color || "black";
         el.style.transition = "none";
-        el.style.opacity = String(params.from ?? 0);
-        el.offsetHeight;
-        el.style.transition = `opacity ${fx.durationMs}ms linear`;
-        el.style.opacity = String(params.to ?? 1);
+        el.style.opacity = String(fromVal);
+
+        if (el._fadeTransitionEnd) {
+            el.removeEventListener("transitionend", el._fadeTransitionEnd);
+            el._fadeTransitionEnd = null;
+        }
+        if (el._fadeTimeout) {
+            clearTimeout(el._fadeTimeout);
+            el._fadeTimeout = null;
+        }
+
+        requestAnimationFrame(() => {
+            el.style.transition = `opacity ${dur}ms ease-in`;
+            el.style.opacity = String(toVal);
+            console.log(`[Fade] trigger(rAF) dur=${dur} from=${fromVal} to=${toVal} t=${triggerT.toFixed(0)} timing=ease-in`);
+
+            const handler = (e) => {
+                if (e.propertyName !== "opacity") return;
+                const actualDur = performance.now() - triggerT;
+                console.log(`[Fade] transitionend actualDur=${actualDur.toFixed(0)}ms (expected ${dur}ms) finalOpacity=${el.style.opacity}`);
+                if (el._fadeTransitionEnd === handler) el._fadeTransitionEnd = null;
+                el.removeEventListener("transitionend", handler);
+                if (el._fadeSampleInterval) {
+                    clearInterval(el._fadeSampleInterval);
+                    el._fadeSampleInterval = null;
+                }
+            };
+            el._fadeTransitionEnd = handler;
+            el.addEventListener("transitionend", handler);
+
+            if (el._fadeSampleInterval) clearInterval(el._fadeSampleInterval);
+            el._fadeSampleInterval = setInterval(() => {
+                const computed = parseFloat(getComputedStyle(el).opacity);
+                const elapsed = performance.now() - triggerT;
+                console.log(`[Fade] sample t=${elapsed.toFixed(0)} opacity=${computed.toFixed(3)}`);
+            }, 200);
+
+            el._fadeTimeout = setTimeout(() => {
+                if (el._fadeTransitionEnd === handler) {
+                    console.warn(`[Fade] NO transitionend after ${dur + 300}ms — transition NOT fired! opacity=${el.style.opacity}`);
+                    el.removeEventListener("transitionend", handler);
+                    el._fadeTransitionEnd = null;
+                }
+                if (el._fadeSampleInterval) {
+                    clearInterval(el._fadeSampleInterval);
+                    el._fadeSampleInterval = null;
+                }
+            }, dur + 300);
+        });
     }
 
     _clearFade() {
         const el = this._overlay?.fade;
         if (!el) return;
+        console.log(`[Fade] _clearFade called — setting opacity=0 (was ${el.style.opacity})`);
         el.style.transition = "none";
         el.style.opacity = "0";
     }

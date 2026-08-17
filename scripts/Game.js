@@ -274,8 +274,9 @@ export class Game {
         console.log('[Checkpoint] saved', { sceneId, spawnId, scenario: this._checkpoint.scenario, hp: this._checkpoint.hp, heroPos, items: this._checkpoint.inventory.length, buffs: this._checkpoint.buffs.length });
     }
 
-    restoreCheckpoint() {
+    async restoreCheckpoint(opts = {}) {
         const currentMode = this.gameModeManager?.currentMode;
+        const fadeInDurationMs = opts.fadeInDurationMs ?? 2000;
         // 检查点重置的统一清理入口（职责划分）：
         //   - AudioManager 内部状态（_audioResumeDone/_activeSounds）由 detachScene 自清
         //     （见 plans/commits_detailed/26.7.28 战败重置后 ambient 不响修复）
@@ -296,11 +297,14 @@ export class Game {
             this.resetWorldState();
             this.inventoryManager.items = [];
             this._pendingRestore = { hp: 3, maxHp: 3, buffs: [], heroPos: null };
-            this.requestSceneSwitch(
+            await this.requestSceneSwitch(
                 getSceneDefSync(this.worldState.currentSceneId),
                 this.worldState.currentSpawnId ?? "house_door",
                 { skipTransition: true }
             );
+            if (opts.fadeInAfter) {
+                this._enqueueFadeIn(fadeInDurationMs, 'cp');
+            }
             return;
         }
 
@@ -316,9 +320,21 @@ export class Game {
             buffs: JSON.parse(JSON.stringify(cp.buffs)),
             heroPos: cp.heroPos ? [...cp.heroPos] : null,
         };
-        this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId, { skipTransition: true });
+        await this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId, { skipTransition: true });
+        if (opts.fadeInAfter) {
+            this._enqueueFadeIn(fadeInDurationMs, 'cp');
+        }
 
         console.log('[Checkpoint] restored', { sceneId: cp.sceneId, spawnId: cp.spawnId, scenario: cp.scenario, hp: cp.hp });
+    }
+
+    _enqueueFadeIn(durationMs, tag) {
+        console.log(`[Fade] restoreCheckpoint(${tag}) enqueue fade-in dur=${durationMs} t=${performance.now().toFixed(0)}`);
+        this.cameraManager?.enqueueEffect({
+            type: "fade",
+            durationMs,
+            params: { from: 1, to: 0, color: "black" }
+        });
     }
 
     async requestSceneSwitch(sceneDef, spawnId, opts = {}) {

@@ -177,8 +177,18 @@ export class BattleMode extends BaseMode {
             id: "defeat",
             steps: [
                 { type: STEP_TYPE.LOCK_INPUT, actorId: "hero" },
-                { type: STEP_TYPE.WAIT, durationMs: 2500 },
-                { type: STEP_TYPE.CALLBACK, fn: (ctx) => ctx.game?.restoreCheckpoint() },
+                { type: STEP_TYPE.WAIT, durationMs: 1000 },
+                { type: STEP_TYPE.CAMERA_EFFECT, effect: "fade", durationMs: 800, color: "black", from: 0, to: 1 },
+                { type: STEP_TYPE.WAIT, durationMs: 2000 },
+                // 注意：CALLBACK step 不 await async fn（见 SceneSequencer._startCurrentStep）。
+                // restoreCheckpoint 是 fire-and-forget，必须作为 sequence 最后一步，
+                // 否则后续 step 会在 await requestSceneSwitch 期间执行（old scene 正在 dispose）。
+                { type: STEP_TYPE.CALLBACK, fn: (ctx) => {
+                    const p = ctx.game?.restoreCheckpoint({ fadeInAfter: true });
+                    if (p && typeof p.catch === "function") {
+                        p.catch(err => console.error("[BattleMode] restoreCheckpoint failed", err));
+                    }
+                } },
             ]
         };
         sceneSequencer.play(defeatSequence);
