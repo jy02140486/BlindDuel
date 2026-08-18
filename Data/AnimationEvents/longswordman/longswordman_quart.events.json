@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "quart": {
+            "events": [
+                { "frame": 3, "type": "swing_heavy" }
+            ]
+        }
+    }
+}

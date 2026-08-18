@@ -30,7 +30,7 @@ villagers
 
 
 
-level 2 forest, acient ruins in a cave
+level 2 riverdale, settlement
 
 beat man at arms on road
 beat crossbowman on road

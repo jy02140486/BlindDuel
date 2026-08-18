@@ -2,7 +2,8 @@
     "clips": {
         "draw": {
             "events": [
-                { "frame": 1, "type": "off_cloaked" }
+                { "frame": 1, "type": "off_cloaked" },
+                { "frame": 4, "type": "on_draw_sheath" }
             ]
         }
     }

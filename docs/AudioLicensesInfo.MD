@@ -1,10 +1,8 @@
-| asset | author | Source  | license |
-|---|---|---|---|
-| Footsteps, Light Mud, A.wav | InspectorJ | Freesound | CC BY 4.0 |
-| 847838__posdesigndesom__fghtimpt_punch-sounds-strong_guilherme-gabriel-leonardo_dsba.wav | posdesigndesom | Freesound | CC BY 4.0 |
-| 744710__letterborne__forest_footsteps_6x.wav | letterborne | Freesound | CC BY 4.0 |
-| 263595__porkmuncher__swoosh.wav | porkmuncher | Freesound | CC BY 4.0 |
-| 762061__newlocknew__ambforst_a-small-forest-near-the-townbirdsong | newlocknew | Freesound | CC BY 4.0 |
-| 556754__fmaudio__rustling-duvet-1.wav | fmaudio | Freesound | CC BY 4.0 |
-| 556756__fmaudio__rustling-duvet-6.wav | fmaudio | Freesound | CC BY 4.0 |
-| 556758__fmaudio__swirling-velvet-cloak-3.wav | fmaudio | Freesound | CC BY 4.0 |
+FGHTImpt_Punch Sounds Strong_Guilherme, Gabriel, Leonardo_DSBA by posdesigndesom -- https://freesound.org/s/847838/ -- License: Attribution 4.0
+Forest_footsteps_6x by Letterborne -- https://freesound.org/s/744710/ -- License: Creative Commons 0
+swoosh.wav by PorkMuncher -- https://freesound.org/s/263595/ -- License: Creative Commons 0
+AMBForst_A Small Forest Near The Town.Birdsong.Insects Buzzing_EM by newlocknew -- https://freesound.org/s/762061/ -- License: Attribution NonCommercial 4.0
+Rustling Duvet 1.wav by F.M.Audio -- https://freesound.org/s/556754/ -- License: Attribution 4.0
+Rustling Duvet 6.wav by F.M.Audio -- https://freesound.org/s/556756/ -- License: Attribution 4.0
+Swirling Velvet Cloak 3.wav by F.M.Audio -- https://freesound.org/s/556758/ -- License: Attribution 4.0
+Super Slow-Slide.wav by scriptique -- https://freesound.org/s/50822/ -- License: Attribution 4.0

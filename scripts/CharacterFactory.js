@@ -71,6 +71,7 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_quart.png",
                 atlasData: assets.atlas.hero.quart,
                 colliderData: assets.colliders.hero.quart,
+                eventsData: assets.animationEvents?.hero?.quart,
                 loop: false
             },
             zornhut: {

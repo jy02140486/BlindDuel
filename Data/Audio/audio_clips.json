@@ -46,6 +46,11 @@
         "volume": 0.9,
         "pitch": [0.64, 0.72],
         "bus": "sfx"
+    },
+        "on_draw_sheath": {
+        "clips": ["./Audio/sfx/weapon/50822__scriptique__super-slow-slide.wav"],
+        "volume": 0.9,
+        "pitch": [0.84, 0.96],
+        "bus": "sfx"
     }
-    
 }
