@@ -35,7 +35,7 @@
                     { "type": "command", "atMs": 0, "command": "walk" },
                     { "type": "faceWorldX", "atMs": 0, "direction": 1 },
                     { "type": "moveActorTo", "startMs": 0, "durationMs": 1000, "x": -9, "y": 0, "speed": 1.4 },
-                    { "type": "command", "atMs": 1800, "command": "idle" }
+                    { "type": "command", "atMs": 1000, "command": "idle" }
                 ]
             },
             {
@@ -145,7 +145,7 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [-23, 0, 0],
+            "pos": [3, 0, 0],
             "controller": "ai",
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
         },
@@ -154,7 +154,7 @@
             "id": "altar_gem_01",
             "name": "altar_gem",
             "kind": "pickable",
-            "pos": [-18.0, -1.5],
+            "pos": [-18.0, -0.7],
             "controller": "none",
             "visualYOffset": 0,
             "itemDef": {

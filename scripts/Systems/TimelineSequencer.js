@@ -674,7 +674,9 @@ const ACTION_HANDLERS = {
             }
             const nativeFacingX = actor.nativeFacingX ?? 1;
             const spriteFacing = clip.direction === nativeFacingX ? 1 : -1;
+            const prevFacing = actor.facing;
             actor.setFacing(spriteFacing);
+            console.log(`[FollowingBehavior] faceWorldX actor=${actor.id ?? actor.name} direction=${clip.direction} nativeFacingX=${nativeFacingX} spriteFacing=${spriteFacing} prevFacing=${prevFacing} newFacing=${actor.facing}`);
         }
     },
 

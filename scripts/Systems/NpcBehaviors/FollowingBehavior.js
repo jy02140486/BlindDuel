@@ -8,17 +8,14 @@ function clamp(v, lo, hi) {
 export class FollowingBehavior extends NpcBehavior {
     constructor(options = {}) {
         super({
-            targetOffsetX: 1.0,
+            targetOffsetX: 2.0,
             targetOffsetY: 0,
             followStart: 0.4,
             followStop: 0.1,
             followDeadbandY: 0.15,
             followStopY: 0.05,
-            speedMin: 0.7,
-            speedMax: 1.4,
-            baseSpeed: 1.1,
-            speedMapSpan: 1.5,
-        speedMapAnchor: 1.0,
+            speedMin: 0.77,
+            speedMax: 1.87,
         separationRadius: 0.6,
         separationStrength: 1.0,
         ...options
@@ -120,8 +117,14 @@ export class FollowingBehavior extends NpcBehavior {
         }
 
         const o = this.options;
-        const m = clamp((absDx - o.speedMapAnchor) / o.speedMapSpan, o.speedMin, o.speedMax);
-        npc.baseWalkSpeed = o.baseSpeed * m;
+        let speed;
+        if (absDx >= o.followStart) {
+            speed = o.speedMax;
+        } else {
+            const t = (absDx - o.followStop) / (o.followStart - o.followStop);
+            speed = o.speedMin + (o.speedMax - o.speedMin) * Math.max(0, t);
+        }
+        npc.baseWalkSpeed = speed;
         npc.setMoveIntent({ x: ix, y: iy });
         if (npc.currentStateName !== "walk" && npc.hasState("walk")) {
             npc.enterState("walk");

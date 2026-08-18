@@ -17,6 +17,10 @@
 cd .\
 py -m http.server 9000 --bind 127.0.0.1
 ```
+不使用json缓存:
+```powershell
+py .\.serve.ps1
+```   
 访问：`http://127.0.0.1:9000/babylon_demo.html`
 
 ## 3. 当前目录与关键文件

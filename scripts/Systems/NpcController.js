@@ -37,7 +37,9 @@ export class NpcController {
         this._dialogueBubble = context.dialogueBubble ?? this._dialogueBubble;
 
         if (this._behavior) {
-            this._behavior.update(dtMs, npc, context);
+            if (!context.sequencerBusy) {
+                this._behavior.update(dtMs, npc, context);
+            }
             if (this._debugDisc && this._debugRootNode) {
                 this._debugDisc.position.x = this._debugRootNode.position.x;
                 this._debugDisc.position.y = this._debugRootNode.position.y;
