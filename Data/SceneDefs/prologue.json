@@ -456,6 +456,14 @@
                         "tileSize": { "width": 5.12, "height": 5.12 },
                         "width": 128,
                         "height": 8
+                    },{
+                        "id": "altar_fragment_2",
+                        "texture": "Art/Environment/altar_fragment_2.png",
+                        "kind": "single",
+                        "x": -21,
+                        "y": 1.6,
+                        "width": 2.64,
+                        "height": 1.6
                     },
                     {
                         "id": "ruin_main",
@@ -510,6 +518,23 @@
                         "y": -2,
                         "width": 16,
                         "height": 2
+                    },
+                    {
+                        "id": "grass_deco6",
+                        "texture": "Art/Environment/grass_deco.png",
+                        "kind": "single",
+                        "x": -32,
+                        "y": 0.5,
+                        "width": 16,
+                        "height": 2
+                    },{
+                        "id": "altar_fragment_1",
+                        "texture": "Art/Environment/altar_fragment_1.png",
+                        "kind": "single",
+                        "x": -30,
+                        "y": 1.8,
+                        "width": 3.15,
+                        "height": 1.6
                     }
 
                 ]
