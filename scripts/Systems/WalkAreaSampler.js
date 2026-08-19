@@ -15,6 +15,7 @@ export class WalkAreaSampler {
             else if (ty > walkArea.maxY) ty = walkArea.maxY;
         }
 
+        let unresolved = false;
         for (let iter = 0; iter < maxIter; iter++) {
             let pushed = false;
             for (const blocker of blockers ?? []) {
@@ -32,24 +33,43 @@ export class WalkAreaSampler {
                 const dRight = maxX - tx;
                 const dBottom = ty - minY;
                 const dTop = maxY - ty;
-                const minD = Math.min(dLeft, dRight, dBottom, dTop);
 
-                if (minD === dLeft || minD === dRight) {
-                    if (Math.abs(dLeft - dRight) < 1e-6) {
-                        tx = (agentX !== undefined && agentX >= tx) ? maxX : minX;
-                    } else {
-                        tx = (minD === dLeft) ? minX : maxX;
+                const candidates = [
+                    { axis: 'x', dist: dLeft, val: minX },
+                    { axis: 'x', dist: dRight, val: maxX },
+                    { axis: 'y', dist: dBottom, val: minY },
+                    { axis: 'y', dist: dTop, val: maxY },
+                ];
+                candidates.sort((a, c) => a.dist - c.dist);
+
+                let resolvedThisBlocker = false;
+                for (const cand of candidates) {
+                    if (cand.dist <= 0) continue;
+                    let nx = tx, ny = ty;
+                    if (cand.axis === 'x') nx = cand.val;
+                    else ny = cand.val;
+
+                    if (walkArea) {
+                        if (nx < walkArea.minX) nx = walkArea.minX;
+                        else if (nx > walkArea.maxX) nx = walkArea.maxX;
+                        if (ny < walkArea.minY) ny = walkArea.minY;
+                        else if (ny > walkArea.maxY) ny = walkArea.maxY;
                     }
-                } else if (minD === dBottom || minD === dTop) {
-                    if (Math.abs(dBottom - dTop) < 1e-6) {
-                        ty = (agentY !== undefined && agentY >= ty) ? maxY : minY;
-                    } else {
-                        ty = (minD === dBottom) ? minY : maxY;
+
+                    if (nx > minX && nx < maxX && ny > minY && ny < maxY) {
+                        continue;
                     }
+                    tx = nx; ty = ny;
+                    resolvedThisBlocker = true;
+                    pushed = true;
+                    break;
                 }
-                pushed = true;
+                if (!resolvedThisBlocker) {
+                    unresolved = true;
+                    console.warn(`[WalkAreaSampler] unresolved blocker: raw=(${x.toFixed(2)}, ${y.toFixed(2)}) cur=(${tx.toFixed(2)}, ${ty.toFixed(2)}) blocker=${JSON.stringify(b)}`);
+                }
             }
-            if (!pushed) break;
+            if (!pushed || unresolved) break;
         }
 
         if (walkArea) {

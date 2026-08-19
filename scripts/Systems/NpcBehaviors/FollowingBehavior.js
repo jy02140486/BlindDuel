@@ -105,10 +105,12 @@ export class FollowingBehavior extends NpcBehavior {
 
         let ix = movingX ? Math.sign(dx) : 0;
         let iy;
-        if (sepForce > 0) {
+        if (movingY) {
+            iy = Math.sign(dy);
+        } else if (sepForce > 0) {
             iy = sepIy;
         } else {
-            iy = movingY ? Math.sign(dy) : 0;
+            iy = 0;
         }
         const len = Math.hypot(ix, iy);
         if (len > 0) {
