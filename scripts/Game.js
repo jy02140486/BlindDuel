@@ -157,6 +157,8 @@ export class Game {
             "sceneSequencer=", !!this.sceneSequencer,
             "audioManager=", !!this.audioManager,
             "assets=", !!this.assets);
+
+        this._setupDebugConsole();
     }
 
     async init() {
@@ -461,5 +463,198 @@ export class Game {
 
     toggleCameraProjection() {
         this.scene.toggleCameraProjection();
+    }
+
+    _setupDebugConsole() {
+        const self = this;
+
+        // 工具函数：获取当前场景所有 NPC
+        function _getNpcEntities() {
+            return self.scene?.entityPool?.filter(e => e.npcController) ?? [];
+        }
+
+        // 工具函数：按名称查找 NPC
+        function _findNpc(name) {
+            const entities = _getNpcEntities();
+            return entities.find(e => e.root?.name === name || e.id === name);
+        }
+
+        // 工具函数：获取 NPC 状态摘要
+        function _summarize(npc) {
+            const ctrl = npc.npcController;
+            const pos = npc.root?.position;
+            const behaviorName = ctrl._behavior
+                ? (ctrl._behavior === ctrl._followingBehavior ? "following" : ctrl._behavior.constructor?.name ?? "unknown")
+                : null;
+            const summary = {
+                name: npc.root?.name ?? npc.id ?? "?",
+                id: npc.id,
+                state: ctrl.state,
+                behavior: behaviorName,
+                x: pos?.x?.toFixed(2),
+                y: pos?.y?.toFixed(2),
+                isCompanion: npc.isCompanion ?? false,
+                blocksMovement: npc.blocksMovement ?? false,
+                isBlocking: npc.isBlockingNow ? npc.isBlockingNow() : null,
+            };
+            // FollowingBehavior 附加力数据
+            if (ctrl._followingBehavior?._debugData) {
+                const d = ctrl._followingBehavior._debugData;
+                summary.fx = d.followX;
+                summary.fy = d.followY;
+                summary.ix = d.ix;
+                summary.iy = d.iy;
+                summary.speed = d.speed;
+                summary.dx = d.dx;
+                summary.dy = d.dy;
+            }
+            return summary;
+        }
+
+        globalThis.debug = {
+            /**
+             * 列出当前场景所有 NPC
+             * @returns {Array} NPC 摘要数组
+             */
+            listNpcs() {
+                const entities = _getNpcEntities();
+                const summaries = entities.map(_summarize);
+                console.table(summaries);
+                console.log(`[debug] ${entities.length} NPC(s) found`);
+                return summaries;
+            },
+
+            /**
+             * 按名称获取 NPC 实体
+             * @param {string} name - NPC 名称（root.name 或 entity.id）
+             * @returns {NpcCharacter|null}
+             */
+            getNpc(name) {
+                const npc = _findNpc(name);
+                if (!npc) {
+                    console.warn(`[debug] NPC "${name}" not found. Available:`, _getNpcEntities().map(e => e.root?.name));
+                    return null;
+                }
+                console.log(`[debug] Found NPC "${name}":`, _summarize(npc));
+                return npc;
+            },
+
+            /**
+             * 切换 NPC 的 behavior
+             * @param {string} name - NPC 名称
+             * @param {string} behavior - 目标 behavior: "idle" | "following"
+             */
+            setBehavior(name, behavior) {
+                const npc = _findNpc(name);
+                if (!npc) return;
+                const ctrl = npc.npcController;
+
+                if (behavior === "idle") {
+                    ctrl.enterIdle(npc);
+                    console.log(`[debug] "${name}" → idle`);
+                } else if (behavior === "following") {
+                    ctrl.enterFollowing(npc);
+                    // 如果有 hero，自动 teleport 到 hero 旁
+                    const hero = self.scene?.entityPool?.find(e => e.id === "hero");
+                    if (hero) {
+                        const offsetX = ctrl._followingBehavior?.options?.targetOffsetX ?? 1.0;
+                        const heroPos = hero.root.position;
+                        npc.root.position.set(heroPos.x + offsetX, heroPos.y, heroPos.z);
+                    }
+                    console.log(`[debug] "${name}" → following`);
+                } else {
+                    console.warn(`[debug] Unknown behavior "${behavior}". Use "idle" or "following".`);
+                }
+            },
+
+            /**
+             * 强制触发 NPC 的 greeting（对话气泡）
+             * @param {string} name - NPC 名称
+             */
+            forceGreeting(name) {
+                const npc = _findNpc(name);
+                if (!npc) return;
+                const ctrl = npc.npcController;
+                ctrl.hasGreetedInRange = false;
+                ctrl.enterGreeting(npc);
+                console.log(`[debug] "${name}" → greeting (forced)`);
+            },
+
+            /**
+             * 将 NPC 传送到指定位置
+             * @param {string} name - NPC 名称
+             * @param {number} x - 目标 X
+             * @param {number} y - 目标 Y
+             */
+            teleport(name, x, y) {
+                const npc = _findNpc(name);
+                if (!npc) return;
+                npc.root.position.set(x, y, 0);
+                console.log(`[debug] "${name}" → (${x}, ${y})`);
+            },
+
+            /**
+             * 立即刷新 NPC following 行为的目标采样
+             * @param {string} name - NPC 名称
+             */
+            resample(name) {
+                const npc = _findNpc(name);
+                if (!npc) return;
+                const ctrl = npc.npcController;
+                if (ctrl._followingBehavior) {
+                    ctrl._followingBehavior._lastSampled = null;
+                    ctrl._followingBehavior._sepDirY = 0;
+                    console.log(`[debug] "${name}" following target resampled`);
+                } else {
+                    console.warn(`[debug] "${name}" is not in following state`);
+                }
+            },
+
+            /**
+             * 调整 FollowingBehavior 参数（实时生效）
+             * @param {string} name - NPC 名称
+             * @param {Object} params - 要修改的参数，如 { targetOffsetX: 1.5, followGain: 3.0 }
+             */
+            tuneParams(name, params) {
+                const npc = _findNpc(name);
+                if (!npc) return;
+                const ctrl = npc.npcController;
+                const behavior = ctrl._followingBehavior;
+                if (!behavior) {
+                    console.warn(`[debug] "${name}" is not in following state`);
+                    return;
+                }
+                Object.assign(behavior.options, params);
+                console.log(`[debug] "${name}" params updated:`, params);
+            },
+
+            /**
+             * 导出所有 NPC 状态为 JSON
+             * @returns {string} JSON 字符串
+             */
+            dumpStates() {
+                const data = _getNpcEntities().map(npc => {
+                    const s = _summarize(npc);
+                    if (npc.npcController._followingBehavior?._debugData) {
+                        s._debugData = { ...npc.npcController._followingBehavior._debugData };
+                    }
+                    return s;
+                });
+                const json = JSON.stringify(data, null, 2);
+                console.log(json);
+                return json;
+            },
+        };
+
+        console.log("[debug] Console interface ready. Try:");
+        console.log("  debug.listNpcs()           — list all NPCs");
+        console.log("  debug.getNpc('companion')  — get NPC by name");
+        console.log("  debug.setBehavior('companion', 'following') — switch behavior");
+        console.log("  debug.setBehavior('companion', 'idle')      — back to idle");
+        console.log("  debug.forceGreeting('merchant')  — trigger greeting");
+        console.log("  debug.teleport('companion', 5, -0.5)  — teleport NPC");
+        console.log("  debug.tuneParams('companion', { targetOffsetX: 1.5 }) — adjust follow params");
+        console.log("  debug.resample('companion')  — force target resample");
+        console.log("  debug.dumpStates()  — export all states as JSON");
     }
 }

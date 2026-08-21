@@ -63,6 +63,7 @@ export class FollowingBehavior extends NpcBehavior {
         });
         this._sepDirY = 0;
         this._lastSampled = null;
+        this._debugData = null;
     }
 
     enter(npc, context) {
@@ -134,6 +135,7 @@ export class FollowingBehavior extends NpcBehavior {
         const sepDx = npcPos.x - playerPos.x;
         const sepDy = npcPos.y - playerPos.y;
         const sepDist = Math.hypot(sepDx, sepDy);
+
         let sepForce = 0;
         let sepIy = 0;
         if (sepDist > 0.0001) {
@@ -215,6 +217,29 @@ export class FollowingBehavior extends NpcBehavior {
 
         // 11. output
         npc.setMoveIntent({ x: ix, y: iy });
+
+        // 12. store debug data for force visualization panel (above character head)
+        this._debugData = {
+            targetX: targetX.toFixed(2),
+            targetY: targetY.toFixed(2),
+            dx: dx.toFixed(3),
+            dy: dy.toFixed(3),
+            absDx: absDx.toFixed(3),
+            absDy: absDy.toFixed(3),
+            followX: followX.toFixed(3),
+            followY: followY.toFixed(3),
+            sepDist: sepDist.toFixed(3),
+            sepDirY: this._sepDirY.toFixed(0),
+            sepForce: sepForce.toFixed(3),
+            sepIy: sepIy.toFixed(3),
+            ixRaw: ixRaw.toFixed(3),
+            iyRaw: iyRaw.toFixed(3),
+            ix: ix.toFixed(3),
+            iy: iy.toFixed(3),
+            speed: speed.toFixed(2),
+            failed: sampled.failed ? "Y" : ""
+        };
+
         if (npc.currentStateName !== "walk" && npc.hasState("walk")) {
             npc.enterState("walk");
         }
