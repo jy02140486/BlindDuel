@@ -1,9 +1,37 @@
+/**
+ * WalkAreaSampler — constraint projection sampler (NOT a Unity-style nearest-point query).
+ *
+ * Projects rawTarget onto a point that simultaneously satisfies:
+ *   - within walkArea rectangle
+ *   - outside every staticBlocker AABB (expanded by padding)
+ *   - outside every dynamicConstraint AABB (e.g. player as dynamic follow constraint)
+ *
+ * Algorithm: walkArea clamp → blocker MTV push (per-direction clamp preview, fallback to
+ * next-smallest direction) → walkArea clamp. Per-direction clamp preview prevents the
+ * "push → clamp reverts → push → reverts" dead loop that maxIter alone cannot break.
+ *
+ * Returns { x, y, changed, failed }.
+ *   - changed: true if (x,y) differs from input
+ *   - failed:  true if at least one blocker couldn't be resolved (e.g. player wedged
+ *             against wall + large padding); caller should hold previous target
+ *
+ * Backward compat: if the 5th arg is an options object (old callers, e.g. ExploreMode),
+ * it is treated as options and dynamicConstraints defaults to [].
+ */
 export class WalkAreaSampler {
-    static sample(x, y, walkArea, blockers, options = {}) {
+    static _lastWarnMs = 0;
+
+    static sample(x, y, walkArea, staticBlockers, dynamicConstraints, options = {}) {
+        if (dynamicConstraints && !Array.isArray(dynamicConstraints) && typeof dynamicConstraints === "object") {
+            options = dynamicConstraints;
+            dynamicConstraints = [];
+        }
         const padding = options.padding ?? 0;
         const maxIter = options.maxIter ?? 4;
         const agentX = options.agentX;
         const agentY = options.agentY;
+
+        const allBlockers = [...(staticBlockers ?? []), ...(dynamicConstraints ?? [])];
 
         let tx = x;
         let ty = y;
@@ -18,7 +46,8 @@ export class WalkAreaSampler {
         let unresolved = false;
         for (let iter = 0; iter < maxIter; iter++) {
             let pushed = false;
-            for (const blocker of blockers ?? []) {
+            let iterUnresolved = false;
+            for (const blocker of allBlockers) {
                 if (typeof blocker.isBlockingNow === "function" && !blocker.isBlockingNow()) continue;
                 const b = blocker.getBlockerAabb?.();
                 if (!b) continue;
@@ -65,11 +94,11 @@ export class WalkAreaSampler {
                     break;
                 }
                 if (!resolvedThisBlocker) {
-                    unresolved = true;
-                    console.warn(`[WalkAreaSampler] unresolved blocker: raw=(${x.toFixed(2)}, ${y.toFixed(2)}) cur=(${tx.toFixed(2)}, ${ty.toFixed(2)}) blocker=${JSON.stringify(b)}`);
+                    iterUnresolved = true;
                 }
             }
-            if (!pushed || unresolved) break;
+            unresolved = iterUnresolved;
+            if (!pushed) break;
         }
 
         if (walkArea) {
@@ -79,6 +108,14 @@ export class WalkAreaSampler {
             else if (ty > walkArea.maxY) ty = walkArea.maxY;
         }
 
-        return { x: tx, y: ty, changed: (tx !== x || ty !== y) };
+        if (unresolved) {
+            const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+            if (now - WalkAreaSampler._lastWarnMs > 500) {
+                WalkAreaSampler._lastWarnMs = now;
+                console.warn(`[WalkAreaSampler] sample failed (unresolved blocker): raw=(${x.toFixed(2)}, ${y.toFixed(2)}) cur=(${tx.toFixed(2)}, ${ty.toFixed(2)})`);
+            }
+        }
+
+        return { x: tx, y: ty, changed: (tx !== x || ty !== y), failed: unresolved };
     }
 }
