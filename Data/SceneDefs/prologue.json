@@ -4,7 +4,7 @@
         "followDistance": 17,
         "followHeight": 3.5,
         "smoothing": 0.12,
-        "orthoWidth": 24
+        "orthoWidth": 26
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",

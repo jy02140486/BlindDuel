@@ -511,6 +511,10 @@ export class Game {
             return summary;
         }
 
+        // 初始化移动管线分阶段调试标志
+        // mode: 1=Phase1-only (采样直接传送), 2=Phase1+2 (采样+力), 3=全管线
+        globalThis.__moveDebug = { mode: 3 };
+
         globalThis.debug = {
             /**
              * 列出当前场景所有 NPC
@@ -629,6 +633,39 @@ export class Game {
             },
 
             /**
+             * 设置移动管线调试模式（分阶段隔离运行）
+             * @param {number} mode - 1:Phase1-only | 2:Phase1+2 | 3:Full
+             */
+            setMoveMode(mode) {
+                const modes = { 1: "Phase1-only (sampling→teleport)", 2: "Phase1+2 (sampling+force)", 3: "Full pipeline" };
+                if (!modes[mode]) {
+                    console.warn(`[debug] Invalid mode ${mode}. Use 1, 2, or 3.`);
+                    return;
+                }
+                globalThis.__moveDebug.mode = mode;
+                console.log(`[debug] Move pipeline mode → ${mode}: ${modes[mode]}`);
+                if (mode === 1) {
+                    console.log(`  NPC will teleport to WalkAreaSampler output each frame.
+  Force synthesis (FollowingBehavior) and collision resolution are SKIPPED.`);
+                } else if (mode === 2) {
+                    console.log(`  Force synthesis runs normally.
+  Collision resolution (MTV push) is SKIPPED (walkArea clamp still active).`);
+                }
+            },
+
+            /**
+             * 查询当前移动管线调试模式
+             * @returns {{mode: number, label: string}}
+             */
+            getMoveMode() {
+                const m = globalThis.__moveDebug?.mode ?? 3;
+                const labels = { 1: "Phase1-only", 2: "Phase1+2", 3: "Full" };
+                const info = { mode: m, label: labels[m] };
+                console.log(`[debug] Move pipeline mode: ${m} (${labels[m]})`);
+                return info;
+            },
+
+            /**
              * 导出所有 NPC 状态为 JSON
              * @returns {string} JSON 字符串
              */
@@ -656,5 +693,9 @@ export class Game {
         console.log("  debug.tuneParams('companion', { targetOffsetX: 1.5 }) — adjust follow params");
         console.log("  debug.resample('companion')  — force target resample");
         console.log("  debug.dumpStates()  — export all states as JSON");
+        console.log("  debug.setMoveMode(1) — Phase1-only: sampling→teleport");
+        console.log("  debug.setMoveMode(2) — Phase1+2: sampling+force, no collision");
+        console.log("  debug.setMoveMode(3) — Full pipeline (default)");
+        console.log("  debug.getMoveMode()  — query current mode");
     }
 }

@@ -99,7 +99,8 @@ export class FollowingBehavior extends NpcBehavior {
             context.walkArea ?? null,
             staticBlockers,
             dynamicConstraints,
-            { padding: Math.max(padX, padY), agentX: npcPos.x, agentY: npcPos.y }
+            { padding: Math.max(padX, padY), agentX: npcPos.x, agentY: npcPos.y,
+              edgeInset: Math.max(padX, padY) * 0.5 }
         );
         // On sample failure (e.g. player wedged against wall + large padding) hold previous target
         let targetX, targetY;
@@ -111,6 +112,93 @@ export class FollowingBehavior extends NpcBehavior {
             targetY = sampled.y;
             this._lastSampled = { x: targetX, y: targetY };
         }
+
+        // ── DEBUG: Move target disc to sampled point for visualization ──
+        //    The disc is created by NpcController.setupDebugVisual and positioned here.
+        const targetDisc = npc.npcController?._targetDisc;
+        if (targetDisc) {
+            targetDisc.position.set(targetX, targetY, -0.02);
+            // Enable target disc: visible only when global debug is ON (stored on NpcController)
+            targetDisc.setEnabled(npc.npcController._debugVisible === true);
+        }
+        // ── END DEBUG ──
+
+        // ── DEBUG: Phase isolation for stepping through the movement pipeline ──
+        // globalThis.__moveDebug.mode controls which phases are active:
+        //   1 = sampling only      → teleport NPC to sampled target, skip force + collision
+        //   2 = sampling + force   → run force synthesis, skip collision resolution
+        //   3 = full pipeline      → normal operation
+        const dbgMode = globalThis.__moveDebug?.mode ?? 3;
+
+        if (dbgMode === 1) {
+            // Phase 1 only: use the project's own walk pipeline to move NPC toward
+            // the WalkAreaSampler output. Force synthesis (Phase 2) and collision
+            // resolution (Phase 3) are both skipped. Only the sampling constrains the target.
+            const dx = targetX - npcPos.x;
+            const dy = targetY - npcPos.y;
+            const dist = Math.hypot(dx, dy);
+            const stopThreshold = this.options.followStop ?? 0.1;
+
+            if (dist <= stopThreshold) {
+                // At target — stop, return to idle
+                npc.setMoveIntent({ x: 0, y: 0 });
+                if (npc.currentStateName !== "idle" && npc.hasState("idle")) {
+                    npc.enterState("idle");
+                }
+                // Update arrows to show zero-force state
+                this._updateForceArrows(npc, npcPos, {
+                    followX: 0, followY: 0,
+                    sepForce: 0, sepIy: 0,
+                    ixRaw: 0, iyRaw: 0,
+                });
+                this._debugData = {
+                    targetX: targetX.toFixed(2),
+                    targetY: targetY.toFixed(2),
+                    dx: dx.toFixed(3),
+                    dy: dy.toFixed(3),
+                    followX: "——",
+                    followY: "——",
+                    ix: "0",
+                    iy: "0",
+                    speed: "0",
+                    failed: sampled.failed ? "Y" : "",
+                    mode: "Phase1-only",
+                };
+                return;
+            }
+
+            // Normalize direction → feed into standard walk pipeline
+            const ix = dx / dist;
+            const iy = dy / dist;
+            npc.baseWalkSpeed = this.options.speedMax ?? 2.0;
+            npc.setMoveIntent({ x: ix, y: iy });
+
+            if (npc.currentStateName !== "walk" && npc.hasState("walk")) {
+                npc.enterState("walk");
+            }
+
+            // Update arrows with Phase1 direction (follow only, no separation)
+            this._updateForceArrows(npc, npcPos, {
+                followX: ix, followY: iy,
+                sepForce: 0, sepIy: 0,
+                ixRaw: ix, iyRaw: iy,
+            });
+            this._debugData = {
+                targetX: targetX.toFixed(2),
+                targetY: targetY.toFixed(2),
+                dx: dx.toFixed(3),
+                dy: dy.toFixed(3),
+                followX: "——",
+                followY: "——",
+                ix: ix.toFixed(3),
+                iy: iy.toFixed(3),
+                speed: (this.options.speedMax ?? 2.0).toFixed(2),
+                failed: sampled.failed ? "Y" : "",
+                mode: "Phase1-only",
+            };
+            return;
+        }
+        // ── END DEBUG ──
 
         // 3. follow error (target → npc)
         const dx = targetX - npcPos.x;
@@ -157,6 +245,14 @@ export class FollowingBehavior extends NpcBehavior {
         const ixRaw = followX * o.followWeight;
         const iyRaw = followY * o.followWeight + sepIy * o.separationWeight;
 
+        // ── DEBUG: Update force visualization arrows ──
+        this._updateForceArrows(npc, npcPos, {
+            followX: followX, followY: followY,
+            sepForce: sepForce, sepIy: sepIy,
+            ixRaw: ixRaw, iyRaw: iyRaw,
+        });
+        // ── END DEBUG ──
+
         // 7. idle when combined force is zero
         if (ixRaw === 0 && iyRaw === 0) {
             npc.setMoveIntent({ x: 0, y: 0 });
@@ -183,13 +279,23 @@ export class FollowingBehavior extends NpcBehavior {
             iy = iyRaw / len;
         }
 
+        // ── CORNER-STUCK DETECTION ──
+        // When the follow target is at or beyond a walkArea boundary and Charlotte
+        // is already at that boundary, the follow force pushes her into the wall.
+        // walkArea.clampPosition then cancels the displacement every frame,
+        // causing "walk in place" (walk animation plays but no actual movement).
+        // Solution: detect this case and enter idle instead of walk.
+        if (this._isStuckAtBoundary(npc, npcPos, ixRaw, iyRaw, context.walkArea)) {
+            npc.setMoveIntent({ x: 0, y: 0 });
+            const idleClip = this.options.idleClip ?? "idle";
+            if (npc.currentStateName !== idleClip && npc.hasState(idleClip)) {
+                npc.enterState(idleClip);
+            }
+            return;
+        }
+        // ── END CORNER-STUCK ──
+
         // 10. speed — based on maxAbs = max(absDx, absDy)
-        //    Pure Y movement (player moves vertically while Charlotte's X is aligned)
-        //    must still produce speed. Using absDx alone would zero speed when X is
-        //    aligned but Y is not, causing Charlotte to not follow Y-only movement.
-        //    maxAbs preserves the dead-zone: when both dx and dy are small (Charlotte
-        //    at target), speed=0 → idle (prevents high-frequency jitter from
-        //    followGain continuous control on small dx/dy perturbations).
         const maxAbs = Math.max(absDx, absDy);
         let speed;
         if (maxAbs < o.followStop) {
@@ -202,10 +308,6 @@ export class FollowingBehavior extends NpcBehavior {
         }
         npc.baseWalkSpeed = speed;
 
-        // If speed is 0 (Charlotte at target), enter idle and return.
-        // ixRaw/iyRaw may be non-zero (followGain produces ~0.25 at dx=0.05), so
-        // Step 7's ixRaw===0 check fails, leading to walk animation without
-        // movement. This guard ensures Charlotte visually stops at target.
         if (speed === 0) {
             npc.setMoveIntent({ x: 0, y: 0 });
             const idleClip = this.options.idleClip ?? "idle";
@@ -242,6 +344,127 @@ export class FollowingBehavior extends NpcBehavior {
 
         if (npc.currentStateName !== "walk" && npc.hasState("walk")) {
             npc.enterState("walk");
+        }
+    }
+
+    /**
+     * Detect corner-stuck scenario:
+     * - NPC is at a walkArea boundary (within 0.01 units tolerance)
+     * - The combined follow+separation force points INTO that boundary
+     *
+     * When both conditions hold, every frame:
+     *   1. follow force pushes NPC toward target (into the wall)
+     *   2. walkArea.clampPosition pulls NPC back to boundary
+     *   3. Net displacement = 0, but walk animation still plays
+     *
+     * This causes the "walk in place" behavior at walkArea corners.
+     * The fix: enter idle instead of walk when stuck.
+     *
+     * @param {NpcCharacter} npc
+     * @param {BABYLON.Vector3} npcPos
+     * @param {number} ixRaw combined raw force X
+     * @param {number} iyRaw combined raw force Y
+     * @param {object} walkArea
+     * @returns {boolean}
+     */
+    _isStuckAtBoundary(npc, npcPos, ixRaw, iyRaw, walkArea) {
+        if (!walkArea) return false;
+
+        const tol = 0.01; // boundary tolerance
+        const atLeft   = npcPos.x <= walkArea.minX + tol;
+        const atRight  = npcPos.x >= walkArea.maxX - tol;
+        const atBottom = npcPos.y <= walkArea.minY + tol;
+        const atTop    = npcPos.y >= walkArea.maxY - tol;
+
+        const absFx = Math.abs(ixRaw);
+        const absFy = Math.abs(iyRaw);
+
+        // ── X-axis stuck (NPC at left/right boundary) ──
+        // Only truly stuck if the X-component of force dominates.
+        // If Y-component dominates, NPC is sliding along the wall — not stuck.
+        //
+        // Example: Charlotte at right boundary, target is above (player moved up).
+        //   forceX = 0.01 (tiny, slightly into wall), forceY = 0.54 (large, along wall)
+        //   → NOT stuck: Charlotte slides up along right wall toward target.
+        if ((atLeft  && ixRaw < 0) ||
+            (atRight && ixRaw > 0)) {
+            if (absFx >= absFy) return true;   // force INTO wall dominates → stuck
+            // force ALONG wall dominates → sliding, allow walk
+        }
+
+        // ── Y-axis stuck (NPC at top/bottom boundary) ──
+        if ((atBottom && iyRaw < 0) ||
+            (atTop    && iyRaw > 0)) {
+            if (absFy >= absFx) return true;   // force INTO wall dominates → stuck
+            // force ALONG wall dominates → sliding, allow walk
+        }
+
+        return false;
+    }
+
+    /**
+     * Update force visualization arrows (follow=blue, separation=red, combined=yellow)
+     * Arrow lengths are scaled so they are visible without cluttering:
+     *   - Follow:     magnitude 0..1  →  scale × 0.5  (max 0.5 units)
+     *   - Separation: magnitude ~0..2 →  scale × 0.3  (kept shorter to avoid overlap)
+     *   - Combined:   unit vector     →  fixed 0.4 units (always points forward)
+     *
+     * @param {NpcCharacter} npc
+     * @param {BABYLON.Vector3} npcPos current NPC position
+     * @param {object} forces computed force components
+     */
+    _updateForceArrows(npc, npcPos, forces) {
+        const arrows = npc.npcController?._forceArrows;
+        if (!arrows) return;
+
+        // Respect global debug visibility toggle (X key).
+        // If debug is OFF, force-hide all arrows and skip per-frame updates.
+        if (npc.npcController._debugVisible !== true) {
+            for (const key of Object.keys(arrows)) {
+                arrows[key].group.setEnabled(false);
+            }
+            return;
+        }
+
+        const { followX, followY, sepForce, sepIy, ixRaw, iyRaw } = forces;
+        const originX = npcPos.x;
+        const originY = npcPos.y;
+
+        // --- Follow force (blue) ---
+        const fLen = Math.hypot(followX, followY);
+        if (fLen > 0.001) {
+            arrows.follow.update(
+                originX, originY,
+                followX / fLen, followY / fLen,
+                fLen * 0.5
+            );
+        } else {
+            arrows.follow.group.setEnabled(false);
+        }
+
+        // --- Separation force (red, Y-axis only) ---
+        if (sepForce > 0.001) {
+            // sepIy = direction * sepStrength. Extract direction and magnitude.
+            const sDirY = sepIy !== 0 ? Math.sign(sepIy) : 0;
+            arrows.separation.update(
+                originX, originY,
+                0, sDirY,
+                sepForce * 0.3
+            );
+        } else {
+            arrows.separation.group.setEnabled(false);
+        }
+
+        // --- Combined / Synthesized intent (yellow) ---
+        const cLen = Math.hypot(ixRaw, iyRaw);
+        if (cLen > 0.001) {
+            arrows.combined.update(
+                originX, originY,
+                ixRaw / cLen, iyRaw / cLen,
+                0.4 // fixed length since it's a unit intent
+            );
+        } else {
+            arrows.combined.group.setEnabled(false);
         }
     }
 }

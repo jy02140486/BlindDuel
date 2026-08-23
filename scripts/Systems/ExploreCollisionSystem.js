@@ -9,44 +9,49 @@ export class ExploreCollisionSystem {
         if (entity.controlledBySequence) return;
 
         const pos = entity.root.position;
+        const dbgMode = globalThis.__moveDebug?.mode ?? 3;
 
-        for (const blocker of blockers) {
-            if (blocker === entity) continue;
-            if (typeof blocker.isBlockingNow === "function" && !blocker.isBlockingNow()) {
-                continue;
-            }
-            const blockerAabb = blocker.getBlockerAabb();
-            if (!blockerAabb) continue;
-
-            const entityAabb = entity.getBlockerAabb?.() ?? null;
-            let overlapLeft, overlapRight, overlapBottom, overlapTop;
-
-            if (entityAabb) {
-                if (entityAabb.maxX <= blockerAabb.minX || entityAabb.minX >= blockerAabb.maxX ||
-                    entityAabb.maxY <= blockerAabb.minY || entityAabb.minY >= blockerAabb.maxY) {
+        // ── DEBUG: Phase isolation ──
+        // mode 1 & 2: skip MTV push (sampling or force-only, no collision resolution)
+        if (dbgMode >= 3) {
+            for (const blocker of blockers) {
+                if (blocker === entity) continue;
+                if (typeof blocker.isBlockingNow === "function" && !blocker.isBlockingNow()) {
                     continue;
                 }
-                overlapLeft = entityAabb.maxX - blockerAabb.minX;
-                overlapRight = blockerAabb.maxX - entityAabb.minX;
-                overlapBottom = entityAabb.maxY - blockerAabb.minY;
-                overlapTop = blockerAabb.maxY - entityAabb.minY;
-            } else {
-                if (pos.x < blockerAabb.minX || pos.x > blockerAabb.maxX ||
-                    pos.y < blockerAabb.minY || pos.y > blockerAabb.maxY) {
-                    continue;
+                const blockerAabb = blocker.getBlockerAabb();
+                if (!blockerAabb) continue;
+
+                const entityAabb = entity.getBlockerAabb?.() ?? null;
+                let overlapLeft, overlapRight, overlapBottom, overlapTop;
+
+                if (entityAabb) {
+                    if (entityAabb.maxX <= blockerAabb.minX || entityAabb.minX >= blockerAabb.maxX ||
+                        entityAabb.maxY <= blockerAabb.minY || entityAabb.minY >= blockerAabb.maxY) {
+                        continue;
+                    }
+                    overlapLeft = entityAabb.maxX - blockerAabb.minX;
+                    overlapRight = blockerAabb.maxX - entityAabb.minX;
+                    overlapBottom = entityAabb.maxY - blockerAabb.minY;
+                    overlapTop = blockerAabb.maxY - entityAabb.minY;
+                } else {
+                    if (pos.x < blockerAabb.minX || pos.x > blockerAabb.maxX ||
+                        pos.y < blockerAabb.minY || pos.y > blockerAabb.maxY) {
+                        continue;
+                    }
+                    overlapLeft = pos.x - blockerAabb.minX;
+                    overlapRight = blockerAabb.maxX - pos.x;
+                    overlapBottom = pos.y - blockerAabb.minY;
+                    overlapTop = blockerAabb.maxY - pos.y;
                 }
-                overlapLeft = pos.x - blockerAabb.minX;
-                overlapRight = blockerAabb.maxX - pos.x;
-                overlapBottom = pos.y - blockerAabb.minY;
-                overlapTop = blockerAabb.maxY - pos.y;
+
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapBottom, overlapTop);
+
+                if (minOverlap === overlapLeft) pos.x -= overlapLeft;
+                else if (minOverlap === overlapRight) pos.x += overlapRight;
+                else if (minOverlap === overlapBottom) pos.y -= overlapBottom;
+                else pos.y += overlapTop;
             }
-
-            const minOverlap = Math.min(overlapLeft, overlapRight, overlapBottom, overlapTop);
-
-            if (minOverlap === overlapLeft) pos.x -= overlapLeft;
-            else if (minOverlap === overlapRight) pos.x += overlapRight;
-            else if (minOverlap === overlapBottom) pos.y -= overlapBottom;
-            else pos.y += overlapTop;
         }
 
         if (walkArea) {

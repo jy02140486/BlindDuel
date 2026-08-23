@@ -30,17 +30,40 @@ export class WalkAreaSampler {
         const maxIter = options.maxIter ?? 4;
         const agentX = options.agentX;
         const agentY = options.agentY;
+        const edgeInset = options.edgeInset ?? 0;
 
         const allBlockers = [...(staticBlockers ?? []), ...(dynamicConstraints ?? [])];
+
+        // Compute effective walkArea bounds with edge inset.
+        // edgeInset pushes sampled targets inward so they never land exactly on a
+        // boundary, preventing "walk in place" when the NPC is at the boundary and
+        // the follow force points into it. Applied to all three clamp points:
+        // initial clamp, per-direction preview clamp, and final clamp.
+        // Initialize with NaN sentinel — should never be read when walkArea is null
+        // since all accesses are guarded by 'if (walkArea)'. NaN makes accidental access
+        // immediately visible (NaN comparisons always return false, clamp becomes no-op).
+        let eMinX = NaN, eMaxX = NaN, eMinY = NaN, eMaxY = NaN;
+        if (walkArea && edgeInset > 0) {
+            const insX = Math.min(edgeInset, (walkArea.maxX - walkArea.minX) * 0.5);
+            const insY = Math.min(edgeInset, (walkArea.maxY - walkArea.minY) * 0.5);
+            eMinX = walkArea.minX + insX;
+            eMaxX = walkArea.maxX - insX;
+            eMinY = walkArea.minY + insY;
+            eMaxY = walkArea.maxY - insY;
+        } else if (walkArea) {
+            eMinX = walkArea.minX; eMaxX = walkArea.maxX;
+            eMinY = walkArea.minY; eMaxY = walkArea.maxY;
+        }
 
         let tx = x;
         let ty = y;
 
+        // Initial clamp
         if (walkArea) {
-            if (tx < walkArea.minX) tx = walkArea.minX;
-            else if (tx > walkArea.maxX) tx = walkArea.maxX;
-            if (ty < walkArea.minY) ty = walkArea.minY;
-            else if (ty > walkArea.maxY) ty = walkArea.maxY;
+            if (tx < eMinX) tx = eMinX;
+            else if (tx > eMaxX) tx = eMaxX;
+            if (ty < eMinY) ty = eMinY;
+            else if (ty > eMaxY) ty = eMaxY;
         }
 
         let unresolved = false;
@@ -79,10 +102,10 @@ export class WalkAreaSampler {
                     else ny = cand.val;
 
                     if (walkArea) {
-                        if (nx < walkArea.minX) nx = walkArea.minX;
-                        else if (nx > walkArea.maxX) nx = walkArea.maxX;
-                        if (ny < walkArea.minY) ny = walkArea.minY;
-                        else if (ny > walkArea.maxY) ny = walkArea.maxY;
+                        if (nx < eMinX) nx = eMinX;
+                        else if (nx > eMaxX) nx = eMaxX;
+                        if (ny < eMinY) ny = eMinY;
+                        else if (ny > eMaxY) ny = eMaxY;
                     }
 
                     if (nx > minX && nx < maxX && ny > minY && ny < maxY) {
@@ -102,10 +125,10 @@ export class WalkAreaSampler {
         }
 
         if (walkArea) {
-            if (tx < walkArea.minX) tx = walkArea.minX;
-            else if (tx > walkArea.maxX) tx = walkArea.maxX;
-            if (ty < walkArea.minY) ty = walkArea.minY;
-            else if (ty > walkArea.maxY) ty = walkArea.maxY;
+            if (tx < eMinX) tx = eMinX;
+            else if (tx > eMaxX) tx = eMaxX;
+            if (ty < eMinY) ty = eMinY;
+            else if (ty > eMaxY) ty = eMaxY;
         }
 
         if (unresolved) {
