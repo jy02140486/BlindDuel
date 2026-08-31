@@ -1,0 +1,227 @@
+{
+    "id": "ep1_tavern",
+    "exploreCamera": {
+        "followDistance": 17,
+        "followHeight": 3.5,
+        "smoothing": 0.12,
+        "orthoWidth": 26
+    },
+    "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "introSequenceUrl": "Data/Sequences/ep1_intro.json",
+    "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
+    "ambient": ["forest_ambient"],
+    "onEnterDirectives": [
+        { "type": "advanceScenario", "value": 110 }
+    ],
+    "entities": [
+        {
+            "archetype": "hero_longsword",
+            "id": "hero",
+            "name": "hero",
+            "kind": "player",
+            "pos": [-30, -1],
+            "controller": "player"
+        },
+        {
+            "archetype": "rabble_stick",
+            "id": "enemy_1",
+            "name": "rabble_stick",
+            "kind": "enemy",
+            "pos": [3.2, 0],
+            "controller": "ai",
+            "spawnIf": { "flagNot": "battle_field_1" }
+        },
+        {
+            "archetype": "npc_traveller",
+            "id": "npc_1",
+            "name": "npc",
+            "kind": "npc",
+            "pos": [-14, -1],
+            "controller": "npc"
+        },
+        {
+            "archetype": "npc_merchant",
+            "id": "merchant",
+            "name": "merchant",
+            "kind": "npc",
+            "pos": [-11, -0.9],
+            "controller": "npc"
+        },
+        {
+            "archetype": "npc_companion",
+            "id": "companion",
+            "name": "Charlotte",
+            "kind": "npc",
+            "pos": [-30, -0.7, 0],
+            "controller": "npc"
+        }
+    ],
+    "walkAreas": [
+        { "if": {}, "minX": -24, "maxX": -7, "minY": -1, "maxY": 0.7 }
+    ],
+    "spawns": {
+        "house_door": [-12.33, -0.4, 0]
+    },
+    "triggers": [
+        {
+            "type": "sceneSwitch",
+            "id": "enter_house",
+            "pos": [-12, -1, 0],
+            "size": [2, 2, 2],
+            "targetScene": "ep1_tavern_hall",
+            "targetSpawn": "house_door",
+            "debugColor": [0, 1, 1],
+            "debugVisible": true
+        },
+        {
+            "type": "battle",
+            "id": "bt_field_1",
+            "pos": [-6, 0, 0],
+            "size": [4, 8, 4],
+            "battleId": "battle_field_1",
+            "condition": { "flagNot": "battle_field_1" },
+            "debugColor": [0, 1, 0],
+            "debugVisible": false
+        }
+    ],
+    "environment": {
+        "layers": [
+            {
+                "id": "BG_FAR",
+                "z": 40,
+                "parallaxFactor": 0.15,
+                "renderingGroupId": 0,
+                "loopX": true,
+                "loopWidth": 40,
+                "elements": [
+                    {
+                        "id": "sky_1",
+                        "texture": "Art/Environment/skybase.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 8,
+                        "width": 48,
+                        "height": 32,
+                        "alphaIndex": 0
+                    },
+                    {
+                        "id": "mountain_1",
+                        "texture": "Art/Environment/Mountain.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 8,
+                        "width": 48,
+                        "height": 16,
+                        "parallaxFactor": 0.08,
+                        "alphaIndex": 1
+                    }
+                ]
+            },
+            {
+                "id": "BG_MID",
+                "z": 30,
+                "parallaxFactor": 0.45,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "building_1",
+                        "texture": "Art/Environment/House1.png",
+                        "kind": "single",
+                        "x": -5,
+                        "y": 2.7,
+                        "width": 6,
+                        "height": 6,
+                        "alphaIndex": 2
+                    },
+                    {
+                        "id": "building_2",
+                        "texture": "Art/Environment/House2.png",
+                        "kind": "single",
+                        "x": 4,
+                        "y": 4,
+                        "width": 16,
+                        "height": 8,
+                        "alphaIndex": 3
+                    },
+                    {
+                        "id": "treeline",
+                        "texture": "Art/Environment/treeline.png",
+                        "kind": "single",
+                        "x": 0,
+                        "y": 3.2,
+                        "width": 48,
+                        "height": 4.8,
+                        "alphaIndex": 1,
+                        "parallaxFactor": 1.6
+                    }
+                ]
+            },
+            {
+                "id": "STAGE",
+                "z": 10,
+                "parallaxFactor": 1.0,
+                "renderingGroupId": 1,
+                "loopX": true,
+                "loopWidth": 20,
+                "elements": [
+                    {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/grassbase.png",
+                        "atlas": "Art/Environment/grassbase.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": -3.2,
+                        "width": 64,
+                        "height": 8,
+                        "tileSize": { "width": 1.28, "height": 1.28 },
+                        "loop": true,
+                        "alphaIndex": 4
+                    },
+                    {
+                        "id": "ground_2",
+                        "texture": "Art/Environment/grasstop.png",
+                        "atlas": "Art/Environment/grasstop.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": 0.9,
+                        "width": 64,
+                        "height": 0.32,
+                        "tileSize": { "width": 1.28, "height": 0.32 },
+                        "loop": true,
+                        "alphaIndex": 3
+                    },
+                    {
+                        "id": "tavern",
+                        "texture": "Art/Environment/Tavern.png",
+                        "kind": "single",
+                        "x": -12,
+                        "y": 5.5,
+                        "width": 16,
+                        "height": 10,
+                        "alphaIndex": 2
+                    }
+                ]
+            },
+            {
+                "id": "FG_DECOR",
+                "z": -10,
+                "parallaxFactor": 1.35,
+                "renderingGroupId": 2,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "fence_1",
+                        "texture": "Art/Environment/FG_Fence.png",
+                        "kind": "single",
+                        "x": 4,
+                        "y": -0.2,
+                        "width": 8,
+                        "height": 4,
+                        "alphaIndex": 0
+                    }
+                ]
+            }
+        ]
+    }
+}

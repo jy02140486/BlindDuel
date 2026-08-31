@@ -4,7 +4,7 @@ export class WorldState {
         this.flags = {};
         this.quests = {};
         this.sceneStates = {};
-        this.currentSceneId = "prologue";
+        this.currentSceneId = "ep1_tavern";
         this.currentSpawnId = null;
         this._listeners = [];
     }

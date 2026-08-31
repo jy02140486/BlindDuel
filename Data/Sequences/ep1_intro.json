@@ -1,0 +1,67 @@
+{
+  "id": "ep1_intro",
+  "durationMs": 6600,
+  "tracks": [
+    {
+      "id": "fx.fadein",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "fx.letterbox",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 0, "effect": "letterbox", "durationMs": 5500, "height": 72, "speed": 240 }
+      ]
+    },
+    {
+      "id": "camera.scripted",
+      "kind": "camera",
+      "binding": { "cameraId": "scripted" },
+      "channel": "blend",
+      "clips": [
+        { "type": "setCameraFrame", "atMs": 0, "center": [-32, 0, 0], "height": 2, "orthoWidth": 8 },
+        { "type": "cameraBlend", "startMs": 50, "durationMs": 100, "to": "scripted" },
+        { "type": "setCameraFollow", "atMs": 200, "actorId": "companion", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 2, "orthoWidth": 20 }
+      ]
+    },
+    {
+      "id": "hero.walk",
+      "kind": "actor",
+      "binding": { "actorId": "hero" },
+      "channel": "movement",
+      "clips": [
+        { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "command", "atMs": 200, "command": "walk" },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -23, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
+        { "type": "inputLock", "atMs": 6600, "locked": false }
+      ]
+    },
+    {
+      "id": "companion.walk",
+      "kind": "actor",
+      "binding": { "actorId": "companion" },
+      "channel": "movement",
+      "clips": [
+        { "type": "command", "atMs": 600, "command": "walk" },
+        { "type": "moveActorTo", "startMs": 400, "durationMs": 2600, "x": -22.5, "y": 0, "speed": 1.4, "startPos": [-30, -0.7]},
+        { "type": "faceWorldX", "atMs": 3000, "direction": -1 },
+        { "type": "moveActorTo", "startMs": 3000, "durationMs": 500, "x": -23, "y": 0.4, "speed": 1.4, "startPos": [-22.5, 0]},
+        { "type": "callback", "atMs": 3600, "fn": "enterCompanionIdle" }
+      ]
+    },
+    {
+      "id": "camera.back",
+      "kind": "camera",
+      "binding": { "cameraId": "explore" },
+      "channel": "blend",
+      "clips": [
+        { "type": "cameraBlend", "startMs": 5500, "durationMs": 1000, "to": "explore" }
+      ]
+    }
+  ]
+}

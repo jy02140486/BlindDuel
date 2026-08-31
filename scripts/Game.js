@@ -166,6 +166,7 @@ export class Game {
         const sceneDef = await resolveSceneDef(sceneId);
         this.scene._loading = true;
         this.cameraManager.setFadeImmediate("black", 1);
+        this._executeOnEnterDirectives(sceneDef);
         await this.scene.init(sceneDef, BATTLE_DEFS);
         this.scene._loading = false;
         this._playIntro(sceneDef);
@@ -345,6 +346,15 @@ export class Game {
         await this._loadSceneInternal(sceneDef, spawnId, opts);
     }
 
+    _executeOnEnterDirectives(sceneDef) {
+        if (Array.isArray(sceneDef?.onEnterDirectives)) {
+            const before = this.worldState.scenario;
+            console.log(`[Game] onEnterDirectives for ${sceneDef.id}:`, sceneDef.onEnterDirectives, `scenario BEFORE=${before}`);
+            this.questManager.executeDirectives(sceneDef.onEnterDirectives);
+            console.log(`[Game] onEnterDirectives done, scenario AFTER=${this.worldState.scenario}`);
+        }
+    }
+
     async _loadSceneInternal(sceneDef, spawnId, opts = {}) {
         const oldScene = this.scene;
         const oldSceneId = this.worldState.currentSceneId;
@@ -376,6 +386,7 @@ export class Game {
         console.log("[Game] _loadSceneInternal dispose old scene, savedHp=", savedHp);
         oldScene.dispose();
 
+        this._executeOnEnterDirectives(sceneDef);
         await newScene.init(sceneDef, BATTLE_DEFS);
 
         const newHero = newScene.entityPool?.find(e => e.id === "hero");

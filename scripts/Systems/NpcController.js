@@ -161,6 +161,7 @@ export class NpcController {
         for (const entry of map) {
             if (this._matchCondition(entry.if, worldState)) {
                 const target = entry.state;
+                console.log(`[NpcCtrl] applyInitialState ${npc.id} scenario=${worldState.scenario} match=${JSON.stringify(entry.if)} → ${target}`);
                 if (target === "following") {
                     this.enterFollowing(npc);
                     // 进入 following 时立即 teleport 到 hero 旁，避免依赖后续 fixedUpdate 拉回
@@ -199,6 +200,7 @@ export class NpcController {
         if (cond.flag !== undefined && !this.world.flags[cond.flag]) return false;
         if (cond.scenario !== undefined && this.world.scenario !== cond.scenario) return false;
         if (cond.scenarioMin !== undefined && this.world.scenario < cond.scenarioMin) return false;
+        if (cond.scenarioMax !== undefined && this.world.scenario > cond.scenarioMax) return false;
         if (cond.hasItem !== undefined) {
             if (!this._inventoryManager) return false;
             return this._inventoryManager.hasItem(cond.hasItem);

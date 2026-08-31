@@ -3,7 +3,7 @@ import { ExploreCollisionSystem } from "../ExploreCollisionSystem.js";
 import { WalkAreaSampler } from "../WalkAreaSampler.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { getItemDef } from "../../../Data/ItemDefs.js";
-import { getSceneDefSync } from "../../SceneDefRegistry.js";
+import { getSceneDefSync, getSceneDef } from "../../SceneDefRegistry.js";
 
 
 export class ExploreMode extends BaseMode {
@@ -149,13 +149,20 @@ export class ExploreMode extends BaseMode {
                 this._currentSceneSwitchTrigger = { trigger, triggerDef };
                 if (inputSystem.consumeAction("interact", tickCount)) {
                     this._currentSceneSwitchTrigger = null;
-                    const targetDef = getSceneDefSync(triggerDef.targetScene);
-                    if (!targetDef) {
-                        console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
-                        return;
-                    }
                     const game = this.context.game;
-                    game.requestSceneSwitch(targetDef, triggerDef.targetSpawn);
+                    // 优先同步查缓存（已 resolve 过的场景），fallback 异步 fetch（首次访问的 JSON 场景）
+                    const cached = getSceneDefSync(triggerDef.targetScene);
+                    if (cached) {
+                        game.requestSceneSwitch(cached, triggerDef.targetSpawn);
+                    } else {
+                        getSceneDef(triggerDef.targetScene).then(targetDef => {
+                            if (targetDef) {
+                                game.requestSceneSwitch(targetDef, triggerDef.targetSpawn);
+                            } else {
+                                console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
+                            }
+                        });
+                    }
                     return;
                 }
                 return;

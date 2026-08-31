@@ -9,6 +9,16 @@ export function getSceneDefSync(id) {
     return _hardcoded.get(id) ?? _cache.get(id);
 }
 
+/**
+ * 异步获取场景定义。若未缓存则 fetch Data/SceneDefs/{id}.json。
+ * 用于 ExploreMode 等首次跨场景切换的调用方。
+ */
+export async function getSceneDef(id) {
+    if (_hardcoded.has(id)) return _hardcoded.get(id);
+    if (_cache.has(id)) return _cache.get(id);
+    return resolveSceneDef(id);
+}
+
 export async function resolveSceneDef(id) {
     if (_hardcoded.has(id)) return _hardcoded.get(id);
     if (_cache.has(id)) return _cache.get(id);

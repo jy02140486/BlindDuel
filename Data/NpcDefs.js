@@ -7,7 +7,7 @@ export const NPC_DEFS = {
         // scenario >= 105 (PROLOGUE_CHARLOTTE_JOIN) 后跟随，之前 idle。
         // 重置/跨场景时按当前 scenario 重新评估，与 checkpoint 自然兼容。
         initialStateMap: [
-            { if: { scenarioMin: 105 }, state: "following" },
+            { if: { scenarioMin: 105,scenarioMax: 109 }, state: "following" },
             { if: {}, state: "idle" }
         ],
         dialogues: [
