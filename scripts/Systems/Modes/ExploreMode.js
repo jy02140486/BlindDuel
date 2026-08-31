@@ -386,7 +386,9 @@ export class ExploreMode extends BaseMode {
     _registerSequenceHandlers() {
         const handlers = this.context.sequenceHandlers;
         if (!handlers) return;
-        handlers.set("disposeProp", (ctx, clip) => this.#handleDisposeProp(ctx, clip));
+        const disposeHandler = (ctx, clip) => this.#handleDisposeActor(ctx, clip);
+        handlers.set("disposeActor", disposeHandler);
+        handlers.set("disposeProp", disposeHandler);  // backward compat
         handlers.set("enterCompanionFollowing", (ctx, clip) => this.#handleEnterCompanionFollowing(ctx, clip));
         handlers.set("enterCompanionIdle", (ctx, clip) => this.#handleEnterCompanionIdle(ctx, clip));
     }
@@ -395,6 +397,7 @@ export class ExploreMode extends BaseMode {
         const handlers = this.context.sequenceHandlers;
         if (!handlers) return;
         handlers.delete("disposeProp");
+        handlers.delete("disposeActor");
         handlers.delete("enterCompanionFollowing");
         handlers.delete("enterCompanionIdle");
     }
@@ -437,39 +440,43 @@ export class ExploreMode extends BaseMode {
         }
     }
 
-    #handleDisposeProp(_ctx, clip) {
+    #handleDisposeActor(_ctx, clip) {
         const entityPool = this.context.entityPool;
         const targetId = clip?.actorId;
-        const match = (e) => e?.kind === "prop" && (targetId == null || e.id === targetId || e.name === targetId);
+        const match = (e) => e && (targetId == null || e.id === targetId || e.name === targetId);
 
-        // 1. 释放 prop 的 GPU 资源，并从 exploreMode.props 移除（fixedUpdate 列表）
-        for (let i = this.props.length - 1; i >= 0; i--) {
-            const prop = this.props[i];
-            if (match(prop)) {
-                console.log(`[ExploreMode] disposeProp: ${prop.id}`);
-                prop.dispose?.();
-                this.props.splice(i, 1);
-            }
-        }
-        // 2. 从 exploreMode.renderables 移除（本帧绘制列表）
-        for (let i = this.renderables.length - 1; i >= 0; i--) {
-            if (match(this.renderables[i])) {
-                this.renderables.splice(i, 1);
-            }
-        }
-        // 2b. 从 exploreMode.staticBlockers 移除（Phase 4 后 prop 进 staticBlockers）
-        for (let i = this.staticBlockers.length - 1; i >= 0; i--) {
-            if (match(this.staticBlockers[i])) {
-                this.staticBlockers.splice(i, 1);
-            }
-        }
-        // 3. 从 scene.entityPool 移除（持久实体清单）—— 防止 _buildIndices 重新收集已 dispose 的 prop
+        // 收集所有要 dispose 的实体（从 entityPool 统一找，覆盖 prop / npc / pickable）
+        const targets = [];
         if (entityPool) {
-            for (let i = entityPool.length - 1; i >= 0; i--) {
-                if (match(entityPool[i])) {
-                    entityPool.splice(i, 1);
-                }
+            for (const e of entityPool) {
+                if (match(e)) targets.push(e);
             }
+        }
+        if (!targets.length) return;
+
+        for (const entity of targets) {
+            const id = entity.id ?? entity.name ?? "?";
+            console.log(`[ExploreMode] disposeActor: kind=${entity.kind} id=${id}`);
+            entity.dispose?.();
+
+            // 从各个运行时列表里移除（列表重叠没关系，splice 自身防重复）
+            this._spliceWhere(this.props, match);
+            this._spliceWhere(this.renderables, match);
+            this._spliceWhere(this.staticBlockers, match);
+            this._spliceWhere(this.dynamicActors, match);
+            this._spliceWhere(this.interactables, match);
+            this._spliceWhere(this.pickables, match);
+            this._spliceWhere(this.enemies, match);
+        }
+
+        // 最后从 entityPool 移除（持久清单，防止 _buildIndices 重新收集）
+        if (entityPool) this._spliceWhere(entityPool, match);
+    }
+
+    _spliceWhere(arr, match) {
+        if (!arr?.length) return;
+        for (let i = arr.length - 1; i >= 0; i--) {
+            if (match(arr[i])) arr.splice(i, 1);
         }
     }
 
@@ -526,6 +533,21 @@ export class ExploreMode extends BaseMode {
             }
             if (entity.spritePlane) {
                 this.renderables.push(entity);
+            }
+        }
+
+        // WalkArea 内定义的虚拟障碍（无对应 prop 实体的纯 AABB 障碍区）
+        const wa = this.context.walkArea;
+        if (wa?.obstacles?.length) {
+            for (const ob of wa.obstacles) {
+                this.staticBlockers.push({
+                    kind: "walkAreaObstacle",
+                    label: ob.label ?? "obstacle",
+                    getBlockerAabb: () => ({
+                        minX: ob.minX, maxX: ob.maxX,
+                        minY: ob.minY, maxY: ob.maxY
+                    })
+                });
             }
         }
 

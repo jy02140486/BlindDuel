@@ -37,7 +37,7 @@
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -23, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 1500, "x": -23, "y": 0, "speed": 1.4 , "startPos": [-28, 0]},
         { "type": "inputLock", "atMs": 6600, "locked": false }
       ]
     },
@@ -48,10 +48,28 @@
       "channel": "movement",
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 400, "durationMs": 2600, "x": -22.5, "y": 0, "speed": 1.4, "startPos": [-30, -0.7]},
-        { "type": "faceWorldX", "atMs": 3000, "direction": -1 },
-        { "type": "moveActorTo", "startMs": 3000, "durationMs": 500, "x": -23, "y": 0.4, "speed": 1.4, "startPos": [-22.5, 0]},
-        { "type": "callback", "atMs": 3600, "fn": "enterCompanionIdle" }
+        { "type": "moveActorTo", "startMs": 400, "durationMs": 1600, "x": -19.7, "y": 0, "speed": 1.4, "startPos": [-26, -0.7]},
+        { "type": "faceWorldX", "atMs": 2000, "direction": -1 },
+        { "type": "command", "atMs": 2050, "command": "idle" },
+        { "type": "faceWorldX", "atMs": 3600, "direction": 1 },
+        { "type": "command", "atMs": 3650, "command": "walk" },
+        { "type": "moveActorTo", "startMs": 3600, "durationMs": 500, "x": -19.3, "y": 0.4, "speed": 1.4},
+        { "type": "command", "atMs": 4150, "command": "idle" },
+        { "type": "disposeActor", "actorId": "companion", "atMs": 4200 }
+      ]
+    },
+    {
+      "id": "companion.bubble_show",
+      "kind": "callback",
+      "binding": { "actorId": "companion" },
+      "clips": [
+        { "type": "dialogueBubble", "atMs": 2650, "actorId": "companion", "text": "🛌" }
+      ]
+    }, {
+      "id": "companion.bubble_hide",
+      "kind": "callback",
+      "clips": [
+        { "type": "dialogueBubble", "atMs": 3600, "action": "hide" }
       ]
     },
     {

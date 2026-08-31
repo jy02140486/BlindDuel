@@ -1,0 +1,33 @@
+{ "frames": {
+   "grasstop_1 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 720, "h": 57 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 720, "h": 57 },
+    "sourceSize": { "w": 720, "h": 57 },
+    "duration": 1280
+   },
+   "grasstop_1 1.ase": {
+    "frame": { "x": 720, "y": 0, "w": 720, "h": 57 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 720, "h": 57 },
+    "sourceSize": { "w": 720, "h": 57 },
+    "duration": 1280
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\Env\\grasstop_1.png",
+  "format": "RGBA8888",
+  "size": { "w": 1440, "h": 57 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Layer", "opacity": 255, "blendMode": "normal" },
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

@@ -168,8 +168,23 @@ export class Game {
         this.cameraManager.setFadeImmediate("black", 1);
         this._executeOnEnterDirectives(sceneDef);
         await this.scene.init(sceneDef, BATTLE_DEFS);
-        this.scene._loading = false;
+
+        // hero 初始位置设置：与 _loadSceneInternal 保持一致
+        const hero = this.scene.entityPool.find(e => e.id === "hero");
+        const spawnId = this.worldState.currentSpawnId
+            ?? Object.keys(sceneDef.spawns ?? {})[0]
+            ?? null;
+        const spawnPoint = sceneDef.spawns?.[spawnId];
+        if (spawnPoint && hero) {
+            hero.root.position.set(spawnPoint[0], spawnPoint[1], spawnPoint[2] ?? 0);
+        }
+
+        // hero 位置确定后，重新应用 NPC 初始 behavior state
+        this.scene.applyNpcInitialStates(this.worldState, hero);
+
+        // 先发起 intro（即使 fetch 是异步的，_loading 继续阻止 fixedUpdate）
         this._playIntro(sceneDef);
+        this.scene._loading = false;
     }
 
     _playIntro(sceneDef) {

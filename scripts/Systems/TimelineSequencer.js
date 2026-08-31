@@ -314,7 +314,17 @@ export class TimelineSequencer {
     }
 
     _getHandler(type) {
-        return ACTION_HANDLERS[type] || null;
+        if (ACTION_HANDLERS[type]) return ACTION_HANDLERS[type];
+        // Fallback: 动态注册的 handler（如 ExploreMode 在 ctx.sequenceHandlers 里注册的 disposeProp / disposeActor 等）
+        const seqHandlers = this.context?.sequenceHandlers;
+        if (seqHandlers?.has(type)) {
+            const fn = seqHandlers.get(type);
+            if (typeof fn === "function") {
+                // sequenceHandlers 里的 fn 是 (ctx, clip) 形式的普通函数，包装成 handler.start(ctx, clip)
+                return { start: (ctx, clip) => fn(ctx, clip) };
+            }
+        }
+        return null;
     }
 
     _validateTimeline(timeline) {

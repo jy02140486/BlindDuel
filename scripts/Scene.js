@@ -696,6 +696,7 @@ export class Scene {
                     this.walkArea = new WalkArea(this.scene, {
                         minX: def.minX, maxX: def.maxX,
                         minY: def.minY, maxY: def.maxY,
+                        obstacles: def.obstacles ?? [],
                         visible: this._debugVisible
                     });
                     if (this.sharedContext) {

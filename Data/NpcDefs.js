@@ -13,7 +13,7 @@ export const NPC_DEFS = {
         dialogues: [
             {
                 priority: 100,
-                condition: { scenarioMin: 105 },
+                condition: { scenarioMin: 105, scenarioMax: 109 },
                 text: "👍"
             },
             {
