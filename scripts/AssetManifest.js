@@ -158,7 +158,8 @@ export const ASSET_MANIFEST = {
         }
     },
     stageMasks: {
-        tavern_indoor: "./Data/StageMask/Tavern_indoorStage.mask.json"
+        tavern_indoor: "./Data/StageMask/Tavern_indoorStage.mask.json",
+        tavern_room: "./Data/StageMask/tavern_room.mask.json"
     },
     ui: {
         arrow: "./Art/Sprite/UI/arrow.json"

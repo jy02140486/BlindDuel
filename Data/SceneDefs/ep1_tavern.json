@@ -77,7 +77,15 @@
             "targetScene": "ep1_tavern_hall",
             "targetSpawn": "house_door",
             "debugColor": [0, 1, 1],
-            "debugVisible": true
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "top",
+                "direction": "up",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
         },
         {
             "type": "battle",

@@ -8,8 +8,6 @@
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "stageMask": "tavern_indoor",
-    "introSequenceUrl": "Data/Sequences/ep1_intro.json",
-    "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
     "entities": [
         {
             "archetype": "hero_longsword",
@@ -106,7 +104,8 @@
         { "if": {}, "minX": -6.75, "maxX": 13.98, "minY": -4.77, "maxY": -1.65 }
     ],
     "spawns": {
-        "house_door": [-2.09, -1, 0]
+        "house_door": [-2.09, -1, 0],
+        "house_door_room": [-5.91, -2.81, 0]
     },
     "triggers": [
         {
@@ -118,7 +117,33 @@
             "targetSpawn": "house_door",
             "condition": { "scenarioMin": 110 },
             "debugColor": [0, 1, 1],
-            "debugVisible": true
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "left",
+                "direction": "left",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
+        },
+        {
+            "type": "sceneSwitch",
+            "id": "enter_tavern_room",
+            "pos": [-5.91, -2.81, 0],
+            "size": [2, 2, 2],
+            "targetScene": "ep1_tavern_room",
+            "targetSpawn": "room_right",
+            "debugColor": [1, 0.5, 0],
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "left",
+                "direction": "left",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
         },
         {
             "type": "battle",

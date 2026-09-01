@@ -1,0 +1,68 @@
+{
+    "id": "ep1_tavern_room",
+    "exploreCamera": {
+        "followDistance": 17,
+        "followHeight": 3.5,
+        "smoothing": 0.12,
+        "orthoWidth": 26
+    },
+    "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "stageMask": "tavern_room",
+    "entities": [
+        {
+            "archetype": "hero_longsword",
+            "id": "hero",
+            "name": "hero",
+            "kind": "player",
+            "pos": [0, 0],
+            "controller": "player"
+        }
+    ],
+    "spawns": {
+        "room_left": [-6.09, -3.00, 0],
+        "room_right": [5.52, -3.00, 0]
+    },
+    "triggers": [
+        {
+            "type": "sceneSwitch",
+            "id": "exit_room_to_hall",
+            "pos": [5.52, -2.4, 0],
+            "size": [2, 2, 2],
+            "targetScene": "ep1_tavern_hall",
+            "targetSpawn": "house_door_room",
+            "debugColor": [1, 0.5, 0],
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "right",
+                "direction": "right",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
+        }
+    ],
+    "environment": {
+        "layers": [
+            {
+                "id": "STAGE",
+                "z": 10,
+                "parallaxFactor": 1.0,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "tavern_room_bg",
+                        "texture": "Art/Environment/tavern_room.png",
+                        "kind": "single",
+                        "x": 0,
+                        "y": 0,
+                        "width": 14.4,
+                        "height": 7.68,
+                        "alphaIndex": 3
+                    }
+                ]
+            }
+        ]
+    }
+}
