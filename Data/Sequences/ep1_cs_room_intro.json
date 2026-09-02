@@ -1,13 +1,63 @@
 {
   "id": "ep1_cs_room_intro",
-  "durationMs": 7450,
+  "durationMs": 14500,
   "tracks": [
+    {
+        "id": "camera.movement",
+      "kind": "camera",
+      "binding": { "cameraId": "scripted" },
+      "channel": "frame",
+      "clips": [
+        { "type": "setCameraFrame", "atMs": 4600, "center": [-5.22, -2.98, 0], "height": -2, "orthoWidth": 8 },
+        { "type": "cameraBlend", "startMs": 4600, "durationMs": 1000, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 8600, "center": [5.7, -2.21, 0], "height": 0, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 8600, "durationMs": 1000, "to": "scripted" },
+        { "type": "setCameraFrame", "atMs": 11500, "center": [-5.22, -2.98, 0], "height": 0, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 11500, "durationMs": 1000, "to": "scripted" },
+         { "type": "setCameraFollow", "atMs": 12500, "actorId": "hero", "offsetX": 0, "offsetY": 0, "offsetZ": 0, "lerp": 0.12, "height": 0, "orthoWidth": 20 }
+      ]
+    },
     {
       "id": "fx.fadein",
       "kind": "camera",
       "channel": "fx",
       "clips": [
-        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 },
+        { "type": "cameraEffect", "atMs": 3400, "effect": "fade", "durationMs": 1200, "color": "black", "from": 0, "to": 1 },
+        { "type": "cameraEffect", "atMs": 7500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "prop_rabble_kidnap",
+      "kind": "actor",
+      "binding": { "actorId": "prop_rabble_kidnap" },
+      "clips": [
+        { "type": "setVisibility", "atMs": 0, "visible": false },
+        { "type": "setVisibility", "atMs": 7500, "visible": true },
+        { "type": "command",       "atMs": 10600, "command": "hold" },
+        { "type": "callback", "atMs": 11000, "fn": "disposeProp", "actorId": "prop_rabble_kidnap" }
+      ]
+    },
+    {
+      "id": "chalotte_sleep",
+      "kind": "actor",
+      "binding": { "actorId": "prop_charlotte_sleep" },
+      "clips": [
+        { "type": "setVisibility", "atMs": 0, "visible": true },
+        { "type": "setVisibility", "atMs": 7500, "visible": false }
+      ]
+    },
+    {
+      "id": "enemy_1",
+      "kind": "actor",
+      "binding": { "actorId": "enemy_1" },
+      "clips": [
+        
+        { "type": "setVisibility", "atMs": 0, "visible": false },
+        { "type": "setVisibility", "atMs": 7500, "visible": true },
+        { "type": "command",       "atMs": 7400, "command": "CS_turnaround", "pause": true },
+        { "type": "resumeAnimation","atMs": 9200 },
+        { "type": "moveActorByDirection", "startMs": 10200, "durationMs": 500,"dir": [-1, -0.5]}
       ]
     },
     {
@@ -22,9 +72,11 @@
         { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -5.22, "y": -2.98, "speed": 1.4 , "startPos": [5.39, -2.25]},
         { "type": "faceWorldX", "atMs": 3000, "direction": 1 },
         { "type": "command", "atMs": 3400, "command": "sleep", "reverse": true },
-        { "type": "command", "atMs": 5400, "command": "sleep" },
-        { "type": "command", "atMs": 7400, "command": "standing" },
-        { "type": "inputLock", "atMs": 7450, "locked": false }
+        { "type": "command", "atMs": 8000, "command": "sleep" },
+        { "type": "pauseAnimation","atMs": 8400 },
+        { "type": "resumeAnimation","atMs": 11500 },
+        { "type": "command", "atMs": 12800, "command": "standing" },
+        { "type": "inputLock", "atMs": 14500, "locked": false }
       ]
     }
     ]

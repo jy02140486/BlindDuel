@@ -46,8 +46,9 @@
             "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_rabble_kidnap_charlotte.png",
             "atlasKey": "csChars.ep1_rabble_kidnap_charlotte",
             "initialClip": "loop",
+            "autoPlay": false,
             "clips": {
-                "loop": { "mode": "loop" }
+                "loop": { "mode": "hold" }
             }
         },
         {
@@ -56,6 +57,7 @@
             "name": "rabble_stick",
             "kind": "enemy",
             "pos": [4.08, -2.24, 0],
+            "autoPlay": false,
             "controller": "test"
         }
     ],

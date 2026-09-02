@@ -13,6 +13,7 @@ export class FrameAnimationComponent {
         this.onAnimationEvent = null;
         this._currentClipEvents = [];
         this._firedEventKeys = new Set();
+        this._paused = false;
     }
 
     setTimeScale(scale) {
@@ -118,7 +119,20 @@ export class FrameAnimationComponent {
         return this.finished;
     }
 
+    pause() {
+        this._paused = true;
+    }
+
+    resume() {
+        this._paused = false;
+    }
+
+    get isPaused() {
+        return this._paused;
+    }
+
     fixedUpdate(dtMs) {
+        if (this._paused) return;
         if (this.frames.length <= 1) {
             if (!this.loop) {
                 this.finished = true;

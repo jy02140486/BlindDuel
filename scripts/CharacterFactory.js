@@ -213,6 +213,12 @@ export function createRabbleStickCharacter(scene, assets) {
                 atlasData: assets.atlas.rabble.die,
                 colliderData: assets.colliders.rabble.die,
                 loop: false
+            },
+            CS_turnaround: {
+                spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_CS_turnaround.png",
+                atlasData: assets.atlas.rabble.CS_turnaround,
+                colliderData: assets.colliders.rabble.CS_turnaround,
+                loop: false
             }
         }
     });

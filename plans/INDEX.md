@@ -2,6 +2,15 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-09-02)
+- TimelineSequencer 新增 2 种动画帧控制 clip：`pauseAnimation` / `resumeAnimation`（event clip，纯 FrameAnimationComponent 层冻结帧推进）；command clip 新增可选 `pause` 字段（进态后立即 pause）；§5.15 setVisibility 已于此前落地（当前共 17 种 clip）
+- `command+paused` 典型场景：sequence 专用一次性动画（状态图 `loop: false` + 空 `transitions`）在第一帧等待显式播放——`{ "type": "command", "atMs": 0, "command": "CS_turnaround", "pause": true }` 进态后停在首帧，后续 `resumeAnimation` 触发播放
+- `pauseAnimation` / `resumeAnimation` 典型场景：动画已在播放中，临时冻结若干毫秒再继续——`{ command: sleep atMs:7400 } → pauseAnimation atMs:8400 → resumeAnimation atMs:9400` 让 sleep 第二帧停 1 秒；帧暂停期间 `timeInFrameMs` 不累积，resume 后从中断点继续计时
+- FrameAnimationComponent 新增 `_paused` 字段 + `pause()` / `resume()` / `isPaused` getter；`fixedUpdate` 入口加 `if (this._paused) return` 早退；CharacterBase.fixedUpdate 不改——`animation.fixedUpdate` 已经自己负责跳过帧推进，CharacterBase 上层逻辑正常跑（_consumeTransition 也正常跑，但 normalizedTime 不变所以依赖它的 transition 条件自然 freeze）
+- **关键设计决策**：pause 不改写 CharacterBase 层。`enterState` 内部调 `animation.play()` 会重置 `_paused = false`，所以 pause 期间如果发生状态切换，pause 自动解除——不会出现"某个状态还挂着 pause"的脏状态
+- 浏览器缓存坑：新 handler 加入 ACTION_HANDLERS 后若页面不硬刷新，`_getHandler` 返回 null，handler.start 根本不会被调，表现为"clip 没生效"——排查第一步永远是 Ctrl+Shift+R
+- 文档同步：`docs/TimelineSequencer User Guide.md` §5.1 command 补充 pause 字段 + §5.16 pauseAnimation + §5.17 resumeAnimation + §10 已知限制第 10/11 条 + §9.2 排查表加行
+
 ## Update Log (2026-08-15)
 - Companion 目标采样落地：新建 `scripts/Systems/WalkAreaSampler.js`（静态 `sample(x,y,walkArea,blockers,{padding,agentX,agentY})`，三步算法：walkArea clamp + blocker 迭代推离 + 二次 clamp），对标 Unity `NavMesh.SamplePosition`。解决两个现象：①玩家紧贴障碍物左侧时 raw target 落在障碍物 AABB 内 → companion 走过去被 resolveMovement 推开 → 永远 `absDx > followStop` 卡在 walk 状态；②玩家走到 walkArea 右端时 raw target 超出 `walkArea.maxX` → companion 被 clamp 回边界 → 同样永远到不了 target。`FollowingBehavior.update` 在算 dx/dy 前对 raw target 走一次 sample；`ExploreMode.fixedUpdate` 把 `walkArea` 和 `staticBlockers` 塞进 controller context。player 不进 `staticBlockers`（不改 §10.3 物理推开行为），只在 sample 阶段临时拼进 `sampleBlockers` 软处理，避免 target 落在 player 身上。padding 取 npc 自身 AABB 半宽，保证到达 target 时 AABB 不重叠。实施期发现并修复震荡 bug：sample 推离时若某轴正负方向穿透距离并列（player 在 walkArea 右墙 + rawTargetY = player.y 居中），固定推到一侧会让 Charlotte 需穿越 player 走到另一侧，与 Separation 软避让冲突导致原地在 Y 方向踏步；修复方式是 sample 接受 `agentX/agentY` 参数，并列时按 agent 当前所在侧选推离方向。设计稿 `plans/Companion 目标采样（WalkAreaSampler）设计.MD`。遗留 §7.1 auto-braking（路径阻断卡死）、§7.2 双向跟随方向校验未做
 
@@ -186,7 +195,7 @@
 - **cutsceneInvokers**：SceneDef 数据驱动 cutscene 触发（condition + sequenceUrl + flagOnPlay），替代硬编码
 - **统一时间源架构**：`FrameClock`（全游戏唯一时钟）+ TimelineSequencer/CameraManager 采样化（`sample(renderTime)`）；TimeControlSystem 正交（参数注入）。设计稿 `plans/统一时间源与 Render 采样架构设计.MD`，Phase 1-3 全部落地：Phase 3 Render 插值采用「Scene 层 snapshot/restore + updateRender 重排 + supportsRenderSampling 路径分流」架构（设计稿 §8.7 原写在 CharacterBase.fixedUpdate 末尾快照，实际移到 Scene.fixedUpdate 末尾以覆盖后置 position 写入）
 - **Mode 切换规范**：`switchMode` clip 必须放 sequence 末尾；sequence 期间 mode.enter 不碰 rig（由 cameraBlend clip 负责）；rig.compute 在上下文未就绪时 hold（安全网）。设计稿 §6.5
-- **TimelineSequencer**：多 track + 14 种 clip 类型（command/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble/moveActorByDirection/playAudio）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
+- **TimelineSequencer**：多 track + 17 种 clip 类型（command+pause/moveActorTo/cameraBlend/setCameraFrame/setCameraFollow/cameraEffect/inputLock/faceWorldX/switchMode/callback/wait/dialogueBubble/moveActorByDirection/playAudio/setVisibility/pauseAnimation/resumeAnimation）+ callback handler（Map<String, Function>），文档见 `docs/TimelineSequencer User Guide.md`
 - **sequencer 期间 ExploreMode 门控**：`isBusy()` 期间 NpcController greeting 不触发、`#updateDialogueBubble` 不接管气泡生命周期、`controlledBySequence` 标记让 ExploreCollisionSystem 跳过 walkArea clamp；气泡显隐完全由 `dialogueBubble` clip 控制
 - `GameMode` 拆分已接入：`GameModeManager + BattleMode + ExploreMode`
 - `Explore -> Battle` 主流程已通，`Battle -> Explore` 返回流程已通

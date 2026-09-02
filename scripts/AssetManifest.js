@@ -40,7 +40,8 @@ export const ASSET_MANIFEST = {
             dodge: "./Art/Sprite/rabble_stick/rabble_stick_dodge.json",
             guard: "./Art/Sprite/rabble_stick/rabble_stick_guard.json",
             clash: "./Art/Sprite/rabble_stick/rabble_stick_clash.json",
-            die: "./Art/Sprite/rabble_stick/rabble_stick_die.json"
+            die: "./Art/Sprite/rabble_stick/rabble_stick_die.json",
+            CS_turnaround: "./Art/Sprite/rabble_stick/rabble_stick_CS_turnaround.json"
         },
         manatarms: {
             idle: "./Art/Sprite/manatarms_sword/manatarms_sword_idle.json",
@@ -100,7 +101,8 @@ export const ASSET_MANIFEST = {
             guard: "./Data/CollisionMask/rabble_stick/rabble_stick_guard.collider.json",
             clash: "./Data/CollisionMask/rabble_stick/rabble_stick_clash.collider.json",
             dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json",
-            die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json"
+            die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json",
+            CS_turnaround: "./Data/CollisionMask/rabble_stick/rabble_stick_CS_turnaround.collider.json"
         },
         manatarms: {
             idle: "./Data/CollisionMask/manatarms_sword/manatarms_sword_idle.collider.json",

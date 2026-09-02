@@ -68,13 +68,19 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 ```jsonc
 { "type": "command", "atMs": 500, "command": "fall" }
+
+// 进态后立即 pause 动画（停在第一帧等后续 resumeAnimation）
+{ "type": "command", "atMs": 0, "command": "CS_turnaround", "pause": true }
 ```
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `command` | string | 状态/clip 名（如 `idle` / `walk` / `draw` / `fall`） |
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `command` | string | 是 | — | 状态/clip 名（如 `idle` / `walk` / `draw` / `fall`） |
+| `pause` | boolean | 否 | `false` | 若为 `true`，command 执行完毕后立即调 `actor.animation.pause()` 冻结动画帧。配合后续 `resumeAnimation` event clip 使用 |
 
 **行为**：先调 `actor.pushCommand(command)`；返回 `false` 时 fallback 调 `actor.enterState(command)`。这让无 transitions 的 actor（PropEntity、companion NPC）也能响应。
+
+**`pause: true` 典型场景**：某个序列专用动画（非循环、一次性）在第一帧等待编排者的显式播放指令。写法通常是 command+pause 进态 → 可选的暂停维持 → resumeAnimation 播放 → 动画自然播完停在末帧（靠状态图 `loop: false` + 空 `transitions` 实现）。
 
 ### 5.2 moveActorTo（actor 移动）
 
@@ -413,6 +419,76 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 - 同一 id 在 50ms 内连续触发会被 AudioManager 节流吞掉（`DEFAULT_THROTTLE_MS`），sequencer 编排密集同 id 音效时需注意时序间隔
 - `bus` 字段当前仅透传，实际总线音量到 Step 5 才生效
 
+### 5.15 setVisibility（actor 视觉显隐）
+
+瞬设 actor 可见性。用于"某个 prop / 角色一开始藏起来，到特定时刻再出现"这类演出。
+
+```jsonc
+// prop 一开始隐藏，5 秒后显现
+{ "type": "setVisibility", "atMs": 0,    "visible": false }
+{ "type": "setVisibility", "atMs": 5000, "visible": true  }
+```
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `type` | string | 是 | — | `"setVisibility"` |
+| `visible` | boolean | 是 | — | `false` 隐藏，`true` 显示 |
+| `atMs` | number | 是 | — | event clip 触发时刻 |
+| `startMs` + `durationMs` | number | 否 | — | 也可写 interval clip 形式（handler start 时一次性设置，end 不自动恢复） |
+
+**行为**：
+- 通过 `actor.root.setEnabled(visible)` 级联隐藏整个 Babylon TransformNode 子树——spritePlane、debugMesh 等所有子节点一起隐/显
+- 没有 `root` 的轻量实体 fallback 到 `actor.spritePlane.setEnabled(visible)`
+- **纯视觉层控制**：碰撞/阻挡、位置更新、动画推进都不受影响
+- **不自动恢复**：sequence 结束时不会自动把 visible 还原成调用前状态，编排者需显式配 `visible: true` clip 恢复
+- 所有实体类型都支持：CharacterBase（hero / rabble / NPC）、PropEntity、PickableEntity；任何模式都能用（不走 callback 通道）
+
+### 5.16 pauseAnimation（暂停动画帧推进）
+
+冻结 actor 当前动画，帧不再推进。纯视觉层操作——actor 的位置、碰撞、状态机 transition 评估都继续正常运行。
+
+```jsonc
+{ "type": "pauseAnimation", "atMs": 8000 }
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `type` | string | 是 | `"pauseAnimation"` |
+| `atMs` | number | 是 | event clip 触发时刻 |
+
+**行为**：
+- `handler.start` 调 `actor.animation.pause()`，内部设 `FrameAnimationComponent._paused = true`
+- 后续每帧 `FrameAnimationComponent.fixedUpdate` 开头检查 `_paused`，为 true 时直接 return，跳过帧推进、事件触发、loop/transition 检测
+- **状态机不受影响**：`CharacterBase._consumeTransition` 在 `animation.fixedUpdate` 之前执行，它比较的是 `animation.normalizedTime`——pause 期间 `fixedUpdate` 不跑，`normalizedTime` 不变，所以依赖 normalizedTime 的 transition 条件不会被触发（等于 freeze 了 transition 评估）
+- **不跨状态持久**：`enterState` 会调 `animation.play()` 重置 FrameAnimationComponent，`_paused` 随之变回 `false`。所以 pauseAnimation 生效期间如果发生了状态切换，pause 会被静默解除——这是设计意图（切到新状态理应自动播放）
+
+### 5.17 resumeAnimation（恢复动画帧推进）
+
+恢复被 pauseAnimation 或 command+paused 的 actor 动画帧推进。
+
+```jsonc
+{ "type": "resumeAnimation", "atMs": 9000 }
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `type` | string | 是 | `"resumeAnimation"` |
+| `atMs` | number | 是 | event clip 触发时刻 |
+
+**行为**：
+- `handler.start` 调 `actor.animation.resume()`，内部设 `FrameAnimationComponent._paused = false`
+- 帧推进从 pause 中断的那一帧继续，不会重新开始当前帧的 durationMs 计时（`timeInFrameMs` 在 pause 期间不累积，resume 后继续累加）
+
+**与 command+paused 的配合**：两者都会调 `animation.pause()`，效果等价。区别在于：`command+paused` 是单条 clip（进态 + 立即暂停），适合"进第一帧等播放"的场景；`pauseAnimation` / `resumeAnimation` 是两条独立 event clip，适合"动画正在播放中，临时冻结一会儿再继续"的场景。两者可以混用——`resumeAnimation` 也能解除 `command+paused` 造成的暂停。
+
+**完整示例**（暂停 sleep 第二帧 1 秒）：
+```jsonc
+// sleep 从 atMs:7400 开始
+{ "type": "command",        "atMs": 7400, "command": "sleep" },
+{ "type": "pauseAnimation", "atMs": 8400 },  // sleep 第二帧中途冻结
+{ "type": "resumeAnimation","atMs": 9400 },  // 冻结 1000ms 后继续播放
+```
+
 ## 6. Track 并行与重叠
 
 **多 track 天然并行**：每个 track 独立推进，互不阻塞。
@@ -522,6 +598,7 @@ sceneSequencer.stop();    // 强制停
 | moveActorByDirection 不动 | ① 看 `dir is zero or near-zero` warn（`dir=[0,0]` 或未填）；② 看 `actor not found`（binding.actorId 找不到）；③ 看 `INTERVAL START` 未打（startMs 超 durationMs） |
 | playAudio 无声 | ① 看 `playAudio: missing or invalid 'id'` warn（id 未填）；② 看 `playAudio: audioManager not found` warn（ctx 未注入）；③ id 不在 `audio_clips.json`——看 `[AudioPlayer] unknown clip id`；④ 浏览器自动播放策略——首次需 pointerdown/keydown 解锁 AudioContext |
 | playAudio 被截断 | 50ms 节流吞掉——同 id 两条 clip 时序太近；或 `stopOnInterrupt` 默认 true，sequencer stop/loop 时被停 |
+| pauseAnimation / resumeAnimation 没生效 | ① 浏览器缓存旧 JS（TimelineSequencer.js / FrameAnimationComponent.js / CharacterBase.js）——硬刷新 Ctrl+Shift+R；② `frame` 未变但视觉上看不出"暂停"——pause 冻结的是当前帧，如果恰好停在多帧长的某帧中间（如 sleep 的 1000ms 长帧），帧不变所以看不出"跳帧"证据，但 pause 确实生效了（resume 时 frame 号应该和 pause 时一样）；③ 看 TimelineSequencer 是否打了 `pauseAnimation: actor=... frame=N` log——没打说明 handler 根本没被调 |
 | 进战斗相机抖缩放 | ① 检查 `cameraBlend(to=duel)` 的 `endMs` 是否 ≤ `switchMode(modeId=battle)` 的 `atMs`，看是否有 `cameraBlend clip ended but isBlending()=true` 警告；② 检查 `timeline.durationMs` 是否 ≥ 所有 clip endMs，看是否有 `sequence durationMs reached, but N clip(s) still active` 警告；③ 检查 character/rabbleStick 是否在 ctx 中，看是否有 `switchMode to "battle" but ... MISSING` 警告 |
 
 ### 9.3 校验
@@ -598,6 +675,10 @@ handler 会自动算 fighterDistance 注入 payload，但前提是 ctx 里有 `c
 5. 同一时刻多个 cameraEffect 叠播靠 CameraManager 内部队列，无显式优先级
 6. `wait` clip 目前几乎无实际用途（多 track 已并行），保留作语义占位
 7. DialogueBubble 是单例，同时只能显示一个气泡
+8. `setVisibility` 不自动恢复 visible 状态——sequence 结束后 actor 保持隐藏，编排者需显式恢复
+9. `setVisibility` 只控视觉层，不影响碰撞阻挡；隐藏后若 `blocksMovement=true` 仍会阻挡玩家
+10. `pauseAnimation` / `resumeAnimation` 是纯 FrameAnimationComponent 层控制，不影响 `CharacterBase` 的 `_consumeTransition`（但 transition 条件里的 `normalizedTime` 也不会变，等于 freeze 了依赖动画进度的 transition 评估）
+11. `enterState` 会重置 `FrameAnimationComponent._paused = false`——pauseAnimation 生效期间如果有状态切换（`pushCommand` / `enterState`），pause 会被静默解除，不会进入"某个状态还挂着 pause"的脏状态
 
 ## 11. 扩展指南
 

@@ -416,6 +416,35 @@ const ACTION_HANDLERS = {
             } else {
                 console.warn(`[TimelineSequencer] command: actor has no pushCommand or enterState`);
             }
+            if (clip.pause && actor.animation?.pause) {
+                actor.animation.pause();
+            }
+        }
+    },
+
+    resumeAnimation: {
+        start(ctx, clip, track) {
+            const actor = _resolveActor(ctx, track.binding);
+            if (!actor) {
+                console.warn(`[TimelineSequencer] resumeAnimation: actor not found`);
+                return;
+            }
+            if (actor.animation?.resume) {
+                actor.animation.resume();
+            }
+        }
+    },
+
+    pauseAnimation: {
+        start(ctx, clip, track) {
+            const actor = _resolveActor(ctx, track.binding);
+            if (!actor) {
+                console.warn(`[TimelineSequencer] pauseAnimation: actor not found`);
+                return;
+            }
+            if (actor.animation?.pause) {
+                actor.animation.pause();
+            }
         }
     },
 
@@ -691,6 +720,26 @@ const ACTION_HANDLERS = {
             const spriteFacing = clip.direction === nativeFacingX ? 1 : -1;
             actor.setFacing(spriteFacing);
         }
+    },
+
+    setVisibility: {
+        start(ctx, clip, track) {
+            const actor = _resolveActor(ctx, track.binding);
+            if (!actor) {
+                console.warn(`[TimelineSequencer] setVisibility: actor not found`);
+                return;
+            }
+            const visible = clip.visible !== false; // 防御性默认 true
+            if (actor.root && typeof actor.root.setEnabled === "function") {
+                actor.root.setEnabled(visible);
+            } else if (actor.spritePlane && typeof actor.spritePlane.setEnabled === "function") {
+                actor.spritePlane.setEnabled(visible);
+            } else {
+                console.warn(`[TimelineSequencer] setVisibility: actor ${actor.id ?? actor.name} has no root or spritePlane`);
+                return;
+            }
+        }
+        // 不提供 update / end —— setVisibility 是瞬设操作，区间隐藏用两条 event clip 表达
     },
 
     switchMode: {

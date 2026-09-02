@@ -181,6 +181,12 @@
       "allowMoveInput": false,
       "loop": false,
       "transitions": []
+    },
+    "CS_turnaround": {
+      "clip": "CS_turnaround",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
     }
   }
 }
