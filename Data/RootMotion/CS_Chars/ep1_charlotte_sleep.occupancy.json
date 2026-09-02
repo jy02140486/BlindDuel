@@ -1,0 +1,40 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/CS_Chars/ep1_charlotte_sleep.json",
+                   "rootAtlasPng":  "Data/RootMotion/CS_Chars/ep1_charlotte_sleep.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  16,
+                   "generatedAtUtc":  "2026-09-02T02:43:01.5506092Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "ep1_charlotte_sleep (rootmotion).ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  64
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  58,
+                                                    "cy":  59
+                                                },
+                                       "action":  {
+                                                      "cx":  64,
+                                                      "cy":  51.2
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  58,
+                                         "cy":  59,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   }
+               ]
+}

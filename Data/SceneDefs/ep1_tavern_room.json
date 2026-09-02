@@ -7,6 +7,7 @@
         "orthoWidth": 26
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "introSequenceUrl": "Data/Sequences/ep1_cs_room_intro.json",
     "stageMask": "tavern_room",
     "entities": [
         {
@@ -16,6 +17,46 @@
             "kind": "player",
             "pos": [0, 0],
             "controller": "player"
+        },
+        {
+            "archetype": "prop",
+            "id": "prop_charlotte_sleep",
+            "name": "ep1_charlotte_sleep",
+            "kind": "prop",
+            "pos": [-4.6, -2.0, 0],
+            "controller": "none",
+            "frameWidth": 3.84,
+            "frameHeight": 1.92,
+            "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_charlotte_sleep.png",
+            "atlasKey": "csChars.ep1_charlotte_sleep",
+            "initialClip": "idle",
+            "clips": {
+                "idle": { "mode": "hold" }
+            }
+        },
+        {
+            "archetype": "prop",
+            "id": "prop_rabble_kidnap",
+            "name": "ep1_rabble_kidnap_charlotte",
+            "kind": "prop",
+            "pos": [5.7, -2.2, 0],
+            "controller": "none",
+            "frameWidth": 3.84,
+            "frameHeight": 3.84,
+            "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_rabble_kidnap_charlotte.png",
+            "atlasKey": "csChars.ep1_rabble_kidnap_charlotte",
+            "initialClip": "loop",
+            "clips": {
+                "loop": { "mode": "loop" }
+            }
+        },
+        {
+            "archetype": "rabble_stick",
+            "id": "enemy_1",
+            "name": "rabble_stick",
+            "kind": "enemy",
+            "pos": [4.08, -2.24, 0],
+            "controller": "test"
         }
     ],
     "spawns": {

@@ -1,0 +1,14 @@
+{
+  "id": "ep1_intro",
+  "durationMs": 6600,
+  "tracks": [
+    {
+      "id": "fx.fadein",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    }
+    ]
+}

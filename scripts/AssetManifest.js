@@ -64,7 +64,9 @@ export const ASSET_MANIFEST = {
             prologue_rabble_flee0: "./Art/Sprite/CS_Chars/prologue_rabble_flee0.json",
             prologue_rabble_flee1: "./Art/Sprite/CS_Chars/prologue_rabble_flee1.json",
             prologue_rabble_flee2: "./Art/Sprite/CS_Chars/prologue_rabble_flee2.json",
-            prologue_rabble_flee3: "./Art/Sprite/CS_Chars/prologue_rabble_flee3.json"
+            prologue_rabble_flee3: "./Art/Sprite/CS_Chars/prologue_rabble_flee3.json",
+            ep1_charlotte_sleep: "./Art/Sprite/CS_Chars/ep1_charlotte_sleep.json",
+            ep1_rabble_kidnap_charlotte: "./Art/Sprite/CS_Chars/ep1_rabble_kidnap_charlotte.json"
         },
         environment: {
             altar: "./Art/Environment/altar.json"
@@ -142,7 +144,9 @@ export const ASSET_MANIFEST = {
             prologue_rabble_flee0: "./Data/RootMotion/CS_Chars/prologue_rabble_flee0.json",
             prologue_rabble_flee1: "./Data/RootMotion/CS_Chars/prologue_rabble_flee1.json",
             prologue_rabble_flee2: "./Data/RootMotion/CS_Chars/prologue_rabble_flee2.json",
-            prologue_rabble_flee3: "./Data/RootMotion/CS_Chars/prologue_rabble_flee3.json"
+            prologue_rabble_flee3: "./Data/RootMotion/CS_Chars/prologue_rabble_flee3.json",
+            ep1_charlotte_sleep: "./Data/RootMotion/CS_Chars/ep1_charlotte_sleep.json",
+            ep1_rabble_kidnap_charlotte: "./Data/RootMotion/CS_Chars/ep1_rabble_kidnap_charlotte.json"
         }
     },
     occupancy: {

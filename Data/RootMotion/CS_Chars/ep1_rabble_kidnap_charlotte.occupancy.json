@@ -1,0 +1,67 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/CS_Chars/ep1_rabble_kidnap_charlotte.json",
+                   "rootAtlasPng":  "Data/RootMotion/CS_Chars/ep1_rabble_kidnap_charlotte.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  16,
+                   "generatedAtUtc":  "2026-09-02T02:43:05.5020560Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "ep1_rabble_kidnap_charlotte (rootmotion) 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  58,
+                                                    "cy":  118
+                                                },
+                                       "action":  {
+                                                      "cx":  64,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  58,
+                                         "cy":  118,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "ep1_rabble_kidnap_charlotte (rootmotion) 1.ase",
+                       "frameRect":  {
+                                         "x":  128,
+                                         "y":  0,
+                                         "w":  128,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  58,
+                                                    "cy":  118
+                                                },
+                                       "action":  {
+                                                      "cx":  64,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  58,
+                                         "cy":  118,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   }
+               ]
+}
