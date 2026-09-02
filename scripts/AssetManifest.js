@@ -28,7 +28,8 @@ export const ASSET_MANIFEST = {
             pickup: "./Art/Sprite/longswordman/longswordman_pickup.json",
             eat: "./Art/Sprite/longswordman/longswordman_eat.json",
             drink: "./Art/Sprite/longswordman/longswordman_drink.json",
-            topack: "./Art/Sprite/longswordman/longswordman_topack.json"
+            topack: "./Art/Sprite/longswordman/longswordman_topack.json",
+            sleep: "./Art/Sprite/longswordman/longswordman_sleep.json"
         },
         rabble: {
             idle: "./Art/Sprite/rabble_stick/rabble_stick_idle.json",
@@ -88,7 +89,8 @@ export const ASSET_MANIFEST = {
             dodge: "./Data/CollisionMask/longswordman/longswordman_dodge.collider.json",
             clash: "./Data/CollisionMask/longswordman/longswordman_clash.collider.json",
             hit: "./Data/CollisionMask/longswordman/longswordman_hit.collider.json",
-            defeated: "./Data/CollisionMask/longswordman/longswordman_defeated.collider.json"
+            defeated: "./Data/CollisionMask/longswordman/longswordman_defeated.collider.json",
+            sleep: "./Data/CollisionMask/longswordman/longswordman_sleep.collider.json"
         },
         rabble: {
             idle: "./Data/CollisionMask/rabble_stick/rabble_stick_idle.collider.json",

@@ -135,6 +135,12 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_topack.png",
                 atlasData: assets.atlas.hero.topack,
                 loop: false
+            },
+            sleep: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_sleep.png",
+                atlasData: assets.atlas.hero.sleep,
+                colliderData: assets.colliders.hero.sleep,
+                loop: false
             }
         },
         rootMotionData: assets.rootMotion?.hero ?? null,

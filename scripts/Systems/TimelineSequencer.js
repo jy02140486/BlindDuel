@@ -401,13 +401,18 @@ const ACTION_HANDLERS = {
                 return;
             }
             // pushCommand 失败时 fallback 到 enterState（支持无 transitions 的 actor，如 PropEntity / companion）
-            if (typeof actor.pushCommand === "function") {
+            // 当 clip 带运行时覆写字段（如 reverse:true）时跳过 pushCommand 路径——pushCommand 内部 enterState 不走 overrides 链
+            // 注意 reverse:false 等同于未指定，不算覆写，走正常 pushCommand 路径
+            const overrides = {};
+            if (clip.reverse === true) overrides.reverse = true;
+            const hasOverrides = Object.keys(overrides).length > 0;
+            if (typeof actor.pushCommand === "function" && !hasOverrides) {
                 const accepted = actor.pushCommand(clip.command);
                 if (!accepted && typeof actor.enterState === "function") {
-                    actor.enterState(clip.command);
+                    actor.enterState(clip.command, null, {});
                 }
             } else if (typeof actor.enterState === "function") {
-                actor.enterState(clip.command);
+                actor.enterState(clip.command, null, overrides);
             } else {
                 console.warn(`[TimelineSequencer] command: actor has no pushCommand or enterState`);
             }

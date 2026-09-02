@@ -9,6 +9,7 @@ export class FrameAnimationComponent {
         this.loop = true;
         this.finished = false;
         this.timeScale = 1.0;
+        this.reverse = false;
         this.onAnimationEvent = null;
         this._currentClipEvents = [];
         this._firedEventKeys = new Set();
@@ -61,15 +62,17 @@ export class FrameAnimationComponent {
         }
 
         const restart = options.restart ?? this.currentClipName !== clipName;
+        const reverse = options.reverse ?? false;
         this.currentClipName = clipName;
         this.currentClip = clip;
         this.frames = clip.frames;
         this.loop = clip.loop ?? true;
+        this.reverse = reverse;
 
         this._currentClipEvents = this.#resolveEvents(clipName);
 
         if (restart) {
-            this.currentFrameIndex = 0;
+            this.currentFrameIndex = reverse ? this.frames.length - 1 : 0;
             this.timeInFrameMs = 0;
             this.finished = false;
             this._firedEventKeys = new Set();
@@ -102,6 +105,12 @@ export class FrameAnimationComponent {
         const frameProgress = this.currentFrame.durationMs > 0
             ? this.timeInFrameMs / this.currentFrame.durationMs
             : 0;
+        if (this.reverse) {
+            // 反向时 normT 应单调从 0（起始帧 len-1）递增到 1（终止帧 0）
+            // 已播放帧 = (len-1 - idx)，再加当前帧内进度
+            const playedFrames = (this.frames.length - 1 - this.currentFrameIndex) + frameProgress;
+            return Math.min(playedFrames / this.frames.length, 1);
+        }
         return Math.min((this.currentFrameIndex + frameProgress) / this.frames.length, 1);
     }
 
@@ -119,20 +128,39 @@ export class FrameAnimationComponent {
 
         const scaledDt = dtMs * this.timeScale;
         this.timeInFrameMs += scaledDt;
-        while (this.timeInFrameMs >= this.currentFrame.durationMs) {
-            this.timeInFrameMs -= this.currentFrame.durationMs;
-            if (this.currentFrameIndex + 1 < this.frames.length) {
-                this.currentFrameIndex += 1;
-                this.#tryFireEvents(this.currentFrameIndex);
-            } else if (this.loop) {
-                this.currentFrameIndex = 0;
-                this._firedEventKeys.clear();
-                this.#tryFireEvents(this.currentFrameIndex);
-            } else {
-                this.currentFrameIndex = this.frames.length - 1;
-                this.timeInFrameMs = 0;
-                this.finished = true;
-                break;
+        if (this.reverse) {
+            while (this.timeInFrameMs >= this.currentFrame.durationMs) {
+                this.timeInFrameMs -= this.currentFrame.durationMs;
+                if (this.currentFrameIndex - 1 >= 0) {
+                    this.currentFrameIndex -= 1;
+                    this.#tryFireEvents(this.currentFrameIndex);
+                } else if (this.loop) {
+                    this.currentFrameIndex = this.frames.length - 1;
+                    this._firedEventKeys.clear();
+                    this.#tryFireEvents(this.currentFrameIndex);
+                } else {
+                    this.currentFrameIndex = 0;
+                    this.timeInFrameMs = 0;
+                    this.finished = true;
+                    break;
+                }
+            }
+        } else {
+            while (this.timeInFrameMs >= this.currentFrame.durationMs) {
+                this.timeInFrameMs -= this.currentFrame.durationMs;
+                if (this.currentFrameIndex + 1 < this.frames.length) {
+                    this.currentFrameIndex += 1;
+                    this.#tryFireEvents(this.currentFrameIndex);
+                } else if (this.loop) {
+                    this.currentFrameIndex = 0;
+                    this._firedEventKeys.clear();
+                    this.#tryFireEvents(this.currentFrameIndex);
+                } else {
+                    this.currentFrameIndex = this.frames.length - 1;
+                    this.timeInFrameMs = 0;
+                    this.finished = true;
+                    break;
+                }
             }
         }
     }

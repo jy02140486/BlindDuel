@@ -481,11 +481,13 @@ export class CharacterBase {
         }
     }
 
-    enterState(stateName, tickCount = null) {
+    enterState(stateName, tickCount = null, overrides = {}) {
         const stateDef = this.stateGraph?.states?.[stateName];
         if (!stateDef) {
             throw new Error(`Unknown character state: ${stateName}`);
         }
+
+        const prevStateName = this.currentStateName;
 
         this.stateEntrySerial += 1;
         this.currentStateName = stateName;
@@ -501,7 +503,8 @@ export class CharacterBase {
 
         this.animation.setTimeScale(timeScale);
 
-        this.animation.play(stateDef.clip, { restart: true });
+        const reverse = overrides.reverse ?? false;
+        this.animation.play(stateDef.clip, { restart: true, reverse });
         this.collision?.setClip(stateDef.clip);
         this.#applyCurrentClipTexture();
         if (this.spritePlane) {

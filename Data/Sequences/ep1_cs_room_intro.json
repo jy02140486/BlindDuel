@@ -1,6 +1,6 @@
 {
-  "id": "ep1_intro",
-  "durationMs": 6600,
+  "id": "ep1_cs_room_intro",
+  "durationMs": 7450,
   "tracks": [
     {
       "id": "fx.fadein",
@@ -8,6 +8,23 @@
       "channel": "fx",
       "clips": [
         { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "hero.walk",
+      "kind": "actor",
+      "binding": { "actorId": "hero" },
+      "channel": "movement",
+      "clips": [
+        { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "faceWorldX", "atMs": 0, "direction": -1 },
+        { "type": "command", "atMs": 200, "command": "walk" },
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 3000, "x": -5.22, "y": -2.98, "speed": 1.4 , "startPos": [5.39, -2.25]},
+        { "type": "faceWorldX", "atMs": 3000, "direction": 1 },
+        { "type": "command", "atMs": 3400, "command": "sleep", "reverse": true },
+        { "type": "command", "atMs": 5400, "command": "sleep" },
+        { "type": "command", "atMs": 7400, "command": "standing" },
+        { "type": "inputLock", "atMs": 7450, "locked": false }
       ]
     }
     ]

@@ -2,7 +2,7 @@
   "machine": "longswordman",
   "initialState": "standing",
   "inputs": {
-    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge"],
+    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -413,6 +413,12 @@
           ]
         }
       ]
+    },
+    "sleep": {
+      "clip": "sleep",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
     }
   }
 }
