@@ -57,7 +57,8 @@
         { "type": "setVisibility", "atMs": 7500, "visible": true },
         { "type": "command",       "atMs": 7400, "command": "CS_turnaround", "pause": true },
         { "type": "resumeAnimation","atMs": 9200 },
-        { "type": "moveActorByDirection", "startMs": 10200, "durationMs": 500,"dir": [-1, -0.5]}
+        { "type": "moveActorByDirection", "startMs": 10200, "durationMs": 500,"dir": [-1, -0.5]},
+        { "type": "command",       "atMs": 11200, "command": "idle" }
       ]
     },
     {

@@ -30,6 +30,7 @@
             "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_charlotte_sleep.png",
             "atlasKey": "csChars.ep1_charlotte_sleep",
             "initialClip": "idle",
+            "spawnIf": { "flagNot": "intro_played_ep1_tavern_room" },
             "clips": {
                 "idle": { "mode": "hold" }
             }
@@ -47,6 +48,7 @@
             "atlasKey": "csChars.ep1_rabble_kidnap_charlotte",
             "initialClip": "loop",
             "autoPlay": false,
+            "spawnIf": { "flagNot": "intro_played_ep1_tavern_room" },
             "clips": {
                 "loop": { "mode": "hold" }
             }
@@ -58,6 +60,7 @@
             "kind": "enemy",
             "pos": [4.08, -2.24, 0],
             "autoPlay": false,
+            "spawnIf": { "flagNot": "battle_field_tavern_room_post_charlotte_kidnapped" },
             "controller": "test"
         }
     ],
@@ -83,7 +86,16 @@
                 "scale": 0.4,
                 "frameMs": 250
             }
-        }
+        },{
+    "type": "battle",
+    "id": "bt_room",
+    "pos": [-0.31,-2.62, 0],
+    "size": [2, 2, 2],
+    "battleId": "battle_field_tavern_room_post_charlotte_kidnapped",
+    "condition": { "flagNot": "battle_field_tavern_room_post_charlotte_kidnapped" },
+    "debugColor": [0, 1, 0],
+    "debugVisible": true
+}
     ],
     "environment": {
         "layers": [

@@ -283,6 +283,97 @@ export const PROLOGUE_BATTLE = {
 };
 
 // ---------------------------------------------------------------------------
+// tavern room 专用 BattleDef
+// --
+export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
+    id: "battle_field_tavern_room_post_charlotte_kidnapped",
+    combatants: ["hero", "enemy_1"],     // ← 这个 enemy 要跟 sceneDef 里的 entity id 对上
+    stageBounds: { minX: -4.85, maxX: 4.63, minY: -2.88, maxY: -2.43 },
+    battleYBaseline: -2.97,
+    onVictory: {
+        // 打赢后要设什么 flag？推进什么 scenario？
+        flags: ["battle_field_tavern_room_post_charlotte_kidnapped"],
+    },
+     duelCamera: {
+        zoomMinDistance: 2.4,
+        zoomMaxDistance: 5.0,
+        orthoMinWidth: 12,
+        orthoMaxWidth: 20,
+        perspMinDistance: 12,
+        perspMaxDistance: 28,
+        minCameraHeight: 1.2,
+        maxCameraHeight: 3.2,
+        targetAspect: 16 / 9,
+    },
+     enterSequence: (battleDef) => ({
+        id: "enter_battle",
+        durationMs: 2000,
+        tracks: [
+            {
+                id: "hero.command",
+                kind: "actor",
+                binding: { actorId: "hero" },
+                channel: "command",
+                clips: [
+                    { type: "command", atMs: 0, command: "draw" }
+                ]
+            },
+            {
+                id: "camera",
+                kind: "camera",
+                binding: { cameraId: "duel" },
+                channel: "blend",
+                clips: [
+                    { type: "cameraBlend", startMs: 0, durationMs: 1800, to: "duel" }
+                ]
+            },
+            {
+                id: "mode",
+                kind: "mode",
+                clips: [
+                    { type: "switchMode", atMs: 1800, modeId: "battle", payload: { battleDef } }
+                ]
+            }
+        ]
+    }),
+    exitSequence: {
+        id: "exit_battle",
+        durationMs: 6000,
+        tracks: [
+            {
+                id: "hero.command",
+                kind: "actor",
+                binding: { actorId: "hero" },
+                channel: "command",
+                clips: [
+                    { type: "inputLock", atMs: 0, locked: true },
+                    { type: "command", atMs: 2500, command: "sheath" },
+                    { type: "inputLock", atMs: 6000, locked: false }
+                ]
+            },
+            {
+                id: "camera",
+                kind: "camera",
+                binding: { cameraId: "explore" },
+                channel: "blend",
+                clips: [
+                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 1, orthoWidth: 20 },
+                   { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
+                   
+                   { type: "cameraBlend", startMs: 500, durationMs: 5500, to: "explore" }
+                ]
+            },
+            {
+                id: "mode",
+                kind: "mode",
+                clips: [
+                    { type: "switchMode", atMs: 6000, modeId: "explore" }
+                ]
+            }
+        ]
+    }               // 收刀 + switchMode explore
+};
+// ---------------------------------------------------------------------------
 // BattleDef 索引（按 id 快速查找）
 // ---------------------------------------------------------------------------
 
@@ -290,5 +381,6 @@ export const BATTLE_DEFS = {
     [BATTLE_FIELD_1.id]: BATTLE_FIELD_1,
     [BATTLE_FIELD_2.id]: BATTLE_FIELD_2,
     [PROLOGUE_BATTLE.id]: PROLOGUE_BATTLE,
+    [BATTLE_FIELD_EP1_TAVERN_ROOM.id]: BATTLE_FIELD_EP1_TAVERN_ROOM,
 };
 

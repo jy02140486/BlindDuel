@@ -52,6 +52,8 @@
 
 # mannual
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
-prologue_cs_rabble_flee.json时charlotte继续idle
 配音，格挡成功攻方播还是守方播，是不是跟动画播
-面包屑路径
+## 所有战斗动画节奏调整
+    - 首帧调短，考虑是否会被动画系统忽略
+    - 增加收招帧，缩短判定窗口，大约50-100ms
+    - 缩短前摇，大约300-500ms
