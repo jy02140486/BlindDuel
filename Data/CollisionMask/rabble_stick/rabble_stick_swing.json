@@ -5,7 +5,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 144 },
     "sourceSize": { "w": 160, "h": 144 },
-    "duration": 100
+    "duration": 20
    },
    "rabble_stick_swing 1.ase": {
     "frame": { "x": 160, "y": 0, "w": 160, "h": 144 },
@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 144 },
     "sourceSize": { "w": 160, "h": 144 },
-    "duration": 700
+    "duration": 400
    },
    "rabble_stick_swing 2.ase": {
     "frame": { "x": 320, "y": 0, "w": 160, "h": 144 },
@@ -21,7 +21,15 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 144 },
     "sourceSize": { "w": 160, "h": 144 },
-    "duration": 500
+    "duration": 150
+   },
+   "rabble_stick_swing 3.ase": {
+    "frame": { "x": 480, "y": 0, "w": 160, "h": 144 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 144 },
+    "sourceSize": { "w": 160, "h": 144 },
+    "duration": 200
    }
  },
  "meta": {
@@ -29,7 +37,7 @@
   "version": "1.1-dev",
   "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\rabble_stick_swing.png",
   "format": "RGBA8888",
-  "size": { "w": 480, "h": 144 },
+  "size": { "w": 640, "h": 144 },
   "scale": "1",
   "frameTags": [
   ],
@@ -37,10 +45,10 @@
    { "name": "Collision", "opacity": 255, "blendMode": "normal" },
    { "name": "main visual", "opacity": 255, "blendMode": "normal" },
    { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
    { "name": "lowerbody", "opacity": 255, "blendMode": "normal" },
    { "name": "body", "opacity": 255, "blendMode": "normal" },
    { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
-   { "name": "PushBox", "opacity": 255, "blendMode": "normal" },
    { "name": "leftarm", "opacity": 255, "blendMode": "normal" }
   ]
  }

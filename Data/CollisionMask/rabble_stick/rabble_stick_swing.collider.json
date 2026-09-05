@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.png",
                    "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_swing.json",
                    "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_swing.png",
-                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_swing.json",
-                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_swing.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:40:04.5864928Z"
+                   "generatedAtUtc":  "2026-09-04T02:46:26.2131307Z"
                },
     "frames":  [
                    {
@@ -54,17 +54,6 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  104.5,
-                                         "cy":  121.5,
-                                         "w":  42,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  1596
                                      }
                                  ],
                        "anchors":  {
@@ -94,17 +83,6 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  107.5,
-                                         "cy":  121.5,
-                                         "w":  48,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  1824
                                      }
                                  ],
                        "anchors":  {
@@ -145,22 +123,40 @@
                                          "h":  38,
                                          "angle":  90,
                                          "pixelCount":  1634
-                                     },
-                                     {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  101.5,
-                                         "cy":  121.5,
-                                         "w":  58,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  2204
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  96,
+                                                    "cy":  136
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "rabble_stick_swing 3.ase",
+                       "frameRect":  {
+                                         "x":  480,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  92.5,
+                                         "w":  98,
+                                         "h":  40,
+                                         "angle":  90,
+                                         "pixelCount":  3920
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  100,
                                                     "cy":  136
                                                 }
                                    }

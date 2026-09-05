@@ -61,7 +61,7 @@
             "pos": [4.08, -2.24, 0],
             "autoPlay": false,
             "spawnIf": { "flagNot": "battle_field_tavern_room_post_charlotte_kidnapped" },
-            "controller": "test"
+            "controller": "ai"
         }
     ],
     "spawns": {

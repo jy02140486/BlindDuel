@@ -121,6 +121,8 @@
     "swing": {
       "clip": "swing",
       "attackActive": true,
+      "attackActiveStartMs": 440,
+      "attackActiveDurationMs": 100,
       "attackWeight": "light",
       "attackTrajectory": "slash",
       "loop": false,

@@ -234,9 +234,20 @@ export class CombatCharacter extends CharacterBase {
             ? `${this.id}:${this.currentStateName}:${this.stateEntrySerial}`
             : null;
 
-        const attackActiveFrames = this.currentStateDef?.attackActiveFrames;
-        const isActiveAttackFrame = isAttackState && hasWeapon &&
-            (attackActiveFrames === undefined || attackActiveFrames.includes(frameIndex));
+        let isActiveAttackFrame = false;
+        if (isAttackState && hasWeapon) {
+            const startMs = this.currentStateDef?.attackActiveStartMs;
+            const durationMs = this.currentStateDef?.attackActiveDurationMs;
+            if (startMs != null) {
+                const elapsedMs = this.animation.elapsedInClipMs;
+                const endMs = startMs + (durationMs ?? 1000);
+                isActiveAttackFrame = elapsedMs >= startMs && elapsedMs < endMs;
+            } else {
+                // fallback: 旧的 frame-based 逻辑
+                const attackActiveFrames = this.currentStateDef?.attackActiveFrames;
+                isActiveAttackFrame = attackActiveFrames === undefined || attackActiveFrames.includes(frameIndex);
+            }
+        }
 
         const isInvincible = this.currentStateDef?.invincible === true || this.currentStateDef?.dodgeActive === true;
         const worldBoxes = boxes

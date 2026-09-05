@@ -96,7 +96,7 @@
             "name": "rabble_stick",
             "kind": "enemy",
             "pos": [8.47, -4.92],
-            "controller": "test",
+            "controller": "ai",
             "spawnIf": { "flagNot": "battle_field_2" }
         }
     ],

@@ -77,6 +77,7 @@ export class FrameAnimationComponent {
             this.timeInFrameMs = 0;
             this.finished = false;
             this._firedEventKeys = new Set();
+            this.#tryFireEvents(this.currentFrameIndex);
         }
     }
 
@@ -117,6 +118,16 @@ export class FrameAnimationComponent {
 
     get isFinished() {
         return this.finished;
+    }
+
+    /** 进入当前 clip 后累计的时间（ms），hitstop 期间自动冻结 */
+    get elapsedInClipMs() {
+        if (this.frames.length === 0) return 0;
+        let total = 0;
+        for (let i = 0; i < this.currentFrameIndex; i++) {
+            total += this.frames[i]?.durationMs ?? 0;
+        }
+        return total + this.timeInFrameMs;
     }
 
     pause() {
