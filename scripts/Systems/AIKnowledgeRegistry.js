@@ -46,6 +46,26 @@ export class AIKnowledgeRegistry {
     }
 
     /**
+     * 导出单个角色的知识档案为 JSON 字符串
+     */
+    static exportProfile(character) {
+        if (!character) return null;
+        const profile = this.getProfile(character);
+        return profile ? JSON.stringify(profile, null, 2) : null;
+    }
+
+    /**
+     * 导出所有已缓存的知识档案
+     */
+    static exportAll() {
+        const result = {};
+        for (const [charId, entry] of this.#cache) {
+            result[charId] = entry.profile;
+        }
+        return JSON.stringify(result, null, 2);
+    }
+
+    /**
      * 计算版本哈希，用于检测数据是否更新
      */
     static #computeVersionHash(character) {
@@ -77,6 +97,8 @@ export class AIKnowledgeRegistry {
         const moveSpeed = character.baseMoveSpeed ?? character.baseWalkSpeed ?? 0;
 
         const attackProfiles = [];
+        const dodgeProfiles = [];
+        const guardProfiles = [];
         const stateDisplacements = {};
 
         for (const [stateName, stateDef] of Object.entries(states)) {
@@ -97,7 +119,7 @@ export class AIKnowledgeRegistry {
             );
             stateDisplacements[stateName] = displacement;
 
-            // 只扫描攻击状态
+            // 攻击状态
             if (stateDef.attackActive === true) {
                 const profile = this.#scanAttackState(
                     stateName,
@@ -108,6 +130,32 @@ export class AIKnowledgeRegistry {
                 );
                 if (profile) {
                     attackProfiles.push(profile);
+                }
+            }
+            // 闪避状态
+            else if (stateDef.dodgeActive === true) {
+                const profile = this.#scanDodgeState(
+                    stateName,
+                    stateDef,
+                    clipDef,
+                    displacement,
+                    warnings
+                );
+                if (profile) {
+                    dodgeProfiles.push(profile);
+                }
+            }
+            // 格挡状态
+            else if (stateDef.guardActive === true) {
+                const profile = this.#scanGuardState(
+                    stateName,
+                    stateDef,
+                    clipDef,
+                    displacement,
+                    warnings
+                );
+                if (profile) {
+                    guardProfiles.push(profile);
                 }
             }
         }
@@ -121,6 +169,8 @@ export class AIKnowledgeRegistry {
             pxToWorld,
             moveSpeed,
             attacks: attackProfiles,
+            dodges: dodgeProfiles,
+            guards: guardProfiles,
             movement: {
                 moveSpeed,
                 stateDisplacements
@@ -252,6 +302,8 @@ export class AIKnowledgeRegistry {
 
         return {
             stateName,
+            trajectory: stateDef.attackTrajectory ?? null, // "thrust" | "slash" | null
+            weight: stateDef.attackWeight ?? null,         // "light" | "heavy" | null
             timing: {
                 startupMs,
                 activeMs,
@@ -367,6 +419,68 @@ export class AIKnowledgeRegistry {
         }
 
         return displacement;
+    }
+
+    /**
+     * 扫描单个闪避状态
+     * dodge 本质是 invincible：期间 hitbox 被过滤，所以不需要 colliderData 算范围
+     */
+    static #scanDodgeState(stateName, stateDef, clipDef, displacement, warnings) {
+        const atlasFrames = this.#extractAtlasFrames(clipDef.atlasData, stateName, warnings);
+        if (!atlasFrames || atlasFrames.length === 0) {
+            warnings.push(`No atlas frames for dodge state ${stateName}`);
+            return null;
+        }
+
+        // 计算总时长
+        let totalMs = 0;
+        for (const frame of atlasFrames) {
+            totalMs += frame.durationMs ?? 100;
+        }
+
+        const frameSpeeds = stateDef.frameSpeeds || [];
+
+        return {
+            stateName,
+            timing: { totalMs },
+            displacement,
+            frameSpeeds: [...frameSpeeds],
+            invincible: true
+        };
+    }
+
+    /**
+     * 扫描单个格挡状态
+     * guard 不需要 colliderData 算 reach，关键属性是 guardType（克制关系）+ 是否支持 parry 反击
+     */
+    static #scanGuardState(stateName, stateDef, clipDef, displacement, warnings) {
+        const atlasFrames = this.#extractAtlasFrames(clipDef.atlasData, stateName, warnings);
+        if (!atlasFrames || atlasFrames.length === 0) {
+            warnings.push(`No atlas frames for guard state ${stateName}`);
+            return null;
+        }
+
+        // 计算总时长
+        let totalMs = 0;
+        for (const frame of atlasFrames) {
+            totalMs += frame.durationMs ?? 100;
+        }
+
+        // 判断是否支持 parry 反击：transitions 里有没有 hasTag: "parryBonus" 的条件
+        const hasParryTransition = (stateDef.transitions || []).some(t =>
+            (t.when || []).some(w => w.hasTag === "parryBonus")
+        );
+
+        const frameSpeeds = stateDef.frameSpeeds || [];
+
+        return {
+            stateName,
+            timing: { totalMs },
+            displacement,
+            frameSpeeds: [...frameSpeeds],
+            guardType: stateDef.guardType ?? null,
+            canParry: hasParryTransition
+        };
     }
 
     /**

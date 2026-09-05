@@ -470,4 +470,51 @@ export class ContactResolver {
             }
         };
     }
+
+    // ==================== Phase 2: AI 查询接口 ====================
+
+    /**
+     * 纯规则查询：评估一次攻击对某种防御的结果。
+     * 不依赖实例状态（hitDedupe / clashDedupe 等跨帧数据），AI 决策阶段用。
+     *
+     * @param {Object} params
+     * @param {string}  params.offenseTrajectory  - "thrust" | "slash" | null
+     * @param {string}  params.offenseWeight      - "light" | "heavy" | null
+     * @param {string}  params.defenseGuardType   - "guard" | "shield" | null (null = 非 guard 状态)
+     * @param {boolean} params.defenseIsDodging   - 是否处于 dodgeActive 状态
+     * @param {boolean} [params.defenseCanParry]  - guard 状态是否支持 parry
+     * @returns {{ blocked: boolean, dodged: boolean, parryable: boolean, willMiss: boolean }}
+     */
+    static evaluateInteraction({
+        offenseTrajectory,
+        offenseWeight,
+        defenseGuardType,
+        defenseIsDodging,
+        defenseCanParry = false
+    } = {}) {
+        // Dodge 全免疫（Phase 1 规则：dodgeActive=true 跳过所有攻击命中）
+        if (defenseIsDodging) {
+            return { blocked: false, dodged: true, parryable: false, willMiss: true };
+        }
+
+        // Guard 拦截判定（ContactResolver.resolve Phase 1 的同一规则）
+        let blocked = false;
+        if (defenseGuardType === "guard") {
+            // guard: 防 slash（light + heavy），不防 thrust
+            if (offenseTrajectory !== "thrust") blocked = true;
+        } else if (defenseGuardType === "shield") {
+            // shield: 防 thrust + light slash，不防 heavy slash
+            if (!(offenseTrajectory === "slash" && offenseWeight === "heavy")) blocked = true;
+        }
+        // defenseGuardType 为 null 或其他 → 不拦截
+
+        const parryable = blocked && defenseCanParry;
+
+        return {
+            blocked,
+            dodged: false,
+            parryable,
+            willMiss: blocked // 对 AI 来说 blocked = 攻击打不中
+        };
+    }
 }

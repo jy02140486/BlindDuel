@@ -25,6 +25,7 @@ import { loadDataAssets } from "./DataLoader.js";
 import { AudioManager } from "./Systems/AudioManager.js";
 import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
 import { AnimationEventBus } from "./Systems/AnimationEventBus.js";
+import { AIKnowledgeRegistry } from "./Systems/AIKnowledgeRegistry.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -705,6 +706,35 @@ export class Game {
                 });
                 const json = JSON.stringify(data, null, 2);
                 console.log(json);
+                return json;
+            },
+
+            /**
+             * 导出指定角色的 AI 知识档案为 JSON
+             * @param {string} characterId - entity id，如 "enemy_1", "hero"
+             * @returns {string}
+             */
+            kb(characterId) {
+                const entity = self.scene?.entityPool?.find(e => e.id === characterId);
+                if (!entity) {
+                    console.warn(`[debug] entity '${characterId}' not found. Available:`,
+                        self.scene?.entityPool?.map(e => e.id) ?? []);
+                    return;
+                }
+                const json = AIKnowledgeRegistry.exportProfile(entity);
+                console.log(json);
+                try { copy(json); } catch (_) { /* ignore */ }
+                return json;
+            },
+
+            /**
+             * 导出所有已缓存的 AI 知识档案
+             * @returns {string}
+             */
+            kbAll() {
+                const json = AIKnowledgeRegistry.exportAll();
+                console.log(json);
+                try { copy(json); } catch (_) { /* ignore */ }
                 return json;
             },
         };
