@@ -1,6 +1,14 @@
 {
   "machine": "rabble_stick",
   "initialState": "idle",
+  "characterTraits": {
+    "postDefenseMobility": {
+      "enabled": true,
+      "triggers": ["guard_block", "parry", "dodge"],
+      "durationMs": 500,
+      "speedMultiplier": 1.5
+    }
+  },
   "inputs": {
     "commands": ["thrust", "swing", "hit", "dodge", "guard"],
     "parameters": {

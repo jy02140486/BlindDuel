@@ -79,9 +79,11 @@ export class AIKnowledgeRegistry {
             }
         }
 
-        // 包含 stateGraph 的引用，确保状态定义变化也能触发重扫
-        const stateKeys = Object.keys(character.stateGraph?.states || {}).sort();
-        parts.push(`states:${stateKeys.join(",")}`);
+        // canonical JSON 序列化 stateGraph 整个对象
+        // 避免维护白名单，以后加任何字段（characterTraits 等）都自动纳入
+        const sg = character.stateGraph || {};
+        const stateGraphJson = JSON.stringify(sg, Object.keys(sg).sort());
+        parts.push(`sg:${stateGraphJson}`);
 
         return parts.join("|");
     }
@@ -164,6 +166,8 @@ export class AIKnowledgeRegistry {
             console.warn(`[AI KB] ${character.id} scan completed with ${warnings.length} warnings:`, warnings);
         }
 
+        const traits = character.stateGraph?.characterTraits || null;
+
         return {
             characterId: character.id,
             pxToWorld,
@@ -174,7 +178,8 @@ export class AIKnowledgeRegistry {
             movement: {
                 moveSpeed,
                 stateDisplacements
-            }
+            },
+            traits
         };
     }
 

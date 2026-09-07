@@ -41,6 +41,8 @@ export class CharacterBase {
         this.facingMode = FACING_MODE.LOCKED;
         this.stateEntrySerial = 0;
         this.stateTags = new Set();
+        this.timedTags = new Map();
+        this._pendingPostDefenseMobility = null;
         this.stateEnterTick = 0;
         this.debugTrace = config.debugTrace ?? false;
         this.gameplayEvents = null;
@@ -119,8 +121,6 @@ export class CharacterBase {
         this.currentSpd = 0;
         this._moveSpeedBonus = 1.0;
 
-        this.timedTags = new Map();
-
         // [JITTER_DEBUG] 抖动检测相关字段初始化
         this._prevRootPos = new BABYLON.Vector3(0, 0, 0);
         this._jitterLogCount = 0;
@@ -149,6 +149,10 @@ export class CharacterBase {
 
     addTag(tag) {
         this.stateTags.add(tag);
+    }
+
+    markPostDefenseMobilityPending(durationFrames) {
+        this._pendingPostDefenseMobility = durationFrames;
     }
 
     addTimedTag(tag, durationFrames) {
@@ -413,13 +417,42 @@ export class CharacterBase {
         let speed = this.activeSpeedMode === "move"
             ? this.baseMoveSpeed
             : this.baseWalkSpeed;
-        if (this.hasTag("parryBonus") || this.hasTag("chainBonus")) {
-            speed *= this._moveSpeedBonus;
+
+        // 统一查询 speed modifiers（替换原来的两条硬编码 tag 特判）
+        const modifiers = this._collectSpeedModifiers();
+        for (const m of modifiers) {
+            speed *= m.multiplier;
         }
+
+        // buffsProvider 保持不变（PlayerController 的 buff 系统）
         if (this.buffsProvider && typeof this.buffsProvider.getSpeedMultiplier === "function") {
             speed *= this.buffsProvider.getSpeedMultiplier();
         }
         return speed;
+    }
+
+    /**
+     * 从 tag → trait 配置收集移动速度 modifier
+     * 新的速度影响只要加 tag + trait 定义即可，不需要改这里
+     */
+    _collectSpeedModifiers() {
+        const modifiers = [];
+        const traits = this.stateGraph?.characterTraits || {};
+
+        // 1. parryBonus / chainBonus
+        if (this.hasTag("parryBonus") || this.hasTag("chainBonus")) {
+            modifiers.push({ source: "parryBonus", multiplier: this._moveSpeedBonus });
+        }
+
+        // 2. postDefenseMobility
+        if (this.hasTag("postDefenseMobilityActive")) {
+            const trait = traits.postDefenseMobility;
+            if (trait?.speedMultiplier) {
+                modifiers.push({ source: "postDefenseMobility", multiplier: trait.speedMultiplier });
+            }
+        }
+
+        return modifiers;
     }
 
     _matchesTransitionCondition(condition) {
@@ -513,6 +546,16 @@ export class CharacterBase {
             const anchor = this._getCurrentRootAnchor(this.animation.currentFrameIndex);
             this._applyRootAlignment(current.w, current.h, anchor);
             this._syncRootDebug(anchor);
+        }
+
+        // 延迟触发 postDefenseMobility：defenseSuccess 事件到 defense 动作结束（转 idle/move）才开始计时
+        if (this._pendingPostDefenseMobility !== null) {
+            const restricted = (stateDef.frameSpeeds && stateDef.frameSpeeds.length > 0) || stateDef.allowMoveInput === false;
+            if (!restricted) {
+                const durationFrames = this._pendingPostDefenseMobility;
+                this._pendingPostDefenseMobility = null;
+                this.addTimedTag("postDefenseMobilityActive", durationFrames);
+            }
         }
 
     }

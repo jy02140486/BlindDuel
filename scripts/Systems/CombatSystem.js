@@ -12,6 +12,7 @@ export class CombatSystem {
         const result = this.resolver.resolve(combatants, { tickCount });
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
+
             if (!target) {
                 continue;
             }
@@ -59,9 +60,26 @@ export class CombatSystem {
                 continue;
             }
 
+            if (effect.type === "defenseSuccess") {
+                const source = effect.context?.source;
+                const traits = target.stateGraph?.characterTraits || {};
+                for (const [traitName, traitConfig] of Object.entries(traits)) {
+                    if (!traitConfig.enabled) continue;
+                    if (!traitConfig.triggers?.includes(source)) continue;
+                    if (traitName === "postDefenseMobility") {
+                        const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
+                        if (typeof target.markPostDefenseMobilityPending === "function") {
+                            target.markPostDefenseMobilityPending(durationFrames);
+                        }
+                    }
+                }
+                continue;
+            }
+
             if (typeof target.takeDamage === "function") {
                 target.takeDamage(effect.context);
             }
+
             this._fxShake(0.25, 180);
             this._fxFlash(80);
         }

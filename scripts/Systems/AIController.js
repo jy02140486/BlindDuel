@@ -199,6 +199,9 @@ export class AIController extends BaseController {
             oppVulnerable = 0.3; // 反制窗口
         }
 
+        const selfMobilityTrait = this.kbProfile?.traits?.postDefenseMobility ?? null;
+        const selfHasMobilityBoost = self.hasTag("postDefenseMobilityActive");
+
         return {
             distance,
             self:   { stateName: selfState, def: selfDef, normTime: selfNormTime },
@@ -208,7 +211,12 @@ export class AIController extends BaseController {
             oppThreat,
             oppVulnerable,
             selfMaxReach,
-            now: performance.now()
+            now: performance.now(),
+            selfMobility: {
+                hasTrait: selfMobilityTrait?.enabled === true,
+                hasActiveBoost: selfHasMobilityBoost,
+                traitConfig: selfMobilityTrait
+            }
         };
     }
 
@@ -366,18 +374,23 @@ export class AIController extends BaseController {
         const maxReach = sit.selfMaxReach;
         const minReach = this.#getMinReach();
         const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
+        const hasBoost = sit.selfMobility?.hasActiveBoost === true;
+
+        // mobility boost 时：威胁忍耐阈值提高，approach 范围扩大
+        const retreatThreatThreshold = hasBoost ? 0.8 : 0.6;
+        const approachReachMargin = hasBoost ? 1.0 : 0.5;
 
         // 高威胁时优先后撤保持距离
-        if (sit.oppThreat > 0.6 && jitteredDistance <= maxReach + 0.5) {
+        if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + approachReachMargin) {
             this.currentBehavior = "retreat";
             this.#retreat();
             return;
         }
 
-        if (jitteredDistance > maxReach + 0.5) {
+        if (jitteredDistance > maxReach + approachReachMargin) {
             this.currentBehavior = "approach";
             this.#approach();
-        } else if (jitteredDistance > minReach && jitteredDistance <= maxReach + 0.5) {
+        } else if (jitteredDistance > minReach && jitteredDistance <= maxReach + approachReachMargin) {
             this.currentBehavior = "hold";
             this.#holdPosition();
         } else {

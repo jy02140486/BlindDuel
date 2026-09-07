@@ -6,6 +6,8 @@ export class ContactResolver {
         this.clashDedupe = new Set();
         // 防守接触去重：同一攻击实例对同一防守方只处理一次拦截结果。
         this.guardDedupe = new Set();
+        // defenseSuccess 去重：同一攻击实例对同一防守方只触发一次防守成功事件。
+        this.defenseSuccessDedupe = new Set();
         // 攻击失效集合：被盾牌拦截或拼刀失败的攻击，跨帧保留直到攻击结束。
         this.invalidatedAttacks = new Set();
         this.hitKnockback = options.hitKnockback ?? 0.12;
@@ -113,12 +115,14 @@ export class ContactResolver {
                     );
 
                     if (canParry) {
+                        this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "parry", effects);
                         effects.push({ type: "parryBonus", targetId: defenseCharId, context: { durationFrames: 40 } });
                         effects.push({ type: "clash", targetId: defenseCharId });
                         effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.clashKnockback) } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 8 });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 8 });
                     } else {
+                        this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "guard_block", effects);
                         effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: 10 });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 4 });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 4 });
@@ -190,10 +194,9 @@ export class ContactResolver {
                 : null;
 
             if (skipReason) {
-                // console.log(
-                //     `[Resolver-P2] tick=${tickCount} SKIP | attacker=${contact.attackerId}(${contact.weapon.id}) target=${contact.targetId}(${contact.hitbox.id}) | ` +
-                //     `reason=${skipReason} attackId=${attackId}`
-                // );
+                if (skipReason === "dodgeActive" && attackId) {
+                    this.#pushDefenseSuccess(contact.targetId, attackId, "dodge", effects);
+                }
                 continue;
             }
 
@@ -284,6 +287,13 @@ export class ContactResolver {
             const [attackId] = key.split("|");
             if (!activeAttackIds.has(attackId)) {
                 this.guardDedupe.delete(key);
+            }
+        }
+
+        for (const key of this.defenseSuccessDedupe) {
+            const [attackId] = key.split("|");
+            if (!activeAttackIds.has(attackId)) {
+                this.defenseSuccessDedupe.delete(key);
             }
         }
 
@@ -469,6 +479,20 @@ export class ContactResolver {
                 knockbackX: this.#signedKnockback(targetPos, otherPos, this.clashKnockback)
             }
         };
+    }
+
+    /**
+     * 辅助方法：push defenseSuccess event（带 dedupe，同一攻击对同一防守方只 push 一次）
+     * @param {string} defenseCharId - 防守方角色 id
+     * @param {string} attackId - 被防住的攻击实例 id
+     * @param {string} source - 防守来源："parry" | "guard_block" | "dodge"
+     * @param {Array} effects - effects 数组（resolve 内的局部变量）
+     */
+    #pushDefenseSuccess(defenseCharId, attackId, source, effects) {
+        const key = `${attackId}|${defenseCharId}`;
+        if (this.defenseSuccessDedupe.has(key)) return;
+        this.defenseSuccessDedupe.add(key);
+        effects.push({ type: "defenseSuccess", targetId: defenseCharId, context: { source } });
     }
 
     // ==================== Phase 2: AI 查询接口 ====================

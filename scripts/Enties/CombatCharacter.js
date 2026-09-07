@@ -251,7 +251,12 @@ export class CombatCharacter extends CharacterBase {
 
         const isInvincible = this.currentStateDef?.invincible === true || this.currentStateDef?.dodgeActive === true;
         const worldBoxes = boxes
-            .filter((box) => !(isInvincible && box.type === "hitbox"))
+            // 不再 filter 掉 invincible 的 hitbox，而是标记 invincible 标志
+            // ContactResolver Phase 2 会检查这个标志来 skip
+            .map((box) => ({
+                ...box,
+                invincible: isInvincible && box.type === "hitbox"
+            }))
             .map((box) => {
                 const localX = (box.cx - frameWidth / 2) * this.pxToWorld - anchorOffsetX;
                 const localY = (frameHeight / 2 - box.cy) * this.pxToWorld - anchorOffsetY;
