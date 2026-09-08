@@ -29,6 +29,10 @@ export class AIController extends BaseController {
         this.decisionIntervalMs = options.decisionIntervalMs ?? 100;
         this.decisionAccumulatedMs = 0;
 
+        // 统一范围模型：攻击有效阈值 & positioning hold 边界共用同一个 buffer
+        // 原来 attack 用 +0.3、positioning 用 +0.5/+1.0，导致 gap 和 mobility boost 反效果
+        this.rangeBuffer = options.rangeBuffer ?? 0.2;
+
         // 随机扰动
         this.reactionVariance = options.reactionVariance ?? 0.15;
 
@@ -171,7 +175,7 @@ export class AIController extends BaseController {
         let oppThreat = 0; // 0~1
         if (oppAttackProfile) {
             const oppReach = oppAttackProfile.range?.maxReach ?? 0;
-            const inRange = distance <= oppReach + 0.3;
+            const inRange = distance <= oppReach + this.rangeBuffer;
             const selfIsBusy = selfDef?.attackActive === true;
 
             if (oppPhase === "active") {
@@ -193,7 +197,15 @@ export class AIController extends BaseController {
         // opponent vulnerability：recovery 阶段 + 在我 attack range 内
         let oppVulnerable = 0;
         const selfMaxReach = this.#getMaxReach();
-        if (oppPhase === "recovery" && distance <= selfMaxReach + 0.3) {
+
+        // Step 2 新增：统一距离模型字段
+        const preferredCombatRange = selfMaxReach;
+        const distanceError = distance - preferredCombatRange;
+        // distanceError > 0 → 当前偏远（应该 approach）
+        // distanceError ≈ 0 → 已在攻击边缘
+        // distanceError < 0 → 过近（可能需要 retreat）
+
+        if (oppPhase === "recovery" && distance <= selfMaxReach + this.rangeBuffer) {
             oppVulnerable = 0.8;
         } else if (oppPhase === "startup") {
             oppVulnerable = 0.3; // 反制窗口
@@ -211,6 +223,9 @@ export class AIController extends BaseController {
             oppThreat,
             oppVulnerable,
             selfMaxReach,
+            // Step 2 新增：供 Step 4 Distance Consequence 消费
+            preferredCombatRange,
+            distanceError,
             now: performance.now(),
             selfMobility: {
                 hasTrait: selfMobilityTrait?.enabled === true,
@@ -251,8 +266,9 @@ export class AIController extends BaseController {
         const range = attack.range?.maxReach ?? 0;
         const timing = attack.timing;
 
-        // 距离不可达 → 0
-        if (sit.distance > range + 0.3) return 0;
+        // 统一有效阈值（Step 1：改为引用 rangeBuffer，与 positioning 边界对齐）
+        const effectiveRange = range + this.rangeBuffer;
+        if (sit.distance > effectiveRange) return 0;
 
         let score = 0.4; // base: 距离可达就有基础分
 
@@ -292,8 +308,8 @@ export class AIController extends BaseController {
             if (myStartupMs <= sit.opp.remainingMs) score += 0.2;
         }
 
-        // 距离接近 range 上限 → 微加分（稳定命中点）
-        if (sit.distance >= range * 0.8 && sit.distance <= range) score += 0.05;
+        // 距离接近 range 上限 → 微加分（稳定命中点，Step 1：与 effectiveRange 对齐）
+        if (sit.distance >= range && sit.distance <= effectiveRange) score += 0.05;
 
         return Math.max(0, Math.min(1, score));
     }
@@ -339,16 +355,41 @@ export class AIController extends BaseController {
 
         if (sit.opp.phase === "active") {
             // 对手刀正在挥 → 必须防御
-            score += kind === "dodge" ? 0.9 : 0.8;
+            // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.9 / guard 0.8）
+            score += 0.85;
         } else if (sit.opp.phase === "startup") {
             // 对手还在起手 → 预判防御有价值
             const myStartupMs = defenseAction.timing?.totalMs ?? 200;
             if (myStartupMs <= sit.opp.remainingMs) {
-                score += kind === "dodge" ? 0.7 : 0.6;
+                // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.7 / guard 0.6）
+                score += 0.65;
             } else {
                 score += 0.3; // 可能来不及
             }
         }
+
+        // Step 4 新增：Distance Consequence — 防御动作后的距离后果
+        // 核心思想：防御选择不只是"哪个更安全"，还应该考虑"哪个更符合距离目标"
+        // 如果当前距离已经合适 → guard 保住地盘（displacement≈0）更好，dodge 反而退远送空间
+        // 如果当前距离偏近 → dodge 拉开回 preferred range 更好
+        const currentDistance    = sit.distance;
+        const preferredRange     = sit.preferredCombatRange;
+        const actionDisplacement = defenseAction.displacement ?? 0;
+
+        // 预测执行防御动作后的距离
+        // 项目约束：AI 永远在右侧朝左，displacement > 0 总是代表远离对手
+        const predictedDistance = currentDistance + actionDisplacement;
+
+        // 计算距离偏差的变化（执行后 vs 执行前）
+        const errorNow   = Math.abs(currentDistance - preferredRange);
+        const errorAfter = Math.abs(predictedDistance - preferredRange);
+        const consequenceDelta = errorAfter - errorNow;
+        // consequenceDelta > 0 → 动作让距离变糟（远离 preferred range）→ 应该扣分
+        // consequenceDelta < 0 → 动作让距离变好（回归 preferred range）→ 应该加分
+
+        // 转换成评分调整量，系数 0.3 控制敏感度，±0.25 限幅避免盖过威胁评分
+        const consequenceAdjustment = Math.max(-0.25, Math.min(0.25, -consequenceDelta * 0.3));
+        score += consequenceAdjustment;
 
         return Math.max(0, Math.min(1, score));
     }
@@ -376,21 +417,21 @@ export class AIController extends BaseController {
         const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
         const hasBoost = sit.selfMobility?.hasActiveBoost === true;
 
-        // mobility boost 时：威胁忍耐阈值提高，approach 范围扩大
+        // Step 1：删除 approachReachMargin 变量，rangeBuffer 统一来自构造函数
+        // mobility boost 时 rangeBuffer 保持 0.2（不扩大！boost 让 AI 冲得更近，不是停得更远）
         const retreatThreatThreshold = hasBoost ? 0.8 : 0.6;
-        const approachReachMargin = hasBoost ? 1.0 : 0.5;
 
         // 高威胁时优先后撤保持距离
-        if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + approachReachMargin) {
+        if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + this.rangeBuffer) {
             this.currentBehavior = "retreat";
             this.#retreat();
             return;
         }
 
-        if (jitteredDistance > maxReach + approachReachMargin) {
+        if (jitteredDistance > maxReach + this.rangeBuffer) {
             this.currentBehavior = "approach";
             this.#approach();
-        } else if (jitteredDistance > minReach && jitteredDistance <= maxReach + approachReachMargin) {
+        } else if (jitteredDistance > minReach && jitteredDistance <= maxReach + this.rangeBuffer) {
             this.currentBehavior = "hold";
             this.#holdPosition();
         } else {
@@ -535,11 +576,11 @@ export class AIController extends BaseController {
         const maxReach = this.#getMaxReach();
         const minReach = this.#getMinReach();
 
-        // 三个圈的半径
+        // 三个圈的半径（Step 1 后同步：蓝圈 = positioning hold 上边界 = maxReach + rangeBuffer）
         const radii = [
-            maxReach + 0.5,  // 蓝圈：远距离边界
-            maxReach,        // 绿圈：最大攻击范围
-            minReach         // 红圈：最小攻击范围
+            maxReach + this.rangeBuffer,  // 蓝圈：远距离边界（approach/hold 分界）
+            maxReach,                     // 绿圈：最大攻击范围
+            minReach                      // 红圈：最小攻击范围
         ];
 
         for (let i = 0; i < 3; i++) {

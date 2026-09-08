@@ -2,6 +2,34 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-09-08)
+- AI 距离重平衡落地：`AIController.js` 重构防御评分与定位逻辑
+- 统一范围常量：新增 `this.rangeBuffer = 0.2`，替换三处硬编码（attack 有效阈值、positioning hold 边界、debug 蓝圈）；删除 `approachReachMargin`，**mobility boost 不再扩大 rangeBuffer**（原来 0.5 → 1.0 反效果），AI 冲得更近而非停得更远
+- 注入距离模型：`#buildSituation()` 新增 `preferredCombatRange = selfMaxReach` 与 `distanceError` 字段
+- 防御评分基数拉平：active 0.85/0.85、startup 0.65/0.65，消除 dodge 天生 +0.1 优势；parry +0.2、thrust guard -0.5 保留
+- **Distance Consequence 评价**（核心新增）：`#scoreDefense()` 根据防御动作 displacement 预测 `predictedDistance = current + displacement`，计算 `errorNow → errorAfter` 变化，±0.25 限幅调整评分。效果：完美距离附近 guard 占优（dodge -0.18），贴脸过近时 dodge 合理胜出（dodge +0.12 拉回 preferred range）
+- 遗留硬编码修复：`oppThreat` 的 `oppReach + 0.3`、`oppVulnerable` 的 `selfMaxReach + 0.3`、debug 蓝圈 `maxReach + 0.5` 全部统一为 `this.rangeBuffer`
+- 设计参考：`plans/AI_Combat_Distance_Guideline.md` + `plans/AI Combat Distance Rebalance 实施计划.MD` + `commits_detailed/26.9.8 AI 距离重平衡.MD`
+- 文档同步：无（改动全在 Decision 层，不产生新规则/概念）
+
+## Update Log (2026-09-07)
+- Rabble Stick Post-Defense Mobility trait 落地：首个 characterTraits 数据驱动防御后奖励的用例
+- 架构：`StateGraph.characterTraits` → `ContactResolver defenseSuccess 事件`（parry/guard_block/dodge 均触发）→ `CombatSystem trait 分支` → `markPostDefenseMobilityPending()`（pending tag，过渡到非 restricted 状态时激活为 timed tag）→ `CharacterBase._collectSpeedModifiers()` 统一消费
+- 参数：durationMs=500、speedMultiplier=1.5、无冷却、重复触发刷新；pending 机制解决 dodge 有 frameSpeeds 期间 mobility buff 无效的 timing 问题
+- KB 版本 hash 新增 characterTraits 序列化，保证 trait 数据变化时自动重扫
+- 实现期修复：CombatCharacter dodgeActive 状态改为保留 hitboxes 但标记 `invincible: true`（ContactResolver 能检测到 dodge 成功，同时保持无敌）
+- 设计参考：`plans/archived/Rabble Stick Post-Defense Mobility 设计计划.MD` + `commits_detailed/26.9.7 Rabble Stick Post-Defense Mobility 实现.MD`
+- 文档同步：`scripts/Systems/AIKnowledgeRegistry.js` KB schema 新增 characterTraits 扫描字段
+
+## Update Log (2026-09-05)
+- AI 决策系统从「距离分段 + 随机选招」升级为「局面感知 + Utility 评分 + Action Commitment」
+- 三层分离落地：Knowledge（AIKnowledgeRegistry 扫描 StateGraph 构建 profile）、Rules（ContactResolver.evaluateInteraction 纯规则查询，AI 不硬编码克制）、Decision（AIController 评分选动作）
+- 新增组件：`#buildSituation()`（局面采集 distance/oppPhase/oppThreat/oppVulnerable）、`#scoreAttack()`、`#scoreDefense()`、`#executeCommitted()`、`#executePositioning()`
+- Action Commitment：攻击/防御动作完整执行后才重决策（不被对手反击窗口打断），每 100ms tick 触发
+- KB 扩展：AIKnowledgeRegistry 新增 `dodges[]` / `guards[]` 扫描，攻击 profile 新增 `trajectory` / `weight` 克制字段
+- 调试 API：`Game.kb(characterId)` / `kbAll()` 导出 AI 知识档案
+- 设计参考：`commits_detailed/26.9.5 AI决策升级.MD` + `plans/archived/AI 战斗决策强化计划.MD`
+
 ## Update Log (2026-09-02)
 - TimelineSequencer 新增 2 种动画帧控制 clip：`pauseAnimation` / `resumeAnimation`（event clip，纯 FrameAnimationComponent 层冻结帧推进）；command clip 新增可选 `pause` 字段（进态后立即 pause）；§5.15 setVisibility 已于此前落地（当前共 17 种 clip）
 - `command+paused` 典型场景：sequence 专用一次性动画（状态图 `loop: false` + 空 `transitions`）在第一帧等待显式播放——`{ "type": "command", "atMs": 0, "command": "CS_turnaround", "pause": true }` 进态后停在首帧，后续 `resumeAnimation` 触发播放
