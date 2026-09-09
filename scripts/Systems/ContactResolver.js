@@ -1,3 +1,5 @@
+import { CombatTuning } from "../../Data/CombatTuning.js";
+
 export class ContactResolver {
     constructor(options = {}) {
         // 命中去重：同一攻击实例对同一目标只生效一次（跨帧保留，攻击结束后清理）。
@@ -10,8 +12,8 @@ export class ContactResolver {
         this.defenseSuccessDedupe = new Set();
         // 攻击失效集合：被盾牌拦截或拼刀失败的攻击，跨帧保留直到攻击结束。
         this.invalidatedAttacks = new Set();
-        this.hitKnockback = options.hitKnockback ?? 0.12;
-        this.clashKnockback = options.clashKnockback ?? 0.2;
+        // 系统级战斗手感参数（嵌套对象，字段分组与 CombatTuning.js 一一对应）
+        this.tuning = options.combatTuning ?? CombatTuning;
         this.debugTrace = options.debugTrace ?? false;
     }
 
@@ -106,7 +108,7 @@ export class ContactResolver {
                     const offenseEnterTick = offenseSnapshot?.stateEnterTick ?? 0;
                     const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
                     const tickDiff = guardEnterTick - offenseEnterTick;
-                    const isPreemptiveGuard = guardFrameIdx === 0 || tickDiff <= 16;
+                    const isPreemptiveGuard = guardFrameIdx === 0 || tickDiff <= this.tuning.parry.preemptiveTickDiffMax;
                     const canParry = defenseBox.canParry && isPreemptiveGuard;
 
                     this.#trace(
@@ -116,16 +118,16 @@ export class ContactResolver {
 
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "parry", effects);
-                        effects.push({ type: "parryBonus", targetId: defenseCharId, context: { durationFrames: 40 } });
+                        effects.push({ type: "parryBonus", targetId: defenseCharId, context: { durationFrames: this.tuning.parry.bonusDurationFrames } });
                         effects.push({ type: "clash", targetId: defenseCharId });
-                        effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.clashKnockback) } });
-                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 8 });
-                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 8 });
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
                         this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "guard_block", effects);
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: 10 });
-                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: 4 });
-                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: 4 });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.block.hitstopFrames });
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.block.hitstopFrames });
                     }
                 }
                 continue;
@@ -159,8 +161,8 @@ export class ContactResolver {
                     this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB),
                     this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA)
                 );
-                effects.push({ type: "hitstop", targetId: contact.characterA, durationFrames: 8 });
-                effects.push({ type: "hitstop", targetId: contact.characterB, durationFrames: 8 });
+                effects.push({ type: "hitstop", targetId: contact.characterA, durationFrames: this.tuning.clash.tieHitstopFrames });
+                effects.push({ type: "hitstop", targetId: contact.characterB, durationFrames: this.tuning.clash.tieHitstopFrames });
                 continue;
             }
 
@@ -177,8 +179,8 @@ export class ContactResolver {
                 ` winnerWeight=${heavyIsA ? weightA : weightB} loserWeight=${heavyIsA ? weightB : weightA}`
             );
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
-            effects.push({ type: "hitstop", targetId: loserId, durationFrames: 6 });
-            effects.push({ type: "hitstop", targetId: winnerId, durationFrames: 4 });
+            effects.push({ type: "hitstop", targetId: loserId, durationFrames: this.tuning.clash.loseLoserHitstopFrames });
+            effects.push({ type: "hitstop", targetId: winnerId, durationFrames: this.tuning.clash.loseWinnerHitstopFrames });
         }
 
         // Phase 2: 再结算 weapon vs hitbox（若攻击在拼刀阶段失效或非激活攻击帧则跳过）。
@@ -214,7 +216,7 @@ export class ContactResolver {
             // );
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
-            const knockback = this.#signedKnockback(targetPos, attackerPos, this.hitKnockback);
+            const knockback = this.#signedKnockback(targetPos, attackerPos, this.tuning.hit.victimKnockbackX);
 /*
             const attackerSnap = snapshotById.get(contact.attackerId);
             const targetSnap = snapshotById.get(contact.targetId);
@@ -476,7 +478,7 @@ export class ContactResolver {
                 contactType,
                 damage: 0,
                 hitState: "clash",
-                knockbackX: this.#signedKnockback(targetPos, otherPos, this.clashKnockback)
+                knockbackX: this.#signedKnockback(targetPos, otherPos, this.tuning.block.knockbackX)
             }
         };
     }

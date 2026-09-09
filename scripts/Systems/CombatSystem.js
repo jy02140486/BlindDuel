@@ -1,8 +1,11 @@
 import { ContactResolver } from "./ContactResolver.js";
+import { CombatTuning } from "../../Data/CombatTuning.js";
 
 export class CombatSystem {
     constructor(options = {}) {
-        this.resolver = options.resolver ?? new ContactResolver(options);
+        this.tuning = options.combatTuning ?? CombatTuning;
+        // ContactResolver 接收同一 combatTuning 对象，保证 resolve 阶段和 effect 处理阶段使用同一套手感参数
+        this.resolver = options.resolver ?? new ContactResolver({ ...options, combatTuning: this.tuning });
         this.debugTrace = options.debugTrace ?? false;
         this.cameraManager = options.cameraManager ?? null;
     }
@@ -23,7 +26,7 @@ export class CombatSystem {
             }
 
             if (effect.type === "parryBonus") {
-                const durationFrames = effect.context?.durationFrames ?? 15;
+                const durationFrames = effect.context?.durationFrames ?? this.tuning.parry.bonusDefaultDurationFrames;
                 if (typeof target.addTimedTag === "function") {
                     target.addTimedTag("parryBonus", durationFrames);
                 }
@@ -36,7 +39,7 @@ export class CombatSystem {
                 const hitState = effect.context?.hitState ?? "clash";
                 const knockbackX = effect.context?.knockbackX ?? 0;
                 if (typeof target.freezeImpact === "function") {
-                    target.freezeImpact(24, {
+                    target.freezeImpact(this.tuning.hit.freezeImpactFrames, {
                         nextState: target.hasState(hitState) ? hitState : null,
                         knockbackX: knockbackX
                     });

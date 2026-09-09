@@ -1,6 +1,7 @@
 import { BaseController } from "./BaseController.js";
 import { AIKnowledgeRegistry } from "./AIKnowledgeRegistry.js";
 import { ContactResolver } from "./ContactResolver.js";
+import { AITuning } from "../../Data/AITuning.js";
 
 /**
  * AIController - AI 控制器（Phase 1：局面感知 + Utility 选招 + Action Commitment）
@@ -21,20 +22,23 @@ export class AIController extends BaseController {
         this.kbProfile = AIKnowledgeRegistry.getProfile(this.character);
         this.opponentKB = null;
 
+        // AI 行为偏好参数（嵌套对象，字段分组与 AITuning.js 一一对应）
+        this.tuning = options.aiTuning ?? AITuning;
+
         // 决策冷却
-        this.attackCooldownMs = options.attackCooldownMs ?? 800;
+        this.attackCooldownMs = this.tuning.attackCooldownMs;
         this.lastAttackTime = -Infinity;
 
         // 决策间隔（避免每帧都重新决策）
-        this.decisionIntervalMs = options.decisionIntervalMs ?? 100;
+        this.decisionIntervalMs = this.tuning.decisionIntervalMs;
         this.decisionAccumulatedMs = 0;
 
         // 统一范围模型：攻击有效阈值 & positioning hold 边界共用同一个 buffer
         // 原来 attack 用 +0.3、positioning 用 +0.5/+1.0，导致 gap 和 mobility boost 反效果
-        this.rangeBuffer = options.rangeBuffer ?? 0.2;
+        this.rangeBuffer = this.tuning.rangeBuffer;
 
         // 随机扰动
-        this.reactionVariance = options.reactionVariance ?? 0.15;
+        this.reactionVariance = this.tuning.reactionVariance;
 
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
@@ -132,7 +136,7 @@ export class AIController extends BaseController {
         const best = scored[0];
 
         // 有足够好的 committed action 就执行
-        if (best && best.score > 0.15) {
+        if (best && best.score > this.tuning.committedScoreThreshold) {
             this.#executeCommitted(best);
             return;
         }
@@ -179,14 +183,14 @@ export class AIController extends BaseController {
             const selfIsBusy = selfDef?.attackActive === true;
 
             if (oppPhase === "active") {
-                oppThreat = inRange ? 1.0 : 0.3;
+                oppThreat = inRange ? this.tuning.threatPerPhase.active : 0.3;
             } else if (oppPhase === "startup") {
-                oppThreat = inRange ? 0.6 : 0.2;
+                oppThreat = inRange ? this.tuning.threatPerPhase.startup : 0.2;
             } else if (oppPhase === "recovery") {
-                oppThreat = 0.1; // 威胁窗口已过
+                oppThreat = this.tuning.threatPerPhase.recovery; // 威胁窗口已过
             }
             // self 正在攻击中（不可响应窗口）→ 放大威胁
-            if (selfIsBusy && oppPhase !== "recovery") oppThreat = Math.min(1, oppThreat + 0.2);
+            if (selfIsBusy && oppPhase !== "recovery") oppThreat = Math.min(1, oppThreat + this.tuning.selfBusyThreatBonus);
         }
 
         // opponent 当前防御状态（用于 Phase 2 queryInteraction）
@@ -206,9 +210,9 @@ export class AIController extends BaseController {
         // distanceError < 0 → 过近（可能需要 retreat）
 
         if (oppPhase === "recovery" && distance <= selfMaxReach + this.rangeBuffer) {
-            oppVulnerable = 0.8;
+            oppVulnerable = this.tuning.vulnerabilityPerPhase.recovery;
         } else if (oppPhase === "startup") {
-            oppVulnerable = 0.3; // 反制窗口
+            oppVulnerable = this.tuning.vulnerabilityPerPhase.startup; // 反制窗口
         }
 
         const selfMobilityTrait = this.kbProfile?.traits?.postDefenseMobility ?? null;
@@ -270,10 +274,10 @@ export class AIController extends BaseController {
         const effectiveRange = range + this.rangeBuffer;
         if (sit.distance > effectiveRange) return 0;
 
-        let score = 0.4; // base: 距离可达就有基础分
+        let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
 
         const canAttack = sit.now - this.lastAttackTime >= this.attackCooldownMs;
-        if (!canAttack) score -= 0.5; // 冷却中 → 大幅扣分
+        if (!canAttack) score -= this.tuning.attack.cooldownPenalty; // 冷却中 → 大幅扣分
 
         // ---- Phase 2: 克制关系查询 ----
         // 我的攻击 → opponent 当前防御状态，能不能打中？
@@ -286,30 +290,30 @@ export class AIController extends BaseController {
         });
         if (interaction.willMiss) {
             // opponent dodge 了或 guard 防住了 → 大幅扣分
-            const penalty = interaction.parryable ? 0.9 : 0.6; // parry 更危险（有反击）
+            const penalty = interaction.parryable ? this.tuning.attack.parryRiskPenalty : this.tuning.attack.missPenalty; // parry 更危险（有反击）
             score -= penalty;
         } else if (sit.opp.guardType && !interaction.blocked) {
             // opponent 在 guard 但防不住我的攻击 → 加分（抓漏洞）
-            score += 0.25;
+            score += this.tuning.attack.guardLeakBonus;
         }
         // --------------------------------
 
         // opponent vulnerability 高 → 加分（punish 窗口）
-        score += sit.oppVulnerable * 0.4;
+        score += sit.oppVulnerable * this.tuning.attack.vulnReward;
 
         // opponent 正在 active 且在我 range 内 → 攻击风险高 → 扣分
         if (sit.opp.phase === "active" && sit.distance <= (sit.opp.attackProfile?.range?.maxReach ?? 99)) {
-            score -= sit.oppThreat * 0.3;
+            score -= sit.oppThreat * this.tuning.attack.threatPenalty;
         }
 
         // opponent 在 startup 且我能在他 active 前出手 → 加分（抢先）
         if (sit.opp.phase === "startup" && timing) {
             const myStartupMs = timing.startupMs ?? 0;
-            if (myStartupMs <= sit.opp.remainingMs) score += 0.2;
+            if (myStartupMs <= sit.opp.remainingMs) score += this.tuning.attack.preemptiveBonus;
         }
 
         // 距离接近 range 上限 → 微加分（稳定命中点，Step 1：与 effectiveRange 对齐）
-        if (sit.distance >= range && sit.distance <= effectiveRange) score += 0.05;
+        if (sit.distance >= range && sit.distance <= effectiveRange) score += this.tuning.attack.rangeEdgeBonus;
 
         return Math.max(0, Math.min(1, score));
     }
@@ -319,7 +323,7 @@ export class AIController extends BaseController {
      */
     #scoreDefense(defenseAction, sit, kind) {
         // opponent 没有攻击 → 防御无意义
-        if (sit.opp.phase === "none" || sit.oppThreat < 0.3) return 0;
+        if (sit.opp.phase === "none" || sit.oppThreat < this.tuning.defense.activationThreshold) return 0;
 
         let score = 0;
 
@@ -344,11 +348,11 @@ export class AIController extends BaseController {
                 // 我能防住/躲开 → 这防御动作有效
                 if (interaction.parryable) {
                     // parry 有反击收益 → 额外加分
-                    score += 0.2;
+                    score += this.tuning.defense.parryReward;
                 }
             } else if (oppAtk.trajectory && !interaction.blocked && !interaction.dodged) {
                 // 我的防御对对手这个攻击完全没用（比如 guard 遇到 thrust）→ 大幅扣分
-                score -= 0.5;
+                score -= this.tuning.defense.badDefensePenalty;
             }
         }
         // -----------------------------------------------------------
@@ -356,15 +360,15 @@ export class AIController extends BaseController {
         if (sit.opp.phase === "active") {
             // 对手刀正在挥 → 必须防御
             // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.9 / guard 0.8）
-            score += 0.85;
+            score += this.tuning.defense.activeBase;
         } else if (sit.opp.phase === "startup") {
             // 对手还在起手 → 预判防御有价值
             const myStartupMs = defenseAction.timing?.totalMs ?? 200;
             if (myStartupMs <= sit.opp.remainingMs) {
                 // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.7 / guard 0.6）
-                score += 0.65;
+                score += this.tuning.defense.startupCanActBase;
             } else {
-                score += 0.3; // 可能来不及
+                score += this.tuning.defense.startupTooLateBase; // 可能来不及
             }
         }
 
@@ -387,8 +391,9 @@ export class AIController extends BaseController {
         // consequenceDelta > 0 → 动作让距离变糟（远离 preferred range）→ 应该扣分
         // consequenceDelta < 0 → 动作让距离变好（回归 preferred range）→ 应该加分
 
-        // 转换成评分调整量，系数 0.3 控制敏感度，±0.25 限幅避免盖过威胁评分
-        const consequenceAdjustment = Math.max(-0.25, Math.min(0.25, -consequenceDelta * 0.3));
+        // 转换成评分调整量，系数控制敏感度，限幅避免盖过威胁评分
+        const dc = this.tuning.distanceConsequence;
+        const consequenceAdjustment = Math.max(-dc.clamp, Math.min(dc.clamp, -consequenceDelta * dc.multiplier));
         score += consequenceAdjustment;
 
         return Math.max(0, Math.min(1, score));
@@ -419,7 +424,7 @@ export class AIController extends BaseController {
 
         // Step 1：删除 approachReachMargin 变量，rangeBuffer 统一来自构造函数
         // mobility boost 时 rangeBuffer 保持 0.2（不扩大！boost 让 AI 冲得更近，不是停得更远）
-        const retreatThreatThreshold = hasBoost ? 0.8 : 0.6;
+        const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
 
         // 高威胁时优先后撤保持距离
         if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + this.rangeBuffer) {

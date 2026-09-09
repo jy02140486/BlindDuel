@@ -2,6 +2,7 @@ import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
 import { NpcController } from "./Systems/NpcController.js";
 import { AIController } from "./Systems/AIController.js";
+import { AITuning } from "../Data/AITuning.js";
 import { createEntityFromDef } from "./SceneDefs.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";
 import { AABBTrigger } from "./Enties/AABBTrigger.js";
@@ -619,7 +620,7 @@ export class Scene {
             const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
             this.rabbleController = new TestController(rabbleStick, scriptConfig);
         } else if (controllerType === "ai") {
-            this.rabbleController = new AIController(rabbleStick, { opponent: hero, debugVisible: this._debugVisible });
+            this.rabbleController = new AIController(rabbleStick, { opponent: hero, debugVisible: this._debugVisible, aiTuning: AITuning });
         } else {
             this.rabbleController = new DummyController(rabbleStick);
         }
