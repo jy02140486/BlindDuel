@@ -118,7 +118,6 @@ export class ContactResolver {
 
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "parry", effects);
-                        effects.push({ type: "parryBonus", targetId: defenseCharId, context: { durationFrames: this.tuning.parry.bonusDurationFrames } });
                         effects.push({ type: "clash", targetId: defenseCharId });
                         effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });

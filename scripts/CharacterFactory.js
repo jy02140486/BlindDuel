@@ -81,6 +81,12 @@ export function createHeroCharacter(scene, assets) {
                 colliderData: assets.colliders.hero.zornhut,
                 loop: false
             },
+            nachschlag: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_nachschlag.png",
+                atlasData: assets.atlas.hero.nachschlag,
+                colliderData: assets.colliders.hero.nachschlag,
+                loop: false
+            },
             guard: {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_Guard.png",
                 atlasData: assets.atlas.hero.guard,

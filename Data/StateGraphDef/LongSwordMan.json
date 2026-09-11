@@ -1,6 +1,14 @@
 {
   "machine": "longswordman",
   "initialState": "standing",
+  "characterTraits": {
+    "postDefenseCounter": {
+      "enabled": true,
+      "triggers": ["guard_block", "parry"],
+      "durationMs": 500,
+      "allowedCommands": ["zornhut", "quart"]
+    }
+  },
   "inputs": {
     "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep"],
     "parameters": {
@@ -208,7 +216,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "slash",
-      "attackActiveFrames": [3, 4],
+      "attackActiveFrames": [3],
       "loop": false,
       "transitions": [
         {
@@ -229,7 +237,7 @@
       "attackActiveFrames": [3,4],
       "loop": false,
       "timeScale": 1.0,
-      "bonusTimeScale": 1.75,
+      "bonusTimeScale": 1.2,
       "transitions": [
         {
           "to": "idle",
@@ -239,6 +247,26 @@
         }
       ],
       "frameSpeeds": [0.4, 1.2, 0, 2.4, 0.4]
+    },
+    "nachschlag": {
+      "clip": "nachschlag",
+      "allowMoveInput": false,
+      "attackActive": true,
+      "attackWeight": "heavy",
+      "attackTrajectory": "slash",
+      "attackActiveFrames": [2],
+      "loop": false,
+      "timeScale": 1.0,
+      "bonusTimeScale": 1.0,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0, 0, 0.2, 0.1, -0.1]
     },
     "guard": {
       "clip": "guard",
@@ -254,17 +282,17 @@
           ]
         },
         {
-          "to": "zornhut",
+          "to": "nachschlag",
           "when": [
             { "command": "zornhut" },
-            { "hasTag": "parryBonus" }
+            { "hasTag": "postDefenseCounterActive" }
           ]
         },
         {
           "to": "quart",
           "when": [
             { "command": "quart" },
-            { "hasTag": "parryBonus" }
+            { "hasTag": "postDefenseCounterActive" }
           ]
         }
       ]
@@ -290,7 +318,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
-      "attackActiveFrames": [3, 4],
+      "attackActiveFrames": [3],
       "loop": false,
       "transitions": [
         {
@@ -314,17 +342,17 @@
           ]
         },
         {
-          "to": "zornhut",
+          "to": "nachschlag",
           "when": [
             { "command": "zornhut" },
-            { "hasTag": "parryBonus" }
+            { "hasTag": "postDefenseCounterActive" }
           ]
         },
         {
           "to": "quart",
           "when": [
             { "command": "quart" },
-            { "hasTag": "parryBonus" }
+            { "hasTag": "postDefenseCounterActive" }
           ]
         }
       ]

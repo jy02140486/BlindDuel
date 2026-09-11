@@ -36,10 +36,8 @@ export class TimeControlSystem {
         const tc = character?.timeControl;
         if (!tc) return;
         if (tc.impactContext) {
-            console.log(`[freezeImpact] ${character.id}: already has impactContext, skip`);
             return;
         }
-        console.log(`[freezeImpact] ${character.id}: start freeze, frames=${durationFrames}, nextState=${options.nextState}, currentState=${character.currentStateName}`);
         tc.impactContext = new ImpactContext({
             frames: durationFrames,
             nextState: options.nextState ?? null,
@@ -76,7 +74,6 @@ export class TimeControlSystem {
             tc.impactContext.frames--;
             if (tc.impactContext.frames <= 0) {
                 const ctx = tc.impactContext;
-                console.log(`[fixedUpdate] ${character.id}: impactContext end, nextState=${ctx.nextState}, currentState=${character.currentStateName}`);
                 tc.impactContext = null;
                 character.animation.setTimeScale(ctx.preTimeScale);
                 if (ctx.knockbackX !== 0) {

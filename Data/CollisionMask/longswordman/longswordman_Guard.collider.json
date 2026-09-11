@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_Guard.png",
                    "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_Guard.json",
                    "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_Guard.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_Guard.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_Guard.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:35:08.6823405Z"
+                   "generatedAtUtc":  "2026-09-10T15:12:24.5746200Z"
                },
     "frames":  [
                    {
@@ -40,7 +40,7 @@
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
-                                         "w":  160,
+                                         "w":  192,
                                          "h":  128
                                      },
                        "boxes":  [
@@ -48,7 +48,7 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  38.5,
+                                         "cx":  70.5,
                                          "cy":  75.5,
                                          "w":  80,
                                          "h":  48,
@@ -59,28 +59,17 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  88.886,
+                                         "cx":  120.886,
                                          "cy":  61.244,
                                          "w":  47.274,
                                          "h":  18.216,
                                          "angle":  25.008,
                                          "pixelCount":  785
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  34.5,
-                                         "cy":  110.5,
-                                         "w":  42,
-                                         "h":  28,
-                                         "angle":  0,
-                                         "pixelCount":  1176
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  39,
+                                                    "cx":  71,
                                                     "cy":  119
                                                 }
                                    }
@@ -89,9 +78,9 @@
                        "frameIndex":  1,
                        "frameName":  "longswordman_Guard 1.ase",
                        "frameRect":  {
-                                         "x":  160,
+                                         "x":  192,
                                          "y":  0,
-                                         "w":  160,
+                                         "w":  192,
                                          "h":  128
                                      },
                        "boxes":  [
@@ -99,7 +88,36 @@
                                          "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  42.5,
+                                         "cx":  59.5,
+                                         "cy":  75.5,
+                                         "w":  80,
+                                         "h":  48,
+                                         "angle":  90,
+                                         "pixelCount":  3840
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  71,
+                                                    "cy":  119
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_Guard 2.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  74.5,
                                          "cy":  56.5,
                                          "w":  51.073,
                                          "h":  36.906,
@@ -107,31 +125,20 @@
                                          "pixelCount":  1740
                                      },
                                      {
-                                         "id":  "hitbox_2",
+                                         "id":  "hitbox_3",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  55.5,
+                                         "cx":  87.5,
                                          "cy":  103.5,
                                          "w":  36,
                                          "h":  24,
                                          "angle":  90,
                                          "pixelCount":  864
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  34.5,
-                                         "cy":  110.5,
-                                         "w":  42,
-                                         "h":  28,
-                                         "angle":  0,
-                                         "pixelCount":  1176
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  39,
+                                                    "cx":  71,
                                                     "cy":  119
                                                 }
                                    }

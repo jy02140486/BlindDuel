@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_fullthrust.png",
                    "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_fullthrust.json",
                    "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_fullthrust.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_fullthrust.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_fullthrust.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:34:56.5421249Z"
+                   "generatedAtUtc":  "2026-09-10T15:11:42.7098386Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 0.ase",
+                       "frameName":  "longswordman_fullthrust 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -65,17 +65,6 @@
                                          "h":  21.145,
                                          "angle":  79.524,
                                          "pixelCount":  718
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  36.5,
-                                         "cy":  116.5,
-                                         "w":  62,
-                                         "h":  18,
-                                         "angle":  0,
-                                         "pixelCount":  1116
                                      }
                                  ],
                        "anchors":  {
@@ -87,7 +76,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 1.ase",
+                       "frameName":  "longswordman_fullthrust 1.ase",
                        "frameRect":  {
                                          "x":  220,
                                          "y":  0,
@@ -116,17 +105,6 @@
                                          "h":  21.145,
                                          "angle":  79.524,
                                          "pixelCount":  718
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  35.5,
-                                         "cy":  114.5,
-                                         "w":  58,
-                                         "h":  18,
-                                         "angle":  0,
-                                         "pixelCount":  1044
                                      }
                                  ],
                        "anchors":  {
@@ -138,7 +116,7 @@
                    },
                    {
                        "frameIndex":  2,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 2.ase",
+                       "frameName":  "longswordman_fullthrust 2.ase",
                        "frameRect":  {
                                          "x":  440,
                                          "y":  0,
@@ -167,17 +145,6 @@
                                          "h":  18.18,
                                          "angle":  63.84,
                                          "pixelCount":  515
-                                     },
-                                     {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  36,
-                                         "cy":  116.5,
-                                         "w":  63,
-                                         "h":  18,
-                                         "angle":  0,
-                                         "pixelCount":  1134
                                      }
                                  ],
                        "anchors":  {
@@ -189,7 +156,7 @@
                    },
                    {
                        "frameIndex":  3,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 3.ase",
+                       "frameName":  "longswordman_fullthrust 3.ase",
                        "frameRect":  {
                                          "x":  660,
                                          "y":  0,
@@ -229,17 +196,6 @@
                                          "h":  8.068,
                                          "angle":  9.756,
                                          "pixelCount":  470
-                                     },
-                                     {
-                                         "id":  "pushbox_3",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  42,
-                                         "cy":  113,
-                                         "w":  67,
-                                         "h":  23,
-                                         "angle":  0,
-                                         "pixelCount":  1541
                                      }
                                  ],
                        "anchors":  {
@@ -251,7 +207,7 @@
                    },
                    {
                        "frameIndex":  4,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 4.ase",
+                       "frameName":  "longswordman_fullthrust 4.ase",
                        "frameRect":  {
                                          "x":  880,
                                          "y":  0,
@@ -302,17 +258,6 @@
                                          "h":  8,
                                          "angle":  0,
                                          "pixelCount":  688
-                                     },
-                                     {
-                                         "id":  "pushbox_4",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  45.5,
-                                         "cy":  114,
-                                         "w":  72,
-                                         "h":  21,
-                                         "angle":  0,
-                                         "pixelCount":  1512
                                      }
                                  ],
                        "anchors":  {
@@ -324,7 +269,7 @@
                    },
                    {
                        "frameIndex":  5,
-                       "frameName":  "longswordman_fullthrust (collisionmask) 5.ase",
+                       "frameName":  "longswordman_fullthrust 5.ase",
                        "frameRect":  {
                                          "x":  1100,
                                          "y":  0,
@@ -353,17 +298,6 @@
                                          "h":  17.982,
                                          "angle":  66.7,
                                          "pixelCount":  524
-                                     },
-                                     {
-                                         "id":  "pushbox_5",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  39.5,
-                                         "cy":  116,
-                                         "w":  72,
-                                         "h":  19,
-                                         "angle":  0,
-                                         "pixelCount":  1368
                                      }
                                  ],
                        "anchors":  {

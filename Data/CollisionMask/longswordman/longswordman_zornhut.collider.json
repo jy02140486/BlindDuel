@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-27T14:07:26.3812579Z"
+                   "generatedAtUtc":  "2026-09-10T15:19:03.9701501Z"
                },
     "frames":  [
                    {
@@ -252,6 +252,35 @@
                        "anchors":  {
                                        "root":  {
                                                     "cx":  120.5,
+                                                    "cy":  149.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  5,
+                       "frameName":  "longswordman_zornhut 5.ase",
+                       "frameRect":  {
+                                         "x":  1280,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_10",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  125.5,
+                                         "cy":  98.5,
+                                         "w":  60,
+                                         "h":  32,
+                                         "angle":  90,
+                                         "pixelCount":  1920
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124.5,
                                                     "cy":  149.5
                                                 }
                                    }

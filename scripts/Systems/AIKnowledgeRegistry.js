@@ -154,7 +154,8 @@ export class AIKnowledgeRegistry {
                     stateDef,
                     clipDef,
                     displacement,
-                    warnings
+                    warnings,
+                    character.stateGraph?.characterTraits || null
                 );
                 if (profile) {
                     guardProfiles.push(profile);
@@ -458,7 +459,7 @@ export class AIKnowledgeRegistry {
      * 扫描单个格挡状态
      * guard 不需要 colliderData 算 reach，关键属性是 guardType（克制关系）+ 是否支持 parry 反击
      */
-    static #scanGuardState(stateName, stateDef, clipDef, displacement, warnings) {
+    static #scanGuardState(stateName, stateDef, clipDef, displacement, warnings, characterTraits) {
         const atlasFrames = this.#extractAtlasFrames(clipDef.atlasData, stateName, warnings);
         if (!atlasFrames || atlasFrames.length === 0) {
             warnings.push(`No atlas frames for guard state ${stateName}`);
@@ -471,10 +472,8 @@ export class AIKnowledgeRegistry {
             totalMs += frame.durationMs ?? 100;
         }
 
-        // 判断是否支持 parry 反击：transitions 里有没有 hasTag: "parryBonus" 的条件
-        const hasParryTransition = (stateDef.transitions || []).some(t =>
-            (t.when || []).some(w => w.hasTag === "parryBonus")
-        );
+        // 判断是否支持 parry 反击：查 characterTraits 而非扫 transition 条件
+        const hasCounterTrait = !!characterTraits?.postDefenseCounter?.enabled;
 
         const frameSpeeds = stateDef.frameSpeeds || [];
 
@@ -484,7 +483,7 @@ export class AIKnowledgeRegistry {
             displacement,
             frameSpeeds: [...frameSpeeds],
             guardType: stateDef.guardType ?? null,
-            canParry: hasParryTransition
+            canParry: hasCounterTrait
         };
     }
 

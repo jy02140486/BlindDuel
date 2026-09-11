@@ -1,0 +1,216 @@
+﻿{
+    "source":  {
+                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_nachschlag.json",
+                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_nachschlag.png",
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_nachschlag.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_nachschlag.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-09-10T17:18:13.1168698Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_nachschlag 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  240,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  96.95,
+                                         "cy":  140.509,
+                                         "w":  90.279,
+                                         "h":  47.64,
+                                         "angle":  68.413,
+                                         "pixelCount":  2012
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  105,
+                                                    "cy":  181
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_nachschlag 1.ase",
+                       "frameRect":  {
+                                         "x":  240,
+                                         "y":  0,
+                                         "w":  240,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  79,
+                                         "cy":  124.5,
+                                         "w":  56,
+                                         "h":  29,
+                                         "angle":  90,
+                                         "pixelCount":  1624
+                                     },
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  109.922,
+                                         "cy":  169.899,
+                                         "w":  40.383,
+                                         "h":  18.453,
+                                         "angle":  52.263,
+                                         "pixelCount":  685
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  105,
+                                                    "cy":  181
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_nachschlag 2.ase",
+                       "frameRect":  {
+                                         "x":  480,
+                                         "y":  0,
+                                         "w":  240,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  109.705,
+                                         "cy":  143.738,
+                                         "w":  94.504,
+                                         "h":  37.864,
+                                         "angle":  72.172,
+                                         "pixelCount":  1897
+                                     },
+                                     {
+                                         "id":  "hitbox_4",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  128.5,
+                                         "cy":  135.5,
+                                         "w":  24,
+                                         "h":  22,
+                                         "angle":  0,
+                                         "pixelCount":  528
+                                     },
+                                     {
+                                         "id":  "weaponbox_weak_blade_0",
+                                         "type":  "weaponbox",
+                                         "subtype":  "weak_blade",
+                                         "cx":  168.5,
+                                         "cy":  128,
+                                         "w":  55,
+                                         "h":  54,
+                                         "angle":  90,
+                                         "pixelCount":  2970
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  105,
+                                                    "cy":  181
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_nachschlag 3.ase",
+                       "frameRect":  {
+                                         "x":  720,
+                                         "y":  0,
+                                         "w":  240,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  172.5,
+                                         "cy":  150,
+                                         "w":  71,
+                                         "h":  28,
+                                         "angle":  90,
+                                         "pixelCount":  1988
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  104,
+                                                    "cy":  181
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "longswordman_nachschlag 4.ase",
+                       "frameRect":  {
+                                         "x":  960,
+                                         "y":  0,
+                                         "w":  240,
+                                         "h":  192
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_6",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  127,
+                                         "cy":  138,
+                                         "w":  95,
+                                         "h":  23,
+                                         "angle":  90,
+                                         "pixelCount":  2185
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  117,
+                                                    "cy":  180
+                                                }
+                                   }
+                   }
+               ]
+}

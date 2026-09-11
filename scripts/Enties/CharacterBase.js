@@ -43,6 +43,7 @@ export class CharacterBase {
         this.stateTags = new Set();
         this.timedTags = new Map();
         this._pendingPostDefenseMobility = null;
+        this._pendingPostDefenseCounter = null;
         this.stateEnterTick = 0;
         this.debugTrace = config.debugTrace ?? false;
         this.gameplayEvents = null;
@@ -153,6 +154,10 @@ export class CharacterBase {
 
     markPostDefenseMobilityPending(durationFrames) {
         this._pendingPostDefenseMobility = durationFrames;
+    }
+
+    markPostDefenseCounterPending(durationFrames) {
+        this._pendingPostDefenseCounter = durationFrames;
     }
 
     addTimedTag(tag, durationFrames) {
@@ -439,9 +444,9 @@ export class CharacterBase {
         const modifiers = [];
         const traits = this.stateGraph?.characterTraits || {};
 
-        // 1. parryBonus / chainBonus
-        if (this.hasTag("parryBonus") || this.hasTag("chainBonus")) {
-            modifiers.push({ source: "parryBonus", multiplier: this._moveSpeedBonus });
+        // 1. chainBonus
+        if (this.hasTag("chainBonus")) {
+            modifiers.push({ source: "chainBonus", multiplier: this._moveSpeedBonus });
         }
 
         // 2. postDefenseMobility
@@ -555,6 +560,15 @@ export class CharacterBase {
                 const durationFrames = this._pendingPostDefenseMobility;
                 this._pendingPostDefenseMobility = null;
                 this.addTimedTag("postDefenseMobilityActive", durationFrames);
+            }
+        }
+
+        // 延迟触发 postDefenseCounter：freezeImpact 跳过，从进入 clash（parry 结果）或后续状态时开始计时
+        if (this._pendingPostDefenseCounter !== null) {
+            if (stateName !== "guard") {
+                const durationFrames = this._pendingPostDefenseCounter;
+                this._pendingPostDefenseCounter = null;
+                this.addTimedTag("postDefenseCounterActive", durationFrames);
             }
         }
 

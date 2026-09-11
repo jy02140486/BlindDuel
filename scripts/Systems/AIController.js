@@ -243,9 +243,8 @@ export class AIController extends BaseController {
      * 判断 opponent 当前 guard 状态是否有 parry 反击 transition
      */
     #opponentHasParry(oppState) {
-        const oppDef = this.opponent?.currentStateDef;
-        if (!oppDef?.transitions) return false;
-        return oppDef.transitions.some(t => t.when?.some(w => w.hasTag === "parryBonus"));
+        const traits = this.opponent?.stateGraph?.characterTraits || null;
+        return !!traits?.postDefenseCounter?.enabled;
     }
 
     /**

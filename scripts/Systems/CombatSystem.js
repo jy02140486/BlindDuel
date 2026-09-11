@@ -25,16 +25,6 @@ export class CombatSystem {
                 );
             }
 
-            if (effect.type === "parryBonus") {
-                const durationFrames = effect.context?.durationFrames ?? this.tuning.parry.bonusDefaultDurationFrames;
-                if (typeof target.addTimedTag === "function") {
-                    target.addTimedTag("parryBonus", durationFrames);
-                }
-                this._fxShake(0.35, 250);
-                this._fxFlash(100);
-                continue;
-            }
-
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
                 const knockbackX = effect.context?.knockbackX ?? 0;
@@ -73,6 +63,11 @@ export class CombatSystem {
                         const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
                         if (typeof target.markPostDefenseMobilityPending === "function") {
                             target.markPostDefenseMobilityPending(durationFrames);
+                        }
+                    } else if (traitName === "postDefenseCounter") {
+                        const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
+                        if (typeof target.markPostDefenseCounterPending === "function") {
+                            target.markPostDefenseCounterPending(durationFrames);
                         }
                     }
                 }
