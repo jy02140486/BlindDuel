@@ -91,7 +91,7 @@ export class Game {
         console.log("[Game.bootstrap] B2 done — assets loaded, keys=", Object.keys(this.assets).length);
 
         this.inputSystem = new InputSystem({ debugEnabled: true });
-        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: true });
+        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: false });
         this.playerController = new PlayerController(this.inputSystem, null);
 
         this.cameraRig = new DuelCameraRig(DEFAULT_DUEL_CAMERA);

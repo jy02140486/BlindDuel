@@ -211,6 +211,9 @@ export class CombatCharacter extends CharacterBase {
 
         if (this.currentStateName !== hitState) {
             this.enterState(hitState);
+        } else {
+            // 已经在 hit 状态，仍重播 hit 动画表示新的伤害
+            this.animation.play(this.currentStateDef.clip, { restart: true });
         }
 
         return true;
@@ -431,8 +434,13 @@ export class CombatCharacter extends CharacterBase {
 
         const newState = this.currentStateName;
         const oldStateDef = oldState ? this.stateGraph?.states?.[oldState] : null;
-        const wasAttackState = oldStateDef?.attackActive === true;
-        if (oldState !== newState && newState === "idle" && wasAttackState) {
+        // committed 状态 = 进入后有代价的状态，退出到 idle 应触发 cooldown
+        // 注意：全部基于 oldState（退出的那个状态），不能用 newState
+        // hitstunFrames 在 StateGraph JSON 里不存在（运行时只存在于 TimeControlComponent），所以用 oldState==="hit" 替代
+        const wasCommittedState = oldStateDef?.attackActive === true
+            || oldStateDef?.guardActive === true
+            || oldState === "hit";
+        if (oldState !== newState && newState === "idle" && wasCommittedState) {
             this.triggerCooldown();
         }
 

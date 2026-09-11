@@ -12,8 +12,8 @@ export const CombatTuning = {
     hit: {
         /** 受击方的击退位移（Phase 2 weapon vs hitbox） */
         victimKnockbackX: 0.12,
-        // hitstopFrames: 暂不补 — 代码里普通 hit 当前没有加 hitstop effect，
-        // 需要先确认设计意图
+        /** 普通 hit 双方 hitstop 帧（双方各停这么多帧） */
+        hitstopFrames: 8,
         /** hit / clash 的 freezeImpact 默认帧数（CombatSystem.js effect 处理） */
         freezeImpactFrames: 24,
     },

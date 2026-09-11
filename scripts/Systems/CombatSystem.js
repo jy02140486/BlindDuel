@@ -19,11 +19,6 @@ export class CombatSystem {
             if (!target) {
                 continue;
             }
-            if (this.debugTrace) {
-                console.log(
-                    `[CombatEffect] tick=${tickCount ?? "?"} type=${effect.type} target=${effect.targetId} context=${JSON.stringify(effect.context ?? {})}`
-                );
-            }
 
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
@@ -59,13 +54,12 @@ export class CombatSystem {
                 for (const [traitName, traitConfig] of Object.entries(traits)) {
                     if (!traitConfig.enabled) continue;
                     if (!traitConfig.triggers?.includes(source)) continue;
+                    const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
                     if (traitName === "postDefenseMobility") {
-                        const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
                         if (typeof target.markPostDefenseMobilityPending === "function") {
                             target.markPostDefenseMobilityPending(durationFrames);
                         }
                     } else if (traitName === "postDefenseCounter") {
-                        const durationFrames = Math.round((traitConfig.durationMs ?? 500) / (1000 / 60));
                         if (typeof target.markPostDefenseCounterPending === "function") {
                             target.markPostDefenseCounterPending(durationFrames);
                         }
@@ -74,10 +68,32 @@ export class CombatSystem {
                 continue;
             }
 
+            if (effect.type === "hit") {
+                // 命中处理：双方 hitstop + 被击中 takeDamage + 震屏
+                const hitstopFrames = this.tuning.hit.hitstopFrames ?? 0;
+                if (hitstopFrames > 0 && typeof target.applyHitstop === "function") {
+                    target.applyHitstop(hitstopFrames);
+                }
+                // 给攻击者也加 hitstop（从 context 读 attackerId）
+                const attackerId = effect.context?.attackerId;
+                if (attackerId && hitstopFrames > 0) {
+                    const attacker = characters.find(c => c?.id === attackerId);
+                    if (attacker && typeof attacker.applyHitstop === "function") {
+                        attacker.applyHitstop(hitstopFrames);
+                    }
+                }
+                if (typeof target.takeDamage === "function") {
+                    target.takeDamage(effect.context);
+                }
+                this._fxShake(0.25, 180);
+                this._fxFlash(80);
+                continue;
+            }
+
+            // 兜底：未知 effect.type 仍尝试 takeDamage（兼容未来扩展）
             if (typeof target.takeDamage === "function") {
                 target.takeDamage(effect.context);
             }
-
             this._fxShake(0.25, 180);
             this._fxFlash(80);
         }

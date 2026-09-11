@@ -526,7 +526,6 @@ export class CharacterBase {
         }
 
         const prevStateName = this.currentStateName;
-
         this.stateEntrySerial += 1;
         this.currentStateName = stateName;
         this.currentStateDef = stateDef;

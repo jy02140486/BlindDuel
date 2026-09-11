@@ -75,7 +75,6 @@ export class ContactResolver {
 
                 const guardKey = `${offenseAttackId}|${defenseCharId}`;
                 if (this.guardDedupe.has(guardKey)) {
-                    // console.log(`[Resolver-P1] tick=${tickCount} SKIP: guard dedupe hit for ${guardKey}`);
                     continue;
                 }
                 this.guardDedupe.add(guardKey);
@@ -108,7 +107,13 @@ export class ContactResolver {
                     const offenseEnterTick = offenseSnapshot?.stateEnterTick ?? 0;
                     const guardEnterTick = guardSnapshot?.stateEnterTick ?? 0;
                     const tickDiff = guardEnterTick - offenseEnterTick;
-                    const isPreemptiveGuard = guardFrameIdx === 0 || tickDiff <= this.tuning.parry.preemptiveTickDiffMax;
+                    // Just Guard 判定：只看双方状态 enter 时间差的绝对值
+                    // tickDiff ≈ 0 → 几乎同时进入 → Just Guard → preemptive → can parry
+                    // tickDiff 负值且绝对值大（提前很久 enter guard）→ 不算 preemptive → 普通 guard_block
+                    // tickDiff 正值（攻击已经出去了才 enter guard）→ 不算 preemptive → guard_block
+                    // 注：不能用 guardFrameIdx === 0 做兜底——enter guard 第一帧 animation.play restart 后 frameIndex 一定是 0，
+                    //      不管 Math.abs(tickDiff) 多大都会被放行，导致 hold guard 100% 触发 parry
+                    const isPreemptiveGuard = Math.abs(tickDiff) <= this.tuning.parry.preemptiveTickDiffMax;
                     const canParry = defenseBox.canParry && isPreemptiveGuard;
 
                     this.#trace(
@@ -203,19 +208,15 @@ export class ContactResolver {
 
             const hitKey = `${attackId}|${contact.targetId}`;
             if (this.hitDedupe.has(hitKey)) {
-                // console.log(`[Resolver-P2] tick=${tickCount} SKIP: hit dedupe for ${hitKey}`);
                 continue;
             }
 
             this.hitDedupe.add(hitKey);
-            // console.log(
-            //     `[Resolver-P2] tick=${tickCount} >>> HIT <<< attacker=${contact.attackerId}(${contact.weapon.id}) target=${contact.targetId}(${contact.hitbox.id}) | ` +
-            //     `attackId=${attackId} attackerState=${attackerSnap?.stateName}@${attackerSnap?.frameIndex} targetState=${targetSnap?.stateName}@${targetSnap?.frameIndex} | ` +
-            //     `wpnCenter=(${contact.weapon.center.x.toFixed(3)},${contact.weapon.center.y.toFixed(3)}) hitCenter=(${contact.hitbox.center.x.toFixed(3)},${contact.hitbox.center.y.toFixed(3)})`
-            // );
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
             const knockback = this.#signedKnockback(targetPos, attackerPos, this.tuning.hit.victimKnockbackX);
+
+
 /*
             const attackerSnap = snapshotById.get(contact.attackerId);
             const targetSnap = snapshotById.get(contact.targetId);
@@ -232,6 +233,7 @@ export class ContactResolver {
             );*/
 
             effects.push({
+                type: "hit",
                 targetId: contact.targetId,
                 context: {
                     attackInstanceId: attackId,
