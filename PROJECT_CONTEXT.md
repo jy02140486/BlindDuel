@@ -112,8 +112,8 @@ py .\.serve.ps1
 ## 5. 当前碰撞数据与约定
 1. 扫描颜色约定：
    - `#FFFF00`：`hitbox`
-   - `#E37800`：`weaponbox` + `subtype = strong_blade`
-   - `#FF0000`：`weaponbox` + `subtype = weak_blade`
+   - `#FF0000`：`weaponbox` + `subtype = strong_blade`（强剑身/防御侧，刀背）
+   - `#E37800`：`weaponbox` + `subtype = weak_blade`（弱剑身/攻击侧，刀刃）
    - `#7082C1`：`root`
 2. 每帧可有多个矩形，导出为 OBB：`cx, cy, w, h, angle`。
 3. 跨帧 `id` 采用跟踪分配（位置连续性优先，尺寸变化允许）。

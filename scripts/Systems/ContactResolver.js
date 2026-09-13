@@ -123,8 +123,10 @@ export class ContactResolver {
 
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "parry", effects);
-                        effects.push({ type: "clash", targetId: defenseCharId });
-                        effects.push({ type: "clash", targetId: offenseCharId, context: { hitState: "hit", knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
+                        // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
+                        // 攻击方：freezeImpact 后走 clash（与拼刀统一），knockback 照给
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {

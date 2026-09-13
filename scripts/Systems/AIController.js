@@ -103,9 +103,12 @@ export class AIController extends BaseController {
     #isCommitted() {
         const def = this.character.currentStateDef;
         if (!def) return false;
-        return def.attackActive === true
-            || def.dodgeActive === true
-            || def.guardActive === true;
+        const hasCounterTag = this.character.hasTag("postDefenseCounterActive");
+        const result = (def.guardActive === true && hasCounterTag)
+            ? (def.attackActive === true || def.dodgeActive === true)
+            : (def.attackActive === true || def.dodgeActive === true || def.guardActive === true);
+        console.log(`[dbg-ai] isCommitted=${result} state=${this.character.currentStateName} guardActive=${def.guardActive} attackActive=${def.attackActive} dodgeActive=${def.dodgeActive} hasCounterTag=${hasCounterTag}`);
+        return result;
     }
 
     /**
@@ -113,6 +116,7 @@ export class AIController extends BaseController {
      */
     #makeDecision() {
         const sit = this.#buildSituation();
+        const dist = sit.distance.toFixed(2);
 
         // 对 self 的所有 attacks + dodges + guards 打分
         const scored = [];
@@ -127,6 +131,29 @@ export class AIController extends BaseController {
             scored.push({ kind: "guard", action: g, score: this.#scoreDefense(g, sit, "guard") });
         }
 
+        // 打印 KB 攻击 profile 摘要（每秒打一次够了）
+        if (!this._lastKbLogMs || performance.now() - this._lastKbLogMs > 1000) {
+            this._lastKbLogMs = performance.now();
+            const atkSumm = (this.kbProfile?.attacks || []).map(a => {
+                const fwd = (a.displacement ?? 0) < 0 ? -a.displacement.toFixed(2) : 0;
+                return `${a.stateName}[reach=${(a.range?.maxReach ?? 0).toFixed(2)},disp=${(a.displacement ?? 0).toFixed(2)},fwdBoost=${fwd},totalReach=${((a.range?.maxReach ?? 0) + fwd).toFixed(2)},traj=${a.trajectory},wt=${a.weight}]`;
+            }).join(" | ");
+            console.log(`[dbg-ai] KB attacks: ${atkSumm}`);
+        }
+
+        // 打印所有评分
+        const scoreDump = scored.map(s => {
+            if (s.kind === "attack") {
+                const r = s.action.range?.maxReach ?? 0;
+                const d = s.action.displacement ?? 0;
+                const fb = d < 0 ? -d : 0;
+                const er = r + fb + this.rangeBuffer;
+                return `${s.action.stateName}[score=${s.score.toFixed(3)},reach=${r.toFixed(2)},fwd=${fb.toFixed(2)},effR=${er.toFixed(2)},dist=${dist}]`;
+            }
+            return `${s.kind}[score=${s.score.toFixed(3)}]`;
+        }).join(" | ");
+        console.log(`[dbg-ai] decision dist=${dist} oppPhase=${sit.opp.phase} oppGuardType=${sit.opp.guardType ?? 'none'}: ${scoreDump}`);
+
         // 轻微随机扰动 + 排序
         for (const entry of scored) {
             entry.score *= (1 + (Math.random() - 0.5) * this.reactionVariance);
@@ -134,6 +161,7 @@ export class AIController extends BaseController {
         scored.sort((a, b) => b.score - a.score);
 
         const best = scored[0];
+        console.log(`[dbg-ai] BEST: ${best?.kind ?? 'none'} ${best?.action?.stateName ?? ''} score=${best?.score?.toFixed(3)} threshold=${this.tuning.committedScoreThreshold}`);
 
         // 有足够好的 committed action 就执行
         if (best && best.score > this.tuning.committedScoreThreshold) {
@@ -269,8 +297,11 @@ export class AIController extends BaseController {
         const range = attack.range?.maxReach ?? 0;
         const timing = attack.timing;
 
-        // 统一有效阈值（Step 1：改为引用 rangeBuffer，与 positioning 边界对齐）
-        const effectiveRange = range + this.rangeBuffer;
+        // frameSpeeds 位移加成：displacement < 0 是向对手前冲（负 X），加到 reach 上
+        // 这让 dash 这类有推进的招式的 AI 距离评估与运行时实际命中范围一致
+        const fwdBoost = (attack.displacement ?? 0) < 0 ? -attack.displacement : 0;
+        const effectiveRange = range + fwdBoost + this.rangeBuffer;
+
         if (sit.distance > effectiveRange) return 0;
 
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分

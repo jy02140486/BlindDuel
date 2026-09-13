@@ -7,10 +7,16 @@
       "triggers": ["guard_block", "parry", "dodge"],
       "durationMs": 500,
       "speedMultiplier": 1.5
+    },
+    "postDefenseCounter": {
+      "enabled": true,
+      "triggers": ["guard_block", "parry"],
+      "durationMs": 500,
+      "allowedCommands": ["dash"]
     }
   },
   "inputs": {
-    "commands": ["thrust", "swing", "hit", "dodge", "guard"],
+    "commands": ["thrust", "swing", "hit", "dodge", "guard", "dash"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -57,6 +63,12 @@
           "when": [
             { "command": "guard" }
           ]
+        },
+        {
+          "to": "dash",
+          "when": [
+            { "command": "dash" }
+          ]
         }
       ]
     },
@@ -93,6 +105,12 @@
           "when": [
             { "command": "guard" }
           ]
+        },
+        {
+          "to": "dash",
+          "when": [
+            { "command": "dash" }
+          ]
         }
       ]
     },
@@ -125,6 +143,26 @@
         }
       ],
       "frameSpeeds": [0,0.1,-0.7]
+    },
+    "dash": {
+      "clip": "dash",
+      "allowMoveInput": false,
+      "attackActive": true,
+      "attackWeight": "heavy",
+      "attackTrajectory": "thrust",
+      "attackActiveFrames": [3,4],
+      "loop": false,
+      "timeScale": 1.0,
+      "bonusTimeScale": 1.4,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ],
+      "frameSpeeds": [0,-0.1,-2,-1,-0.7,0]
     },
     "swing": {
       "clip": "swing",
@@ -170,6 +208,13 @@
           "when": [
             { "time": "normalized", "op": ">=", "value": 1.0 }
           ]
+        },
+        {
+          "to": "dash",
+          "when": [
+            { "command": "dash" },
+            { "hasTag": "postDefenseCounterActive" }
+          ]
         }
       ]
     },
@@ -182,6 +227,13 @@
           "to": "idle",
           "when": [
             { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        },
+        {
+          "to": "dash",
+          "when": [
+            { "command": "dash" },
+            { "hasTag": "postDefenseCounterActive" }
           ]
         }
       ]

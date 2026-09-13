@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_clash.png",
                    "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_clash.json",
                    "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_clash.png",
-                   "pushboxAtlasJson":  "Data/PushBox/longswordman/longswordman_clash.json",
-                   "pushboxAtlasPng":  "Data/PushBox/longswordman/longswordman_clash.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,25 +31,25 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:35:41.5520198Z"
+                   "generatedAtUtc":  "2026-09-13T14:48:16.4514789Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "longswordman_clash (CollisionMask) 0.ase",
+                       "frameName":  "longswordman_clash 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
-                                         "w":  160,
-                                         "h":  128
+                                         "w":  192,
+                                         "h":  160
                                      },
                        "boxes":  [
                                      {
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  29,
-                                         "cy":  64,
+                                         "cx":  61,
+                                         "cy":  96,
                                          "w":  61,
                                          "h":  39,
                                          "angle":  90,
@@ -58,27 +58,27 @@
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  31,
-                                                    "cy":  118
+                                                    "cx":  63,
+                                                    "cy":  150
                                                 }
                                    }
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "longswordman_clash (CollisionMask) 1.ase",
+                       "frameName":  "longswordman_clash 1.ase",
                        "frameRect":  {
-                                         "x":  160,
+                                         "x":  192,
                                          "y":  0,
-                                         "w":  160,
-                                         "h":  128
+                                         "w":  192,
+                                         "h":  160
                                      },
                        "boxes":  [
                                      {
                                          "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  29,
-                                         "cy":  64,
+                                         "cx":  61,
+                                         "cy":  96,
                                          "w":  61,
                                          "h":  39,
                                          "angle":  90,
@@ -87,8 +87,8 @@
                                  ],
                        "anchors":  {
                                        "root":  {
-                                                    "cx":  35,
-                                                    "cy":  118
+                                                    "cx":  67,
+                                                    "cy":  150
                                                 }
                                    }
                    }

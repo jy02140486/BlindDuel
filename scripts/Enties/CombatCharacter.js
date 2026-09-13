@@ -409,6 +409,16 @@ export class CombatCharacter extends CharacterBase {
             return;
         }
 
+        // postDefenseCounter pending：改后防守方 parry 不进 clash（只有 blockstun），
+        // 解冻后仍在 guard 状态——如果只在 enterState 里激活 pending 就永远不会触发。
+        // 这里在固定更新路径上补一次：只要已经解冻，就激活 pending，
+        // 让 guard 状态下也能满足 guard→nachschlag/quart 的 hasTag 条件。
+        if (this._pendingPostDefenseCounter !== null) {
+            const durationFrames = this._pendingPostDefenseCounter;
+            this._pendingPostDefenseCounter = null;
+            this.addTimedTag("postDefenseCounterActive", durationFrames);
+        }
+
         const oldState = this.currentStateName;
 
         const nextStateBeforeUpdate = this._consumeTransition();

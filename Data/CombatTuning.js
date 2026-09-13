@@ -29,7 +29,7 @@ export const CombatTuning = {
         /** parry 双方 hitstop 帧 */
         hitstopFrames: 8,
         /** Just Guard 判定阈值：preemptive tickDiff <= 此值 */
-        preemptiveTickDiffMax: 16,
+        preemptiveTickDiffMax: 32,
     },
     clash: {
         /** clash_tie 双方 hitstop 帧 */
