@@ -222,18 +222,12 @@
       "clip": "clash",
       "allowMoveInput": false,
       "loop": false,
+      "frameSpeeds": [1, 0],
       "transitions": [
         {
           "to": "idle",
           "when": [
             { "time": "normalized", "op": ">=", "value": 1.0 }
-          ]
-        },
-        {
-          "to": "dash",
-          "when": [
-            { "command": "dash" },
-            { "hasTag": "postDefenseCounterActive" }
           ]
         }
       ]

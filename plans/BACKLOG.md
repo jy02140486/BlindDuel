@@ -43,3 +43,5 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 主人公clash也有加速奖励
 新的扫描距离判定考虑了framespeeds，但有没有考虑该帧时间
 公共cd太长
+clash需要后退framespeeds
+framespeed的移动在命中判定后终止
