@@ -133,6 +133,7 @@ export class Scene {
         this._game.playerController.setCharacter(character);
         this._game.playerController.inputSystem = this._game.inputSystem;
         this._game.playerController.enabled = true;
+        character.controller = this._game.playerController;
         console.log("[Scene] B8: using game.inputSystem + game.playerController");
         character.buffsProvider = this._game.playerController;
         if (rabbleStick) {
@@ -624,6 +625,7 @@ export class Scene {
         } else {
             this.rabbleController = new DummyController(rabbleStick);
         }
+        rabbleStick.controller = this.rabbleController;
         this._rabbleControllerBound = true;
     }
 

@@ -122,15 +122,17 @@ export class ContactResolver {
                     );
 
                     if (canParry) {
-                        this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "parry", effects);
+                        this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "parry", effects);
                         // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
                         effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
                         // 攻击方：freezeImpact 后走 clash（与拼刀统一），knockback 照给
-                        effects.push({ type: "clash", targetId: offenseCharId, context: { knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
+                        // 注意：此处 attackerId 指向防守方（parry 来源），与普通 clash_lose 一致，
+                        // 但缺少 contactType 字段，CombatSystem 用此区分 parried vs clash
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
-                        this.#pushDefenseSuccess(defenseCharId, offenseAttackId, "guard_block", effects);
+                        this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "guard_block", effects);
                         effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.block.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.block.hitstopFrames });
@@ -203,7 +205,7 @@ export class ContactResolver {
 
             if (skipReason) {
                 if (skipReason === "dodgeActive" && attackId) {
-                    this.#pushDefenseSuccess(contact.targetId, attackId, "dodge", effects);
+                    this.#pushDefenseSuccess(contact.targetId, contact.attackerId, attackId, "dodge", effects);
                 }
                 continue;
             }
@@ -493,11 +495,15 @@ export class ContactResolver {
      * @param {string} source - 防守来源："parry" | "guard_block" | "dodge"
      * @param {Array} effects - effects 数组（resolve 内的局部变量）
      */
-    #pushDefenseSuccess(defenseCharId, attackId, source, effects) {
+    #pushDefenseSuccess(defenseCharId, offenseCharId, attackId, source, effects) {
         const key = `${attackId}|${defenseCharId}`;
         if (this.defenseSuccessDedupe.has(key)) return;
         this.defenseSuccessDedupe.add(key);
-        effects.push({ type: "defenseSuccess", targetId: defenseCharId, context: { source } });
+        effects.push({
+            type: "defenseSuccess",
+            targetId: defenseCharId,
+            context: { source, attackerId: offenseCharId, attackInstanceId: attackId }
+        });
     }
 
     // ==================== Phase 2: AI 查询接口 ====================

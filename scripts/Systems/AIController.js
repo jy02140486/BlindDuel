@@ -12,6 +12,13 @@ import { AITuning } from "../../Data/AITuning.js";
  * 场景设定：AI 永远在右，玩家永远在左，AI 始终面向左
  */
 export class AIController extends BaseController {
+    // Feedback Memory 私有字段声明（JS 要求：先声明后赋值）
+    #memory;
+    #lastCommittedState;
+
+    /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
+    static #FAIL_OUTCOMES = new Set(["parried", "guard_blocked", "clash", "miss"]);
+
     constructor(character = null, options = {}) {
         super(character);
 
@@ -43,6 +50,16 @@ export class AIController extends BaseController {
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
 
+        // Feedback Memory: 最近战术结果存储（Step 2）
+        this.#memory = {
+            entries: [],           // 最近 N 条 { state, outcome, at }
+            maxEntries: 10,
+            decayMs: 5000          // 5 秒前的条目开始衰减（Step 3 用）
+        };
+
+        // Feedback Memory: Continuity 调节器用（Step 4）
+        this.#lastCommittedState = null;
+
         // Debug 可视化
         this.debugVisible = options.debugVisible ?? true;
         this.#initDebugVisuals();
@@ -53,6 +70,27 @@ export class AIController extends BaseController {
         this.opponent = opponent;
         if (opponent) {
             this.opponentKB = AIKnowledgeRegistry.getProfile(opponent);
+        }
+    }
+
+    /**
+     * Feedback Memory: CombatSystem 回传本角色攻击结果时调用
+     * Step 2 实现：存入 #memory.entries，暂不影响评分（Step 3 接入）
+     */
+    onCombatResult({ outcome, targetState, counteredBy } = {}) {
+        const entry = {
+            state: targetState,
+            outcome,
+            counteredBy: counteredBy ?? null,
+            at: performance.now()
+        };
+        this.#memory.entries.push(entry);
+        if (this.#memory.entries.length > this.#memory.maxEntries) {
+            this.#memory.entries.shift();
+        }
+        // Step 4 Continuity: 只有成功才更新 lastCommittedState（失败不覆盖成功记录）
+        if (outcome === "hit") {
+            this.#lastCommittedState = targetState;
         }
     }
 
@@ -291,7 +329,30 @@ export class AIController extends BaseController {
     // ==================== Utility 评分 ====================
 
     /**
-     * 攻击动作 Utility 评分（Phase 2 扩展：加 queryInteraction 克制关系）
+     * Feedback Memory: 计算某个 stateName 的 recent tactical adaptation
+     * 返回 { consecutiveFail, consecutiveSuccess }
+     * 只看最近 10 条里 stateName 匹配的，从近往远数
+     */
+    #computeAdaptationFactor(stateName) {
+        const recent = this.#memory.entries.filter(e => e.state === stateName);
+
+        let consecutiveFail = 0;
+        for (let i = recent.length - 1; i >= 0; i--) {
+            if (AIController.#FAIL_OUTCOMES.has(recent[i].outcome)) consecutiveFail++;
+            else break;
+        }
+
+        let consecutiveSuccess = 0;
+        for (let i = recent.length - 1; i >= 0; i--) {
+            if (recent[i].outcome === "hit") consecutiveSuccess++;
+            else break;
+        }
+
+        return { consecutiveFail, consecutiveSuccess };
+    }
+
+    /**
+     * 攻击动作 Utility 评分（Phase 2 扩展：加 queryInteraction 克制关系 + Feedback Memory）
      */
     #scoreAttack(attack, sit) {
         const range = attack.range?.maxReach ?? 0;
@@ -344,6 +405,27 @@ export class AIController extends BaseController {
 
         // 距离接近 range 上限 → 微加分（稳定命中点，Step 1：与 effectiveRange 对齐）
         if (sit.distance >= range && sit.distance <= effectiveRange) score += this.tuning.attack.rangeEdgeBonus;
+
+        // ---- Feedback Memory Step 3: Adaptation 调节器 ----
+        const adaptation = this.#computeAdaptationFactor(attack.stateName);
+
+        // 失败累积惩罚（第 1 次半罚，第 2 次起满罚 + 累积）
+        if (adaptation.consecutiveFail >= 2) {
+            score -= this.tuning.attack.feedbackFailPenalty * adaptation.consecutiveFail;
+        } else if (adaptation.consecutiveFail === 1) {
+            score -= this.tuning.attack.feedbackFailPenalty * 0.5;
+        }
+
+        // 成功累积奖励（保持惯性）
+        if (adaptation.consecutiveSuccess >= 1) {
+            score += this.tuning.attack.feedbackSuccessBonus * adaptation.consecutiveSuccess;
+        }
+
+        // ---- Feedback Memory Step 4: Continuity 调节器 ----
+        // 上一招成功过 + 当前 adaptation 未强烈反对 → 给惯性加分
+        if (attack.stateName === this.#lastCommittedState && adaptation.consecutiveFail < 2) {
+            score += this.tuning.attack.continuityBonus;
+        }
 
         return Math.max(0, Math.min(1, score));
     }

@@ -55,6 +55,11 @@ export const AITuning = {
         threatPenalty: 0.3,       // opponent active + in range 扣分
         preemptiveBonus: 0.2,     // startup 抢先攻击加分
         rangeEdgeBonus: 0.05,     // 边缘命中微加分
+
+        // === Feedback Memory 调节器 ===
+        feedbackFailPenalty: 0.15,   // 每次失败扣多少分（连续 2 次 → -0.30；第 1 次 × 0.5）
+        feedbackSuccessBonus: 0.05,  // 每次成功加多少分（连续累积）
+        continuityBonus: 0.05,       // 上一招成功过的惯性加分（连续失败 ≥2 则不给）
     },
 
     // === 防御偏好 ===

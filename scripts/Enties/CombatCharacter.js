@@ -47,6 +47,21 @@ export class CombatCharacter extends CharacterBase {
         this._battleYMin = null;
         this._battleYMax = null;
         this._battleYCorrectionSpeed = 0.4;
+
+        // Feedback Memory: 跟踪攻击命中结果，用于判定 miss
+        this._lastAttackHadHit = false;
+        this._currentAttackInstanceId = null;
+        this._resolvedAttackIds = new Set();
+    }
+
+    /** Feedback Memory: CombatSystem 回传结果时调用，标记该攻击实例已有 outcome */
+    markAttackResolved(attackInstanceId) {
+        if (attackInstanceId) this._resolvedAttackIds.add(attackInstanceId);
+    }
+
+    /** Feedback Memory: 攻击命中对手时调用 */
+    markAttackHit() {
+        this._lastAttackHadHit = true;
     }
 
     getBlockerAabb() {
@@ -420,10 +435,26 @@ export class CombatCharacter extends CharacterBase {
         }
 
         const oldState = this.currentStateName;
+        const oldStateDef = oldState ? this.stateGraph?.states?.[oldState] : null;
+        const oldAttackActive = oldStateDef?.attackActive === true;
 
         const nextStateBeforeUpdate = this._consumeTransition();
         if (nextStateBeforeUpdate) {
             this.enterState(nextStateBeforeUpdate, tickCount);
+        }
+
+        // Feedback Memory: 进入攻击状态 → 重置命中标志 + 保存 attackInstanceId
+        const newStateDefBeforeAnim = this.currentStateDef;
+        const newAttackActiveBeforeAnim = newStateDefBeforeAnim?.attackActive === true;
+        if (!oldAttackActive && newAttackActiveBeforeAnim) {
+            this._lastAttackHadHit = false;
+            // 保存当前 attackInstanceId（退出时需要它来检查 resolved）
+            this._currentAttackInstanceId = this.getCombatSnapshot().attackInstanceId;
+            // 容量控制：定期清理已 resolved 的旧攻击记录
+            if (this._resolvedAttackIds.size > 20) {
+                const arr = [...this._resolvedAttackIds];
+                this._resolvedAttackIds = new Set(arr.slice(-10));
+            }
         }
 
         const oldFrame = this.animation.currentFrameIndex;
@@ -443,15 +474,29 @@ export class CombatCharacter extends CharacterBase {
         this._applyMovement(effectiveDeltaMs);
 
         const newState = this.currentStateName;
-        const oldStateDef = oldState ? this.stateGraph?.states?.[oldState] : null;
+        const newStateDef = this.currentStateDef;
+        const newAttackActive = newStateDef?.attackActive === true;
+
         // committed 状态 = 进入后有代价的状态，退出到 idle 应触发 cooldown
         // 注意：全部基于 oldState（退出的那个状态），不能用 newState
         // hitstunFrames 在 StateGraph JSON 里不存在（运行时只存在于 TimeControlComponent），所以用 oldState==="hit" 替代
-        const wasCommittedState = oldStateDef?.attackActive === true
+        const wasCommittedState = oldAttackActive
             || oldStateDef?.guardActive === true
             || oldState === "hit";
         if (oldState !== newState && newState === "idle" && wasCommittedState) {
             this.triggerCooldown();
+        }
+
+        // Feedback Memory: 攻击状态退出 → 判定 miss
+        // 条件：old 是 attackActive，new 不是，且 CombatSystem 也没回过传任何结果给这次攻击
+        if (oldAttackActive && !newAttackActive && oldState !== newState) {
+            const attackInstanceId = this._currentAttackInstanceId;
+            const alreadyResolved = attackInstanceId ? this._resolvedAttackIds.has(attackInstanceId) : false;
+            if (!this._lastAttackHadHit && !alreadyResolved && this.controller?.onCombatResult) {
+                this.controller.onCombatResult({ outcome: "miss", targetState: oldState });
+            }
+            // 重置 currentInstanceId
+            this._currentAttackInstanceId = null;
         }
 
         this._updateDebugPanel();

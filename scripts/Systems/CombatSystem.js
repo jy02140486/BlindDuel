@@ -13,12 +13,20 @@ export class CombatSystem {
     fixedUpdate(characters = [], tickCount = null) {
         const combatants = characters.filter((c) => c?.has?.("combat"));
         const result = this.resolver.resolve(combatants, { tickCount });
+
+        // Feedback Memory: 收集本帧产生的 combat result → outcomeMap[attackerId] = { outcome, attackInstanceId }
+        // 只记录第一次（同帧多个 effect 指向同一 attacker 时优先先处理的）
+        const outcomeMap = new Map();
+
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
 
             if (!target) {
                 continue;
             }
+
+            // Feedback Memory: 本 effect 是否需要产生 outcome 回传？
+            this.#collectOutcomeFromEffect(effect, outcomeMap);
 
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
@@ -82,6 +90,11 @@ export class CombatSystem {
                         attacker.applyHitstop(hitstopFrames);
                     }
                 }
+                // Feedback Memory: 通知攻击者自己的攻击命中了
+                const attackerChar = attackerId ? characters.find(c => c?.id === attackerId) : null;
+                if (attackerChar && typeof attackerChar.markAttackHit === "function") {
+                    attackerChar.markAttackHit();
+                }
                 if (typeof target.takeDamage === "function") {
                     target.takeDamage(effect.context);
                 }
@@ -97,7 +110,103 @@ export class CombatSystem {
             this._fxShake(0.25, 180);
             this._fxFlash(80);
         }
+
+        // Feedback Memory: 统一回传 outcome 给各 attacker 的 controller
+        this.#dispatchOutcomes(outcomeMap, characters);
+
         return result;
+    }
+
+    /**
+     * 从单个 effect 中提取 combat result，写入 outcomeMap
+     * 优先级：同帧内同一 attackerId 只保留第一个 outcome（先处理的为准）
+     */
+    #collectOutcomeFromEffect(effect, outcomeMap) {
+        const type = effect.type;
+        const ctx = effect.context ?? {};
+
+        // hit → outcome="hit" 给 attacker
+        if (type === "hit") {
+            const attackerId = ctx.attackerId;
+            if (attackerId && !outcomeMap.has(attackerId)) {
+                outcomeMap.set(attackerId, {
+                    outcome: "hit",
+                    attackInstanceId: ctx.attackInstanceId ?? null,
+                    counteredBy: effect.targetId
+                });
+            }
+            return;
+        }
+
+        // clash → 区分 parry（无 contactType）vs 普通拼刀（有 contactType）
+        if (type === "clash") {
+            // parry 专用 clash：ContactResolver 手动 push 的，context 只有 { attackerId, knockbackX }
+            // 没有 contactType 字段 → 判定为 parry
+            const isParryClash = ctx.attackerId && !ctx.contactType;
+            // 普通 clash：buildClashEffect 生成的，有 contactType + attackerId
+            const isNormalClash = ctx.attackerId && ctx.contactType;
+
+            if (isParryClash) {
+                const attackerId = effect.targetId;  // clash effect 的 targetId 是被 parry 的攻击方
+                if (attackerId && !outcomeMap.has(attackerId)) {
+                    outcomeMap.set(attackerId, {
+                        outcome: "parried",
+                        attackInstanceId: ctx.attackInstanceId ?? null,
+                        counteredBy: ctx.attackerId  // 防守方（parry 来源）
+                    });
+                }
+            } else if (isNormalClash) {
+                // contactType="clash_tie" 或 "clash_lose" 都是输方
+                const loserId = effect.targetId;
+                if (loserId && !outcomeMap.has(loserId)) {
+                    outcomeMap.set(loserId, {
+                        outcome: "clash",
+                        attackInstanceId: ctx.attackInstanceId ?? null,
+                        counteredBy: ctx.attackerId  // 赢方
+                    });
+                }
+            }
+            return;
+        }
+
+        // defenseSuccess + source="guard_block" → outcome="guard_blocked" 给 attacker
+        // （parry 的 outcome 已经由 clash effect 覆盖了，这里跳过；dodge 暂不回传）
+        if (type === "defenseSuccess") {
+            if (ctx.source === "guard_block") {
+                const attackerId = ctx.attackerId;
+                if (attackerId && !outcomeMap.has(attackerId)) {
+                    outcomeMap.set(attackerId, {
+                        outcome: "guard_blocked",
+                        attackInstanceId: ctx.attackInstanceId ?? null,
+                        counteredBy: effect.targetId  // 防守方
+                    });
+                }
+            }
+            return;
+        }
+    }
+
+    /**
+     * 统一回传 outcome 给各 attacker 的 controller.onCombatResult
+     * 同时通知 CombatCharacter.markAttackResolved（用于去重 miss 检测）
+     */
+    #dispatchOutcomes(outcomeMap, characters) {
+        for (const [attackerId, { outcome, attackInstanceId, counteredBy }] of outcomeMap) {
+            const attackerChar = characters.find(c => c?.id === attackerId);
+            if (!attackerChar?.controller?.onCombatResult) continue;
+
+            // 先标记该攻击实例已被 resolved（让 CombatCharacter 退出攻击状态时不会重复回传 miss）
+            if (attackInstanceId && typeof attackerChar.markAttackResolved === "function") {
+                attackerChar.markAttackResolved(attackInstanceId);
+            }
+
+            const defenderChar = counteredBy ? characters.find(c => c?.id === counteredBy) : null;
+            attackerChar.controller.onCombatResult({
+                outcome,
+                targetState: attackerChar.currentStateName,
+                counteredBy: defenderChar?.currentStateName ?? null
+            });
+        }
     }
 
     _fxShake(amplitude, durationMs) {
