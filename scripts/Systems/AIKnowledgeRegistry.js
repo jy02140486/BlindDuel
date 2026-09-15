@@ -306,6 +306,18 @@ export class AIKnowledgeRegistry {
             warnings
         );
 
+        // 计算 activeDisplacement：累加所有非 0 frameSpeeds 帧的位移
+        // frameSpeeds 约定：非 0 帧 = weaponbox 活跃期间的位移帧
+        // 不依赖 attackActiveFrames 配置
+        let activeDisplacement = 0;
+        for (let i = 0; i < frameSpeeds.length; i++) {
+            const speed = frameSpeeds[i] ?? 0;
+            if (speed !== 0) {
+                const durMs = atlasFrames[i]?.durationMs ?? 100;
+                activeDisplacement += speed * (durMs / 1000);
+            }
+        }
+
         return {
             stateName,
             trajectory: stateDef.attackTrajectory ?? null, // "thrust" | "slash" | null
@@ -322,6 +334,7 @@ export class AIKnowledgeRegistry {
                 facingRight
             },
             displacement,
+            activeDisplacement,  // 新增：weaponbox 覆盖期间的实际位移
             weaponBoxes,
             frameSpeeds: [...frameSpeeds]
         };

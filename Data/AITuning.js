@@ -28,7 +28,7 @@ export const AITuning = {
 
     // === 性格门控 ===
     committedScoreThreshold: 0.15,     // 评分超过此阈值才执行 committed action
-    reactionVariance: 0.15,            // 随机扰动幅度
+    reactionVariance: 0.05,            // 随机扰动幅度（降级为 tie-break，Step 5）
 
     // === oppThreat 感知 ===
     threatPerPhase: {
@@ -58,8 +58,18 @@ export const AITuning = {
 
         // === Feedback Memory 调节器 ===
         feedbackFailPenalty: 0.15,   // 每次失败扣多少分（连续 2 次 → -0.30；第 1 次 × 0.5）
-        feedbackSuccessBonus: 0.05,  // 每次成功加多少分（连续累积）
-        continuityBonus: 0.05,       // 上一招成功过的惯性加分（连续失败 ≥2 则不给）
+        feedbackSuccessBonus: 0.05,  // 每次成功加多少分（短期记忆，封顶 successMaxCount 次）
+        successMaxCount: 3,          // feedbackSuccessBonus 封顶次数（Step 3）
+        continuityBonus: 0.02,       // 上一招成功过的惯性加分（降级为弱 tie-break，Step 4）
+
+        // === Repetition Cost（Step 2）===
+        repetitionCostRate: 0.06,    // 每次连续使用的成本增长（× (count-1)）
+        repetitionCostMax: 0.18,     // 累计成本上限（防止盖过一切）
+
+        // === Startup Utility（Phase 3）===
+        recoveryStartupBonus: 0.12,  // opp recovery 时快招的最大加分（ratio=1.0 最快招拿满额）
+        activeStartupPenalty: 0.10,  // opp active + in-range 时长招的最大扣分（ratio→0 最慢招扣满，ratio=1.0 不扣）
+        distanceStartupSmooth: 0.3,  // startup factor 开始衰减的距离窗口
     },
 
     // === 防御偏好 ===

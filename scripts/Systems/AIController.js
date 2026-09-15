@@ -15,6 +15,7 @@ export class AIController extends BaseController {
     // Feedback Memory 私有字段声明（JS 要求：先声明后赋值）
     #memory;
     #lastCommittedState;
+    #consecutiveAttackUsage;  // { stateName, count } 连续使用同一 attack 的次数（非 attack 打断则 reset）
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
     static #FAIL_OUTCOMES = new Set(["parried", "guard_blocked", "clash", "miss"]);
@@ -59,6 +60,9 @@ export class AIController extends BaseController {
 
         // Feedback Memory: Continuity 调节器用（Step 4）
         this.#lastCommittedState = null;
+
+        // Repetition Cost: 连续使用同一 attack 的次数（Step 1）
+        this.#consecutiveAttackUsage = null;
 
         // Debug 可视化
         this.debugVisible = options.debugVisible ?? true;
@@ -183,7 +187,7 @@ export class AIController extends BaseController {
         const scoreDump = scored.map(s => {
             if (s.kind === "attack") {
                 const r = s.action.range?.maxReach ?? 0;
-                const d = s.action.displacement ?? 0;
+                const d = s.action.activeDisplacement ?? s.action.displacement ?? 0;
                 const fb = d < 0 ? -d : 0;
                 const er = r + fb + this.rangeBuffer;
                 return `${s.action.stateName}[score=${s.score.toFixed(3)},reach=${r.toFixed(2)},fwd=${fb.toFixed(2)},effR=${er.toFixed(2)},dist=${dist}]`;
@@ -242,18 +246,29 @@ export class AIController extends BaseController {
         }
 
         // opponent threat：综合 phase + reach + distance + self 当前状态
+        // threat 必须随距离连续衰减到 0，超远距离 threat≈0 → 防御评分直接被门控挡掉
         let oppThreat = 0; // 0~1
         if (oppAttackProfile) {
             const oppReach = oppAttackProfile.range?.maxReach ?? 0;
-            const inRange = distance <= oppReach + this.rangeBuffer;
+            const oppEffRange = oppReach + this.rangeBuffer;
+            // rangeFactor: 距离在 effRange ~ effRange×2 之间线性衰减到 0
+            let rangeFactor = 1.0;
+            if (distance > oppEffRange) {
+                const farThreshold = oppEffRange * 2;
+                if (distance > farThreshold) {
+                    rangeFactor = 0;
+                } else {
+                    rangeFactor = 1 - (distance - oppEffRange) / (farThreshold - oppEffRange);
+                }
+            }
             const selfIsBusy = selfDef?.attackActive === true;
 
             if (oppPhase === "active") {
-                oppThreat = inRange ? this.tuning.threatPerPhase.active : 0.3;
+                oppThreat = this.tuning.threatPerPhase.active * rangeFactor;
             } else if (oppPhase === "startup") {
-                oppThreat = inRange ? this.tuning.threatPerPhase.startup : 0.2;
+                oppThreat = this.tuning.threatPerPhase.startup * rangeFactor;
             } else if (oppPhase === "recovery") {
-                oppThreat = this.tuning.threatPerPhase.recovery; // 威胁窗口已过
+                oppThreat = this.tuning.threatPerPhase.recovery;
             }
             // self 正在攻击中（不可响应窗口）→ 放大威胁
             if (selfIsBusy && oppPhase !== "recovery") oppThreat = Math.min(1, oppThreat + this.tuning.selfBusyThreatBonus);
@@ -352,18 +367,84 @@ export class AIController extends BaseController {
     }
 
     /**
-     * 攻击动作 Utility 评分（Phase 2 扩展：加 queryInteraction 克制关系 + Feedback Memory）
+     * Feedback Memory Phase 3: Startup Utility
+     * 计算 startupFactor（乘法因子，影响 #scoreAttack 最终得分）
+     *
+     * startupRatio = self 最快攻击 startupMs / 当前攻击 startupMs（范围 (0, 1]）
+     *   ratio 越大 = 越快 = 越好
+     *
+     * startupFactor = 1.0
+     *   + recoveryStartupBonus * startupRatio        // opp recovery 时快招加分
+     *   - activeStartupPenalty * (1 - startupRatio)  // opp active 时慢招扣分
+     *
+     * 距离平滑：在 effectiveRange * (1 - distanceStartupSmooth) ~ effectiveRange 之间衰减到 1.0
+     * clamp 到 [0.5, 1.2]
      */
+    #computeStartupFactor(attack, sit) {
+        const timing = attack.timing;
+        if (!timing?.startupMs || this.kbProfile?.attacks?.length === 0) return 1.0;
+
+        // effectiveRange（与 #scoreAttack 计算逻辑一致）
+        const range = attack.range?.maxReach ?? 0;
+        const effectiveDisplacement = attack.activeDisplacement ?? attack.displacement ?? 0;
+        const fwdBoost = effectiveDisplacement < 0 ? -effectiveDisplacement : 0;
+        const effectiveRange = range + fwdBoost + this.rangeBuffer;
+
+        // startupRatio: self 最快攻击 / 当前攻击
+        const minStartupMs = Math.min(...this.kbProfile.attacks.map(a => a.timing.startupMs));
+        const startupRatio = Math.min(1.0, minStartupMs / (timing.startupMs ?? minStartupMs));
+
+        // startupReward: opp recovery 时快招加分
+        let startupReward = 0;
+        if (sit.opp.phase === "recovery") {
+            startupReward = this.tuning.attack.recoveryStartupBonus * startupRatio;
+        }
+
+        // startupRiskPenalty: opp active + in-range 时慢招扣分
+        let startupRiskPenalty = 0;
+        if (sit.opp.phase === "active"
+            && sit.distance <= (sit.opp.attackProfile?.range?.maxReach ?? 99)) {
+            startupRiskPenalty = this.tuning.attack.activeStartupPenalty * (1 - startupRatio);
+        }
+
+        // 距离平滑：接近 effectiveRange 时 startupFactor 衰减到 1.0
+        const smoothWindow = this.tuning.attack.distanceStartupSmooth;
+        const nearThreshold = effectiveRange * (1 - smoothWindow);
+        let smoothFactor = 1.0;
+        if (sit.distance >= nearThreshold && effectiveRange > nearThreshold) {
+            smoothFactor = 1 - (sit.distance - nearThreshold) / (effectiveRange - nearThreshold);
+        }
+        smoothFactor = Math.max(0, Math.min(1, smoothFactor));
+
+        // 组合：rawFactor 表示 startup 对得分的影响倍率
+        const rawFactor = 1.0 + startupReward - startupRiskPenalty;
+        // smoothFactor 从 1.0 降到 0.0，让 rawFactor 渐变为 1.0
+        const startupFactor = rawFactor * smoothFactor + 1.0 * (1 - smoothFactor);
+
+        return Math.max(0.5, Math.min(1.2, startupFactor));
+    }
+
     #scoreAttack(attack, sit) {
         const range = attack.range?.maxReach ?? 0;
         const timing = attack.timing;
 
-        // frameSpeeds 位移加成：displacement < 0 是向对手前冲（负 X），加到 reach 上
-        // 这让 dash 这类有推进的招式的 AI 距离评估与运行时实际命中范围一致
-        const fwdBoost = (attack.displacement ?? 0) < 0 ? -attack.displacement : 0;
+        // frameSpeeds 位移加成：activeDisplacement 是 weaponbox 实际覆盖期间的位移（负=向对手前冲）
+        // 用 activeDisplacement 而不是全动画 displacement，避免 dash 这类 weaponbox 只在短窗口存在的动作
+        // 被高估可达距离（dash 全位移 ~3.8 但 weaponbox 只覆盖 ~1.7 的位移）
+        const effectiveDisplacement = attack.activeDisplacement ?? attack.displacement ?? 0;
+        const fwdBoost = effectiveDisplacement < 0 ? -effectiveDisplacement : 0;
         const effectiveRange = range + fwdBoost + this.rangeBuffer;
 
-        if (sit.distance > effectiveRange) return 0;
+        // ---- Phase 2: Continuous Range Utility ----
+        // 硬门控改平滑衰减：距离在 effectiveRange ~ effectiveRange × (1 + rangeSmoothWindow) 之间
+        // 线性衰减到 0，让 reach 稍小但有其他优势（startup 快、trajectory 好）的攻击不被直接挡掉
+        const rangeSmoothWindow = this.tuning.attack.distanceStartupSmooth ?? 0.3;
+        const maxRange = effectiveRange * (1 + rangeSmoothWindow);
+        let rangeFactor = 1.0;
+        if (sit.distance > effectiveRange && sit.distance < maxRange) {
+            rangeFactor = Math.max(0, 1 - (sit.distance - effectiveRange) / (maxRange - effectiveRange));
+        }
+        if (sit.distance > maxRange) return 0;
 
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
 
@@ -416,9 +497,10 @@ export class AIController extends BaseController {
             score -= this.tuning.attack.feedbackFailPenalty * 0.5;
         }
 
-        // 成功累积奖励（保持惯性）
-        if (adaptation.consecutiveSuccess >= 1) {
-            score += this.tuning.attack.feedbackSuccessBonus * adaptation.consecutiveSuccess;
+        // 成功累积奖励（保持惯性，封顶 Step 3: 只反映最近短期成功）
+        const cappedSuccess = Math.min(adaptation.consecutiveSuccess, this.tuning.attack.successMaxCount ?? 3);
+        if (cappedSuccess >= 1) {
+            score += this.tuning.attack.feedbackSuccessBonus * cappedSuccess;
         }
 
         // ---- Feedback Memory Step 4: Continuity 调节器 ----
@@ -426,6 +508,25 @@ export class AIController extends BaseController {
         if (attack.stateName === this.#lastCommittedState && adaptation.consecutiveFail < 2) {
             score += this.tuning.attack.continuityBonus;
         }
+
+        // ---- Repetition Cost: 重复行为成本（Step 2）----
+        // 同一 attack 连续使用次数越多，边际吸引力递减
+        const usageCount = (this.#consecutiveAttackUsage?.stateName === attack.stateName)
+            ? this.#consecutiveAttackUsage.count
+            : 0;
+        if (usageCount >= 2) {
+            const rcRate = this.tuning.attack.repetitionCostRate ?? 0.06;
+            const rcMax  = this.tuning.attack.repetitionCostMax ?? 0.18;
+            const repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
+            score -= repetitionCost;
+        }
+
+        // ---- Phase 3: Startup Utility ----
+        const startupFactor = this.#computeStartupFactor(attack, sit);
+        score *= startupFactor;
+
+        // ---- Phase 2: Continuous Range Utility（距离平滑衰减）----
+        score *= rangeFactor;
 
         return Math.max(0, Math.min(1, score));
     }
@@ -522,6 +623,15 @@ export class AIController extends BaseController {
         this.queueCommand(action.stateName);
         if (kind === "attack") {
             this.lastAttackTime = performance.now();
+            // Step 1: Repetition Cost 计数器更新
+            if (this.#consecutiveAttackUsage?.stateName === action.stateName) {
+                this.#consecutiveAttackUsage.count++;
+            } else {
+                this.#consecutiveAttackUsage = { stateName: action.stateName, count: 1 };
+            }
+        } else {
+            // dodge / guard / positioning 打断连续 attack → reset
+            this.#consecutiveAttackUsage = null;
         }
     }
 
