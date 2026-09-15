@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_Dodge.png",
                    "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_Dodge.json",
                    "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_Dodge.png",
-                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_Dodge.json",
-                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_Dodge.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,12 +31,12 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:33:31.9259196Z"
+                   "generatedAtUtc":  "2026-09-15T17:04:50.6985744Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "Dodge (CollisionMask) 0.ase",
+                       "frameName":  "rabble_stick_Dodge 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -54,17 +54,6 @@
                                          "h":  36,
                                          "angle":  90,
                                          "pixelCount":  2952
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  73.5,
-                                         "cy":  107,
-                                         "w":  48,
-                                         "h":  29,
-                                         "angle":  0,
-                                         "pixelCount":  1392
                                      }
                                  ],
                        "anchors":  {
@@ -76,7 +65,7 @@
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "Dodge (CollisionMask) 1.ase",
+                       "frameName":  "rabble_stick_Dodge 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,
@@ -94,17 +83,6 @@
                                          "h":  36,
                                          "angle":  90,
                                          "pixelCount":  2952
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  84.5,
-                                         "cy":  107,
-                                         "w":  48,
-                                         "h":  29,
-                                         "angle":  0,
-                                         "pixelCount":  1392
                                      }
                                  ],
                        "anchors":  {

@@ -45,4 +45,4 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 公共cd太长
 
 framespeed的移动在命中判定后终止
-
+近距离会一直尝试swing但被thrust到死

@@ -4,8 +4,8 @@
                    "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_dash.png",
                    "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_dash.json",
                    "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_dash.png",
-                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_dash.json",
-                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_dash.png",
+                   "pushboxAtlasJson":  null,
+                   "pushboxAtlasPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-12T16:52:27.5544868Z"
+                   "generatedAtUtc":  "2026-09-15T17:04:36.9091227Z"
                },
     "frames":  [
                    {
@@ -65,17 +65,6 @@
                                          "h":  17.104,
                                          "angle":  -69.269,
                                          "pixelCount":  516
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  79.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
                                      }
                                  ],
                        "anchors":  {
@@ -116,17 +105,6 @@
                                          "h":  19,
                                          "angle":  90,
                                          "pixelCount":  627
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  80.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
                                      }
                                  ],
                        "anchors":  {
@@ -161,23 +139,12 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  49,
-                                         "cy":  66.5,
-                                         "w":  46,
-                                         "h":  15,
-                                         "angle":  90,
-                                         "pixelCount":  690
-                                     },
-                                     {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  87.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
+                                         "cx":  41.5,
+                                         "cy":  66.499,
+                                         "w":  46.021,
+                                         "h":  16.064,
+                                         "angle":  89.914,
+                                         "pixelCount":  733
                                      }
                                  ],
                        "anchors":  {
@@ -212,23 +179,12 @@
                                          "id":  "weaponbox_weak_blade_1",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  49,
-                                         "cy":  66.5,
-                                         "w":  46,
-                                         "h":  15,
-                                         "angle":  90,
-                                         "pixelCount":  690
-                                     },
-                                     {
-                                         "id":  "pushbox_3",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  87.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
+                                         "cx":  41.5,
+                                         "cy":  66.499,
+                                         "w":  46.021,
+                                         "h":  16.064,
+                                         "angle":  89.914,
+                                         "pixelCount":  733
                                      }
                                  ],
                        "anchors":  {
@@ -258,79 +214,6 @@
                                          "h":  19,
                                          "angle":  90,
                                          "pixelCount":  627
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_2",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  49,
-                                         "cy":  66.5,
-                                         "w":  46,
-                                         "h":  15,
-                                         "angle":  90,
-                                         "pixelCount":  690
-                                     },
-                                     {
-                                         "id":  "pushbox_4",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  87.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
-                                     }
-                                 ],
-                       "anchors":  {
-                                       "root":  {
-                                                    "cx":  86.5,
-                                                    "cy":  121.5
-                                                }
-                                   }
-                   },
-                   {
-                       "frameIndex":  5,
-                       "frameName":  "rabble_stick_dash 5.ase",
-                       "frameRect":  {
-                                         "x":  800,
-                                         "y":  0,
-                                         "w":  160,
-                                         "h":  128
-                                     },
-                       "boxes":  [
-                                     {
-                                         "id":  "hitbox_7",
-                                         "type":  "hitbox",
-                                         "subtype":  null,
-                                         "cx":  56,
-                                         "cy":  109,
-                                         "w":  33,
-                                         "h":  19,
-                                         "angle":  90,
-                                         "pixelCount":  627
-                                     },
-                                     {
-                                         "id":  "weaponbox_weak_blade_3",
-                                         "type":  "weaponbox",
-                                         "subtype":  "weak_blade",
-                                         "cx":  49,
-                                         "cy":  66.5,
-                                         "w":  46,
-                                         "h":  15,
-                                         "angle":  90,
-                                         "pixelCount":  690
-                                     },
-                                     {
-                                         "id":  "pushbox_5",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  87.5,
-                                         "cy":  112,
-                                         "w":  40,
-                                         "h":  25,
-                                         "angle":  0,
-                                         "pixelCount":  1000
                                      }
                                  ],
                        "anchors":  {

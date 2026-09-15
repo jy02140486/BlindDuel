@@ -150,7 +150,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
-      "attackActiveFrames": [3,4],
+      "attackActiveFrames": [2,3],
       "loop": false,
       "timeScale": 1.0,
       "bonusTimeScale": 1.4,
@@ -162,7 +162,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0,-0.1,-2,-1,-0.7,0]
+      "frameSpeeds": [0,-0.1,-1.4,-1,0]
     },
     "swing": {
       "clip": "swing",
