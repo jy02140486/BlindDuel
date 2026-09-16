@@ -5,8 +5,8 @@
     "postDefenseMobility": {
       "enabled": true,
       "triggers": ["guard_block", "parry", "dodge"],
-      "durationMs": 500,
-      "speedMultiplier": 1.5
+      "durationMs": 1000,
+      "speedMultiplier": 4
     },
     "postDefenseCounter": {
       "enabled": true,

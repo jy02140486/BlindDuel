@@ -34,7 +34,7 @@ export const AITuning = {
     threatPerPhase: {
         active: 1.0,   // 对手 active 阶段的威胁感知
         startup: 0.6,  // 对手 startup 阶段的威胁感知
-        recovery: 0.1, // 对手 recovery 阶段的威胁感知
+        recovery: 0.4, // Bug 1 fix: recovery 也乘 rangeFactor，基值调到大范围（对手即将恢复出下一招）
     },
     selfBusyThreatBonus: 0.2,          // self 正在攻击时额外放大威胁的量
 

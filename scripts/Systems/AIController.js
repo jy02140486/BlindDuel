@@ -18,7 +18,7 @@ export class AIController extends BaseController {
     #consecutiveAttackUsage;  // { stateName, count } 连续使用同一 attack 的次数（非 attack 打断则 reset）
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
-    static #FAIL_OUTCOMES = new Set(["parried", "guard_blocked", "clash", "miss"]);
+    static #FAIL_OUTCOMES = new Set(["parried", "guard_blocked", "clash", "miss", "interrupted"]);
 
     constructor(character = null, options = {}) {
         super(character);
@@ -149,7 +149,6 @@ export class AIController extends BaseController {
         const result = (def.guardActive === true && hasCounterTag)
             ? (def.attackActive === true || def.dodgeActive === true)
             : (def.attackActive === true || def.dodgeActive === true || def.guardActive === true);
-        console.log(`[dbg-ai] isCommitted=${result} state=${this.character.currentStateName} guardActive=${def.guardActive} attackActive=${def.attackActive} dodgeActive=${def.dodgeActive} hasCounterTag=${hasCounterTag}`);
         return result;
     }
 
@@ -173,28 +172,7 @@ export class AIController extends BaseController {
             scored.push({ kind: "guard", action: g, score: this.#scoreDefense(g, sit, "guard") });
         }
 
-        // 打印 KB 攻击 profile 摘要（每秒打一次够了）
-        if (!this._lastKbLogMs || performance.now() - this._lastKbLogMs > 1000) {
-            this._lastKbLogMs = performance.now();
-            const atkSumm = (this.kbProfile?.attacks || []).map(a => {
-                const fwd = (a.displacement ?? 0) < 0 ? -a.displacement.toFixed(2) : 0;
-                return `${a.stateName}[reach=${(a.range?.maxReach ?? 0).toFixed(2)},disp=${(a.displacement ?? 0).toFixed(2)},fwdBoost=${fwd},totalReach=${((a.range?.maxReach ?? 0) + fwd).toFixed(2)},traj=${a.trajectory},wt=${a.weight}]`;
-            }).join(" | ");
-            console.log(`[dbg-ai] KB attacks: ${atkSumm}`);
-        }
 
-        // 打印所有评分
-        const scoreDump = scored.map(s => {
-            if (s.kind === "attack") {
-                const r = s.action.range?.maxReach ?? 0;
-                const d = s.action.activeDisplacement ?? s.action.displacement ?? 0;
-                const fb = d < 0 ? -d : 0;
-                const er = r + fb + this.rangeBuffer;
-                return `${s.action.stateName}[score=${s.score.toFixed(3)},reach=${r.toFixed(2)},fwd=${fb.toFixed(2)},effR=${er.toFixed(2)},dist=${dist}]`;
-            }
-            return `${s.kind}[score=${s.score.toFixed(3)}]`;
-        }).join(" | ");
-        console.log(`[dbg-ai] decision dist=${dist} oppPhase=${sit.opp.phase} oppGuardType=${sit.opp.guardType ?? 'none'}: ${scoreDump}`);
 
         // 轻微随机扰动 + 排序
         for (const entry of scored) {
@@ -203,7 +181,6 @@ export class AIController extends BaseController {
         scored.sort((a, b) => b.score - a.score);
 
         const best = scored[0];
-        console.log(`[dbg-ai] BEST: ${best?.kind ?? 'none'} ${best?.action?.stateName ?? ''} score=${best?.score?.toFixed(3)} threshold=${this.tuning.committedScoreThreshold}`);
 
         // 有足够好的 committed action 就执行
         if (best && best.score > this.tuning.committedScoreThreshold) {
@@ -248,6 +225,10 @@ export class AIController extends BaseController {
         // opponent threat：综合 phase + reach + distance + self 当前状态
         // threat 必须随距离连续衰减到 0，超远距离 threat≈0 → 防御评分直接被门控挡掉
         let oppThreat = 0; // 0~1
+        // Bug 1 fix: recovery 阶段用 opp 整体最大 reach（即将恢复能出任何一招）
+        const oppMaxReach = this.opponentKB?.attacks?.length
+            ? Math.max(...this.opponentKB.attacks.map(a => a.range?.maxReach ?? 0))
+            : 0;
         if (oppAttackProfile) {
             const oppReach = oppAttackProfile.range?.maxReach ?? 0;
             const oppEffRange = oppReach + this.rangeBuffer;
@@ -268,7 +249,18 @@ export class AIController extends BaseController {
             } else if (oppPhase === "startup") {
                 oppThreat = this.tuning.threatPerPhase.startup * rangeFactor;
             } else if (oppPhase === "recovery") {
-                oppThreat = this.tuning.threatPerPhase.recovery;
+                // Bug 1 fix: recovery 也乘 rangeFactor，但用 oppMaxReach（对手即将恢复能出任何一招）
+                const recoveryEffRange = Math.max(oppMaxReach, oppReach) + this.rangeBuffer;
+                let recoveryRangeFactor = 1.0;
+                if (distance > recoveryEffRange) {
+                    const farThreshold = recoveryEffRange * 2;
+                    if (distance > farThreshold) {
+                        recoveryRangeFactor = 0;
+                    } else {
+                        recoveryRangeFactor = 1 - (distance - recoveryEffRange) / (farThreshold - recoveryEffRange);
+                    }
+                }
+                oppThreat = this.tuning.threatPerPhase.recovery * recoveryRangeFactor;
             }
             // self 正在攻击中（不可响应窗口）→ 放大威胁
             if (selfIsBusy && oppPhase !== "recovery") oppThreat = Math.min(1, oppThreat + this.tuning.selfBusyThreatBonus);
@@ -318,6 +310,8 @@ export class AIController extends BaseController {
                 traitConfig: selfMobilityTrait
             }
         };
+
+        return sit;
     }
 
     /**
@@ -447,6 +441,7 @@ export class AIController extends BaseController {
         if (sit.distance > maxRange) return 0;
 
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
+        const baseScore = score;
 
         const canAttack = sit.now - this.lastAttackTime >= this.attackCooldownMs;
         if (!canAttack) score -= this.tuning.attack.cooldownPenalty; // 冷却中 → 大幅扣分
@@ -471,11 +466,15 @@ export class AIController extends BaseController {
         // --------------------------------
 
         // opponent vulnerability 高 → 加分（punish 窗口）
-        score += sit.oppVulnerable * this.tuning.attack.vulnReward;
+        const vulnDelta = sit.oppVulnerable * this.tuning.attack.vulnReward;
+        score += vulnDelta;
 
-        // opponent 正在 active 且在我 range 内 → 攻击风险高 → 扣分
-        if (sit.opp.phase === "active" && sit.distance <= (sit.opp.attackProfile?.range?.maxReach ?? 99)) {
-            score -= sit.oppThreat * this.tuning.attack.threatPenalty;
+        // Bug 2 fix: opp 有招在身上（任何阶段）→ 攻击风险高 → 扣分
+        // sit.oppThreat 已经编码了 phase + range + distance，不需要额外检查
+        let threatPenaltyApplied = 0;
+        if (sit.opp.phase !== "none") {
+            threatPenaltyApplied = sit.oppThreat * this.tuning.attack.threatPenalty;
+            score -= threatPenaltyApplied;
         }
 
         // opponent 在 startup 且我能在他 active 前出手 → 加分（抢先）
@@ -491,22 +490,29 @@ export class AIController extends BaseController {
         const adaptation = this.#computeAdaptationFactor(attack.stateName);
 
         // 失败累积惩罚（第 1 次半罚，第 2 次起满罚 + 累积）
+        let failDelta = 0;
         if (adaptation.consecutiveFail >= 2) {
-            score -= this.tuning.attack.feedbackFailPenalty * adaptation.consecutiveFail;
+            failDelta = -(this.tuning.attack.feedbackFailPenalty * adaptation.consecutiveFail);
+            score += failDelta;
         } else if (adaptation.consecutiveFail === 1) {
-            score -= this.tuning.attack.feedbackFailPenalty * 0.5;
+            failDelta = -(this.tuning.attack.feedbackFailPenalty * 0.5);
+            score += failDelta;
         }
 
         // 成功累积奖励（保持惯性，封顶 Step 3: 只反映最近短期成功）
         const cappedSuccess = Math.min(adaptation.consecutiveSuccess, this.tuning.attack.successMaxCount ?? 3);
+        let successDelta = 0;
         if (cappedSuccess >= 1) {
-            score += this.tuning.attack.feedbackSuccessBonus * cappedSuccess;
+            successDelta = this.tuning.attack.feedbackSuccessBonus * cappedSuccess;
+            score += successDelta;
         }
 
         // ---- Feedback Memory Step 4: Continuity 调节器 ----
         // 上一招成功过 + 当前 adaptation 未强烈反对 → 给惯性加分
+        let continuityDelta = 0;
         if (attack.stateName === this.#lastCommittedState && adaptation.consecutiveFail < 2) {
-            score += this.tuning.attack.continuityBonus;
+            continuityDelta = this.tuning.attack.continuityBonus;
+            score += continuityDelta;
         }
 
         // ---- Repetition Cost: 重复行为成本（Step 2）----
@@ -514,10 +520,11 @@ export class AIController extends BaseController {
         const usageCount = (this.#consecutiveAttackUsage?.stateName === attack.stateName)
             ? this.#consecutiveAttackUsage.count
             : 0;
+        let repetitionCost = 0;
         if (usageCount >= 2) {
             const rcRate = this.tuning.attack.repetitionCostRate ?? 0.06;
             const rcMax  = this.tuning.attack.repetitionCostMax ?? 0.18;
-            const repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
+            repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
             score -= repetitionCost;
         }
 
@@ -528,7 +535,7 @@ export class AIController extends BaseController {
         // ---- Phase 2: Continuous Range Utility（距离平滑衰减）----
         score *= rangeFactor;
 
-        return Math.max(0, Math.min(1, score));
+        return finalScore;
     }
 
     /**
@@ -536,7 +543,9 @@ export class AIController extends BaseController {
      */
     #scoreDefense(defenseAction, sit, kind) {
         // opponent 没有攻击 → 防御无意义
-        if (sit.opp.phase === "none" || sit.oppThreat < this.tuning.defense.activationThreshold) return 0;
+        if (sit.opp.phase === "none" || sit.oppThreat < this.tuning.defense.activationThreshold) {
+            return 0;
+        }
 
         let score = 0;
 

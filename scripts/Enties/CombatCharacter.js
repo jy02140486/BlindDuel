@@ -64,6 +64,12 @@ export class CombatCharacter extends CharacterBase {
         this._lastAttackHadHit = true;
     }
 
+    /** Feedback Memory: 当前攻击是否已有 resolved outcome（hit 或 CombatSystem 已回传） */
+    isCurrentAttackResolved() {
+        const id = this._currentAttackInstanceId;
+        return !!(this._lastAttackHadHit || (id && this._resolvedAttackIds.has(id)));
+    }
+
     getBlockerAabb() {
         const halfW = 20 * this.pxToWorld;
         const halfH = 12 * this.pxToWorld;

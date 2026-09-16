@@ -95,6 +95,19 @@ export class CombatSystem {
                 if (attackerChar && typeof attackerChar.markAttackHit === "function") {
                     attackerChar.markAttackHit();
                 }
+                // Feedback Memory: 若被击中者在 committed attack 且尚未 resolved → 产生 interrupted outcome
+                // 必须在 takeDamage 之前检测，此时 target.currentStateName 还是攻击状态
+                if (target.currentStateDef?.attackActive === true
+                    && typeof target.isCurrentAttackResolved === "function"
+                    && !target.isCurrentAttackResolved()
+                    && !outcomeMap.has(target.id)) {
+                    outcomeMap.set(target.id, {
+                        outcome: "interrupted",
+                        attackInstanceId: target._currentAttackInstanceId,
+                        targetState: target.currentStateName,
+                        counteredBy: attackerId
+                    });
+                }
                 if (typeof target.takeDamage === "function") {
                     target.takeDamage(effect.context);
                 }
@@ -191,7 +204,7 @@ export class CombatSystem {
      * 同时通知 CombatCharacter.markAttackResolved（用于去重 miss 检测）
      */
     #dispatchOutcomes(outcomeMap, characters) {
-        for (const [attackerId, { outcome, attackInstanceId, counteredBy }] of outcomeMap) {
+        for (const [attackerId, { outcome, attackInstanceId, counteredBy, targetState }] of outcomeMap) {
             const attackerChar = characters.find(c => c?.id === attackerId);
             if (!attackerChar?.controller?.onCombatResult) continue;
 
@@ -203,7 +216,7 @@ export class CombatSystem {
             const defenderChar = counteredBy ? characters.find(c => c?.id === counteredBy) : null;
             attackerChar.controller.onCombatResult({
                 outcome,
-                targetState: attackerChar.currentStateName,
+                targetState: targetState ?? attackerChar.currentStateName,
                 counteredBy: defenderChar?.currentStateName ?? null
             });
         }
