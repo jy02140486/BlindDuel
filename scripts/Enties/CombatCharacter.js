@@ -3,6 +3,7 @@ import { FrameAnimationComponent } from "../Components/FrameAnimationComponent.j
 import { CollisionComponent } from "../Components/CollisionComponent.js";
 import { TimeControlComponent } from "../Components/TimeControlComponent.js";
 import { TimeControlSystem } from "../Systems/TimeControlSystem.js";
+import { CombatTuning } from "../../Data/CombatTuning.js";
 
 export class CombatCharacter extends CharacterBase {
     constructor(scene, config) {
@@ -43,6 +44,9 @@ export class CombatCharacter extends CharacterBase {
             isDead: false,
             deathState: config.deathState ?? "defeated"
         };
+
+        // 边界补偿反推 attacker 时，抑制 frameSpeeds 前推，直到攻击状态结束
+        this._suppressFrameSpeeds = false;
 
         this._battleYMin = null;
         this._battleYMax = null;
@@ -321,7 +325,13 @@ export class CombatCharacter extends CharacterBase {
                     angle: box.angle ?? 0
                 };
             });
-
+        const stateImpact = this.currentStateDef?.impact ?? {};
+        const impact = {
+            attackKnockback: stateImpact.knockback ?? CombatTuning.hit.victimKnockbackX,
+            attackHitstopFrames: stateImpact.hitstopFrames ?? CombatTuning.hit.hitstopFrames,
+        };
+        //todo fix [runRenderLoop] EXCEPTION: ReferenceError: finalScore is not defined or remove on task completed
+        console.log(`[SnapImpact] state=${this.currentStateName}`, impact);
         return {
             characterId: this.id,
             stateName: this.currentStateName,
@@ -330,7 +340,8 @@ export class CombatCharacter extends CharacterBase {
             attackInstanceId,
             stateEnterTick: this.stateEnterTick,
             dodgeActive: this.currentStateDef?.dodgeActive === true,
-            boxes: worldBoxes
+            boxes: worldBoxes,
+            impact
         };
     }
 

@@ -366,8 +366,8 @@ export class CharacterBase {
 
         // inputLocked 时阻止状态自带的移动（如攻击动作的 frameSpeeds）
         // 但允许通过 moveIntent 控制的移动（如 sequencer 的 moveActorTo）
-        const stateSpeed = this.inputLocked ? null : this.currentStateDef?.speed;
-        const frameSpeeds = this.inputLocked ? null : this.currentStateDef?.frameSpeeds;
+        const stateSpeed = (this.inputLocked || this._suppressFrameSpeeds) ? null : this.currentStateDef?.speed;
+        const frameSpeeds = (this.inputLocked || this._suppressFrameSpeeds) ? null : this.currentStateDef?.frameSpeeds;
 
         if (frameSpeeds && frameSpeeds.length > 0) {
             const frameIndex = this.animation.currentFrameIndex;
@@ -530,6 +530,9 @@ export class CharacterBase {
         this.currentStateName = stateName;
         this.currentStateDef = stateDef;
         this.stateEnterTick = tickCount ?? this.stateEnterTick;
+
+        // 状态切换时清除边界补偿的 frameSpeed 抑制标志
+        this._suppressFrameSpeeds = false;
 
         const timeScale = this._getStateTimeScale(stateDef);
         this.clearTags();

@@ -2,6 +2,26 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-09-16)
+- **Bug 3 修复：AI 攻击被 hit 打断时无 outcome 回传**（Feedback Memory 闭环最后一环）
+- 根因：CombatCharacter.fixedUpdate 先于 CombatSystem.fixedUpdate 执行，takeDamage() 直接触发 enterState("hit") 绕过了 miss 检测的 `oldAttackActive && !newAttackActive` 条件，AI committed attack 在 startup 阶段被 hit 打断时永远不产生 outcome
+- 修复方案：CombatSystem hit effect 段、takeDamage 之前新增 target 中断检测（检查 attackActive + isCurrentAttackResolved()），写入 outcomeMap(outcome="interrupted") 并提前缓存 targetState（dispatch 时读实时值已是 "hit"）；dispatchOutcomes 解构补全 targetState 字段并优先读缓存
+- 新增：CombatCharacter.isCurrentAttackResolved() 公开方法（排除已命中假阳性）；AIController.#FAIL_OUTCOMES 加 "interrupted"
+- 实施期修复：Step 4 只改了 dispatch 调用行漏改解构行导致 targetState 字段缺失 + entry 变量未定义 → TypeError 被吞导致 outcome 不回传；本次一并补全
+- 附带清理：AIController.js 8 处裸写 dbg console.log
+- 设计参考：`plans/archived/26.9.11 AI模式化问题/26.9.16 攻击被中断结果回传设计.MD` + `commits_detailed/26.9.16 截击结果回传.MD`
+
+## Update Log (2026-09-15)
+- Feedback Memory Step 1-4 全链路调试 + bug 修复
+- Bug 1：oppThreat 在 recovery 阶段未乘 rangeFactor 和 oppMaxReach，基值 0.1→0.4（AIController.js L250-290）
+- Bug 2：attack threatPenalty 条件 `active` → `phase !== none`（AIController.js L483-488）
+- activeDisplacement 多段非0修复：原逻辑取最后一段过渡为起点，漏算中间段（如 `[0,1,1,0,1,1]` 只加最后一段），改为累加所有非零段
+- Repetition Cost 连续同招惩罚：2次-0.06 / 3次-0.12 / 4次及以上-0.18（封顶）；非攻击动作打断重置
+- Success 累积封顶 `successMaxCount ?? 3`，防单次 hit 永久拉高分
+- continuity/reactionVariance 降级：避免 AI 决策过于抖动
+- 日志清理：统一前缀 `[dbg-ai-thrust-react]`
+- 设计参考：`commits_detailed/26.9.16 AI重复出招问题,招数启动时间评分.MD` + `plans/archived/26.9.11 AI模式化问题/` 下四份 Feedback Memory 设计稿
+
 ## Update Log (2026-09-08)
 - AI 距离重平衡落地：`AIController.js` 重构防御评分与定位逻辑
 - 统一范围常量：新增 `this.rangeBuffer = 0.2`，替换三处硬编码（attack 有效阈值、positioning hold 边界、debug 蓝圈）；删除 `approachReachMargin`，**mobility boost 不再扩大 rangeBuffer**（原来 0.5 → 1.0 反效果），AI 冲得更近而非停得更远

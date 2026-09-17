@@ -535,7 +535,7 @@ export class AIController extends BaseController {
         // ---- Phase 2: Continuous Range Utility（距离平滑衰减）----
         score *= rangeFactor;
 
-        return finalScore;
+        return score;
     }
 
     /**

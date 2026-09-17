@@ -218,7 +218,9 @@ export class ContactResolver {
             this.hitDedupe.add(hitKey);
             const attackerPos = snapshotById.get(contact.attackerId)?.rootPositionX ?? 0;
             const targetPos = snapshotById.get(contact.targetId)?.rootPositionX ?? 0;
-            const knockback = this.#signedKnockback(targetPos, attackerPos, this.tuning.hit.victimKnockbackX);
+            const attackerImpact = snapshotById.get(contact.attackerId)?.impact ?? {};
+            const requestedKnockback = attackerImpact.attackKnockback ?? this.tuning.hit.victimKnockbackX;
+            const knockback = this.#signedKnockback(targetPos, attackerPos, requestedKnockback);
 
 
 /*
@@ -247,7 +249,8 @@ export class ContactResolver {
                     contactType: "weapon_vs_hitbox",
                     damage: 1,
                     hitState: "hit",
-                    knockbackX: knockback
+                    knockbackX: knockback,
+                    attackHitstopFrames: attackerImpact.attackHitstopFrames ?? this.tuning.hit.hitstopFrames
                 }
             });
         }

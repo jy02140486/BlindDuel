@@ -1,5 +1,6 @@
 import { ContactResolver } from "./ContactResolver.js";
 import { CombatTuning } from "../../Data/CombatTuning.js";
+import { ImpactMovementResolver } from "./ImpactMovementResolver.js";
 
 export class CombatSystem {
     constructor(options = {}) {
@@ -10,7 +11,7 @@ export class CombatSystem {
         this.cameraManager = options.cameraManager ?? null;
     }
 
-    fixedUpdate(characters = [], tickCount = null) {
+    fixedUpdate(characters = [], tickCount = null, worldContext = {}) {
         const combatants = characters.filter((c) => c?.has?.("combat"));
         const result = this.resolver.resolve(combatants, { tickCount });
 
@@ -32,7 +33,7 @@ export class CombatSystem {
                 const hitState = effect.context?.hitState ?? "clash";
                 const knockbackX = effect.context?.knockbackX ?? 0;
                 if (typeof target.freezeImpact === "function") {
-                    target.freezeImpact(this.tuning.hit.freezeImpactFrames, {
+                    target.freezeImpact(effect.context?.freezeImpactFrames ?? this.tuning.hit.freezeImpactFrames, {
                         nextState: target.hasState(hitState) ? hitState : null,
                         knockbackX: knockbackX
                     });
@@ -77,13 +78,34 @@ export class CombatSystem {
             }
 
             if (effect.type === "hit") {
-                // 命中处理：双方 hitstop + 被击中 takeDamage + 震屏
-                const hitstopFrames = this.tuning.hit.hitstopFrames ?? 0;
+                // === Apply-time 边界位移求解 ===
+                const attackerId = effect.context?.attackerId;
+                let finalKnockbackX = effect.context?.knockbackX ?? 0;
+                const boundary = worldContext.boundary;
+                if (boundary && attackerId && finalKnockbackX !== 0) {
+                    const attacker = characters.find(c => c?.id === attackerId);
+                    if (attacker) {
+                        const result = ImpactMovementResolver.resolve({
+                            attacker,
+                            victim: target,
+                            victimKnockbackX: finalKnockbackX,
+                            boundary,
+                        });
+                        finalKnockbackX = result.victimActualX;
+                        if (result.attackerCompX !== 0) {
+                            attacker.root.position.x += result.attackerCompX;
+                            // 抑制 frameSpeeds 前推直到攻击状态结束（enterState 里自动清零）
+                            attacker._suppressFrameSpeeds = true;
+                        }
+                    }
+                }
+
+                // === hitstop — 从 effect.context 读 override ===
+                const hitstopFrames = effect.context?.attackHitstopFrames ?? this.tuning.hit.hitstopFrames ?? 0;
                 if (hitstopFrames > 0 && typeof target.applyHitstop === "function") {
                     target.applyHitstop(hitstopFrames);
                 }
-                // 给攻击者也加 hitstop（从 context 读 attackerId）
-                const attackerId = effect.context?.attackerId;
+                // 给攻击者也加 hitstop
                 if (attackerId && hitstopFrames > 0) {
                     const attacker = characters.find(c => c?.id === attackerId);
                     if (attacker && typeof attacker.applyHitstop === "function") {
@@ -109,7 +131,8 @@ export class CombatSystem {
                     });
                 }
                 if (typeof target.takeDamage === "function") {
-                    target.takeDamage(effect.context);
+                    const modifiedCtx = { ...effect.context, knockbackX: finalKnockbackX };
+                    target.takeDamage(modifiedCtx);
                 }
                 this._fxShake(0.25, 180);
                 this._fxFlash(80);

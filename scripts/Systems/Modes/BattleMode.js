@@ -100,7 +100,12 @@ export class BattleMode extends BaseMode {
             stageBoundary.clampCharacter(c, dtMs);
         }
 
-        combatSystem.fixedUpdate(combatants, tickCount);
+        combatSystem.fixedUpdate(combatants, tickCount, { boundary: stageBoundary });
+
+        // post-combat clamp — 保险，防止 knockback / freezeImpact 后任何漏网位移推出边界
+        for (const c of combatants) {
+            stageBoundary.clampCharacter(c, dtMs);
+        }
 
         this.#checkBattleEnd(sceneSequencer);
     }
