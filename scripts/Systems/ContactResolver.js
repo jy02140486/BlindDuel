@@ -250,7 +250,8 @@ export class ContactResolver {
                     damage: 1,
                     hitState: "hit",
                     knockbackX: knockback,
-                    attackHitstopFrames: attackerImpact.attackHitstopFrames ?? this.tuning.hit.hitstopFrames
+                    attackHitstopFrames: attackerImpact.attackHitstopFrames ?? this.tuning.hit.hitstopFrames,
+                    pushbackMultiplier: attackerImpact.pushbackMultiplier ?? 0.05,
                 }
             });
         }

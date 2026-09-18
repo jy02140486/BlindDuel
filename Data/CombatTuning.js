@@ -16,6 +16,10 @@ export const CombatTuning = {
         hitstopFrames: 8,
         /** hit / clash 的 freezeImpact 默认帧数（CombatSystem.js effect 处理） */
         freezeImpactFrames: 24,
+        /** 边界 pushback：attacker 反推距离 = victimKnockback × 此系数 */
+        pushbackKnockbackScale: 2,
+        /** 边界 pushback：victim 到边界距离小于此阈值时才触发（米） */
+        pushbackTriggerThreshold: 1.0,
     },
     block: {
         /** guard / clash 击退（双方互相推开的位移） */

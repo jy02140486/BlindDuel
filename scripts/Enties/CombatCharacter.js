@@ -45,9 +45,6 @@ export class CombatCharacter extends CharacterBase {
             deathState: config.deathState ?? "defeated"
         };
 
-        // 边界补偿反推 attacker 时，抑制 frameSpeeds 前推，直到攻击状态结束
-        this._suppressFrameSpeeds = false;
-
         this._battleYMin = null;
         this._battleYMax = null;
         this._battleYCorrectionSpeed = 0.4;
@@ -329,9 +326,8 @@ export class CombatCharacter extends CharacterBase {
         const impact = {
             attackKnockback: stateImpact.knockback ?? CombatTuning.hit.victimKnockbackX,
             attackHitstopFrames: stateImpact.hitstopFrames ?? CombatTuning.hit.hitstopFrames,
+            pushbackMultiplier: stateImpact.pushbackMultiplier ?? 0.05,
         };
-        //todo fix [runRenderLoop] EXCEPTION: ReferenceError: finalScore is not defined or remove on task completed
-        console.log(`[SnapImpact] state=${this.currentStateName}`, impact);
         return {
             characterId: this.id,
             stateName: this.currentStateName,
@@ -343,6 +339,32 @@ export class CombatCharacter extends CharacterBase {
             boxes: worldBoxes,
             impact
         };
+    }
+
+    /**
+     * pushback 消费（hitstop 结束后，与 sprite 更新同帧执行）
+     * - pending 模式：等帧索引变化（即 sprite 切到下一帧）才开始消费
+     * - 非 pending 模式：hitstop 解冻后直接开始消费（最后一帧命中时）
+     */
+    _consumePushbackIfReady() {
+        const tc = this.combat?.timeControl;
+        if (!tc || tc.hitstopFrames > 0 || tc.impactContext) return;
+        if (tc.hitstopPushbackFrames <= 0) return;
+
+        // 解除 pending：hitstop 解冻后帧索引已经变了
+        if (tc.hitstopPushbackPending) {
+            if (this.animation.currentFrameIndex !== tc.hitstopPushbackStartFrameIndex) {
+                tc.hitstopPushbackPending = false;
+            } else {
+                return; // 帧还没变，等下一帧
+            }
+        }
+
+        this.root.position.x += tc.hitstopPushbackPerFrame;
+        tc.hitstopPushbackFrames--;
+        if (tc.hitstopPushbackFrames <= 0) {
+            this._suppressFrameSpeeds = false;
+        }
     }
 
     setMoveIntent(intent) {
@@ -434,6 +456,7 @@ export class CombatCharacter extends CharacterBase {
             this._syncRootDebug(anchorWhenFrozen);
             this.collision.syncToFrame(newFrameWhenFrozen, currentWhenFrozen.w, currentWhenFrozen.h, anchorWhenFrozen);
             this._updateDebugPanel();
+            this._consumePushbackIfReady();
             return;
         }
 
@@ -487,6 +510,8 @@ export class CombatCharacter extends CharacterBase {
         this._applyRootAlignment(current.w, current.h, anchor);
         this._syncRootDebug(anchor);
         this.collision.syncToFrame(newFrame, current.w, current.h, anchor);
+
+        this._consumePushbackIfReady(); // pushback 和 sprite 更新同帧
 
         this._applyMovement(effectiveDeltaMs);
 

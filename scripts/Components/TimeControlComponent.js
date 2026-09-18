@@ -17,5 +17,11 @@ export class TimeControlComponent {
         this.blockstunFrames = 0;
         this.hitstunFrames = 0;
         this.impactContext = null;
+        // hitstop 结束后 attacker pushback 逐帧消费
+        this.hitstopPushbackFrames = 0;
+        this.hitstopPushbackPerFrame = 0;
+        // pending 延迟启动：hitstop 解冻后等 sprite 切到下一帧才开始
+        this.hitstopPushbackPending = false;
+        this.hitstopPushbackStartFrameIndex = 0;
     }
 }

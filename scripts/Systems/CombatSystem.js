@@ -1,6 +1,5 @@
 import { ContactResolver } from "./ContactResolver.js";
 import { CombatTuning } from "../../Data/CombatTuning.js";
-import { ImpactMovementResolver } from "./ImpactMovementResolver.js";
 
 export class CombatSystem {
     constructor(options = {}) {
@@ -78,38 +77,51 @@ export class CombatSystem {
             }
 
             if (effect.type === "hit") {
-                // === Apply-time 边界位移求解 ===
                 const attackerId = effect.context?.attackerId;
                 let finalKnockbackX = effect.context?.knockbackX ?? 0;
-                const boundary = worldContext.boundary;
-                if (boundary && attackerId && finalKnockbackX !== 0) {
-                    const attacker = characters.find(c => c?.id === attackerId);
-                    if (attacker) {
-                        const result = ImpactMovementResolver.resolve({
-                            attacker,
-                            victim: target,
-                            victimKnockbackX: finalKnockbackX,
-                            boundary,
-                        });
-                        finalKnockbackX = result.victimActualX;
-                        if (result.attackerCompX !== 0) {
-                            attacker.root.position.x += result.attackerCompX;
-                            // 抑制 frameSpeeds 前推直到攻击状态结束（enterState 里自动清零）
-                            attacker._suppressFrameSpeeds = true;
-                        }
-                    }
-                }
 
                 // === hitstop — 从 effect.context 读 override ===
                 const hitstopFrames = effect.context?.attackHitstopFrames ?? this.tuning.hit.hitstopFrames ?? 0;
                 if (hitstopFrames > 0 && typeof target.applyHitstop === "function") {
                     target.applyHitstop(hitstopFrames);
                 }
-                // 给攻击者也加 hitstop
                 if (attackerId && hitstopFrames > 0) {
                     const attacker = characters.find(c => c?.id === attackerId);
                     if (attacker && typeof attacker.applyHitstop === "function") {
                         attacker.applyHitstop(hitstopFrames);
+                    }
+
+                    // === Pushback v2：逐帧反推（仅边界场景） ===
+                    // 触判条件同时满足：
+                    // 1. 有 boundary
+                    // 2. victim 被推方向有边界
+                    // 3. victim 到该边界的距离 < PUSHBACK_TRIGGER_THRESHOLD
+                    const boundary = worldContext?.boundary;
+                    const PUSHBACK_TRIGGER_THRESHOLD = this.tuning.hit.pushbackTriggerThreshold ?? 1.0;
+                    if (attacker && boundary && finalKnockbackX !== 0) {
+                        const pushDir = Math.sign(finalKnockbackX); // victim 被推的方向
+                        const victimX = target.root.position.x;
+                        // victim 被推方向到该侧边界的距离
+                        const victimAvailable = pushDir > 0
+                            ? boundary.maxX - victimX  // 往右推 → 看右边界
+                            : victimX - boundary.minX;  // 往左推 → 看左边界
+                        const isNearBoundary = victimAvailable < PUSHBACK_TRIGGER_THRESHOLD;
+                        if (isNearBoundary) {
+                            const dir = Math.sign(target.root.position.x - attacker.root.position.x);
+                            const PUSHBACK_KNOCKBACK_SCALE = this.tuning.hit.pushbackKnockbackScale ?? 2;
+                            const attackerPushX = -dir * Math.abs(finalKnockbackX) * PUSHBACK_KNOCKBACK_SCALE;
+                            const slipFrames = Math.max(1, hitstopFrames);
+                            const perFrame = attackerPushX / slipFrames;
+                            const tc = attacker.timeControl;
+                            tc.hitstopPushbackFrames = slipFrames;
+                            tc.hitstopPushbackPerFrame = perFrame;
+                            attacker._suppressFrameSpeeds = true;
+                            const curFrameIdx = attacker.animation.currentFrameIndex;
+                            const totalFrames = attacker.animation.frameCount;
+                            const isLastFrame = curFrameIdx >= totalFrames - 1;
+                            tc.hitstopPushbackPending = !isLastFrame;
+                            tc.hitstopPushbackStartFrameIndex = curFrameIdx;
+                        }
                     }
                 }
                 // Feedback Memory: 通知攻击者自己的攻击命中了
