@@ -45,8 +45,14 @@ export class AIController extends BaseController {
         // 原来 attack 用 +0.3、positioning 用 +0.5/+1.0，导致 gap 和 mobility boost 反效果
         this.rangeBuffer = this.tuning.rangeBuffer;
 
-        // 随机扰动
+        // 随机扰动（评分阶段乘入，微小波动打破 tie）
         this.reactionVariance = this.tuning.reactionVariance;
+
+        // 反应延迟：每个决策 tick 抽取 0~reflexMaxMs 的随机偏移，加到防御 decisionBuffer 上。
+        // reflexMaxMs=0 → 和现在一样（默认）；reflexMaxMs=200 → AI 反应窗口变为 [100ms, 300ms]。
+        this.reflexMaxMs = this.tuning.defense?.reflexMaxMs ?? 0;
+        // 每个决策 tick 更新（供 #scoreDefense 消费）
+        this._reflexOffset = 0;
 
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
@@ -156,6 +162,11 @@ export class AIController extends BaseController {
      * Phase 1 核心决策：构建 Combat Situation → Utility 评分 → 选最高分 → 执行
      */
     #makeDecision() {
+        // 为本决策 tick 抽取 reflex 偏移（0 ~ reflexMaxMs 均匀分布）
+        this._reflexOffset = this.reflexMaxMs > 0
+            ? Math.random() * this.reflexMaxMs
+            : 0;
+
         const sit = this.#buildSituation();
         const dist = sit.distance.toFixed(2);
 
@@ -181,6 +192,20 @@ export class AIController extends BaseController {
         scored.sort((a, b) => b.score - a.score);
 
         const best = scored[0];
+
+        // === DIAGNOSTIC LOG: decision ===
+        if (this.debugVisible) {
+            const _top3 = scored.slice(0, 3).map(s =>
+                `${s.kind}:${s.action.stateName}=${s.score.toFixed(3)}`
+            ).join(" | ");
+            console.log(
+                `[AI-Diag] decision oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
+                `oppAttack=${sit.opp.attackProfile?.stateName ?? "none"} → ` +
+                `best=${best?.kind}:${best?.action?.stateName ?? "none"}(${best?.score?.toFixed(3) ?? "0"}) threshold=${this.tuning.committedScoreThreshold} ` +
+                `top3: ${_top3}`
+            );
+        }
+        // ================================
 
         // 有足够好的 committed action 就执行
         if (best && best.score > this.tuning.committedScoreThreshold) {
@@ -247,6 +272,8 @@ export class AIController extends BaseController {
             if (oppPhase === "active") {
                 oppThreat = this.tuning.threatPerPhase.active * rangeFactor;
             } else if (oppPhase === "startup") {
+                // oppThreat 保留给 attack 评分的 threatPenalty 和 positioning retreat 使用
+                // 但不再是防御评分的门控（防御已改为精确时序驱动）
                 oppThreat = this.tuning.threatPerPhase.startup * rangeFactor;
             } else if (oppPhase === "recovery") {
                 // Bug 1 fix: recovery 也乘 rangeFactor，但用 oppMaxReach（对手即将恢复能出任何一招）
@@ -291,6 +318,20 @@ export class AIController extends BaseController {
         const selfMobilityTrait = this.kbProfile?.traits?.postDefenseMobility ?? null;
         const selfHasMobilityBoost = self.hasTag("postDefenseMobilityActive");
 
+        // === DIAGNOSTIC LOG: opp attack perception ===
+        if (oppAttackProfile && this.debugVisible) {
+            const _ap = oppAttackProfile;
+            const _timing = _ap.timing;
+            const _normMs = oppNormTime * _timing.totalMs;
+            console.log(
+                `[AI-Diag] oppAttack=${_ap.stateName} phase=${oppPhase} ` +
+                `normTime=${oppNormTime.toFixed(3)} (${_normMs.toFixed(0)}ms/${_timing.totalMs}ms) ` +
+                `timing=[s:${_timing.startupMs} a:${_timing.activeMs} r:${_timing.recoveryMs}] ` +
+                `threat=${oppThreat.toFixed(2)} remainingMs=${oppRemainingMs.toFixed(0)} distance=${distance.toFixed(2)}`
+            );
+        }
+        // ===============================================
+
         return {
             distance,
             self:   { stateName: selfState, def: selfDef, normTime: selfNormTime },
@@ -310,8 +351,6 @@ export class AIController extends BaseController {
                 traitConfig: selfMobilityTrait
             }
         };
-
-        return sit;
     }
 
     /**
@@ -542,56 +581,91 @@ export class AIController extends BaseController {
      * 防御动作 Utility 评分（Phase 2 扩展：evaluateInteraction 区分 dodge/guard 对不同攻击的有效性）
      */
     #scoreDefense(defenseAction, sit, kind) {
-        // opponent 没有攻击 → 防御无意义
-        if (sit.opp.phase === "none" || sit.oppThreat < this.tuning.defense.activationThreshold) {
-            return 0;
+        // ======== 精确时序驱动的防御评分重构 ========
+        // 用户洞察：所有变量 AI 已知 — 对手状态、距离、reach、还剩多少时间 hit。
+        // 防御不该用 threat 近似门控，应该直接回答两个精确问题：
+        //   1. 这招能不能够到我 + 我的防御能不能防住？
+        //   2. 现在是不是出防御的正确时机？
+
+        const oppPhase = sit.opp.phase;
+        const oppAtk = sit.opp.attackProfile;
+
+        // --- 问题 2a: 对手有没有在攻击？---
+        if (!oppAtk || oppPhase === "none" || oppPhase === "recovery") {
+            return 0; // 没攻击或已收招，防御无意义
         }
 
-        let score = 0;
+        // --- 问题 1a: 这招能不能够到我？---
+        const oppReach = oppAtk.range?.maxReach ?? 0;
+        // 攻击位移也能缩短距离 — 算上 forward displacement
+        const oppEffReach = oppReach + this.rangeBuffer;
+        // startup 阶段对手可能还没前冲到位 — 保守判断
+        if (sit.distance > oppEffReach * 1.5) {
+            return 0; // 明显够不着
+        }
 
-        // ---- Phase 2: 我的防御 → opponent 当前攻击，能不能防住？----
+        // --- 问题 2b: 现在是不是正确时机？---
+        if (oppPhase === "startup") {
+            // timeUntilActive = 距对手 weaponbox 激活还有多久
+            const totalMs = oppAtk.timing.totalMs;
+            const startupMs = oppAtk.timing.startupMs;
+            const elapsedMs = sit.opp.normTime * totalMs;
+            const timeUntilActive = startupMs - elapsedMs;
+
+            // AI 每隔 decisionIntervalMs 才能做一次决策 + 防御瞬时生效
+            // 窗口定义：timeUntilActive 在 [0, decisionBuffer] 之间 = 该按了
+            // decisionBuffer 覆盖：1个决策间隔 + 少许生效延迟余量 + reflex 延迟
+            // reflex 延迟每次决策 tick 重新抽取（0 ~ reflexMaxMs），表达 AI 反应速度的随机分布
+            const decisionBuffer = this.decisionIntervalMs + this._reflexOffset;
+
+            if (timeUntilActive > decisionBuffer) {
+                // 还早！对手距离 active 还有 ~300-500ms
+                // 此时不该出 guard — 让攻击/走位竞争，留着 guard 给 hit 真要来的时候
+                return 0;
+            }
+            // timeUntilActive <= decisionBuffer → 进入反应窗口，开始打分
+            // 越低分越高（越接近 active，反应越紧急）
+            const urgency = Math.max(0, 1 - timeUntilActive / decisionBuffer);
+            // === DIAGNOSTIC LOG: timing window ===
+            if (this.debugVisible) {
+                console.log(
+                    `[AI-Diag] defenseScore ${kind}:${defenseAction.stateName} ` +
+                    `startup timing → timeUntilActive=${timeUntilActive.toFixed(0)}ms ` +
+                    `decisionBuffer=${decisionBuffer} urgency=${urgency.toFixed(2)} ` +
+                    `(normTime=${sit.opp.normTime.toFixed(3)} startupMs=${startupMs})`
+                );
+            }
+            // ===============================================
+        }
+        // oppPhase === "active" → 已经在 hit 帧了，当然该防
+
+        // --- 问题 1b: 我的防御对这招有效吗？---
         let defenseGuardType = null;
         if (kind === "guard") {
             defenseGuardType = defenseAction.guardType ?? null;
         }
         const defenseCanParry = kind === "guard" && (defenseAction.canParry === true);
 
-        const oppAtk = sit.opp.attackProfile;
-        if (oppAtk) {
-            const interaction = ContactResolver.evaluateInteraction({
-                offenseTrajectory: oppAtk.trajectory,
-                offenseWeight: oppAtk.weight,
-                defenseGuardType,
-                defenseIsDodging: kind === "dodge",
-                defenseCanParry
-            });
-
-            if (interaction.dodged || interaction.blocked) {
-                // 我能防住/躲开 → 这防御动作有效
-                if (interaction.parryable) {
-                    // parry 有反击收益 → 额外加分
-                    score += this.tuning.defense.parryReward;
-                }
-            } else if (oppAtk.trajectory && !interaction.blocked && !interaction.dodged) {
-                // 我的防御对对手这个攻击完全没用（比如 guard 遇到 thrust）→ 大幅扣分
-                score -= this.tuning.defense.badDefensePenalty;
-            }
+        let score = this.tuning.defense.activeBase; // 基础分（active 阶段）或 startupCanActBase（startup 窗口）
+        if (oppPhase === "startup") {
+            score = this.tuning.defense.startupCanActBase;
         }
-        // -----------------------------------------------------------
 
-        if (sit.opp.phase === "active") {
-            // 对手刀正在挥 → 必须防御
-            // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.9 / guard 0.8）
-            score += this.tuning.defense.activeBase;
-        } else if (sit.opp.phase === "startup") {
-            // 对手还在起手 → 预判防御有价值
-            const myStartupMs = defenseAction.timing?.totalMs ?? 200;
-            if (myStartupMs <= sit.opp.remainingMs) {
-                // Step 3 改动：拉平 dodge 和 guard 基数（原 dodge 0.7 / guard 0.6）
-                score += this.tuning.defense.startupCanActBase;
-            } else {
-                score += this.tuning.defense.startupTooLateBase; // 可能来不及
+        const interaction = ContactResolver.evaluateInteraction({
+            offenseTrajectory: oppAtk.trajectory,
+            offenseWeight: oppAtk.weight,
+            defenseGuardType,
+            defenseIsDodging: kind === "dodge",
+            defenseCanParry
+        });
+
+        if (interaction.dodged || interaction.blocked) {
+            if (interaction.parryable) {
+                score += this.tuning.defense.parryReward;
             }
+        } else if (oppAtk.trajectory && !interaction.blocked && !interaction.dodged) {
+            // 完全没用的防御 — 大幅扣分
+            score -= this.tuning.defense.badDefensePenalty;
         }
 
         // Step 4 新增：Distance Consequence — 防御动作后的距离后果

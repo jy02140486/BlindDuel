@@ -40,5 +40,4 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 板边击退距离加成
 主人公clash也有加速奖励
 公共cd太长
-framespeed的移动在命中判定后终止
-近距离会一直尝试swing但被thrust到死  ← 根因之一（AI攻击被hit打断无outcome→不知换招）已在26.9.16 interrupt outcome修复，还需实测验证
+防不住zornhut

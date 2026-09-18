@@ -2,6 +2,14 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
 
+## Update Log (2026-09-18)
+- **版边 Pushback 三轮迭代全部落地**：attacker 在 victim 被推至边界时反向被推离，仅边界场景触发（victim 到边界距离 < 1.0m），开阔地不推；pushback 距离从 victimKnockback × 系数计算（重招远于轻招），非固定值
+- 核心链路：CombatSystem hit handler 触判门禁 + 设置 pushback 参数(per-frame + pending 同步) → CombatCharacter._consumePushbackIfReady 逐帧消费 → BattleMode post-combat clamp 兜底边界安全
+- 参数外置：`CombatTuning.hit.pushbackKnockbackScale`(2) + `CombatTuning.hit.pushbackTriggerThreshold`(1.0)
+- 废弃清理：ImpactMovementResolver 架构整套移除（原边界守恒方案，无条件触发 + momentumDisp 恒为 0，不可行）
+- 涉及文件：CombatSystem.js / CombatCharacter.js / TimeControlComponent.js / Data/CombatTuning.js
+- 设计参考：`plans/26.9.17 版边pushback momentum增强计划.MD` + `commits_detailed/26.9.18 版边攻击pushback.MD`
+
 ## Update Log (2026-09-16)
 - **Bug 3 修复：AI 攻击被 hit 打断时无 outcome 回传**（Feedback Memory 闭环最后一环）
 - 根因：CombatCharacter.fixedUpdate 先于 CombatSystem.fixedUpdate 执行，takeDamage() 直接触发 enterState("hit") 绕过了 miss 检测的 `oldAttackActive && !newAttackActive` 条件，AI committed attack 在 startup 阶段被 hit 打断时永远不产生 outcome

@@ -80,6 +80,12 @@ export const AITuning = {
         activeBase: 0.85,          // opponent active 时的防御基础分
         startupCanActBase: 0.65,   // startup 且自己来得及反应
         startupTooLateBase: 0.3,   // startup 但自己来不及
+        // === Reaction Profile ===
+        // 每个决策 tick 抽取 0 ~ reflexMaxMs 的随机偏移，加到 decisionBuffer 上。
+        // 效果：reflexMaxMs=0 → 和现在一样（默认）；reflexMaxMs=200 → AI 的
+        // 反应窗口变成 [100ms, 300ms] 随机分布，表示「初级 AI 反应慢/不稳定」。
+        // 未来可通过 aiProfile 角色级 override（如 tutorial=400, elite=0, boss=0）。
+        reflexMaxMs: 0,
     },
 
     // === 距离后果（防御动作后的距离代价）===
