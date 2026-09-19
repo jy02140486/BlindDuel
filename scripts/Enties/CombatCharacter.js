@@ -35,7 +35,7 @@ export class CombatCharacter extends CharacterBase {
         }
 
         this.combat = {
-            globalCooldownMs: config.globalCooldownMs ?? 700,
+            globalCooldownMs: config.globalCooldownMs ?? CombatTuning.action.globalCooldownMs,
             lastActionTime: -Infinity,
             timeControl: new TimeControlComponent(),
             timeControlSystem: new TimeControlSystem(),

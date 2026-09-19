@@ -21,7 +21,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
     "sourceSize": { "w": 192, "h": 128 },
-    "duration": 300
+    "duration": 200
    },
    "longswordman_thrust 3.ase": {
     "frame": { "x": 576, "y": 0, "w": 192, "h": 128 },

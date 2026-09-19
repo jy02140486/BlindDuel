@@ -43,4 +43,8 @@ export const CombatTuning = {
         /** clash_lose 强方 hitstop 帧 */
         loseWinnerHitstopFrames: 4,
     },
+    action: {
+        /** committed state 退出回 idle 后的公共动作冷却（ms）— 硬拦截层 */
+        globalCooldownMs: 400,
+    },
 };

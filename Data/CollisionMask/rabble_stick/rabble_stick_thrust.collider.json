@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-04T02:47:12.1790258Z"
+                   "generatedAtUtc":  "2026-09-19T12:18:05.9425517Z"
                },
     "frames":  [
                    {
@@ -88,7 +88,7 @@
                                          "id":  "hitbox_2",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  98,
+                                         "cx":  104,
                                          "cy":  58.5,
                                          "w":  58,
                                          "h":  33,
@@ -99,7 +99,7 @@
                                          "id":  "hitbox_3",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  89.5,
+                                         "cx":  95.5,
                                          "cy":  107.5,
                                          "w":  34.31,
                                          "h":  22.898,
@@ -150,12 +150,12 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  42.5,
+                                         "cx":  31.5,
                                          "cy":  73,
-                                         "w":  54,
+                                         "w":  32,
                                          "h":  13,
                                          "angle":  0,
-                                         "pixelCount":  702
+                                         "pixelCount":  416
                                      }
                                  ],
                        "anchors":  {
@@ -179,7 +179,7 @@
                                          "id":  "hitbox_6",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  98,
+                                         "cx":  102,
                                          "cy":  58.5,
                                          "w":  58,
                                          "h":  33,
@@ -190,7 +190,7 @@
                                          "id":  "hitbox_7",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  89.5,
+                                         "cx":  93.5,
                                          "cy":  107.5,
                                          "w":  34.31,
                                          "h":  22.898,

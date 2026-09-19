@@ -31,7 +31,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-10T15:11:42.7098386Z"
+                   "generatedAtUtc":  "2026-09-19T12:24:22.0401731Z"
                },
     "frames":  [
                    {
@@ -190,12 +190,12 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  137.132,
-                                         "cy":  53.138,
-                                         "w":  67.093,
-                                         "h":  8.068,
-                                         "angle":  9.756,
-                                         "pixelCount":  470
+                                         "cx":  134.018,
+                                         "cy":  52.796,
+                                         "w":  38.821,
+                                         "h":  9.971,
+                                         "angle":  9.782,
+                                         "pixelCount":  341
                                      }
                                  ],
                        "anchors":  {
@@ -252,12 +252,12 @@
                                          "id":  "weaponbox_weak_blade_1",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  158.5,
+                                         "cx":  178.5,
                                          "cy":  64.5,
-                                         "w":  86,
+                                         "w":  44,
                                          "h":  8,
                                          "angle":  0,
-                                         "pixelCount":  688
+                                         "pixelCount":  352
                                      }
                                  ],
                        "anchors":  {
