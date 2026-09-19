@@ -198,11 +198,53 @@ export class AIController extends BaseController {
             const _top3 = scored.slice(0, 3).map(s =>
                 `${s.kind}:${s.action.stateName}=${s.score.toFixed(3)}`
             ).join(" | ");
+
+            // 每个 attack 的完整分解：minReach/maxReach/effectiveRange/rangeFactor
+            const _atkBreakdown = (this.kbProfile?.attacks || []).map(a => {
+                const s = scored.find(x => x.action === a && x.kind === "attack");
+                const r = a.range;
+                const disp = a.activeDisplacement ?? a.displacement ?? 0;
+                const fwd = disp < 0 ? -disp : 0;
+                const effR = (r?.maxReach ?? 0) + fwd + this.rangeBuffer;
+                // 算 rangeFactor（与 #scoreAttack 逻辑一致）
+                const smoothW = this.tuning.attack.distanceStartupSmooth ?? 0.3;
+                const maxR = effR * (1 + smoothW);
+                let rf = 1.0;
+                if (sit.distance > effR && sit.distance < maxR) {
+                    rf = Math.max(0, 1 - (sit.distance - effR) / (maxR - effR));
+                }
+                if (sit.distance > maxR) rf = 0;
+                return `${a.stateName}(minR=${(r?.minReach ?? 0).toFixed(2)} maxR=${(r?.maxReach ?? 0).toFixed(2)} effR=${effR.toFixed(2)} rf=${rf.toFixed(2)} sc=${(s?.score ?? 0).toFixed(3)})`;
+            }).join(", ");
+
+            // Precompute decision outcome for single-line diagnostic (eliminates redundant close-range logs)
+            let _decisionOutcome;
+            if (best && best.score > this.tuning.committedScoreThreshold) {
+                _decisionOutcome = `COMMIT: ${best.kind}:${best.action.stateName}`;
+            } else {
+                // Inline positioning branch logic (diagnostic-only, no separate helper needed)
+                const maxReach = sit.selfMaxReach;
+                const closestMinReach = this.#getClosestMinReach();
+                const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
+                const hasBoost = sit.selfMobility?.hasActiveBoost === true;
+                const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
+                let _posBranch;
+                if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + this.rangeBuffer) {
+                    _posBranch = `retreat(threat>${retreatThreatThreshold.toFixed(2)}, dist≤${(maxReach + this.rangeBuffer).toFixed(2)})`;
+                } else if (jitteredDistance > maxReach + this.rangeBuffer) {
+                    _posBranch = `approach(dist=${sit.distance.toFixed(2)}>${(maxReach + this.rangeBuffer).toFixed(2)})`;
+                } else if (jitteredDistance > closestMinReach && jitteredDistance <= maxReach + this.rangeBuffer) {
+                    _posBranch = `hold(${closestMinReach.toFixed(2)}<dist=${sit.distance.toFixed(2)}≤${(maxReach + this.rangeBuffer).toFixed(2)})`;
+                } else {
+                    _posBranch = `retreat(dist=${sit.distance.toFixed(2)}≤closestMinReach=${closestMinReach.toFixed(2)})`;
+                }
+                _decisionOutcome = `POSITIONING: ${_posBranch}`;
+            }
+
             console.log(
-                `[AI-Diag] decision oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
-                `oppAttack=${sit.opp.attackProfile?.stateName ?? "none"} → ` +
-                `best=${best?.kind}:${best?.action?.stateName ?? "none"}(${best?.score?.toFixed(3) ?? "0"}) threshold=${this.tuning.committedScoreThreshold} ` +
-                `top3: ${_top3}`
+                `[AI-Diag] dist=${sit.distance.toFixed(2)} oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
+                `→ best=${best?.kind}:${best?.action?.stateName ?? "none"}(${best?.score?.toFixed(3) ?? "0"}) threshold=${this.tuning.committedScoreThreshold} ` +
+                `decision=${_decisionOutcome} attacks: ${_atkBreakdown}`
             );
         }
         // ================================
@@ -379,9 +421,18 @@ export class AIController extends BaseController {
     /**
      * Feedback Memory: 计算某个 stateName 的 recent tactical adaptation
      * 返回 { consecutiveFail, consecutiveSuccess }
-     * 只看最近 10 条里 stateName 匹配的，从近往远数
+     * 只看最近 10 条里 stateName 匹配的、且未过期的（< decayMs）
+     *
+     * 关键修复：过去的失败不应该永久累积。
+     * 5 秒内没有新失败 → consecutiveFail 归零 → attack score 回升 → AI 重新敢出招。
      */
     #computeAdaptationFactor(stateName) {
+        const now = performance.now();
+        const decayMs = this.#memory.decayMs ?? 5000;
+
+        // 清理过期条目 — 同时让 decay 生效
+        this.#memory.entries = this.#memory.entries.filter(e => (now - e.at) < decayMs);
+
         const recent = this.#memory.entries.filter(e => e.state === stateName);
 
         let consecutiveFail = 0;
@@ -467,6 +518,10 @@ export class AIController extends BaseController {
         const effectiveDisplacement = attack.activeDisplacement ?? attack.displacement ?? 0;
         const fwdBoost = effectiveDisplacement < 0 ? -effectiveDisplacement : 0;
         const effectiveRange = range + fwdBoost + this.rangeBuffer;
+
+        // ---- 太近打不到：minReach 门控 ----
+        const minReach = attack.range?.minReach ?? 0;
+        if (sit.distance < minReach) return 0; // weaponbox gap 覆盖不到对手
 
         // ---- Phase 2: Continuous Range Utility ----
         // 硬门控改平滑衰减：距离在 effectiveRange ~ effectiveRange × (1 + rangeSmoothWindow) 之间
@@ -723,12 +778,11 @@ export class AIController extends BaseController {
      */
     #executePositioning(sit) {
         const maxReach = sit.selfMaxReach;
-        const minReach = this.#getMinReach();
+        // 所有 attack 中最贴脸的 minReach — 只有 distance < 此值才真正"哪招都打不到"
+        const closestMinReach = this.#getClosestMinReach();
         const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
         const hasBoost = sit.selfMobility?.hasActiveBoost === true;
 
-        // Step 1：删除 approachReachMargin 变量，rangeBuffer 统一来自构造函数
-        // mobility boost 时 rangeBuffer 保持 0.2（不扩大！boost 让 AI 冲得更近，不是停得更远）
         const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
 
         // 高威胁时优先后撤保持距离
@@ -741,10 +795,12 @@ export class AIController extends BaseController {
         if (jitteredDistance > maxReach + this.rangeBuffer) {
             this.currentBehavior = "approach";
             this.#approach();
-        } else if (jitteredDistance > minReach && jitteredDistance <= maxReach + this.rangeBuffer) {
+        } else if (jitteredDistance > closestMinReach && jitteredDistance <= maxReach + this.rangeBuffer) {
+            // 可攻击区：至少有一招能打到，hold 住准备 attack
             this.currentBehavior = "hold";
             this.#holdPosition();
         } else {
+            // distance <= closestMinReach：真正"太近，哪招都打不到" → retreat
             this.currentBehavior = "retreat";
             this.#retreat();
         }
@@ -824,19 +880,28 @@ export class AIController extends BaseController {
     }
 
     /**
-     * 获取最小攻击范围
+     * 获取最宽松的贴脸无效区（所有 attack 中最小的 minReach）
+     * 语义：distance < 此值时，**没有任何一招**能打到（全部被 weaponbox gap 挡住）
+     * 用于 positioning 的 close-range retreat 阈值。
+     *
+     * 与旧 #getMinReach() 的区别：
+     *   旧 #getMinReach() = min(所有 attack 的 maxReach) — 取的是最短那招的最大射程
+     *     → 错误地把"最短 maxReach"当成了"太近阈值"，在 distance=1.5 时
+     *       swing(minReach=1.38) 和 dash(minReach=0.66) 都能打到，
+     *       但 positioning 却让 AI retreat，完全反效果。
+     *   新 #getClosestMinReach() = min(所有 attack 的 minReach) — 取的是最贴脸的 weaponbox gap
+     *     → 只在真正"哪招都打不到"时才触发 retreat。
      */
-    #getMinReach() {
+    #getClosestMinReach() {
         if (!this.kbProfile || !this.kbProfile.attacks) {
             return 0;
         }
-        let min = Infinity;
+        let closest = Infinity;
         for (const attack of this.kbProfile.attacks) {
-            if (attack.range && attack.range.maxReach < min) {
-                min = attack.range.maxReach;
-            }
+            const mr = attack.range?.minReach ?? 0;
+            if (mr < closest) closest = mr;
         }
-        return min === Infinity ? 0 : min;
+        return closest === Infinity ? 0 : closest;
     }
 
     // ==================== Debug 可视化 ====================
@@ -884,13 +949,13 @@ export class AIController extends BaseController {
         if (!this.character || !this.debugMeshes || this.debugMeshes.length === 0) return;
 
         const maxReach = this.#getMaxReach();
-        const minReach = this.#getMinReach();
+        const closestMinReach = this.#getClosestMinReach();
 
         // 三个圈的半径（Step 1 后同步：蓝圈 = positioning hold 上边界 = maxReach + rangeBuffer）
         const radii = [
             maxReach + this.rangeBuffer,  // 蓝圈：远距离边界（approach/hold 分界）
             maxReach,                     // 绿圈：最大攻击范围
-            minReach                      // 红圈：最小攻击范围
+            closestMinReach               // 红圈：真正的贴脸无效区（< 此距离哪招都打不到）
         ];
 
         for (let i = 0; i < 3; i++) {

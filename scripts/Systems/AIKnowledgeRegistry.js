@@ -5,6 +5,10 @@
  */
 
 export class AIKnowledgeRegistry {
+    /** Schema version — bump when scan logic changes to force re-scan of cached profiles.
+     *  例：v1=初始版本, v2=新增 minReach 贴脸无效区计算 */
+    static #SCHEMA_VERSION = 2;
+
     // 全局缓存: characterId -> { versionHash, profile }
     static #cache = new Map();
 
@@ -70,6 +74,9 @@ export class AIKnowledgeRegistry {
      */
     static #computeVersionHash(character) {
         const parts = [];
+        // schema version 确保扫描逻辑变更时强制 re-scan
+        parts.push(`sv:${this.#SCHEMA_VERSION}`);
+
         const clips = character.config?.clips || {};
 
         for (const [clipName, clipDef] of Object.entries(clips)) {
@@ -166,6 +173,12 @@ export class AIKnowledgeRegistry {
         if (warnings.length > 0) {
             console.warn(`[AI KB] ${character.id} scan completed with ${warnings.length} warnings:`, warnings);
         }
+
+        // Schema v2+: 打印每个 attack 的 minReach 确认扫描正确
+        const _atkSummary = attackProfiles.map(a =>
+            `${a.stateName}(minR=${(a.range?.minReach ?? 0).toFixed(2)}, maxR=${a.range?.maxReach?.toFixed(2) ?? "?"})`
+        ).join(", ");
+        console.log(`[AI KB] ${character.id} re-scan v${this.#SCHEMA_VERSION}: attacks=[${_atkSummary}]`);
 
         const traits = character.stateGraph?.characterTraits || null;
 
@@ -266,6 +279,7 @@ export class AIKnowledgeRegistry {
 
         // 计算攻击范围
         let globalMaxReach = 0;
+        let globalMinReach = Infinity; // 所有 weaponbox 离 root 最近的距离（贴脸无效区）
         let maxReachBoxId = null;
         const subtypeMaxReach = new Map();
 
@@ -275,11 +289,17 @@ export class AIKnowledgeRegistry {
 
             for (const box of wf.weaponBoxes) {
                 const reach = this.#computeReach(box, anchor, facingRight, pxToWorld);
+                const minReachBox = this.#computeMinReach(box, anchor, facingRight, pxToWorld);
 
                 // 更新全局最大
                 if (reach > globalMaxReach) {
                     globalMaxReach = reach;
                     maxReachBoxId = box.id;
+                }
+
+                // 更新全局最小（最贴脸的 weaponbox）
+                if (minReachBox < globalMinReach) {
+                    globalMinReach = minReachBox;
                 }
 
                 // 更新 subtype 最大
@@ -330,6 +350,7 @@ export class AIKnowledgeRegistry {
             },
             range: {
                 maxReach: globalMaxReach,
+                minReach: globalMinReach === Infinity ? 0 : globalMinReach,
                 maxReachBoxId,
                 facingRight
             },
@@ -391,7 +412,7 @@ export class AIKnowledgeRegistry {
     }
 
     /**
-     * 计算单个 weaponbox 的向前攻击范围
+     * 计算单个 weaponbox 的向前攻击范围（root 到 weaponbox 远端的距离）
      */
     static #computeReach(box, anchor, facingRight, pxToWorld) {
         if (facingRight) {
@@ -402,6 +423,22 @@ export class AIKnowledgeRegistry {
             // 朝左：取 anchor 到 box 左端的距离
             const leftEdge = box.cx - box.w / 2;
             return (anchor.cx - leftEdge) * pxToWorld;
+        }
+    }
+
+    /**
+     * 计算单个 weaponbox 的贴脸无效区（root 到 weaponbox 近端的距离）
+     * 表示：距离 < 此值时，weaponbox 完全覆盖不到对手
+     */
+    static #computeMinReach(box, anchor, facingRight, pxToWorld) {
+        if (facingRight) {
+            // 朝右：取 box 左端离 anchor 的距离
+            const leftEdge = box.cx - box.w / 2;
+            return Math.max(0, leftEdge - anchor.cx) * pxToWorld;
+        } else {
+            // 朝左：取 anchor 到 box 右端的距离
+            const rightEdge = box.cx + box.w / 2;
+            return Math.max(0, anchor.cx - rightEdge) * pxToWorld;
         }
     }
 
