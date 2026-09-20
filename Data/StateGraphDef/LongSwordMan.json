@@ -247,8 +247,8 @@
       "timeScale": 1.0,
       "bonusTimeScale": 1.2,
       "impact": {
-        "knockback": 0.18,
-        "hitstopFrames": 24
+        "knockback": 0.32,
+        "hitstopFrames": 32
       },
       "transitions": [
         {
@@ -258,7 +258,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0.4, 1.2, 0, 2.4, 0.2, -0.2]
+      "frameSpeeds": [0.4, 1.2, 0, 2.4, 0.2, 0, -0.2]
     },
     "nachschlag": {
       "clip": "nachschlag",

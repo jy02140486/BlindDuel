@@ -11,9 +11,9 @@
 export const CombatTuning = {
     hit: {
         /** 受击方的击退位移（Phase 2 weapon vs hitbox） */
-        victimKnockbackX: 0.12,
+        victimKnockbackX: 0.32,
         /** 普通 hit 双方 hitstop 帧（双方各停这么多帧） */
-        hitstopFrames: 8,
+        hitstopFrames: 16,
         /** hit / clash 的 freezeImpact 默认帧数（CombatSystem.js effect 处理） */
         freezeImpactFrames: 24,
         /** 边界 pushback：attacker 反推距离 = victimKnockback × 此系数 */
@@ -23,11 +23,11 @@ export const CombatTuning = {
     },
     block: {
         /** guard / clash 击退（双方互相推开的位移） */
-        knockbackX: 0.2,
+        knockbackX: 0.4,
         /** guard_block 双方 hitstop 帧 */
-        hitstopFrames: 4,
+        hitstopFrames: 8,
         /** guard_block blockstun 帧 */
-        blockstunFrames: 10,
+        blockstunFrames: 16,
     },
     parry: {
         /** parry 双方 hitstop 帧 */
@@ -39,9 +39,9 @@ export const CombatTuning = {
         /** clash_tie 双方 hitstop 帧 */
         tieHitstopFrames: 8,
         /** clash_lose 弱方 hitstop 帧 */
-        loseLoserHitstopFrames: 6,
+        loseLoserHitstopFrames: 16,
         /** clash_lose 强方 hitstop 帧 */
-        loseWinnerHitstopFrames: 4,
+        loseWinnerHitstopFrames: 12,
     },
     action: {
         /** committed state 退出回 idle 后的公共动作冷却（ms）— 硬拦截层 */

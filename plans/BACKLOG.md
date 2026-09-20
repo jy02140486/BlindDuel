@@ -37,7 +37,7 @@
 # mannual
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 配音，格挡成功攻方播还是守方播，是不是跟动画播
-板边击退距离加成
 主人公clash也有加速奖励
-公共cd太长
-防不住zornhut
+闪躲距离过长
+独立的防御/闪避决策序列？
+移除collider脚本的冗余json

@@ -16,8 +16,8 @@
  */
 export const AITuning = {
     // === 节奏参数 ===
-    decisionIntervalMs: 100,           // 决策间隔
-    attackCooldownMs: 800,             // 攻击冷却
+    decisionIntervalMs: 200,           // 决策间隔
+    attackCooldownMs: 1000,             // 攻击冷却
 
     // === 距离模型 ===
     rangeBuffer: 0.2,                  // 统一安全/操作 margin
