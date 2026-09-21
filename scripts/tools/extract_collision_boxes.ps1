@@ -1,10 +1,8 @@
 ﻿param(
-  [string]$CollisionAtlasJson,
-  [string]$CollisionAtlasPng,
-  [string]$RootAtlasJson,
-  [string]$RootAtlasPng,
-  [string]$PushBoxAtlasJson,
-  [string]$PushBoxAtlasPng,
+  [string]$AtlasJson,
+  [string]$CollisionPng,
+  [string]$RootPng,
+  [string]$PushBoxPng,
   [string]$OutJson
 )
 Set-StrictMode -Version Latest
@@ -106,29 +104,23 @@ $collisionScanDefs = @(
 $pushboxScanDefs = @(
   [pscustomobject]@{ key='pushbox'; type='pushbox'; subtype=$null; color='#00FF88' }
 )
-$collisionAtlas = Get-Content -Raw $CollisionAtlasJson | ConvertFrom-Json
-$rootAtlas = Get-Content -Raw $RootAtlasJson | ConvertFrom-Json
-$collisionFrames = Get-OrderedFrames $collisionAtlas
-$rootFrames = Get-OrderedFrames $rootAtlas
-$collisionBmp = [System.Drawing.Bitmap]::new($CollisionAtlasPng)
-$rootBmp = [System.Drawing.Bitmap]::new($RootAtlasPng)
+$atlas = Get-Content -Raw $AtlasJson | ConvertFrom-Json
+$frames = Get-OrderedFrames $atlas
+$collisionBmp = [System.Drawing.Bitmap]::new($CollisionPng)
+$rootBmp = [System.Drawing.Bitmap]::new($RootPng)
 
-$pushboxAtlas = $null
-$pushboxFrames = $null
 $pushboxBmp = $null
 $hasPushBox = $false
-if ($PushBoxAtlasJson -and $PushBoxAtlasPng -and (Test-Path $PushBoxAtlasJson) -and (Test-Path $PushBoxAtlasPng)) {
-  $pushboxAtlas = Get-Content -Raw $PushBoxAtlasJson | ConvertFrom-Json
-  $pushboxFrames = Get-OrderedFrames $pushboxAtlas
-  $pushboxBmp = [System.Drawing.Bitmap]::new($PushBoxAtlasPng)
+if ($PushBoxPng -and (Test-Path $PushBoxPng)) {
+  $pushboxBmp = [System.Drawing.Bitmap]::new($PushBoxPng)
   $hasPushBox = $true
 }
 
 try {
   $tracks = @{}
   $outFrames = @()
-  for ($i=0; $i -lt $collisionFrames.Count; $i++) {
-    $fr = $collisionFrames[$i].data.frame
+  for ($i=0; $i -lt $frames.Count; $i++) {
+    $fr = $frames[$i].data.frame
     $boxes = @()
     foreach ($scanDef in $collisionScanDefs) {
       $target = Parse-HexColor $scanDef.color
@@ -154,11 +146,10 @@ try {
         $regionIndex++
       }
     }
-    if ($hasPushBox -and $i -lt $pushboxFrames.Count) {
-      $pbFr = $pushboxFrames[$i].data.frame
+    if ($hasPushBox) {
       foreach ($scanDef in $pushboxScanDefs) {
         $target = Parse-HexColor $scanDef.color
-        $regions = @(Extract-Regions $pushboxBmp $pbFr $target | Where-Object { $_.Count -ge 6 })
+        $regions = @(Extract-Regions $pushboxBmp $fr $target | Where-Object { $_.Count -ge 6 })
         foreach ($points in $regions) {
           $obb = Get-OrientedBox $points
           $trackKey = $scanDef.key
@@ -179,10 +170,10 @@ try {
         }
       }
     }
-    $rootAnchor = Extract-Root $rootBmp $rootFrames[$i].data.frame (Parse-HexColor '#7082C1')
+    $rootAnchor = Extract-Root $rootBmp $fr (Parse-HexColor '#7082C1')
     $outFrames += [pscustomobject]@{
       frameIndex = $i
-      frameName = $collisionFrames[$i].name
+      frameName = $frames[$i].name
       frameRect = [pscustomobject]@{ x=$fr.x; y=$fr.y; w=$fr.w; h=$fr.h }
       boxes = $boxes
       anchors = [pscustomobject]@{ root = $rootAnchor }
@@ -190,12 +181,10 @@ try {
   }
   $result = [pscustomobject]@{
     source = [pscustomobject]@{
-      collisionAtlasJson = $CollisionAtlasJson
-      collisionAtlasPng = $CollisionAtlasPng
-      rootAtlasJson = $RootAtlasJson
-      rootAtlasPng = $RootAtlasPng
-      pushboxAtlasJson = $(if ($hasPushBox) { $PushBoxAtlasJson } else { $null })
-      pushboxAtlasPng = $(if ($hasPushBox) { $PushBoxAtlasPng } else { $null })
+      atlasJson = $AtlasJson
+      collisionPng = $CollisionPng
+      rootPng = $RootPng
+      pushboxPng = $(if ($hasPushBox) { $PushBoxPng } else { $null })
       collisionTypeColors = @($collisionScanDefs | ForEach-Object { [pscustomobject]@{ key=$_.key; type=$_.type; subtype=$_.subtype; color=$_.color } })
       pushboxColor = '#00FF88'
       rootColor = '#7082C1'
@@ -212,3 +201,4 @@ try {
   $rootBmp.Dispose()
   if ($pushboxBmp) { $pushboxBmp.Dispose() }
 }
+

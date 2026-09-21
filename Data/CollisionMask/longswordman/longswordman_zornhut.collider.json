@@ -1,11 +1,9 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_zornhut.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_zornhut.png",
-                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_zornhut.json",
-                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_zornhut.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_zornhut.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_zornhut.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_zornhut.png",
+                   "pushboxPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -31,7 +29,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-20T04:03:13.0695483Z"
+                   "generatedAtUtc":  "2026-09-20T15:39:08.6182129Z"
                },
     "frames":  [
                    {

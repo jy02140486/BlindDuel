@@ -39,10 +39,9 @@ Data/CollisionMask/{character}/       ← .collider.json 输出到这里
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/tools/extract_collision_boxes.ps1 `
-  -CollisionAtlasJson "Data/CollisionMask/{character}/{character}_{action}.json" `
-  -CollisionAtlasPng "Data/CollisionMask/{character}/{character}_{action}.png" `
-  -RootAtlasJson "Data/RootMotion/{character}/{character}_{action}.json" `
-  -RootAtlasPng "Data/RootMotion/{character}/{character}_{action}.png" `
+  -AtlasJson "Data/CollisionMask/{character}/{character}_{action}.json" `
+  -CollisionPng "Data/CollisionMask/{character}/{character}_{action}.png" `
+  -RootPng "Data/RootMotion/{character}/{character}_{action}.png" `
   -OutJson "Data/CollisionMask/{character}/{character}_{action}.collider.json"
 ```
 
@@ -59,22 +58,20 @@ $rootDir = "Data/RootMotion/$character"
 
 Get-ChildItem "$collisionDir/*.json" -Exclude "*.collider.json" | ForEach-Object {
   $action = $_.BaseName -replace "${character}_", ""
-  $collisionJson = "$collisionDir/$($_.BaseName).json"
+  $atlasJson = "$collisionDir/$($_.BaseName).json"
   $collisionPng = "$collisionDir/$($_.BaseName).png"
-  $rootJson = "$rootDir/$($_.BaseName).json"
   $rootPng = "$rootDir/$($_.BaseName).png"
   $outJson = "$collisionDir/$($_.BaseName).collider.json"
 
-  if (-not (Test-Path $rootJson)) {
-    Write-Warning "SKIP $action : missing root motion $rootJson"
+  if (-not (Test-Path $rootPng)) {
+    Write-Warning "SKIP $action : missing root motion png $rootPng"
     return
   }
 
   powershell -ExecutionPolicy Bypass -File scripts/tools/extract_collision_boxes.ps1 `
-    -CollisionAtlasJson $collisionJson `
-    -CollisionAtlasPng $collisionPng `
-    -RootAtlasJson $rootJson `
-    -RootAtlasPng $rootPng `
+    -AtlasJson $atlasJson `
+    -CollisionPng $collisionPng `
+    -RootPng $rootPng `
     -OutJson $outJson
 
   Write-Host "OK: $action -> $outJson"
