@@ -40,4 +40,3 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 主人公clash也有加速奖励
 闪躲距离过长
 独立的防御/闪避决策序列？
-移除collider脚本的冗余json
