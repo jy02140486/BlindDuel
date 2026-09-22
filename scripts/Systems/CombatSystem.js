@@ -14,9 +14,11 @@ export class CombatSystem {
         const combatants = characters.filter((c) => c?.has?.("combat"));
         const result = this.resolver.resolve(combatants, { tickCount });
 
-        // Feedback Memory: 收集本帧产生的 combat result → outcomeMap[attackerId] = { outcome, attackInstanceId }
-        // 只记录第一次（同帧多个 effect 指向同一 attacker 时优先先处理的）
+        // Feedback Memory: 收集本帧产生的 combat result
+        // outcomeMap[attackerId] → attacker-perspective outcome (现有)
+        // defenderOutcomeMap[defenderId] → defender-perspective outcome (Phase 0 新增)
         const outcomeMap = new Map();
+        const defenderOutcomeMap = new Map();
 
         for (const effect of result.effects) {
             const target = characters.find((character) => character?.id === effect.targetId);
@@ -25,8 +27,10 @@ export class CombatSystem {
                 continue;
             }
 
-            // Feedback Memory: 本 effect 是否需要产生 outcome 回传？
+            // attacker 视角 outcome（hit/miss/parried/guard_blocked/clash/interrupted）
             this.#collectOutcomeFromEffect(effect, outcomeMap);
+            // defender 视角 outcome（self:hit/guard:success/guard:broken/dodge:success/dodge:fail）
+            this.#collectDefenderOutcomeFromEffect(effect, target, defenderOutcomeMap);
 
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
@@ -159,8 +163,9 @@ export class CombatSystem {
             this._fxFlash(80);
         }
 
-        // Feedback Memory: 统一回传 outcome 给各 attacker 的 controller
+        // Feedback Memory: 统一回传 outcome
         this.#dispatchOutcomes(outcomeMap, characters);
+        this.#dispatchDefenderOutcomes(defenderOutcomeMap, characters);
 
         return result;
     }
@@ -253,6 +258,78 @@ export class CombatSystem {
                 outcome,
                 targetState: targetState ?? attackerChar.currentStateName,
                 counteredBy: defenderChar?.currentStateName ?? null
+            });
+        }
+    }
+
+    /**
+     * 从 effect 中提取 defender 视角的 outcome，写入 defenderOutcomeMap
+     * defenderOutcomeMap[defenderId] = { outcome, attackerId }
+     * 同帧同 defender 只保留第一个（先处理的为准）
+     *
+     * 映射规则（与计划文档 outcome 枚举对齐）：
+     *   hit effect + defender 在 guard       → "guard:broken"
+     *   hit effect + defender 在 dodge       → "dodge:fail"
+     *   hit effect + defender 正常状态       → "self:hit"
+     *   defenseSuccess source=guard_block    → "guard:success"
+     *   defenseSuccess source=parry          → "guard:success"
+     *   defenseSuccess source=dodge          → "dodge:success"
+     */
+    #collectDefenderOutcomeFromEffect(effect, defender, defenderOutcomeMap) {
+        const type = effect.type;
+        const ctx = effect.context ?? {};
+        const defenderId = effect.targetId;
+        if (!defenderId || defenderOutcomeMap.has(defenderId)) return;
+
+        // hit effect → defender 被击中
+        if (type === "hit") {
+            const attackerId = ctx.attackerId ?? null;
+            const defState = defender.currentStateDef;
+
+            let outcome;
+            if (defState?.guardActive === true) {
+                outcome = "guard:broken";
+            } else if (defState?.dodgeActive === true) {
+                outcome = "dodge:fail";
+            } else {
+                outcome = "self:hit";
+            }
+            defenderOutcomeMap.set(defenderId, { outcome, attackerId });
+            return;
+        }
+
+        // defenseSuccess effect → defender 成功防御
+        if (type === "defenseSuccess") {
+            const attackerId = ctx.attackerId ?? null;
+            const source = ctx.source;
+
+            let outcome;
+            if (source === "dodge") {
+                outcome = "dodge:success";
+            } else {
+                // guard_block / parry 都是 guard success
+                outcome = "guard:success";
+            }
+            defenderOutcomeMap.set(defenderId, { outcome, attackerId });
+            return;
+        }
+    }
+
+    /**
+     * 将 defender 视角的 outcome 回传给 defender 的 controller.onCombatResult
+     * （与 attacker 视角分开 dispatch，因为 outcome 枚举和方向不同）
+     */
+    #dispatchDefenderOutcomes(defenderOutcomeMap, characters) {
+        for (const [defenderId, { outcome, attackerId }] of defenderOutcomeMap) {
+            const defenderChar = characters.find(c => c?.id === defenderId);
+            if (!defenderChar?.controller?.onCombatResult) continue;
+
+            const attackerChar = attackerId ? characters.find(c => c?.id === attackerId) : null;
+            defenderChar.controller.onCombatResult({
+                outcome,
+                targetState: defenderChar.currentStateName,
+                counteredBy: attackerChar?.currentStateName ?? null,
+                perspective: "defender"
             });
         }
     }

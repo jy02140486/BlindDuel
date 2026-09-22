@@ -1,7 +1,7 @@
 import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
 import { NpcController } from "./Systems/NpcController.js";
-import { AIController } from "./Systems/AIController.js";
+import { AIController } from "./Systems/AI/AIController.js";
 import { AITuning } from "../Data/AITuning.js";
 import { createEntityFromDef } from "./SceneDefs.js";
 import { SceneVisualSystem, DEFAULT_ENVIRONMENT_CONFIG } from "./Enties/SceneVisualSystem.js";

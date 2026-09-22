@@ -1,7 +1,9 @@
-import { BaseController } from "./BaseController.js";
+import { BaseController } from "../BaseController.js";
 import { AIKnowledgeRegistry } from "./AIKnowledgeRegistry.js";
-import { ContactResolver } from "./ContactResolver.js";
-import { AITuning } from "../../Data/AITuning.js";
+import { ContactResolver } from "../ContactResolver.js";
+import { AITuning } from "../../../Data/AITuning.js";
+import { CombatMemory } from "./CombatMemory.js";
+import { CombatPosture } from "./CombatPosture.js";
 
 /**
  * AIController - AI 控制器（Phase 1：局面感知 + Utility 选招 + Action Commitment）
@@ -18,7 +20,7 @@ export class AIController extends BaseController {
     #consecutiveAttackUsage;  // { stateName, count } 连续使用同一 attack 的次数（非 attack 打断则 reset）
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
-    static #FAIL_OUTCOMES = new Set(["parried", "guard_blocked", "clash", "miss", "interrupted"]);
+
 
     constructor(character = null, options = {}) {
         super(character);
@@ -57,7 +59,7 @@ export class AIController extends BaseController {
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
 
-        // Feedback Memory: 最近战术结果存储（Step 2）
+        // Feedback Memory: 最近战术结果存储（Step 2）— Phase 3 迁移到 CombatMemory
         this.#memory = {
             entries: [],           // 最近 N 条 { state, outcome, at }
             maxEntries: 10,
@@ -69,6 +71,17 @@ export class AIController extends BaseController {
 
         // Repetition Cost: 连续使用同一 attack 的次数（Step 1）
         this.#consecutiveAttackUsage = null;
+
+        // === Layer 0: CombatMemory（Phase 0 新增）===
+        this.combatMemory = new CombatMemory();
+
+        // === Layer 1: CombatPosture（Phase 0 新增，500ms 慢变量）===
+        this.combatPosture = new CombatPosture(this.combatMemory);
+
+        // oppIdleMs / oppLastActiveMs 追踪
+        this._oppLastPhase = "none";       // opp 上一次的 phase（用于检测 phase 变化）
+        this._oppLastActiveTs = performance.now(); // 初始假设 opp 刚进入 idle → oppIdleMs=0 正确
+        this._selfJustHitByOpp = false;     // 本 tick 内 self 是否刚被 opp 击中（opp miss 判定用）
 
         // Debug 可视化
         this.debugVisible = options.debugVisible ?? true;
@@ -84,10 +97,12 @@ export class AIController extends BaseController {
     }
 
     /**
-     * Feedback Memory: CombatSystem 回传本角色攻击结果时调用
-     * Step 2 实现：存入 #memory.entries，暂不影响评分（Step 3 接入）
+     * Feedback Memory: CombatSystem 回传本角色的 combat outcome 时调用
+     *
+     * Phase 0 新增：同时把 outcome 映射到计划文档枚举，喂给 CombatMemory
+     * Phase 0 防御方视角：perspective="defender" 时是 opponent 打我 → self:hit 等
      */
-    onCombatResult({ outcome, targetState, counteredBy } = {}) {
+    onCombatResult({ outcome, targetState, counteredBy, perspective } = {}) {
         const entry = {
             state: targetState,
             outcome,
@@ -101,6 +116,43 @@ export class AIController extends BaseController {
         // Step 4 Continuity: 只有成功才更新 lastCommittedState（失败不覆盖成功记录）
         if (outcome === "hit") {
             this.#lastCommittedState = targetState;
+        }
+
+        // === Phase 3: 喂 CombatMemory + 传 stateName 做 per-state tracking ===
+        const mapped = this.#mapToCombatMemoryOutcome(outcome, perspective);
+        if (mapped) {
+            this.combatMemory.onOutcome(mapped, targetState);
+            // 标记：本 tick 内被 opp 击中过（opp miss observer 用来排除）
+            if (mapped === "self:hit" || mapped === "guard:broken" || mapped === "dodge:fail") {
+                this._selfJustHitByOpp = true;
+            }
+        }
+    }
+
+    /**
+     * 把 CombatSystem 回传的 outcome 映射到计划文档的 CombatMemory 枚举
+     *
+     * attacker 视角（perspective 未设或 undefined）：
+     *   hit / miss / parried / guard_blocked / interrupted → 计划枚举
+     *
+     * defender 视角（perspective="defender"，Phase 0 新增）：
+     *   CombatSystem 直接回传 "self:hit" / "guard:success" / "guard:broken" / "dodge:success" / "dodge:fail"
+     *   → 直接用
+     */
+    #mapToCombatMemoryOutcome(outcome, perspective) {
+        if (perspective === "defender") {
+            // defender 视角的枚举值和计划文档一致，直接用
+            return outcome; // "self:hit" | "guard:success" | "guard:broken" | "dodge:success" | "dodge:fail"
+        }
+        // attacker 视角映射
+        switch (outcome) {
+            case "hit":         return "attack:hit";
+            case "miss":        return "attack:miss";
+            case "parried":     return "attack:parried";
+            case "guard_blocked": return "attack:miss";  // 被防住 = 也算 miss
+            case "interrupted": return "attack:miss";  // 被打断 = 也算 miss
+            case "clash":       return null;             // 拼刀不算 outcome
+            default:            return null;
         }
     }
 
@@ -124,6 +176,9 @@ export class AIController extends BaseController {
             this.opponentKB = AIKnowledgeRegistry.getProfile(this.opponent);
         }
 
+        // Phase 0: tick CombatMemory（每帧衰减 pressure + 清理过期 outcomes）
+        this.combatMemory.tick(dtMs);
+
         // Action Commitment：self 正在 committed action（attack/guard/dodge）就跳过决策
         if (this.#isCommitted()) {
             this.decisionAccumulatedMs = 0; // 重置，让 committed action 有完整生命周期
@@ -137,12 +192,58 @@ export class AIController extends BaseController {
         if (this.decisionAccumulatedMs >= this.decisionIntervalMs) {
             this.decisionAccumulatedMs = 0;
             this.#makeDecision();
+
+            // Phase 0: 决策后更新 CombatPosture（吃最新的 Situation）
+            const sit = this._lastSituation ?? this.#buildSituation();
+            this.combatPosture.update(this.decisionIntervalMs, sit);
+
+            // Phase 0: opp miss observer — 检查 opp 上一 tick 是否结束攻击且 self 没被打到
+            this.#checkOppMiss();
+
+            // Phase 0: debug log（每 decision tick 一次，约 5Hz）
+            this.#logPhase0Status(sit);
         }
 
         // 更新 debug 可视化位置
         this.#updateDebugVisuals();
 
         this.applyToCharacter();
+    }
+
+    /**
+     * Phase 0: opp miss observer
+     * opp 从 "in attack state" (active/recovery) 进入 "none" → opp 的这招打完了
+     * 如果 self 这招期间没被 opp 击中 → 视为 opp miss → pressure *= 0.7
+     *
+     * 修复 v1：_selfJustHitByOpp 只在 opp 进入 active 时重置（新招开始）
+     * 不再每 tick 无条件清，确保 active→none 时 flag 恰好反映"这招打到我了吗"
+     */
+    #checkOppMiss() {
+        if (!this.opponent) return;
+
+        const oppDef = this.opponent.currentStateDef;
+        const oppPhase = oppDef?.attackActive === true
+            ? "in_attack"  // active 或 recovery 都算 attack 进行中
+            : "none";
+
+        // opp 进入新的 attack（none → in_attack）→ 重置这招的 hit 标记
+        if (this._oppLastPhase !== "in_attack" && oppPhase === "in_attack") {
+            this._selfJustHitByOpp = false;
+        }
+
+        // opp 打完收招（in_attack → none）→ 判定这招的结果
+        if (this._oppLastPhase === "in_attack" && oppPhase === "none") {
+            if (!this._selfJustHitByOpp) {
+                // 这招没打到我 → opp miss
+                this.combatMemory.onOppOutcome("miss");
+            }
+            // 无论如何，这招处理完了
+        }
+
+        this._oppLastPhase = oppPhase;
+        if (oppPhase === "in_attack") {
+            this._oppLastActiveTs = performance.now();
+        }
     }
 
     /**
@@ -168,11 +269,10 @@ export class AIController extends BaseController {
             : 0;
 
         const sit = this.#buildSituation();
-        const dist = sit.distance.toFixed(2);
 
-        // 对 self 的所有 attacks + dodges + guards 打分
         const scored = [];
 
+        // Attack / Defense 候选
         for (const atk of this.kbProfile?.attacks || []) {
             scored.push({ kind: "attack", action: atk, score: this.#scoreAttack(atk, sit) });
         }
@@ -183,30 +283,30 @@ export class AIController extends BaseController {
             scored.push({ kind: "guard", action: g, score: this.#scoreDefense(g, sit, "guard") });
         }
 
+        // Phase 2: Positioning 三候选（正式进入同池竞争）
+        const pos = this.#scorePositioning(sit);
+        scored.push({ kind: "approach", action: null, score: pos.score });
+        scored.push({ kind: "hold", action: null, score: pos.holdScore });
+        scored.push({ kind: "retreat", action: null, score: pos.retreatScore });
 
-
-        // 轻微随机扰动 + 排序
-        for (const entry of scored) {
-            entry.score *= (1 + (Math.random() - 0.5) * this.reactionVariance);
-        }
+        // 排序（#scoreAttack/#scoreDefense 已有各自 jitter，positioning 内部也有 jitter）
         scored.sort((a, b) => b.score - a.score);
 
         const best = scored[0];
 
-        // === DIAGNOSTIC LOG: decision ===
+        // === DIAGNOSTIC LOG ===
         if (this.debugVisible) {
-            const _top3 = scored.slice(0, 3).map(s =>
-                `${s.kind}:${s.action.stateName}=${s.score.toFixed(3)}`
-            ).join(" | ");
+            const _top3 = scored.slice(0, 3).map(s => {
+                const actionLabel = s.action?.stateName ?? "(pos)";
+                return `${s.kind}:${actionLabel}=${s.score.toFixed(3)}`;
+            }).join(" | ");
 
-            // 每个 attack 的完整分解：minReach/maxReach/effectiveRange/rangeFactor
             const _atkBreakdown = (this.kbProfile?.attacks || []).map(a => {
                 const s = scored.find(x => x.action === a && x.kind === "attack");
                 const r = a.range;
                 const disp = a.activeDisplacement ?? a.displacement ?? 0;
                 const fwd = disp < 0 ? -disp : 0;
                 const effR = (r?.maxReach ?? 0) + fwd + this.rangeBuffer;
-                // 算 rangeFactor（与 #scoreAttack 逻辑一致）
                 const smoothW = this.tuning.attack.distanceStartupSmooth ?? 0.3;
                 const maxR = effR * (1 + smoothW);
                 let rf = 1.0;
@@ -217,46 +317,25 @@ export class AIController extends BaseController {
                 return `${a.stateName}(minR=${(r?.minReach ?? 0).toFixed(2)} maxR=${(r?.maxReach ?? 0).toFixed(2)} effR=${effR.toFixed(2)} rf=${rf.toFixed(2)} sc=${(s?.score ?? 0).toFixed(3)})`;
             }).join(", ");
 
-            // Precompute decision outcome for single-line diagnostic (eliminates redundant close-range logs)
-            let _decisionOutcome;
-            if (best && best.score > this.tuning.committedScoreThreshold) {
-                _decisionOutcome = `COMMIT: ${best.kind}:${best.action.stateName}`;
-            } else {
-                // Inline positioning branch logic (diagnostic-only, no separate helper needed)
-                const maxReach = sit.selfMaxReach;
-                const closestMinReach = this.#getClosestMinReach();
-                const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
-                const hasBoost = sit.selfMobility?.hasActiveBoost === true;
-                const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
-                let _posBranch;
-                if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + this.rangeBuffer) {
-                    _posBranch = `retreat(threat>${retreatThreatThreshold.toFixed(2)}, dist≤${(maxReach + this.rangeBuffer).toFixed(2)})`;
-                } else if (jitteredDistance > maxReach + this.rangeBuffer) {
-                    _posBranch = `approach(dist=${sit.distance.toFixed(2)}>${(maxReach + this.rangeBuffer).toFixed(2)})`;
-                } else if (jitteredDistance > closestMinReach && jitteredDistance <= maxReach + this.rangeBuffer) {
-                    _posBranch = `hold(${closestMinReach.toFixed(2)}<dist=${sit.distance.toFixed(2)}≤${(maxReach + this.rangeBuffer).toFixed(2)})`;
-                } else {
-                    _posBranch = `retreat(dist=${sit.distance.toFixed(2)}≤closestMinReach=${closestMinReach.toFixed(2)})`;
-                }
-                _decisionOutcome = `POSITIONING: ${_posBranch}`;
-            }
+            const _posDetail = `POS: approach=${pos.score.toFixed(3)} hold=${pos.holdScore.toFixed(3)} retreat=${pos.retreatScore.toFixed(3)}`;
 
+            const _bestLabel = best?.action?.stateName ?? "(pos)";
             console.log(
                 `[AI-Diag] dist=${sit.distance.toFixed(2)} oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
-                `→ best=${best?.kind}:${best?.action?.stateName ?? "none"}(${best?.score?.toFixed(3) ?? "0"}) threshold=${this.tuning.committedScoreThreshold} ` +
-                `decision=${_decisionOutcome} attacks: ${_atkBreakdown}`
+                `→ best=${best?.kind}:${_bestLabel}(${best?.score?.toFixed(3) ?? "0"}) ` +
+                `top3=[${_top3}] ${_posDetail} attacks: ${_atkBreakdown}`
             );
         }
         // ================================
 
-        // 有足够好的 committed action 就执行
-        if (best && best.score > this.tuning.committedScoreThreshold) {
+        // Phase 2: 直接执行最高分（不再有 threshold 硬门控，positioning 已进 pool）
+        if (best && best.score > 0) {
             this.#executeCommitted(best);
-            return;
+        } else {
+            // 极端情况：所有分数都是 0 → hold（保底）
+            this.currentBehavior = "hold";
+            this.setMoveIntent({ x: 0, y: 0 });
         }
-
-        // 否则 fallback 到 positioning
-        this.#executePositioning(sit);
     }
 
     // ==================== Combat Situation ====================
@@ -360,6 +439,20 @@ export class AIController extends BaseController {
         const selfMobilityTrait = this.kbProfile?.traits?.postDefenseMobility ?? null;
         const selfHasMobilityBoost = self.hasTag("postDefenseMobilityActive");
 
+        // === Phase 0: oppIdleMs / oppLastActiveMs 追踪 ===
+        // oppLastActiveTs = opp 上一次 phase !== "none" 的时间戳
+        // oppIdleMs = opp 连续 idle (phase === "none") 的时长
+        const now = performance.now();
+        if (oppPhase !== "none") {
+            this._oppLastActiveTs = now;
+        }
+        const oppIdleMs = oppPhase === "none"
+            ? (now - (this._oppLastActiveTs || now))
+            : 0;
+        const oppLastActiveMs = oppPhase === "none"
+            ? (this._oppLastActiveTs > 0 ? (now - this._oppLastActiveTs) : 0)
+            : 0;
+
         // === DIAGNOSTIC LOG: opp attack perception ===
         if (oppAttackProfile && this.debugVisible) {
             const _ap = oppAttackProfile;
@@ -374,7 +467,7 @@ export class AIController extends BaseController {
         }
         // ===============================================
 
-        return {
+        const situation = {
             distance,
             self:   { stateName: selfState, def: selfDef, normTime: selfNormTime },
             opp:    { stateName: oppState, def: oppDef, normTime: oppNormTime,
@@ -382,17 +475,24 @@ export class AIController extends BaseController {
                       guardType: oppGuardType, isDodging: oppIsDodging, canParry: oppCanParry },
             oppThreat,
             oppVulnerable,
+            // Phase 0 新增
+            oppIdleMs,
+            oppLastActiveMs,
             selfMaxReach,
             // Step 2 新增：供 Step 4 Distance Consequence 消费
             preferredCombatRange,
             distanceError,
-            now: performance.now(),
+            now,
             selfMobility: {
                 hasTrait: selfMobilityTrait?.enabled === true,
                 hasActiveBoost: selfHasMobilityBoost,
                 traitConfig: selfMobilityTrait
             }
         };
+
+        // 缓存，供 Phase 0 Posture.update 消费（每 decision tick 一次）
+        this._lastSituation = situation;
+        return situation;
     }
 
     /**
@@ -419,35 +519,13 @@ export class AIController extends BaseController {
     // ==================== Utility 评分 ====================
 
     /**
-     * Feedback Memory: 计算某个 stateName 的 recent tactical adaptation
-     * 返回 { consecutiveFail, consecutiveSuccess }
-     * 只看最近 10 条里 stateName 匹配的、且未过期的（< decayMs）
-     *
-     * 关键修复：过去的失败不应该永久累积。
-     * 5 秒内没有新失败 → consecutiveFail 归零 → attack score 回升 → AI 重新敢出招。
+     * [DEPRECATED Phase 3] 迁移到 CombatMemory.getAdaptation(stateName)。
+     * 暂时保留作为 wrapper，内部改调 combatMemory.getAdaptation（读映射后的 outcomes）。
+     * 但旧 #memory.entries 仍存原始枚举，所以这个 wrapper 已不等价于原始实现 — 直接调 combatMemory.getAdaptation 更准确。
      */
     #computeAdaptationFactor(stateName) {
-        const now = performance.now();
-        const decayMs = this.#memory.decayMs ?? 5000;
-
-        // 清理过期条目 — 同时让 decay 生效
-        this.#memory.entries = this.#memory.entries.filter(e => (now - e.at) < decayMs);
-
-        const recent = this.#memory.entries.filter(e => e.state === stateName);
-
-        let consecutiveFail = 0;
-        for (let i = recent.length - 1; i >= 0; i--) {
-            if (AIController.#FAIL_OUTCOMES.has(recent[i].outcome)) consecutiveFail++;
-            else break;
-        }
-
-        let consecutiveSuccess = 0;
-        for (let i = recent.length - 1; i >= 0; i--) {
-            if (recent[i].outcome === "hit") consecutiveSuccess++;
-            else break;
-        }
-
-        return { consecutiveFail, consecutiveSuccess };
+        // 过渡 wrapper：读 CombatMemory 的 per-state tracking
+        return this.combatMemory.getAdaptation(stateName);
     }
 
     /**
@@ -580,8 +658,9 @@ export class AIController extends BaseController {
         // 距离接近 range 上限 → 微加分（稳定命中点，Step 1：与 effectiveRange 对齐）
         if (sit.distance >= range && sit.distance <= effectiveRange) score += this.tuning.attack.rangeEdgeBonus;
 
-        // ---- Feedback Memory Step 3: Adaptation 调节器 ----
-        const adaptation = this.#computeAdaptationFactor(attack.stateName);
+        // ---- Phase 3 Feedback Memory: Adaptation 调节器 ----
+        // 改调 CombatMemory.getAdaptation（映射后的 outcomes，per-state tracking）
+        const adaptation = this.combatMemory.getAdaptation(attack.stateName);
 
         // 失败累积惩罚（第 1 次半罚，第 2 次起满罚 + 累积）
         let failDelta = 0;
@@ -629,6 +708,14 @@ export class AIController extends BaseController {
         // ---- Phase 2: Continuous Range Utility（距离平滑衰减）----
         score *= rangeFactor;
 
+        // ---- Phase 1: Posture multiplier（Layer 1 慢变量）----
+        // neutral = 1.0 不变，DEFENSIVE/CAUTIOUS 时压低 attack 分
+        score *= this.combatPosture.attackMultiplier;
+
+        // Phase 1: per-attack 偏好（角色 aiProfile.attackPreferences，默认全 1.0）
+        const pref = this.tuning?.aiProfile?.attackPreferences?.[attack.stateName] ?? 1.0;
+        score *= pref;
+
         return score;
     }
 
@@ -646,8 +733,34 @@ export class AIController extends BaseController {
         const oppAtk = sit.opp.attackProfile;
 
         // --- 问题 2a: 对手有没有在攻击？---
-        if (!oppAtk || oppPhase === "none" || oppPhase === "recovery") {
-            return 0; // 没攻击或已收招，防御无意义
+        // Phase 1 改动：oppPhase === "none" 不再硬 return 0
+        // 新增 defensiveReadiness 分支 — opp idle 2s+ 时 guard 可以有小分进候选池
+        // 这是让 AI 在对手收招后还能保持警惕的关键改动
+        if (oppPhase === "recovery") {
+            return 0; // 对手已收招，防御意义不大
+        }
+
+        if (oppPhase === "none") {
+            // Phase 1 新增：defensiveReadiness — 对手 idle 时的警惕待命
+            // 条件：pressure 高（被打怕了）+ opp idle 足够久（2s+）
+            // 分数很小（0.08 * smoothstep），保证只有 attack 分也低时 guard 才会赢
+            // 这样既能警惕待命，又不会变成"没事就瞎防"
+            const pressureNorm = this.combatMemory?.pressureNorm ?? 0;
+            const oppIdleMs = sit.oppIdleMs ?? 0;
+            const smoothstep = (x, e0, e1) => {
+                if (e1 <= e0) return x <= e0 ? 0 : 1;
+                const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+                return t * t * (3 - 2 * t);
+            };
+            const readiness = smoothstep(oppIdleMs, 800, 2000);
+            // pressureNorm 加权：没被打过时（pressure=0）readiness 也不给分
+            const score = 0.08 * readiness * pressureNorm;
+            // Phase 1: 这里不乘 defenseMultiplier（defensiveReadiness 是独立小分支）
+            return score;
+        }
+
+        if (!oppAtk) {
+            return 0; // 无攻击 profile，防御无从谈起
         }
 
         // --- 问题 1a: 这招能不能够到我？---
@@ -747,18 +860,127 @@ export class AIController extends BaseController {
         const consequenceAdjustment = Math.max(-dc.clamp, Math.min(dc.clamp, -consequenceDelta * dc.multiplier));
         score += consequenceAdjustment;
 
+        // ---- Phase 1: Posture multiplier（Layer 1 慢变量）----
+        // neutral = 1.0 不变，CAUTIOUS/DEFENSIVE 时提高 defense 分
+        score *= this.combatPosture.defenseMultiplier;
+
         return Math.max(0, Math.min(1, score));
     }
 
-    // ==================== 执行 ====================
+    /**
+     * Phase 2: Positioning Utility — approach / hold / retreat 三候选正式评分
+     *
+     * 替代旧的硬编码 #executePositioning 阈值逻辑。
+     * 放进和 attack/defense 同一个 pool 里选最高分。
+     *
+     * distanceHunger: 距离越远越想靠近（smoothstep 连续值，非硬门控）
+     * 三个 positioning 动作乘入 Posture multiplier（advance/retreat）
+     * hold 不乘 multiplier（是基线）
+     */
+    #scorePositioning(sit) {
+        const closestMinReach = this.#getClosestMinReach();
+        // 和 #scoreAttack 的 effectiveRange 对齐：maxReach + forward displacement boost + rangeBuffer
+        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            return disp < 0 ? -disp : 0;
+        }));
+        const maxEffReach = this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
+        const distance = sit.distance;
+
+        // distanceHunger: distance 在 maxEffReach*1.5 ~ maxEffReach*3 之间 smoothstep 从 0→1
+        const smoothstep = (x, e0, e1) => {
+            if (e1 <= e0) return x <= e0 ? 0 : 1;
+            const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+            return t * t * (3 - 2 * t);
+        };
+        const farThreshold = maxEffReach * 3;
+        const nearFarZone = maxEffReach * 1.5;
+        const distanceHunger = smoothstep(distance, nearFarZone, farThreshold);
+
+        // Posture multiplier（Phase 1 已接线）
+        const advMult = this.combatPosture.advanceMultiplier;
+        const retMult = this.combatPosture.retreatMultiplier;
+
+        // === Approach ===
+        // 远距离才想靠近（distanceHunger smoothstep 加权）
+        // 分数低于 attack.baseWeight(0.4)，让 attack 在范围内赢
+        let approachScore = 0;
+        if (distance > maxEffReach) {
+            approachScore = 0.35 * Math.min(1, distanceHunger + 0.5);
+        }
+        // 攻击圈内不需要 approach（hold/attack 应该赢）
+        approachScore *= advMult;
+
+        // === Hold ===
+        // 攻击圈内保底（hold 住准备攻击）
+        // 分数低于 attack.baseWeight(0.4)，让 attack 正常赢
+        let holdScore = 0;
+        if (distance > closestMinReach && distance <= maxEffReach) {
+            holdScore = 0.15;
+            // cooldown 中 → hold 加分（等攻击冷却）
+            if (this.lastAttackTime !== null
+                && sit.now - this.lastAttackTime < this.attackCooldownMs) {
+                holdScore += 0.08;
+            }
+        }
+        // hold 不乘 Posture multiplier（是基线）
+
+        // === Retreat ===
+        // 太近必须退（closestMinReach）
+        // oppThreat 高也想拉开
+        let retreatScore = 0;
+        if (distance <= closestMinReach + 0.3) {
+            retreatScore = 0.5; // 底线：真太近必须退
+        }
+        const hasBoost = sit.selfMobility?.hasActiveBoost === true;
+        const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
+        if (sit.oppThreat > retreatThreatThreshold && distance <= maxEffReach) {
+            retreatScore = Math.max(retreatScore, 0.3);
+        }
+        retreatScore *= retMult;
+
+        // 加微小随机扰动打破 tie（和 attack/defense 一样）
+        const jitter = (1 + (Math.random() - 0.5) * this.reactionVariance);
+        return {
+            kind: "approach",
+            action: null,
+            score: Math.max(0, approachScore) * jitter,
+            holdScore: Math.max(0, holdScore) * jitter,
+            retreatScore: Math.max(0, retreatScore) * jitter,
+        };
+    }
 
     /**
-     * 执行 committed action：停位 + queueCommand
+     * 执行 committed action
+     * Phase 0: 同时记录 COMMIT 到 CombatMemory
+     * Phase 2: positioning kind（approach/hold/retreat）只设 moveIntent，不 queueCommand
      */
     #executeCommitted({ kind, action }) {
         this.currentBehavior = kind;
+
+        // Phase 2: Positioning 三候选 — 只设 moveIntent，没有 stateName 可 queue
+        if (kind === "approach" || kind === "hold" || kind === "retreat") {
+            if (kind === "approach") {
+                this.setMoveIntent({ x: -1, y: 0 });  // AI 在右，向左=靠近对手
+            } else if (kind === "retreat") {
+                this.setMoveIntent({ x: 1, y: 0 });   // 向右=远离对手
+            } else {
+                this.setMoveIntent({ x: 0, y: 0 });   // hold
+            }
+            // Phase 0: 记录 COMMIT（positioning 也算一次 commit）
+            this.combatMemory.pushCommit(kind, kind);
+            // positioning 打断连续 attack
+            this.#consecutiveAttackUsage = null;
+            return;
+        }
+
+        // Attack / Defense — 原逻辑
         this.setMoveIntent({ x: 0, y: 0 });
         this.queueCommand(action.stateName);
+
+        // Phase 0: 记录 COMMIT
+        this.combatMemory.pushCommit(kind, action.stateName);
+
         if (kind === "attack") {
             this.lastAttackTime = performance.now();
             // Step 1: Repetition Cost 计数器更新
@@ -768,91 +990,35 @@ export class AIController extends BaseController {
                 this.#consecutiveAttackUsage = { stateName: action.stateName, count: 1 };
             }
         } else {
-            // dodge / guard / positioning 打断连续 attack → reset
+            // dodge / guard 打断连续 attack → reset
             this.#consecutiveAttackUsage = null;
         }
     }
 
     /**
-     * Positioning fallback：根据距离和 threat 选 approach / hold / retreat
+     * Phase 0: debug log — 每 decision tick 输出 Memory + Posture 状态
+     * 验证 Posture 对事件响应合理后，Phase 1 再接入 Utility
      */
-    #executePositioning(sit) {
-        const maxReach = sit.selfMaxReach;
-        // 所有 attack 中最贴脸的 minReach — 只有 distance < 此值才真正"哪招都打不到"
-        const closestMinReach = this.#getClosestMinReach();
-        const jitteredDistance = sit.distance * (1 + (Math.random() - 0.5) * this.reactionVariance);
-        const hasBoost = sit.selfMobility?.hasActiveBoost === true;
+    #logPhase0Status(sit) {
+        if (!this.debugVisible) return;
+        if (!this.combatMemory || !this.combatPosture) return;
 
-        const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
+        const mem = this.combatMemory.stats;
+        const cur = this.combatPosture.current;
+        const tgt = this.combatPosture.target;
+        const oppIdleSec = (sit?.oppIdleMs ?? 0) / 1000;
 
-        // 高威胁时优先后撤保持距离
-        if (sit.oppThreat > retreatThreatThreshold && jitteredDistance <= maxReach + this.rangeBuffer) {
-            this.currentBehavior = "retreat";
-            this.#retreat();
-            return;
-        }
-
-        if (jitteredDistance > maxReach + this.rangeBuffer) {
-            this.currentBehavior = "approach";
-            this.#approach();
-        } else if (jitteredDistance > closestMinReach && jitteredDistance <= maxReach + this.rangeBuffer) {
-            // 可攻击区：至少有一招能打到，hold 住准备 attack
-            this.currentBehavior = "hold";
-            this.#holdPosition();
-        } else {
-            // distance <= closestMinReach：真正"太近，哪招都打不到" → retreat
-            this.currentBehavior = "retreat";
-            this.#retreat();
-        }
+        console.log(
+            `[Phase0] oppIdleMs=${(oppIdleSec).toFixed(1)}s ` +
+            `oppPhase=${sit?.opp?.phase ?? "?"} oppVuln=${(sit?.oppVulnerable ?? 0).toFixed(2)} | ` +
+            `Mem: pressure=${mem.pressure} consecMiss=${mem.consecutiveMisses} outCnt=${mem.outcomesCount} | ` +
+            `Posture: cur={att=${cur.attackMultiplier},def=${cur.defenseMultiplier},adv=${cur.advanceMultiplier},ret=${cur.retreatMultiplier}} ` +
+            `tgt={att=${tgt.attackMultiplier},def=${tgt.defenseMultiplier},adv=${tgt.advanceMultiplier},ret=${tgt.retreatMultiplier}} ` +
+            `→ ${cur.label}`
+        );
     }
 
-    /**
-     * 接近对手（向左走）
-     */
-    #approach() {
-        this.setMoveIntent({ x: -1, y: 0 });
-    }
-
-    /**
-     * 后退（向右走）
-     */
-    #retreat() {
-        this.setMoveIntent({ x: 1, y: 0 });
-    }
-
-    /**
-     * 保持位置
-     */
-    #holdPosition() {
-        this.setMoveIntent({ x: 0, y: 0 });
-    }
-
-    /**
-     * 发起攻击
-     */
-    #attack() {
-        this.setMoveIntent({ x: 0, y: 0 });
-
-        const attack = this.#selectAttack();
-        if (attack) {
-            this.queueCommand(attack.stateName);
-            this.lastAttackTime = performance.now();
-        }
-    }
-
-    /**
-     * 选择攻击招式
-     * 简单策略：随机选择一个可用的攻击
-     */
-    #selectAttack() {
-        if (!this.kbProfile || !this.kbProfile.attacks || this.kbProfile.attacks.length === 0) {
-            return null;
-        }
-
-        const attacks = this.kbProfile.attacks;
-        const idx = Math.floor(Math.random() * attacks.length);
-        return attacks[idx];
-    }
+    // ==================== 距离辅助 ====================
 
     /**
      * 获取与对手的距离（AI 在右，玩家在左，距离为正）

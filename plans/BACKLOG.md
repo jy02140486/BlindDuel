@@ -40,3 +40,48 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 主人公clash也有加速奖励
 闪躲距离过长
 独立的防御/闪避决策序列？
+
+## AI 系统（Phase 4+）
+
+> 触发：设计 Rabble profile（精于防反、opp 出重击→伺机轻击截断、积极走位）时发现现有 7 个 knob 能配 ~70%，但三个核心特征表达不了。
+> 关联文档：`docs/AI系统说明.MD` Section 10
+> 原则：Phase 4 先落地现有 7 个 knob（见下 Rabble 草案），跑实际效果；缺口按 B2→B1→B3 顺序按需补，不要为一个角色一次加一堆 knob。
+
+### Rabble 草案（Phase 4 可直接用）
+
+```json
+{ "aiProfile": {
+  "baseAggression":0.9, "baseDefense":1.2, "decayAlpha":0.25,
+  "distanceAppetite":0.8, "retreatDesire":0.5, "repetitionCostRate":0.08,
+  "attackPreferences": {"thrust":1.5, "swing":0.6, "dash":1.2}
+}}
+```
+
+预期效果：defenseMult 基准偏高→opp 出招时更早进 guard；alpha=0.25→攻防切换快；attackPreferences→优先 thrust。
+
+### B1: 不区分 opp 出什么招
+
+| 项 | 说明 |
+|----|------|
+| 现状 | `Situation` 只有 oppPhase + oppVulnerable + oppThreat，没有 opp 当前 stateName / attackProfile |
+| 缺口 | 无法针对 opp 招式类型差异化 preemptive（opp 出 swing 想截断，出 thrust 赶不上就不抢）|
+| 补法 | 1) `#buildSituation` 从 opp 已 committed 的 state 查当前 attackProfile；2) `#scoreAttack` 的 startupFactor 改成和 opp startupMs 比 |
+| 优先级 | 中 |
+
+### B2: 没有 defensePreferences
+
+| 项 | 说明 |
+|----|------|
+| 现状 | `aiProfile` 只有 `attackPreferences`，没有 per-defense-state 偏好 |
+| 缺口 | Rabble 想让 parry 分比 guard 高做不到，只能靠 `baseDefense` 整体拉防御意愿 |
+| 补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称）|
+| 优先级 | 高（改动最小，性价比最高）|
+
+### B3: positioning 只有一维推拉
+
+| 项 | 说明 |
+|----|------|
+| 现状 | approach/hold/retreat 只改前后距离，没有 strafe（左右侧移）|
+| 缺口 | "积极走位获取机会"想包括绕侧、拉角度，但 distanceAppetite 只能前后推拉 |
+| 补法 | 大改。两个方向：a) 加 `strafeLeft/strafeRight` 进候选池；b) 用更复杂的位置目标（opp 侧面 45° 扇区）。需和 combat movement 系统对齐 |
+| 优先级 | 低（大改，最后考虑）|

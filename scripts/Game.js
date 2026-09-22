@@ -26,7 +26,7 @@ import { loadDataAssets } from "./DataLoader.js";
 import { AudioManager } from "./Systems/AudioManager.js";
 import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
 import { AnimationEventBus } from "./Systems/AnimationEventBus.js";
-import { AIKnowledgeRegistry } from "./Systems/AIKnowledgeRegistry.js";
+import { AIKnowledgeRegistry } from "./Systems/AI/AIKnowledgeRegistry.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
