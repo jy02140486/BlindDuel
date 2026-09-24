@@ -282,7 +282,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0, 0, 0.2, 0.7, -0.4]
+      "frameSpeeds": [0, 0, 0.7, 1.2, -0.4]
     },
     "guard": {
       "clip": "guard",

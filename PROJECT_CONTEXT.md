@@ -46,6 +46,11 @@ py .\.serve.ps1
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`
+- AI 系统（四层分离架构，详见 `docs/AI系统说明.MD`）：
+  - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning）
+  - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach）
+  - Layer 0 纯数据：`scripts/Systems/AI/CombatMemory.js`（pressure/outcomes/getAdaptation）
+  - Layer 1 慢变量姿态：`scripts/Systems/AI/CombatPosture.js`（attackMult/defenseMult/low-pass smoothing）
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
 - 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
@@ -86,6 +91,7 @@ py .\.serve.ps1
 - 动画事件资源目录：`Data/AnimationEvents/<char>/*.events.json`（sidecar 模式，与 atlas 对齐；战斗角色每 clip 一文件，NPC 一文件含所有 clip）
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
+- AI 系统说明：`docs/AI系统说明.MD`（四层架构 + 配置位置 + 调参索引 + aiProfile 指南）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
@@ -257,8 +263,10 @@ BattleMode / ExploreMode.updateRender()
 ```
 InputSystem (scripts/Systems/InputSystem.js)
   -> PlayerController (scripts/Systems/PlayerController.js)
-  -> AIController (scripts/Systems/AIController.js)
-     -> AIKnowledgeRegistry (scripts/Systems/AIKnowledgeRegistry.js)
+  -> AIController (scripts/Systems/AI/AIController.js)
+     -> CombatMemory (scripts/Systems/AI/CombatMemory.js)     // Layer 0
+     -> CombatPosture (scripts/Systems/AI/CombatPosture.js)   // Layer 1
+     -> AIKnowledgeRegistry (scripts/Systems/AI/AIKnowledgeRegistry.js)
   -> NpcController (scripts/Systems/NpcController.js)
   -> TestController (scripts/Systems/TestController.js)
   -> DummyController (scripts/Systems/DummyController.js)

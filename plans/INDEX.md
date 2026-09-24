@@ -1,6 +1,20 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前没有进行中的单项计划，剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
+> 当前进行中：Phase 4 aiProfile 角色级配置落地（见下方 Update Log）。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
+
+## Update Log (2026-09-22)
+- **AI 多层决策解耦 Phase 0-3 全部落地**：Memory → Posture → Situation → Utility 四层分离架构
+- Phase 0（纯计算只 log 不接入）：新建 `CombatMemory.js`（Layer 0，outcomes/pressure/consecutiveMisses + per-state tracking getAdaptation）+ `CombatPosture.js`（Layer 1，1.0-centered multipliers + 500ms tick + low-pass smoothing）+ defender-perspective outcome 映射 + opp miss observer
+- Phase 1（接入 Utility）：Posture multipliers 乘入 `#scoreAttack`/`#scoreDefense`；新增 defensiveReadiness 小分支（opp idle 2s+ + pressure>0 时 guard 有分）
+- Phase 2（Positioning 升为正式候选）：`#scorePositioning` 返回 approach/hold/retreat 三分数进同一 pool 选最高分（删除 committedScoreThreshold 硬门控 + fallback positioning）；hold 边界对齐 attack effectiveRange（加 activeDisplacement 向前位移）；调平 positioning 基础分低于 attack.baseWeight 保证 attack 正常赢
+- Phase 3（Feedback Memory 迁移）：`CombatMemory.onOutcome` 加可选 stateName 参数 → #perStateOutcomes Map per-state tracking → 新增 getAdaptation API；AIController.#scoreAttack 改调 combatMemory.getAdaptation；旧 #computeAdaptationFactor 标记 deprecated wrapper
+- AI/ 子目录：AIController + AIKnowledgeRegistry + CombatMemory + CombatPosture 全部移入 `scripts/Systems/AI/`
+- Bug 修复：pressure 时间衰减从每帧 ×0.995 改为 ×0.995^(dtMs/500)（half-life ≈ 135s）；oppIdleMs 初始值 performance.now() 确保首帧非 0；opp miss observer 加 `_selfJustHitByOpp` 守卫防误触发 pressure×0.7
+- 新建文档：`docs/AI系统说明.MD`（四层架构 + 配置位置 + 调参索引 + aiProfile 指南 + 已知缺口）
+- Backlog：`plans/BACKLOG.md` 追加 AI 系统 section（Rabble 草案 profile + B1 不区分 opp 招式 / B2 无 defensePreferences / B3 positioning 只有一维 三个表达缺口）
+- 涉及文件：CombatMemory.js / CombatPosture.js / AIController.js（重写 Utility 评分 + #makeDecision pool 选择）/ CombatSystem.js（defender-perspective outcome）/ Game.js + Scene.js（import 路径）/ AITuning.js（保留为 neutral baseline）
+- 设计参考：`plans/26.9.21 AI多层决策解耦计划.MD` + `commits_detailed/26.9.22 AI多层决策解耦.MD`
+- 下一步：Phase 4 aiProfile 角色级配置落地（StateGraphDef JSON 加 aiProfile → AIKnowledgeRegistry 读取 → CombatPosture 构造时 override tuning），Rabble/教学/精英敌人示例
 
 ## Update Log (2026-09-18)
 - **版边 Pushback 三轮迭代全部落地**：attacker 在 victim 被推至边界时反向被推离，仅边界场景触发（victim 到边界距离 < 1.0m），开阔地不推；pushback 距离从 victimKnockback × 系数计算（重招远于轻招），非固定值
