@@ -1,0 +1,276 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_throw.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_throw.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_throw.png",
+                   "pushboxPng":  "Data/PushBox/longswordman/longswordman_throw.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-09-24T14:54:42.3433769Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_throw 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  44.5,
+                                         "cy":  60,
+                                         "w":  57,
+                                         "h":  26,
+                                         "angle":  90,
+                                         "pixelCount":  1482
+                                     },
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  56,
+                                         "cy":  105.5,
+                                         "w":  26,
+                                         "h":  19,
+                                         "angle":  90,
+                                         "pixelCount":  494
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40.5,
+                                         "cy":  111,
+                                         "w":  42,
+                                         "h":  25,
+                                         "angle":  0,
+                                         "pixelCount":  1050
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  118.5
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_throw 1.ase",
+                       "frameRect":  {
+                                         "x":  160,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  36.5,
+                                         "cy":  59.5,
+                                         "w":  60,
+                                         "h":  32,
+                                         "angle":  90,
+                                         "pixelCount":  1920
+                                     },
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  52.5,
+                                         "cy":  108,
+                                         "w":  29,
+                                         "h":  18,
+                                         "angle":  90,
+                                         "pixelCount":  522
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40.5,
+                                         "cy":  111,
+                                         "w":  42,
+                                         "h":  25,
+                                         "angle":  0,
+                                         "pixelCount":  1050
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  118.5
+                                                },
+                                       "hand":  {
+                                                    "cx":  18.5,
+                                                    "cy":  21.5
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_throw 2.ase",
+                       "frameRect":  {
+                                         "x":  320,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_4",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  59.5,
+                                         "cy":  67,
+                                         "w":  59,
+                                         "h":  24,
+                                         "angle":  90,
+                                         "pixelCount":  1416
+                                     },
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  87,
+                                         "cy":  52,
+                                         "w":  21,
+                                         "h":  13,
+                                         "angle":  0,
+                                         "pixelCount":  273
+                                     },
+                                     {
+                                         "id":  "hitbox_6",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  62,
+                                         "cy":  111,
+                                         "w":  23,
+                                         "h":  17,
+                                         "angle":  90,
+                                         "pixelCount":  391
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40.5,
+                                         "cy":  111,
+                                         "w":  42,
+                                         "h":  25,
+                                         "angle":  0,
+                                         "pixelCount":  1050
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  118.5
+                                                },
+                                       "hand":  {
+                                                    "cx":  92,
+                                                    "cy":  49
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_throw 3.ase",
+                       "frameRect":  {
+                                         "x":  480,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_7",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  57,
+                                         "cy":  61.5,
+                                         "w":  60,
+                                         "h":  29,
+                                         "angle":  90,
+                                         "pixelCount":  1740
+                                     },
+                                     {
+                                         "id":  "hitbox_8",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  83,
+                                         "cy":  50.5,
+                                         "w":  19,
+                                         "h":  14,
+                                         "angle":  0,
+                                         "pixelCount":  266
+                                     },
+                                     {
+                                         "id":  "hitbox_9",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  61.5,
+                                         "cy":  111,
+                                         "w":  27,
+                                         "h":  20,
+                                         "angle":  90,
+                                         "pixelCount":  540
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  40.5,
+                                         "cy":  111,
+                                         "w":  42,
+                                         "h":  25,
+                                         "angle":  0,
+                                         "pixelCount":  1050
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  38.5,
+                                                    "cy":  118.5
+                                                },
+                                       "hand":  {
+                                                    "cx":  108,
+                                                    "cy":  44
+                                                }
+                                   }
+                   }
+               ]
+}

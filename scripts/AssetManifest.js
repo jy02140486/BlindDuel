@@ -30,7 +30,8 @@ export const ASSET_MANIFEST = {
             eat: "./Art/Sprite/longswordman/longswordman_eat.json",
             drink: "./Art/Sprite/longswordman/longswordman_drink.json",
             topack: "./Art/Sprite/longswordman/longswordman_topack.json",
-            sleep: "./Art/Sprite/longswordman/longswordman_sleep.json"
+            sleep: "./Art/Sprite/longswordman/longswordman_sleep.json",
+            throw: "./Art/Sprite/longswordman/longswordman_throw.json"
         },
         rabble: {
             idle: "./Art/Sprite/rabble_stick/rabble_stick_idle.json",
@@ -94,7 +95,8 @@ export const ASSET_MANIFEST = {
             clash: "./Data/CollisionMask/longswordman/longswordman_clash.collider.json",
             hit: "./Data/CollisionMask/longswordman/longswordman_hit.collider.json",
             defeated: "./Data/CollisionMask/longswordman/longswordman_defeated.collider.json",
-            sleep: "./Data/CollisionMask/longswordman/longswordman_sleep.collider.json"
+            sleep: "./Data/CollisionMask/longswordman/longswordman_sleep.collider.json",
+            throw: "./Data/CollisionMask/longswordman/longswordman_throw.collider.json"
         },
         rabble: {
             idle: "./Data/CollisionMask/rabble_stick/rabble_stick_idle.collider.json",
@@ -124,7 +126,8 @@ export const ASSET_MANIFEST = {
             thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json",
             quart: "./Data/AnimationEvents/longswordman/longswordman_quart.events.json",
             sheath: "./Data/AnimationEvents/longswordman/longswordman_sheath.events.json",
-            draw: "./Data/AnimationEvents/longswordman/longswordman_draw.events.json"
+            draw: "./Data/AnimationEvents/longswordman/longswordman_draw.events.json",
+            throw: "./Data/AnimationEvents/longswordman/longswordman_throw.events.json"
         },
         rabble: {
             swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",

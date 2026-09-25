@@ -71,6 +71,31 @@ export class CombatCharacter extends CharacterBase {
         return !!(this._lastAttackHadHit || (id && this._resolvedAttackIds.has(id)));
     }
 
+    /**
+     * Get hand anchor position in world coordinates for the current animation frame.
+     * Used by ThrowComponent/Phase 3c to spawn Projectile at the hand's release point.
+     * @returns {{ x: number, y: number, z: number } | null} null if no hand anchor on this frame
+     */
+    getHandAnchorWorld() {
+        const clipName = this.animation.currentClipName;
+        const clipDef = this.config?.clips?.[clipName];
+        const colliderClip = clipDef?.colliderData;
+        const frameIndex = this.animation.currentFrameIndex;
+        const colliderFrame = colliderClip?.frames?.[frameIndex];
+        const hand = colliderFrame?.anchors?.hand;
+        const rootAnchor = colliderFrame?.anchors?.root;
+
+        if (!hand || !rootAnchor) return null;
+
+        // Same conversion formula as getCombatSnapshot box centers:
+        // world = root.position + (pixel_offset_from_root) * pxToWorld
+        return {
+            x: this.root.position.x + (hand.cx - rootAnchor.cx) * this.pxToWorld,
+            y: this.root.position.y + (rootAnchor.cy - hand.cy) * this.pxToWorld,
+            z: this.root.position.z
+        };
+    }
+
     getBlockerAabb() {
         const halfW = 20 * this.pxToWorld;
         const halfH = 12 * this.pxToWorld;

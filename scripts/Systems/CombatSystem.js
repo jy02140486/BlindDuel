@@ -1,4 +1,5 @@
 import { ContactResolver } from "./ContactResolver.js";
+import { ProjectileContactResolver } from "./ProjectileContactResolver.js";
 import { CombatTuning } from "../../Data/CombatTuning.js";
 
 export class CombatSystem {
@@ -6,21 +7,48 @@ export class CombatSystem {
         this.tuning = options.combatTuning ?? CombatTuning;
         // ContactResolver 接收同一 combatTuning 对象，保证 resolve 阶段和 effect 处理阶段使用同一套手感参数
         this.resolver = options.resolver ?? new ContactResolver({ ...options, combatTuning: this.tuning });
+        this.projectileResolver = options.projectileResolver ?? new ProjectileContactResolver({ debugTrace: options.debugTrace });
         this.debugTrace = options.debugTrace ?? false;
         this.cameraManager = options.cameraManager ?? null;
     }
 
     fixedUpdate(characters = [], tickCount = null, worldContext = {}) {
         const combatants = characters.filter((c) => c?.has?.("combat"));
-        const result = this.resolver.resolve(combatants, { tickCount });
+        const projectiles = worldContext.projectiles ?? [];
+
+        // 1. Character↔character resolve (completely untouched — existing pipeline)
+        const characterResult = this.resolver.resolve(combatants, { tickCount });
+
+        // 2. Projectile↔character resolve (new — cut-first, hit-second)
+        const projectileResult = this.projectileResolver
+            ? this.projectileResolver.resolve(projectiles, combatants)
+            : { effects: [] };
+
+        // 3. Merge effects — process both streams in one loop
+        const allEffects = [...characterResult.effects, ...projectileResult.effects];
 
         // Feedback Memory: 收集本帧产生的 combat result
-        // outcomeMap[attackerId] → attacker-perspective outcome (现有)
-        // defenderOutcomeMap[defenderId] → defender-perspective outcome (Phase 0 新增)
+        // outcomeMap[attackerId] → attacker-perspective outcome
+        // defenderOutcomeMap[defenderId] → defender-perspective outcome
         const outcomeMap = new Map();
         const defenderOutcomeMap = new Map();
+        const projectileManager = worldContext.projectileManager ?? null;
 
-        for (const effect of result.effects) {
+        for (const effect of allEffects) {
+            // --- Projectile-only effects (no character target lookup) ---
+            if (effect.type === "projectile_destroy") {
+                if (projectileManager && effect.targetId) {
+                    projectileManager.requestDestroy(effect.targetId);
+                }
+                continue;
+            }
+
+            if (effect.type === "projectile_cut") {
+                // v1: informational only — Future: camera flash / audio cue
+                continue;
+            }
+
+            // --- Character-targeted effects (existing pipeline) ---
             const target = characters.find((character) => character?.id === effect.targetId);
 
             if (!target) {
@@ -167,7 +195,7 @@ export class CombatSystem {
         this.#dispatchOutcomes(outcomeMap, characters);
         this.#dispatchDefenderOutcomes(defenderOutcomeMap, characters);
 
-        return result;
+        return { effects: allEffects, frameContacts: characterResult.frameContacts };
     }
 
     /**

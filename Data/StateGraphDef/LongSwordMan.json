@@ -10,7 +10,7 @@
     }
   },
   "inputs": {
-    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep"],
+    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep", "throw"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -117,9 +117,28 @@
           ]
         },
         {
+          "to": "throw",
+          "when": [
+            { "command": "throw" }
+          ]
+        },
+        {
           "to": "move",
           "when": [
             { "parameter": "moveMagnitude", "op": ">", "value": 0.2 }
+          ]
+        }
+      ]
+    },
+    "throw": {
+      "clip": "throw",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
           ]
         }
       ]
@@ -169,6 +188,12 @@
           "to": "idle",
           "when": [
             { "parameter": "moveMagnitude", "op": "<=", "value": 0.2 }
+          ]
+        },
+        {
+          "to": "throw",
+          "when": [
+            { "command": "throw" }
           ]
         },
         {

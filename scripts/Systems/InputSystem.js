@@ -16,7 +16,9 @@ export class InputSystem {
             j: false,
             e: false,
             q: false,
-            o: false
+            o: false,
+            semicolon: false,
+            p: false
         };
 
         this.gamepad = {
@@ -30,7 +32,8 @@ export class InputSystem {
             x: false,
             y: false,
             lb: false,
-            rb: false
+            rb: false,
+            rt: false
         };
 
         this.bufferedInputs = [];
@@ -86,6 +89,24 @@ export class InputSystem {
                 this.#bufferAction("interact", { source: "keyboard", key: "e" });
             }
         }
+
+        // Throw keys — handled OUTSIDE the `key in keyboard` guard
+        // because semicolon event.key=';' doesn't match keyboard object key 'semicolon'
+        if (event.code === "Semicolon") {
+            const wasSemiDown = this.keyboard.semicolon;
+            this.keyboard.semicolon = isDown;
+            if (!wasSemiDown && isDown) {
+                this.#bufferAction("throw", { source: "keyboard", key: ";" });
+            }
+        }
+        // P as secondary throw key
+        if (key === "p") {
+            const wasPDown = this.keyboard.p ?? false;
+            if (!wasPDown && isDown) {
+                this.#bufferAction("throw", { source: "keyboard", key: "p" });
+            }
+            this.keyboard.p = isDown;
+        }
     }
 
     #bufferAction(action, payload = {}) {
@@ -137,7 +158,7 @@ export class InputSystem {
         this.debugPanel.textContent = [
             "Input Debug",
             `W: ${keyboard.w}  A: ${keyboard.a}  S: ${keyboard.s}  D: ${keyboard.d}`,
-            `L: ${keyboard.l}  I: ${keyboard.i}  K: ${keyboard.k}  O: ${keyboard.o}  Q: ${keyboard.q}`,
+            `L: ${keyboard.l}  I: ${keyboard.i}  K: ${keyboard.k}  O: ${keyboard.o}  Q: ${keyboard.q}  ;: ${this.keyboard.semicolon}`,
             `Pad Connected: ${gamepad.connected}`,
             `A: ${gamepad.a}  B: ${gamepad.b}  X: ${gamepad.x}  Y: ${gamepad.y}  LB: ${gamepad.lb}  RB: ${gamepad.rb}`,
             `Left Stick: (${stickX}, ${stickY})`
@@ -216,6 +237,12 @@ export class InputSystem {
             this.#bufferAction("zornhut", { source: "gamepad", button: "rb" });
         }
         this.gamepad.rb = nextRB;
+
+        const nextRT = Boolean(connectedPad.buttons?.[7]?.pressed);
+        if (!this.gamepad.rt && nextRT) {
+            this.#bufferAction("throw", { source: "gamepad", button: "rt" });
+        }
+        this.gamepad.rt = nextRT;
 
         this.#cleanupBufferedInputs();
         this.#renderDebugPanel();

@@ -148,6 +148,13 @@ export function createHeroCharacter(scene, assets) {
                 atlasData: assets.atlas.hero.sleep,
                 colliderData: assets.colliders.hero.sleep,
                 loop: false
+            },
+            throw: {
+                spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_throw.png",
+                atlasData: assets.atlas.hero.throw,
+                colliderData: assets.colliders.hero.throw,
+                eventsData: assets.animationEvents?.hero?.throw,
+                loop: false
             }
         },
         rootMotionData: assets.rootMotion?.hero ?? null,

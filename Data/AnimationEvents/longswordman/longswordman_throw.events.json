@@ -1,0 +1,10 @@
+{
+    "clips": {
+        "throw": {
+            "events": [
+                { "frame": 1, "type": "throw_draw" },
+                { "frame": 2, "type": "throw_release" }
+            ]
+        }
+    }
+}

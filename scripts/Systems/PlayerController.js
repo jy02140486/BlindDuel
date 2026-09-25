@@ -84,6 +84,9 @@ export class PlayerController extends BaseController {
         if (this.inputSystem.consumeAction("dodge", tickCount)) {
             this.queueCommand("dodge");
         }
+        if (this.inputSystem.consumeAction("throw", tickCount)) {
+            this.queueCommand("throw");
+        }
 
         this.applyToCharacter();
     }

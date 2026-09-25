@@ -96,6 +96,8 @@ function Extract-Root($bmp, $fr, $target) {
   foreach ($p in $best) { $sumX += [double]$p.X; $sumY += [double]$p.Y }
   return [pscustomobject]@{ cx = [Math]::Round($sumX / $best.Count, 3); cy = [Math]::Round($sumY / $best.Count, 3) }
 }
+$rootColor = '#7082C1'
+$handColor = '#FF00FF'
 $collisionScanDefs = @(
   [pscustomobject]@{ key='hitbox'; type='hitbox'; subtype=$null; color='#FFFF00' },
   [pscustomobject]@{ key='weaponbox_strong_blade'; type='weaponbox'; subtype='strong_blade'; color='#FF0000' },
@@ -170,13 +172,14 @@ try {
         }
       }
     }
-    $rootAnchor = Extract-Root $rootBmp $fr (Parse-HexColor '#7082C1')
+    $rootAnchor = Extract-Root $rootBmp $fr (Parse-HexColor $rootColor)
+    $handAnchor = Extract-Root $rootBmp $fr (Parse-HexColor $handColor)
     $outFrames += [pscustomobject]@{
       frameIndex = $i
       frameName = $frames[$i].name
       frameRect = [pscustomobject]@{ x=$fr.x; y=$fr.y; w=$fr.w; h=$fr.h }
       boxes = $boxes
-      anchors = [pscustomobject]@{ root = $rootAnchor }
+      anchors = [pscustomobject]@{ root = $rootAnchor; hand = $handAnchor }
     }
   }
   $result = [pscustomobject]@{
@@ -187,7 +190,8 @@ try {
       pushboxPng = $(if ($hasPushBox) { $PushBoxPng } else { $null })
       collisionTypeColors = @($collisionScanDefs | ForEach-Object { [pscustomobject]@{ key=$_.key; type=$_.type; subtype=$_.subtype; color=$_.color } })
       pushboxColor = '#00FF88'
-      rootColor = '#7082C1'
+      rootColor = $rootColor
+      handColor = $handColor
       colorTolerance = 0
       minPixels = 6
       minRootPixels = 1
