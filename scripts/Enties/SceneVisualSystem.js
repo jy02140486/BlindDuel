@@ -11,6 +11,7 @@ export class SceneVisualSystem {
         this.config = null;
         this.maskRoot = null;
         this._maskMeshes = [];
+        this._debugVisible = true;
 }
     /**
      * 初始化视觉系统
@@ -162,6 +163,10 @@ export class SceneVisualSystem {
         }
     }
 
+    setDebugVisible(value) {
+        this._debugVisible = !!value;
+    }
+
     #createMaskDebugPanel(maskId) {
         const panel = document.createElement("div");
         panel.style.position = "absolute";
@@ -180,6 +185,13 @@ export class SceneVisualSystem {
     }
 
     _updateMaskDebugPanels() {
+        if (!this._debugVisible) {
+            for (const mesh of this._maskMeshes) {
+                if (mesh._debugPanel) mesh._debugPanel.style.display = "none";
+            }
+            return;
+        }
+
         const canvas = this.scene.getEngine().getRenderingCanvas();
         if (!canvas) return;
 

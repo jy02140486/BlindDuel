@@ -347,6 +347,7 @@ export class Scene {
         if (this.rabbleController?.setDebugVisible) {
             this.rabbleController.setDebugVisible(v);
         }
+        this.sceneVisualSystem?.setDebugVisible?.(v);
     }
 
     _applySceneAmbient(sceneDef) {
