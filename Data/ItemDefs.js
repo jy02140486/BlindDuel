@@ -21,6 +21,7 @@ export const ITEM_DEFS = {
         id: "dagger",
         name: "匕首",
         consumeType: "pocket",
+        throwable: true,
         atlasKey: "dagger",
         textureUrl: "./Art/Sprite/items/dagger.png",
     },

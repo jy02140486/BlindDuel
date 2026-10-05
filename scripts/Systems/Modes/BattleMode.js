@@ -2,6 +2,7 @@ import { BaseMode } from "./BaseMode.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { STEP_TYPE } from "../SceneSequencer.js";
 import { ProjectileManager } from "../ProjectileManager.js";
+import { ThrowComponent } from "../../Components/ThrowComponent.js";
 
 
 export class BattleMode extends BaseMode {
@@ -59,6 +60,17 @@ export class BattleMode extends BaseMode {
             entityPool: this.context.scene?.entityPool ?? null
         });
 
+        // ThrowComponent 装配 — 玩家从背包同步 dagger 数量作为初始弹药
+        // AI 路径延后：等 BattleDef 支持 throwAmmo 配置后再扩展
+        const { inventoryManager } = this.context;
+        for (const c of this._combatants ?? []) {
+            if (c?.kind === "player" && inventoryManager) {
+                const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
+                c.throwComponent = new ThrowComponent({ ammo });
+                console.log(`[BattleMode] ThrowComponent mounted on ${c.id}, ammo=${ammo}`);
+            }
+        }
+
         // Subscribe to throw animation events — Phase 3b wireup.
         // throw_draw (frame 1): create carried sprite (dagger in hand)
         // throw_release (frame 2): dispose carried sprite + spawn real projectile
@@ -78,6 +90,7 @@ export class BattleMode extends BaseMode {
                 combatant._battleYMin = null;
                 combatant._battleYMax = null;
                 combatant.activeSpeedMode = "walk";
+                combatant.throwComponent = null;  // 清理 ThrowComponent — 战斗 scope，不跨战斗
             }
         }
         // 清理 BattleMode 独占的相机上下文，避免跨场景/跨战斗残留：
@@ -274,7 +287,9 @@ export class BattleMode extends BaseMode {
     }
 
     /**
-     * Handle throw_release animation event — spawn a Projectile from the throwing character's hand.
+     * Handle throw_release animation event — 路由到 ThrowComponent.release()。
+     * BattleMode 负责：carry sprite 视觉、opponent→dirX 计算、Inventory 同步。
+     * ThrowComponent 负责：handAnchor 检查、Projectile spawn、ammo 消耗（原子性）。
      * Payload: { type: "throw_release", clipName, frame, source: CombatCharacter, ... }
      */
     #onThrowRelease(payload) {
@@ -285,13 +300,13 @@ export class BattleMode extends BaseMode {
         const combatants = this._combatants ?? [];
         if (!combatants.includes(thrower)) return;
 
-        // Dispose carried sprite FIRST — dagger leaves hand
+        // Dispose carried sprite FIRST — dagger leaves hand regardless of release success
         this.#disposeCarriedSprite(thrower.id);
 
-        // Get hand anchor world position — falls through if hand not marked on this frame
-        const handWorld = thrower.getHandAnchorWorld();
-        if (!handWorld) {
-            console.warn("[BattleMode] throw_release but no hand anchor on current frame — skip spawn");
+        // 路由到 ThrowComponent — 没装配的角色（没投掷能力）直接跳过
+        const tc = thrower.throwComponent;
+        if (!tc) {
+            console.warn("[BattleMode] throw_release but no ThrowComponent on", thrower.id);
             return;
         }
 
@@ -299,27 +314,25 @@ export class BattleMode extends BaseMode {
         const opponent = combatants.find(c => c !== thrower);
         const dirX = opponent
             ? Math.sign(opponent.root.position.x - thrower.root.position.x)
-            : 1;  // default facing right
+            : 1;
 
-        // v1: hardcoded dagger projectile config
-        // velocity.x = constant horizontal speed, arcHeight = handY above,
-        // groundY = thrower floor level, gravity = determines time-of-flight naturally
-        this._projectileManager.spawn({
-            ownerId: thrower.id,
-            teamId: thrower.kind === "player" ? "hero" : "enemy",
-            startPos: { x: handWorld.x, y: handWorld.y },
-            groundY: thrower.root.position.y,  // floor level — lands here
-            velocity: { x: dirX * 6, y: 1 },
-            pxToWorld: thrower.pxToWorld,
-            frame: { w: 32, h: 6 },
-            sourceSize: { w: 32, h: 6 },
-            spriteUrl: "./Art/Sprite/projectiles/proj_dagger.png",
-            cuttable: true,
-            damage: 1,
-            lifetimeMs: 4000,
-            arcHeight: 1.5,  // peak 1.5 world units above hand
-            gravity: 4      // world units/s²
+        const success = tc.release({
+            projectileManager: this._projectileManager,
+            dirX,
+            thrower
         });
+
+        // 同步背包 — 玩家扔成功才减，AI 不走 Inventory
+        if (success && thrower.kind === "player") {
+            const inv = this.context.inventoryManager;
+            if (inv) {
+                inv.removeItem("dagger");
+                // 刷新 InventoryBar UI
+                const game = this.context.scene?._game;
+                game?.inventoryBar?.update(inv.items);
+                console.log(`[BattleMode] dagger thrown — ammo=${tc.ammo}, inventory daggers=${inv.getThrowables().filter(it => it.id === "dagger").length}`);
+            }
+        }
     }
 
     #checkBattleEnd(sceneSequencer) {

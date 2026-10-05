@@ -21,6 +21,7 @@
 | 状态机事件回调未展开 | 状态切换缺少 enter/exit 钩子机制，无法在状态进入/退出时触发数据驱动的事件（音效、特效、指令派发）。 | 中 | 移动驱动已展开（moveIntent + controlledBySequence + FollowingBehavior）；事件回调待补 |
 
 | 实体默认隐藏 + 触发时显示 | cutscene/battle 相关实体（如 prop_faller、scenario-gated enemy）在触发条件未满足时应保持隐藏，而非场景加载即出现。当前 `spawnIf` 只控制生成，未满足时实体直接不存在；但部分场景需要实体已生成但不可见（如 prop_faller 需在 scenario=105 后才播 fall 动画，但生成位置需提前预备）。应加 `visibleIf` 字段（与 `spawnIf` 并列），在 `_buildIndices` / fixedUpdate 里根据 WorldState 切换 `spritePlane.isVisible`。同样适用于 BattleDef 中的敌人（如 scenario<105 时 enemy 不可见）。 | 中 | Step 6 prop_faller 暂用 spawnIf 单独生成，idle 静止待机。后续扩到 battle enemy 与多个 cutscene actor |
+| ItemDef 双源不一致 | 物品定义有两套：`Data/ItemDefs.js`（集中注册表，Quest/NPC 链路用）和 SceneDefs JSON 里 entity 内联的 itemDef（PickableEntity → InventoryManager.addItem 实际消费的）。两边独立维护，新字段（如 `throwable`）要同时改两处才生效。应统一为引用式：SceneDef 只写 `itemId: "dagger"`，运行时从 ItemDefs.js 拉取完整定义，避免双源漂移。 | 低 | 投掷物 ammo 同步实现中发现（改了 ItemDefs.js 但 getThrowables 仍空，才发现 SceneDefs 那份才是真的）；当前 dagger 已两边都加 throwable: true，后续其他投掷物注意同步加 |
 
 ## 探索系统切换问题
 

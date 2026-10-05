@@ -49,6 +49,9 @@ export class CombatCharacter extends CharacterBase {
         this._battleYMax = null;
         this._battleYCorrectionSpeed = 0.4;
 
+        // ThrowComponent — BattleMode 负责装配/销毁，没投掷能力的角色保持 null
+        this.throwComponent = null;
+
         // Feedback Memory: 跟踪攻击命中结果，用于判定 miss
         this._lastAttackHadHit = false;
         this._currentAttackInstanceId = null;
@@ -107,6 +110,14 @@ export class CombatCharacter extends CharacterBase {
         };
     }
 
+    /**
+     * Delegate gate — 供 StateGraph transition 评估调用。
+     * throwComponent 为 null（没投掷能力）→ 永远 false。
+     */
+    canThrow() {
+        return this.throwComponent?.canThrow?.() ?? false;
+    }
+
     _getCurrentRootAnchor(frameIndex) {
         const colliderClip = this.config.clips?.[this.animation.currentClipName]?.colliderData;
         const rootFromCollider = colliderClip?.frames?.[frameIndex]?.anchors?.root ?? null;
@@ -145,6 +156,10 @@ export class CombatCharacter extends CharacterBase {
             const canAct = this.canAct();
             const hasCmd = this.pendingCommands.includes(condition.command);
             if (!canAct) {
+                return false;
+            }
+            // throw 专属 gate：弹药耗尽 → 连 throw 状态都不进
+            if (condition.command === "throw" && !this.canThrow()) {
                 return false;
             }
             return hasCmd;
