@@ -1,3 +1,5 @@
+import { getProjectileDef } from "../../Data/ProjectileDefs.js";
+
 /**
  * ThrowComponent — 管理 CombatCharacter 的投掷弹药 + 负责实际 spawn Projectile。
  *
@@ -14,6 +16,8 @@
  */
 export class ThrowComponent {
     static MAX_AMMO = 99;
+    // DEBUG: 设成 true 就无限弹药（测试 AI 投掷物应对用）
+    static DEBUG_INFINITE_AMMO = true;
 
     /**
      * @param {object} config
@@ -25,11 +29,21 @@ export class ThrowComponent {
 
     /** Gate 查询 — CombatCharacter._matchesTransitionCondition 调用。 */
     canThrow() {
+        if (ThrowComponent.DEBUG_INFINITE_AMMO) return true;
         return this.ammo > 0;
+    }
+
+    /**
+     * 指定投掷物类型 ID。默认 "dagger"。
+     * 将来 BattleMode 装配 ThrowComponent 时可按场景配置覆盖（如 RabbleStick="rock"）。
+     */
+    setProjectileType(typeId) {
+        this.projectileTypeId = typeId;
     }
 
     /** 直接消耗 1 发 — release() 内部调用，外部一般不用。 */
     consumeAmmo() {
+        if (ThrowComponent.DEBUG_INFINITE_AMMO) return;  // 无限弹药：不扣
         this.ammo = Math.max(0, this.ammo - 1);
     }
 
@@ -37,6 +51,9 @@ export class ThrowComponent {
      * 尝试 spawn 一次投掷物。原子性保证：spawn 失败 → ammo 不减、返回 false。
      *
      * 由 BattleMode.#onThrowRelease 调用（release 动画帧）。
+     *
+     * 数据源：静态属性从 ProjectileDefs 读（单一真相源），运行时字段（方向/位置/owner）
+     * 在本方法内组装。projectileTypeId 默认 "dagger"，将来扩展时可通过构造参数或场景配置注入。
      *
      * @param {object} context
      * @param {import("../Systems/Modes/BattleMode.js").ProjectileManager} context.projectileManager
@@ -54,22 +71,31 @@ export class ThrowComponent {
             return false;
         }
 
-        // v1: hardcoded dagger config — 从 BattleMode.#onThrowRelease 原封不动搬过来
+        // 从 ProjectileDefs 读静态属性
+        const typeId = this.projectileTypeId ?? "dagger";
+        const def = getProjectileDef(typeId);
+        if (!def) {
+            console.error(`[ThrowComponent] Unknown projectileType "${typeId}" — no spawn attempted`);
+            return false;
+        }
+
+        // 组装 spawn config：静态属性来自 def，运行时字段来自 context
         const result = projectileManager.spawn({
             ownerId: thrower.id,
             teamId: thrower.kind === "player" ? "hero" : "enemy",
             startPos: { x: handWorld.x, y: handWorld.y },
             groundY: thrower.root.position.y,
-            velocity: { x: dirX * 6, y: 1 },
+            velocity: { x: dirX * def.speed, y: def.launchVy },
             pxToWorld: thrower.pxToWorld,
-            frame: { w: 32, h: 6 },
-            sourceSize: { w: 32, h: 6 },
-            spriteUrl: "./Art/Sprite/projectiles/proj_dagger.png",
-            cuttable: true,
-            damage: 1,
-            lifetimeMs: 4000,
-            arcHeight: 1.5,
-            gravity: 4
+            frame: def.frame,
+            sourceSize: def.sourceSize,
+            spriteUrl: def.spriteUrl,
+            cuttable: def.cuttable,
+            damage: def.damage,
+            lifetimeMs: def.lifetimeMs,
+            arcHeight: def.arcHeight,
+            gravity: def.gravity,
+            projectileType: def.typeId,  // 额外字段：AI 侧 cross-reference 用
         });
 
         // 原子性：spawn 失败 → ammo 不扣

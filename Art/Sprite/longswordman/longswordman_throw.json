@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
     "sourceSize": { "w": 160, "h": 128 },
-    "duration": 300
+    "duration": 700
    },
    "longswordman_throw 2.ase": {
     "frame": { "x": 320, "y": 0, "w": 160, "h": 128 },
@@ -35,7 +35,7 @@
  "meta": {
   "app": "https://github.com/LibreSprite/LibreSprite/",
   "version": "1.1-dev",
-  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_throw.png",
+  "image": "C:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_throw.png",
   "format": "RGBA8888",
   "size": { "w": 640, "h": 128 },
   "scale": "1",

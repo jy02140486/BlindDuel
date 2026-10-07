@@ -1,3 +1,5 @@
+import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
+
 /**
  * AIKnowledgeRegistry - 全局 AI 知识缓存系统
  * 自动扫描角色招式的性能数据，提供查询接口给 AIController
@@ -6,8 +8,8 @@
 
 export class AIKnowledgeRegistry {
     /** Schema version — bump when scan logic changes to force re-scan of cached profiles.
-     *  例：v1=初始版本, v2=新增 minReach 贴脸无效区计算 */
-    static #SCHEMA_VERSION = 2;
+     *  v1=初始, v2=minReach, v3=新增 throw 状态扫描（Phase 2 Step 4） */
+    static #SCHEMA_VERSION = 3;
 
     // 全局缓存: characterId -> { versionHash, profile }
     static #cache = new Map();
@@ -108,6 +110,7 @@ export class AIKnowledgeRegistry {
         const attackProfiles = [];
         const dodgeProfiles = [];
         const guardProfiles = [];
+        const throwProfiles = [];
         const stateDisplacements = {};
 
         for (const [stateName, stateDef] of Object.entries(states)) {
@@ -168,6 +171,18 @@ export class AIKnowledgeRegistry {
                     guardProfiles.push(profile);
                 }
             }
+            // 投掷状态（独立于 attack/dodge/guard — 用 throwActive 标记）
+            else if (stateDef.throwActive === true) {
+                const profile = this.#scanThrowState(
+                    stateName,
+                    stateDef,
+                    clipDef,
+                    warnings
+                );
+                if (profile) {
+                    throwProfiles.push(profile);
+                }
+            }
         }
 
         if (warnings.length > 0) {
@@ -189,6 +204,7 @@ export class AIKnowledgeRegistry {
             attacks: attackProfiles,
             dodges: dodgeProfiles,
             guards: guardProfiles,
+            throws: throwProfiles,
             movement: {
                 moveSpeed,
                 stateDisplacements
@@ -534,6 +550,60 @@ export class AIKnowledgeRegistry {
             frameSpeeds: [...frameSpeeds],
             guardType: stateDef.guardType ?? null,
             canParry: hasCounterTrait
+        };
+    }
+
+    /**
+     * 扫描单个投掷状态
+     * throw 没有 weaponbox，不需要 colliderData。
+     * 核心：ProjectileDefs cross-reference（静态属性）+ startupMs 时序计算。
+     *
+     * startupMs = 前 throwReleaseFrame 帧的 duration 累加
+     * 语义：for (let i=0; i<throwReleaseFrame; i++) → release 帧开始时触发
+     */
+    static #scanThrowState(stateName, stateDef, clipDef, warnings) {
+        const projectileType = stateDef.projectileType;
+        const throwReleaseFrame = stateDef.throwReleaseFrame ?? 0;
+
+        // cross-reference validation：ProjectileDefs 是 projectile 属性的唯一真相源
+        const def = projectileType ? ProjectileDefs[projectileType] : null;
+        if (!def) {
+            warnings.push(
+                `State ${stateName} has throwActive=true but no matching ProjectileDefs["${projectileType}"] — skipping`
+            );
+            return null;
+        }
+
+        const atlasFrames = this.#extractAtlasFrames(clipDef.atlasData, stateName, warnings);
+        if (!atlasFrames || atlasFrames.length === 0) {
+            warnings.push(`No atlas frames for throw state ${stateName}`);
+            return null;
+        }
+
+        // startupMs：累加 release 之前所有帧的 duration
+        let startupMs = 0;
+        const frameCount = Math.min(throwReleaseFrame, atlasFrames.length);
+        for (let i = 0; i < frameCount; i++) {
+            startupMs += atlasFrames[i]?.durationMs ?? 100;
+        }
+
+        // totalMs：整个 throw 动画时长
+        let totalMs = 0;
+        for (const f of atlasFrames) {
+            totalMs += f.durationMs ?? 100;
+        }
+
+        return {
+            stateName,
+            projectileType,
+            cuttable: def.cuttable ?? true,
+            damage: def.damage ?? 1,
+            speed: def.speed ?? 6,
+            timing: {
+                startupMs,
+                totalMs,
+                releaseFrame: throwReleaseFrame
+            }
         };
     }
 

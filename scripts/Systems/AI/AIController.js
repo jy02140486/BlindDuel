@@ -4,6 +4,7 @@ import { ContactResolver } from "../ContactResolver.js";
 import { AITuning } from "../../../Data/AITuning.js";
 import { CombatMemory } from "./CombatMemory.js";
 import { CombatPosture } from "./CombatPosture.js";
+import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
 
 /**
  * AIController - AI 控制器（Phase 1：局面感知 + Utility 选招 + Action Commitment）
@@ -78,6 +79,12 @@ export class AIController extends BaseController {
         // === Layer 1: CombatPosture（Phase 0 新增，500ms 慢变量）===
         this.combatPosture = new CombatPosture(this.combatMemory);
 
+        // === Projectile defense 依赖（Phase 3 Step 5）===
+        // ProjectileManager 在 BattleMode.enter() 时才创建 — 通过 setProjectileManager() 延迟注入
+        // ProjectileDefs 是静态模块，构造时直接 import 即可
+        this.projectileManager = null;
+        this.projectileDefs = ProjectileDefs;
+
         // oppIdleMs / oppLastActiveMs 追踪
         this._oppLastPhase = "none";       // opp 上一次的 phase（用于检测 phase 变化）
         this._oppLastActiveTs = performance.now(); // 初始假设 opp 刚进入 idle → oppIdleMs=0 正确
@@ -94,6 +101,16 @@ export class AIController extends BaseController {
         if (opponent) {
             this.opponentKB = AIKnowledgeRegistry.getProfile(opponent);
         }
+    }
+
+    /**
+     * BattleMode.enter() 创建完 ProjectileManager 后注入。
+     * AIController 构造时 ProjectileManager 不存在（BattleMode 尚未 enter），
+     * 所以用 setter 延迟注入，时机是 BattleMode.enter() 末尾。
+     * @param {import("../ProjectileManager.js").ProjectileManager} pm
+     */
+    setProjectileManager(pm) {
+        this.projectileManager = pm;
     }
 
     /**
@@ -285,6 +302,17 @@ export class AIController extends BaseController {
 
         // Phase 2: Positioning 三候选（正式进入同池竞争）
         const pos = this.#scorePositioning(sit);
+
+        // Phase 3 Step 7: 投掷物防御候选——仅真实 in-flight projectile
+        // 门控：只有存在 activeProjectileThreats（真实已发射的）才评估
+        // Preemptive 分支已移除（timing/distance 模型已回归 reactive-only）
+        const projResults = (sit.activeProjectileThreats?.length > 0)
+            ? this.#evaluateProjectileDefense(sit)
+            : [];
+        for (const r of projResults) {
+            scored.push(r);
+        }
+
         scored.push({ kind: "approach", action: null, score: pos.score });
         scored.push({ kind: "hold", action: null, score: pos.holdScore });
         scored.push({ kind: "retreat", action: null, score: pos.retreatScore });
@@ -358,13 +386,23 @@ export class AIController extends BaseController {
 
         // 对手是否在攻击中 + 当前阶段
         let oppAttackProfile = null;
-        let oppPhase = "none";   // "startup" | "active" | "recovery" | "none"
+        let oppPhase = "none";   // "startup" | "active" | "recovery" | "throw_windup" | "none"
         let oppRemainingMs = 0;
         if (oppDef?.attackActive === true && this.opponentKB) {
             oppAttackProfile = this.opponentKB.attacks.find(a => a.stateName === oppState);
             if (oppAttackProfile) {
                 oppPhase = this.#getAttackPhase(oppAttackProfile, oppNormTime);
                 oppRemainingMs = (1 - oppNormTime) * oppAttackProfile.timing.totalMs;
+            }
+        }
+
+        // Phase 3 Step 6 新增：对手是否在投掷准备中（独立于 attack 链路）
+        // throwActive 是独立标记，不蹭 attackActive
+        let oppThrowProfile = null;
+        if (oppPhase === "none" && oppDef?.throwActive === true && this.opponentKB?.throws) {
+            oppThrowProfile = this.opponentKB.throws.find(t => t.stateName === oppState);
+            if (oppThrowProfile) {
+                oppPhase = "throw_windup";
             }
         }
 
@@ -412,6 +450,51 @@ export class AIController extends BaseController {
             }
             // self 正在攻击中（不可响应窗口）→ 放大威胁
             if (selfIsBusy && oppPhase !== "recovery") oppThreat = Math.min(1, oppThreat + this.tuning.selfBusyThreatBonus);
+        }
+
+        // Phase 3 Step 6 新增：throw_windup phase 给一个基础威胁（preemptive 窗口）
+        if (oppPhase === "throw_windup") {
+            oppThreat = Math.max(oppThreat, this.tuning.threatPerPhase?.throw_windup ?? 0.5);
+        }
+
+        // Phase 3 Step 6 新增：查询 in-flight projectiles（独立于 oppPhase）
+        // activeProjectileThreats 是 Situation 独立字段，不覆盖 oppPhase
+        // oppPhase 反映 opponent 当前动作；projectile threat 是并行存在的 threat source
+        const activeProjectileThreats = [];
+        if (this.projectileManager && this.opponent) {
+            const selfX = self.root.position.x;
+            for (const p of this.projectileManager.getActiveProjectiles()) {
+                if (p.ownerId !== this.opponent.id) continue;
+                if (p.isDestroyed) continue;
+
+                // === direction check：projectile 必须朝 self 飞来 ===
+                const dirX = selfX - p.simPos.x;  // >0 = self 在 projectile 右侧
+                const velocityTowardsSelf = Math.sign(dirX) === Math.sign(p.velocity.x);
+                if (!velocityTowardsSelf) continue;  // 远离我，不是威胁
+
+                // === 简化 TTI：假设 self 停在当前位置（v1 简化假设）===
+                const distanceToSelf = Math.abs(dirX);
+                const vx = Math.abs(p.velocity.x);
+                const estTimeToCurrentPositionMs = vx > 0 ? (distanceToSelf / vx) * 1000 : 9999;
+
+                activeProjectileThreats.push({
+                    projectile: p,
+                    profile: this.projectileDefs[p.projectileType] ?? null,
+                    position: { x: p.simPos.x, y: p.simPos.y },
+                    velocity: { x: p.velocity.x, y: p.velocity.y },
+                    distanceToSelf,
+                    estTimeToCurrentPositionMs,
+                    cuttable: p.cuttable,
+                });
+            }
+        }
+
+        // in-flight projectile 存在时，叠加 oppThreat（但不改 oppPhase）
+        if (activeProjectileThreats.length > 0) {
+            const maxUrgency = Math.max(...activeProjectileThreats.map(
+                t => Math.max(0, 1 - t.estTimeToCurrentPositionMs / 1500)
+            ));
+            oppThreat = Math.max(oppThreat, maxUrgency * 0.8);
         }
 
         // opponent 当前防御状态（用于 Phase 2 queryInteraction）
@@ -465,6 +548,26 @@ export class AIController extends BaseController {
                 `threat=${oppThreat.toFixed(2)} remainingMs=${oppRemainingMs.toFixed(0)} distance=${distance.toFixed(2)}`
             );
         }
+        // Phase 3 Step 6 新增：throw / projectile 感知诊断
+        if (this.debugVisible) {
+            if (oppThrowProfile) {
+                const _tp = oppThrowProfile;
+                console.log(
+                    `[AI-Diag] oppThrow=${_tp.stateName} projectileType=${_tp.projectileType} ` +
+                    `cuttable=${_tp.cuttable} startupMs=${_tp.timing.startupMs}ms oppPhase=throw_windup ` +
+                    `oppThreat=${oppThreat.toFixed(2)}`
+                );
+            }
+            if (activeProjectileThreats.length > 0) {
+                const threats = activeProjectileThreats.map(t =>
+                    `${t.projectile.projectileType ?? "?"}(estTTI=${t.estTimeToCurrentPositionMs.toFixed(0)}ms dist=${t.distanceToSelf.toFixed(2)} cuttable=${t.cuttable})`
+                ).join(", ");
+                console.log(
+                    `[AI-Diag] activeProjectileThreats=${activeProjectileThreats.length} [${threats}] ` +
+                    `oppPhase=${oppPhase} oppThreat=${oppThreat.toFixed(2)}`
+                );
+            }
+        }
         // ===============================================
 
         const situation = {
@@ -472,9 +575,12 @@ export class AIController extends BaseController {
             self:   { stateName: selfState, def: selfDef, normTime: selfNormTime },
             opp:    { stateName: oppState, def: oppDef, normTime: oppNormTime,
                       attackProfile: oppAttackProfile, phase: oppPhase, remainingMs: oppRemainingMs,
-                      guardType: oppGuardType, isDodging: oppIsDodging, canParry: oppCanParry },
+                      guardType: oppGuardType, isDodging: oppIsDodging, canParry: oppCanParry,
+                      throwProfile: oppThrowProfile },
             oppThreat,
             oppVulnerable,
+            // Phase 3 Step 6 新增
+            activeProjectileThreats,
             // Phase 0 新增
             oppIdleMs,
             oppLastActiveMs,
@@ -863,6 +969,167 @@ export class AIController extends BaseController {
         // ---- Phase 1: Posture multiplier（Layer 1 慢变量）----
         // neutral = 1.0 不变，CAUTIOUS/DEFENSIVE 时提高 defense 分
         score *= this.combatPosture.defenseMultiplier;
+
+        return Math.max(0, Math.min(1, score));
+    }
+
+    // =========================================================================
+    // Phase 3 Step 7: Projectile Defense 评分（dodge + cut）
+    // =========================================================================
+
+    /**
+     * 入口：选最紧急的 projectile threat，同时评分 dodge 和 cut。
+     * 返回 scored 候选数组，每个候选的 action 是评分阶段选好的真实 dodge/slash。
+     * （GPT 修订：不在 #makeDecision 里重新选 action，评分和执行用同一个 action）
+     */
+    #evaluateProjectileDefense(sit) {
+        const threats = sit.activeProjectileThreats ?? [];
+        if (threats.length === 0) return [];
+
+        // 选最紧急 threat（estTimeToCurrentPositionMs 最小）
+        const threat = threats.reduce((a, b) =>
+            a.estTimeToCurrentPositionMs < b.estTimeToCurrentPositionMs ? a : b);
+        const tti = threat.estTimeToCurrentPositionMs;
+        const projResults = [];
+
+        // --- dodge 分支 --- 
+        const bestDodge = this.#findBestDodgeForProjectile(tti, threat);
+        if (bestDodge) {
+            const dodgeScore = this.#scoreDodgeForProjectile(bestDodge, tti, threat);
+            projResults.push({
+                kind: "dodge",
+                action: bestDodge,
+                score: dodgeScore,
+                reason: "projectile",
+                isProjectileDefense: true
+            });
+        }
+
+        // --- cut 分支（仅 cuttable=true）---
+        if (threat.cuttable) {
+            const bestSlash = this.#findBestSlashForProjectile(tti, threat);
+            if (bestSlash) {
+                const cutScore = this.#scoreCutForProjectile(bestSlash, tti, threat);
+                if (cutScore > 0) {
+                    projResults.push({
+                        kind: "attack",
+                        action: bestSlash,
+                        score: cutScore,
+                        reason: "projectile_cut",
+                        isProjectileCut: true
+                    });
+                }
+            }
+        }
+
+        return projResults;
+    }
+
+    /**
+     * 从 kbProfile.dodges 里选 timeWindowFactor 最优的 dodge。
+     * 不选最快的，选在 tti 时刻的窗口里命中率最高的那个。
+     */
+    #findBestDodgeForProjectile(tti, threat) {
+        const dodges = this.kbProfile?.dodges ?? [];
+        if (dodges.length === 0) return null;
+
+        const tun = this.tuning.projectileDefense;
+        let bestDodge = null;
+        let bestF = -Infinity;
+
+        for (const dodge of dodges) {
+            const totalMs = dodge.timing.totalMs;
+            let f;
+            if (tti >= totalMs && tti <= totalMs + tun.dodgeTimeWindowPeak) {
+                f = 1.0;  // 完美窗口
+            } else if (tti < totalMs) {
+                // 太晚：我还没闪完它就到了
+                f = Math.max(0, tti / totalMs * tun.dodgeTooLateRatio);
+            } else {
+                // 太早：还早不用急，衰减
+                f = Math.max(0, 1 - (tti - totalMs - tun.dodgeTimeWindowPeak) / tun.dodgeTooEarlySpan);
+            }
+            if (f > bestF) { bestF = f; bestDodge = dodge; }
+        }
+        return bestDodge;
+    }
+
+    #scoreDodgeForProjectile(dodge, tti, threat) {
+        const tun = this.tuning.projectileDefense;
+        const totalMs = dodge.timing.totalMs;
+        let timeWindowFactor;
+        if (tti >= totalMs && tti <= totalMs + tun.dodgeTimeWindowPeak) {
+            timeWindowFactor = 1.0;
+        } else if (tti < totalMs) {
+            timeWindowFactor = Math.max(0, tti / totalMs * tun.dodgeTooLateRatio);
+        } else {
+            timeWindowFactor = Math.max(0, 1 - (tti - totalMs - tun.dodgeTimeWindowPeak) / tun.dodgeTooEarlySpan);
+        }
+
+        let score = tun.dodgeBase * timeWindowFactor;
+        score *= this.combatPosture.defenseMultiplier;
+
+        // 距离门控：已经飞过了
+        if (threat.distanceToSelf < 0.2) score *= tun.nearSelfDecay;
+
+        return Math.max(0, Math.min(1, score));
+    }
+
+    /**
+     * 从 kbProfile.attacks 里 trajectory==="slash" 的选 timing 最优的。
+     * timingAlignment: projectile 到达时刻是否在 slash active 窗口内
+     */
+    #findBestSlashForProjectile(tti, threat) {
+        const slashAttacks = (this.kbProfile?.attacks ?? [])
+            .filter(a => a.trajectory === "slash");
+        if (slashAttacks.length === 0) return null;
+
+        const tun = this.tuning.projectileDefense;
+        let bestSlash = null;
+        let bestTimingScore = -Infinity;
+
+        for (const slash of slashAttacks) {
+            const activeStart = slash.timing.startupMs;
+            const activeEnd = slash.timing.startupMs + slash.timing.activeMs;
+            let timingAlignment;
+            if (tti >= activeStart && tti <= activeEnd) {
+                timingAlignment = 1.0;
+            } else if (tti < activeStart) {
+                timingAlignment = Math.max(0, 1 - (activeStart - tti) / activeStart);
+            } else {
+                timingAlignment = Math.max(0, 1 - (tti - activeEnd) / tun.cutTooSlowSpan);
+            }
+            if (timingAlignment > bestTimingScore) {
+                bestTimingScore = timingAlignment;
+                bestSlash = slash;
+            }
+        }
+        return bestTimingScore > 0 ? bestSlash : null;
+    }
+
+    #scoreCutForProjectile(slash, tti, threat) {
+        const tun = this.tuning.projectileDefense;
+        const activeStart = slash.timing.startupMs;
+        const activeEnd = slash.timing.startupMs + slash.timing.activeMs;
+        let timingAlignment;
+        if (tti >= activeStart && tti <= activeEnd) {
+            timingAlignment = 1.0;
+        } else if (tti < activeStart) {
+            timingAlignment = Math.max(0, 1 - (activeStart - tti) / activeStart);
+        } else {
+            timingAlignment = Math.max(0, 1 - (tti - activeEnd) / tun.cutTooSlowSpan);
+        }
+
+        const slashReach = slash.range?.maxReach ?? 0;
+        const distanceAlignment = threat.distanceToSelf <= slashReach
+            ? 1.0
+            : Math.max(0, 1 - (threat.distanceToSelf - slashReach) / 1.0);
+
+        let score = tun.cutBase;
+        score *= timingAlignment;
+        score *= distanceAlignment;
+        score *= this.combatPosture.attackMultiplier;
+        score *= (1 + tun.cutBoostBonus);
 
         return Math.max(0, Math.min(1, score));
     }

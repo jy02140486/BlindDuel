@@ -67,7 +67,16 @@ export class BattleMode extends BaseMode {
             if (c?.kind === "player" && inventoryManager) {
                 const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
                 c.throwComponent = new ThrowComponent({ ammo });
-                console.log(`[BattleMode] ThrowComponent mounted on ${c.id}, ammo=${ammo}`);
+            }
+        }
+
+        // 给 AI Controller 注入 ProjectileManager（Phase 3 Step 5）
+        // AIController 在 Scene 初始化时已构造好，BattleMode.enter() 才创建 ProjectileManager
+        // 所以延迟注入：遍历 combatants 找 controller.setProjectileManager 方法
+        for (const c of this._combatants ?? []) {
+            const ctrl = c?.controller;
+            if (ctrl?.setProjectileManager) {
+                ctrl.setProjectileManager(this._projectileManager);
             }
         }
 
@@ -323,14 +332,13 @@ export class BattleMode extends BaseMode {
         });
 
         // 同步背包 — 玩家扔成功才减，AI 不走 Inventory
-        if (success && thrower.kind === "player") {
+        if (success && thrower.kind === "player" && !ThrowComponent.DEBUG_INFINITE_AMMO) {
             const inv = this.context.inventoryManager;
             if (inv) {
                 inv.removeItem("dagger");
                 // 刷新 InventoryBar UI
                 const game = this.context.scene?._game;
                 game?.inventoryBar?.update(inv.items);
-                console.log(`[BattleMode] dagger thrown — ammo=${tc.ammo}, inventory daggers=${inv.getThrowables().filter(it => it.id === "dagger").length}`);
             }
         }
     }

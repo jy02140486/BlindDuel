@@ -134,6 +134,9 @@
       "clip": "throw",
       "allowMoveInput": false,
       "loop": false,
+      "throwActive": true,
+      "projectileType": "dagger",
+      "throwReleaseFrame": 3,
       "transitions": [
         {
           "to": "idle",

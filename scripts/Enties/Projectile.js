@@ -8,6 +8,7 @@ export class Projectile {
         this.id = config.id ?? `proj_${config.ownerId ?? "unknown"}_${Date.now()}`;
         this.ownerId = config.ownerId ?? null;
         this.teamId = config.teamId ?? null;
+        this.projectileType = config.projectileType ?? null;  // Phase 3 Step 6: AI 侧 profile lookup 用
         this.cuttable = config.cuttable !== false;  // default true
         this.damage = config.damage ?? 1;
         this.lifetimeMs = config.lifetimeMs ?? 4000;

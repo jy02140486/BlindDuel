@@ -16,8 +16,8 @@
  */
 export const AITuning = {
     // === 节奏参数 ===
-    decisionIntervalMs: 200,           // 决策间隔
-    attackCooldownMs: 1000,             // 攻击冷却
+    decisionIntervalMs: 100,           // 决策间隔
+    attackCooldownMs: 500,             // 攻击冷却
 
     // === 距离模型 ===
     rangeBuffer: 0.2,                  // 统一安全/操作 margin
@@ -35,6 +35,7 @@ export const AITuning = {
         active: 1.0,   // 对手 active 阶段的威胁感知
         startup: 0.6,  // 对手 startup 阶段的威胁感知
         recovery: 0.4, // Bug 1 fix: recovery 也乘 rangeFactor，基值调到大范围（对手即将恢复出下一招）
+        throw_windup: 0.5,  // Phase 3 Step 6: 对手在投掷准备阶段的基础威胁（preemptive 窗口）
     },
     selfBusyThreatBonus: 0.2,          // self 正在攻击时额外放大威胁的量
 
@@ -92,6 +93,18 @@ export const AITuning = {
     distanceConsequence: {
         multiplier: 0.3,   // consequenceDelta × multiplier
         clamp: 0.25,       // ±clamp 限幅上限
+    },
+
+    // === 投掷物防御偏好（Phase 3 Step 7）===
+    projectileDefense: {
+        dodgeBase: 0.45,   // dodge 基础分
+        cutBase: 0.65,    // cut 基础分（略高于 dodge 体现奖励）
+        dodgeTimeWindowPeak: 300,  // tti 在 [dodgeTotalMs, dodgeTotalMs + 300] 内满窗口
+        dodgeTooLateRatio: 0.5,    // tti < dodgeTotalMs 时的衰减系数
+        dodgeTooEarlySpan: 700,    // tti > dodgeTotalMs+300 时衰减跨度
+        cutTooSlowSpan: 500,       // tti > slashActiveEnd 时的衰减跨度
+        nearSelfDecay: 0.2,        // distanceToSelf < 0.2 时 dodge 打这个折扣
+        cutBoostBonus: 0.1,        // cut 比 dodge 多一份奖励感
     },
 
     // === Positioning ===
