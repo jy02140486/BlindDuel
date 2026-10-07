@@ -45,8 +45,9 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 ## AI 系统（Phase 4+）
 
 > 触发：设计 Rabble profile（精于防反、opp 出重击→伺机轻击截断、积极走位）时发现现有 7 个 knob 能配 ~70%，但三个核心特征表达不了。
-> 关联文档：`docs/AI系统说明.MD` Section 10
-> 原则：Phase 4 先落地现有 7 个 knob（见下 Rabble 草案），跑实际效果；缺口按 B2→B1→B3 顺序按需补，不要为一个角色一次加一堆 knob。
+> 关联文档：`docs/AI系统说明.MD` Section 10、`plans/26.10.7 投掷物预测-拦截机制计划.MD`
+> 架构方向：throw preemptive cut 和 B1 共享同一上层能力（Predictive Opponent Modeling：Opponent Action → Future Events → Predicted Threat → Counter），但实施上按独立小步推进。
+> 原则：Phase 4 先落地现有 7 个 knob（见下 Rabble 草案），跑实际效果。缺口按 A→B→C 顺序，先验证单次预测链效果，再考虑统一抽象。
 
 ### Rabble 草案（Phase 4 可直接用）
 
@@ -60,7 +61,22 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 
 预期效果：defenseMult 基准偏高→opp 出招时更早进 guard；alpha=0.25→攻防切换快；attackPreferences→优先 thrust。
 
-### B1: 不区分 opp 出什么招
+### A. 预测能力（Predictive Opponent Modeling）
+
+> 架构认知：Opponent Action → Future Events → Predicted Threat → Counter。
+> 让 AI 从"反应已发生的威胁"走向"围绕即将发生的威胁行动"。
+
+#### throw_windup preemptive cut（Phase 4.5，计划已创建）
+
+| 项 | 说明 |
+|----|------|
+| 现状 | opp 抬手（throw_windup）→ AI 只设 oppThreat=0.5，防御评分 return 0，什么也不做 |
+| 缺口 | 无法预测 "opp release → projectile flight → impact" 时间链，错过提前启动 slash 斩落的窗口 |
+| 补法 | `#buildSituation` 新增 predictedTTI（throwRemainingMs + distance/speed×1000）→ `#makeDecision` 门控 oppPhase=throw_windup && cuttable → 复用现有 `#scoreCutForProjectile`（overrideTTI）| 
+| 计划 | `plans/26.10.7 投掷物预测-拦截机制计划.MD` |
+| 优先级 | **高**（本次实现）| 
+
+#### B1: 不区分 opp 出什么招
 
 | 项 | 说明 |
 |----|------|
@@ -69,7 +85,11 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 | 补法 | 1) `#buildSituation` 从 opp 已 committed 的 state 查当前 attackProfile；2) `#scoreAttack` 的 startupFactor 改成和 opp startupMs 比 |
 | 优先级 | 中 |
 
-### B2: 没有 defensePreferences
+### B. 策略表达（Policy Expression）
+
+> 人格层：让 AI 以不同权重/偏好做动作选择。正交于预测层。
+
+#### B2: 没有 defensePreferences
 
 | 项 | 说明 |
 |----|------|
@@ -78,7 +98,11 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 | 补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称）|
 | 优先级 | 高（改动最小，性价比最高）|
 
-### B3: positioning 只有一维推拉
+### C. 走位（Positioning）
+
+> 空间维度：让 AI 不只是前后推拉。
+
+#### B3: positioning 只有一维推拉
 
 | 项 | 说明 |
 |----|------|
