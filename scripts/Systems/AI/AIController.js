@@ -303,12 +303,66 @@ export class AIController extends BaseController {
         // Phase 2: Positioning 三候选（正式进入同池竞争）
         const pos = this.#scorePositioning(sit);
 
-        // Phase 3 Step 7: 投掷物防御候选——仅真实 in-flight projectile
-        // 门控：只有存在 activeProjectileThreats（真实已发射的）才评估
-        // Preemptive 分支已移除（timing/distance 模型已回归 reactive-only）
-        const projResults = (sit.activeProjectileThreats?.length > 0)
+        // Phase 3 Step 7: 投掷物防御候选
+        // 两条路径：reactive（in-flight projectile）+ preemptive（throw_windup 预测）
+        // 不互斥——windup 阶段 preemptive 先触发，release 后 reactive 接管
+        const projResults = [];
+
+        // --- reactive 路径：真实已发射的 projectile ---
+        const reactiveResults = (sit.activeProjectileThreats?.length > 0)
             ? this.#evaluateProjectileDefense(sit)
             : [];
+        projResults.push(...reactiveResults);
+
+        // --- preemptive 路径：opp 抬手预测 projectile ---
+        // 三层门控：
+        //   ① oppPhase=throw_windup ② 有 predictedTTI ③ projectile 可被斩
+        //   ④ 【新增 viability gate】飞行时间足够短（距离够近），让 release 瞬间 timingAlignment ≥ 0.5
+        //      —— 远距离（flightMs > viableFlightCutoff）时 preemptive 物理上不可能，跳过整个路径
+        //      —— 避免 preemptive dodge 在 throw_windup 早期触发，堵死 release 后的 reactive 路径
+        if (sit.opp.phase === "throw_windup"
+            && sit.predictedProjectileTTI != null
+            && sit.predictedProjectileCuttable === true) {
+
+            // 找到所有 slash 中最早的 activeEnd（最快的斩招）
+            const slashAttacks = (this.kbProfile?.attacks ?? [])
+                .filter(a => a.trajectory === "slash");
+
+            if (slashAttacks.length > 0) {
+                const bestActiveEnd = Math.min(...slashAttacks.map(
+                    s => s.timing.startupMs + s.timing.activeMs));
+                const oppThrowProfile = sit.opp.throwProfile;
+                const projectileSpeed = oppThrowProfile?.speed ?? 6;
+                const predictedFlightMs = (sit.predictedProjectileDistance / projectileSpeed) * 1000;
+
+                // 单一物理门控：projectile 到达 AI 的时刻 ≤ weaponbox 结束时刻
+                // AI commit at T=0 → weaponbox = [activeStart, bestActiveEnd]
+                // opp release at T+throwRem → projectile 到达 = T+throwRem+flightMs = T+predictedTTI
+                // 物理条件：throwRem+flightMs ≤ bestActiveEnd → predictedTTI ≤ bestActiveEnd
+                const _canPreemptive = sit.predictedProjectileTTI <= bestActiveEnd;
+
+                if (this.debugVisible) {
+                    console.log(
+                        `[AI-Diag] preemptive_gate: predictedTTI=${sit.predictedProjectileTTI.toFixed(0)}ms ` +
+                        `bestActiveEnd=${bestActiveEnd}ms ` +
+                        `flightMs=${predictedFlightMs.toFixed(0)}ms → ` +
+                        `${_canPreemptive ? "VIABLE" : "SKIP (tts>activeEnd, projectile arrives after weaponbox ends)"}`
+                    );
+                }
+
+                if (_canPreemptive) {
+                    const preemptiveResults = this.#evaluateProjectileDefense(sit, {
+                        overrideTTI: sit.predictedProjectileTTI,
+                        overrideCuttable: true,
+                        overrideDistance: sit.predictedProjectileDistance,
+                        isPreemptive: true,
+                    });
+                    projResults.push(...preemptiveResults);
+                }
+                // else: 远距离，跳过 preemptive。AI 保持不动，release 后 reactive 接管
+            }
+        }
+
         for (const r of projResults) {
             scored.push(r);
         }
@@ -405,6 +459,31 @@ export class AIController extends BaseController {
                 oppPhase = "throw_windup";
             }
         }
+
+        // === Step 1 新增：throw_windup 预测外推 ===
+        // opp 抬手时，从 throwProfile + projectileDef 预测 release → impact 的 TTI
+        // 物理假设：直线恒速飞行（与 reactive 路径的 estTimeToCurrentPositionMs 简化模型一致）
+        let predictedProjectileTTI = null;
+        let predictedProjectileCuttable = false;
+        let predictedProjectileDistance = null;
+        let predictedFlightMs = 0;
+        let throwRemainingMs = 0;
+
+        if (oppPhase === "throw_windup" && oppThrowProfile) {
+            const totalMs = oppThrowProfile.timing.totalMs;
+            const startupMs = oppThrowProfile.timing.startupMs;
+            const elapsedMs = oppNormTime * totalMs;        // 从动画进度算已过时间
+            throwRemainingMs = Math.max(0, startupMs - elapsedMs);  // 距 release 还剩多久
+
+            // throwProfile 已由 AIKnowledgeRegistry cross-reference 校验过，speed/cuttable 直接读
+            const projectileSpeed = oppThrowProfile.speed ?? 6;  // fallback 默认值
+            predictedFlightMs = (distance / projectileSpeed) * 1000;
+
+            predictedProjectileTTI = throwRemainingMs + predictedFlightMs;
+            predictedProjectileCuttable = oppThrowProfile.cuttable === true;
+            predictedProjectileDistance = distance;
+        }
+        // ============================================
 
         // opponent threat：综合 phase + reach + distance + self 当前状态
         // threat 必须随距离连续衰减到 0，超远距离 threat≈0 → 防御评分直接被门控挡掉
@@ -552,10 +631,16 @@ export class AIController extends BaseController {
         if (this.debugVisible) {
             if (oppThrowProfile) {
                 const _tp = oppThrowProfile;
+                const _predInfo = oppPhase === "throw_windup" && predictedProjectileTTI != null
+                    ? ` predictedTTI=${predictedProjectileTTI.toFixed(0)}ms ` +
+                      `throwRemaining=${throwRemainingMs.toFixed(0)}ms ` +
+                      `predictedFlight=${predictedFlightMs.toFixed(0)}ms ` +
+                      `predDist=${predictedProjectileDistance?.toFixed(2) ?? "?"}`
+                    : "";
                 console.log(
                     `[AI-Diag] oppThrow=${_tp.stateName} projectileType=${_tp.projectileType} ` +
                     `cuttable=${_tp.cuttable} startupMs=${_tp.timing.startupMs}ms oppPhase=throw_windup ` +
-                    `oppThreat=${oppThreat.toFixed(2)}`
+                    `oppThreat=${oppThreat.toFixed(2)}${_predInfo}`
                 );
             }
             if (activeProjectileThreats.length > 0) {
@@ -581,6 +666,11 @@ export class AIController extends BaseController {
             oppVulnerable,
             // Phase 3 Step 6 新增
             activeProjectileThreats,
+            // Step 1 新增：throw_windup 预测（仅 oppPhase=throw_windup 时非 null）
+            predictedProjectileTTI,
+            predictedProjectileCuttable,
+            predictedProjectileDistance,
+            throwRemainingMs,
             // Phase 0 新增
             oppIdleMs,
             oppLastActiveMs,
@@ -978,51 +1068,120 @@ export class AIController extends BaseController {
     // =========================================================================
 
     /**
-     * 入口：选最紧急的 projectile threat，同时评分 dodge 和 cut。
+     * 入口：选最紧急的 projectile threat（或接受 override），同时评分 dodge 和 cut。
      * 返回 scored 候选数组，每个候选的 action 是评分阶段选好的真实 dodge/slash。
-     * （GPT 修订：不在 #makeDecision 里重新选 action，评分和执行用同一个 action）
+     *
+     * @param {object} sit Combat Situation
+     * @param {object} [options] 可选参数——仅 preemptive 路径传入
+     * @param {number} [options.overrideTTI]       预测 TTI（throw_windup 外推）
+     * @param {boolean} [options.overrideCuttable] 强制 cuttable（throwProfile.cuttable）
+     * @param {number} [options.overrideDistance]  预测 distance（fighter-to-fighter，保守简化）
+     * @param {boolean} [options.isPreemptive]     标记来源（diagnostic log 用）
+     *
+     * 下游函数（#findBestDodge/#scoreDodge/#findBestSlash/#scoreCut）签名不变，
+     * 统一吃合成的 effectiveThreat 对象——无论来源是 reactive 还是 preemptive。
      */
-    #evaluateProjectileDefense(sit) {
+    #evaluateProjectileDefense(sit, options = {}) {
         const threats = sit.activeProjectileThreats ?? [];
-        if (threats.length === 0) return [];
+        const hasReactive = threats.length > 0;
+        const hasPreemptive = options.overrideTTI != null;
+        if (!hasReactive && !hasPreemptive) return [];
 
-        // 选最紧急 threat（estTimeToCurrentPositionMs 最小）
-        const threat = threats.reduce((a, b) =>
-            a.estTimeToCurrentPositionMs < b.estTimeToCurrentPositionMs ? a : b);
-        const tti = threat.estTimeToCurrentPositionMs;
+        // 选最紧急的 real threat（reactive 路径需要）
+        const realThreat = hasReactive
+            ? threats.reduce((a, b) =>
+                a.estTimeToCurrentPositionMs < b.estTimeToCurrentPositionMs ? a : b)
+            : null;
+
+        // TTI 来源优先级：override > real threat
+        const tti = options.overrideTTI ?? realThreat.estTimeToCurrentPositionMs;
+        const cuttable = options.overrideCuttable ?? realThreat.cuttable;
+        const distanceToSelf = options.overrideDistance ?? realThreat.distanceToSelf;
+
+        // speed：从 realThreat.velocity.x 或 override 路径的 throwProfile.speed 拿
+        // distanceAlignment 修复需要 projectileSpeed 来预测 slash-active 时刻的距离
+        const projectileSpeed = realThreat
+            ? Math.abs(realThreat.velocity?.x ?? realThreat.profile?.speed ?? 6)
+            : (sit.opp?.throwProfile?.speed ?? 6);
+
+        // 合成 effectiveThreat：保留 realThreat 的 velocity/profile 供下游 distance 预测用
+        const effectiveThreat = realThreat
+            ? { ...realThreat, distanceToSelf, cuttable }
+            : { distanceToSelf, cuttable, speed: projectileSpeed };
+
         const projResults = [];
+        const isPreemptive = options.isPreemptive === true;
 
-        // --- dodge 分支 --- 
-        const bestDodge = this.#findBestDodgeForProjectile(tti, threat);
-        if (bestDodge) {
-            const dodgeScore = this.#scoreDodgeForProjectile(bestDodge, tti, threat);
-            projResults.push({
-                kind: "dodge",
-                action: bestDodge,
-                score: dodgeScore,
-                reason: "projectile",
-                isProjectileDefense: true
-            });
+        // --- dodge 分支（仅 reactive 路径）---
+        // preemptive 路径不产出 dodge：设计目的是「提前斩」，不是「提前躲」
+        // dodge 不需要提前——reactive dodge 窗口（totalMs + peak ≈ 600ms）足够，
+        // 等 projectile 飞过来再 dodge 完全来得及。
+        // 如果 preemptive evaluator 在 windup 早期产出了高分 dodge，
+        // AI 会提前 commit → 被锁 dodge recovery → 堵死 release 后的 reactive 路径。
+        if (!isPreemptive) {
+            const bestDodge = this.#findBestDodgeForProjectile(tti, effectiveThreat);
+            if (bestDodge) {
+                const dodgeScore = this.#scoreDodgeForProjectile(bestDodge, tti, effectiveThreat);
+                projResults.push({
+                    kind: "dodge",
+                    action: bestDodge,
+                    score: dodgeScore,
+                    reason: "projectile",
+                    isProjectileDefense: true,
+                });
+            }
         }
 
         // --- cut 分支（仅 cuttable=true）---
-        if (threat.cuttable) {
-            const bestSlash = this.#findBestSlashForProjectile(tti, threat);
+        if (cuttable) {
+            const bestSlash = this.#findBestSlashForProjectile(tti, effectiveThreat);
             if (bestSlash) {
-                const cutScore = this.#scoreCutForProjectile(bestSlash, tti, threat);
+                const cutScore = this.#scoreCutForProjectile(bestSlash, tti, effectiveThreat);
+
+                // === DIAGNOSTIC: preemptive cut 评分详情 ===
+                if (isPreemptive && this.debugVisible) {
+                    const activeStart = bestSlash.timing.startupMs;
+                    const activeEnd = bestSlash.timing.startupMs + bestSlash.timing.activeMs;
+                    const timingAlignment = this.#computeTimingAlignment(tti, activeStart, activeEnd);
+                    console.log(
+                        `[AI-Diag] preemptive_cut: predictedTTI=${tti.toFixed(0)}ms ` +
+                        `slash=${bestSlash.stateName} active=[${activeStart},${activeEnd}]ms ` +
+                        `timingAlignment=${timingAlignment.toFixed(2)} score=${cutScore.toFixed(3)} ` +
+                        `distanceToSelf=${distanceToSelf.toFixed(2)}`
+                    );
+                }
+                // ============================================
+
                 if (cutScore > 0) {
                     projResults.push({
                         kind: "attack",
                         action: bestSlash,
                         score: cutScore,
-                        reason: "projectile_cut",
-                        isProjectileCut: true
+                        reason: isPreemptive ? "projectile_preemptive_cut" : "projectile_cut",
+                        isProjectileCut: true,
+                        isPreemptive,
                     });
                 }
             }
         }
 
         return projResults;
+    }
+
+    /**
+     * 纯函数：计算 slash 的 timingAlignment（三段式）
+     * 抽到独立方法是为了 diagnostic log 能直接调用，
+     * 不重复写三段判断逻辑。
+     */
+    #computeTimingAlignment(tti, activeStart, activeEnd) {
+        // projectile 到达 AI 时 weaponbox 必须还在（或刚结束）
+        if (tti < activeStart) {
+            return 0;   // weaponbox 还没激活 projectile 就到了 → 物理不可能
+        }
+        if (tti > activeEnd) {
+            return 0;   // weaponbox 已经结束 projectile 才到 → 物理不可能
+        }
+        return 1.0;     // 完整窗口 [activeStart, activeEnd] 内到达
     }
 
     /**
@@ -1090,14 +1249,18 @@ export class AIController extends BaseController {
 
         for (const slash of slashAttacks) {
             const activeStart = slash.timing.startupMs;
-            const activeEnd = slash.timing.startupMs + slash.timing.activeMs;
+            // timingAlignment 只判断一个条件：weaponbox 能否在 projectile 到达前激活
+            // 物理语义：projectile 是恒速直线飞行直到命中的物理物体
+            // weaponbox 激活后 projectile 继续飞，只要在 reach 内（distanceAlignment 管）就能斩到
+            // 不存在 "too late"——activeEnd 只是武器挥完，但 projectile 还在飞
             let timingAlignment;
-            if (tti >= activeStart && tti <= activeEnd) {
-                timingAlignment = 1.0;
-            } else if (tti < activeStart) {
-                timingAlignment = Math.max(0, 1 - (activeStart - tti) / activeStart);
+            if (tti < activeStart) {
+                // weaponbox 还没激活 projectile 就到了 → 物理上不可能命中
+                timingAlignment = 0;
             } else {
-                timingAlignment = Math.max(0, 1 - (tti - activeEnd) / tun.cutTooSlowSpan);
+                // weaponbox 能先激活 → timing 达标
+                // tti 越大 projectile 越慢到（越安全），但不额外加分
+                timingAlignment = 1.0;
             }
             if (timingAlignment > bestTimingScore) {
                 bestTimingScore = timingAlignment;
@@ -1111,19 +1274,47 @@ export class AIController extends BaseController {
         const tun = this.tuning.projectileDefense;
         const activeStart = slash.timing.startupMs;
         const activeEnd = slash.timing.startupMs + slash.timing.activeMs;
+
+        // timingAlignment：只判断 weaponbox 能否先激活（物理语义修复）
+        // projectile 是恒速飞行的物理物体，不存在 "too late" 窗口
         let timingAlignment;
-        if (tti >= activeStart && tti <= activeEnd) {
-            timingAlignment = 1.0;
-        } else if (tti < activeStart) {
-            timingAlignment = Math.max(0, 1 - (activeStart - tti) / activeStart);
+        if (tti < activeStart) {
+            // weaponbox 还没激活 projectile 就到了 → 物理上不可能命中
+            timingAlignment = 0;
         } else {
-            timingAlignment = Math.max(0, 1 - (tti - activeEnd) / tun.cutTooSlowSpan);
+            // weaponbox 能先激活 → timing 达标（distanceAlignment 管 reach 覆盖）
+            timingAlignment = 1.0;
         }
 
+        // === Bug 修复：distanceAlignment 用「预测 slash 激活时刻的距离」而非「当前距离」===
+        // 物理假设：projectile 恒速直线飞行（与 reactive TTI 模型一致）
+        // threat.velocity.x 有值（reactive 路径），fallback 到 threat.profile.speed 或 threat.speed（preemptive 路径合成的）
+        const projectileSpeed = Math.abs(
+            threat.velocity?.x ?? threat.profile?.speed ?? threat.speed ?? 6);
         const slashReach = slash.range?.maxReach ?? 0;
-        const distanceAlignment = threat.distanceToSelf <= slashReach
-            ? 1.0
-            : Math.max(0, 1 - (threat.distanceToSelf - slashReach) / 1.0);
+        // slash 激活时刻（commit + startupMs）projectile 飞了多远？
+        const distTraveledByActive = projectileSpeed * (activeStart / 1000);
+        // slash 激活时 projectile 到 AI 的距离
+        const predictedDistAtActive = Math.max(0,
+            threat.distanceToSelf - distTraveledByActive);
+
+        // 同时也要考虑 projectile 到 slash 结束时刻可能已经飞得太近（fast projectile）
+        // 用 active 窗口中间点来估算更保守
+        const activeMidpointMs = (activeStart + activeEnd) / 2;
+        const distTraveledByMid = projectileSpeed * (activeMidpointMs / 1000);
+        const predictedDistAtMid = Math.max(0,
+            threat.distanceToSelf - distTraveledByMid);
+
+        // 取两者的较小值（最紧约束）
+        const criticalDist = Math.min(predictedDistAtActive, predictedDistAtMid);
+
+        let distanceAlignment;
+        if (criticalDist <= slashReach) {
+            distanceAlignment = 1.0;
+        } else {
+            // 每超 1m 线性衰减到 0
+            distanceAlignment = Math.max(0, 1 - (criticalDist - slashReach) / 1.0);
+        }
 
         let score = tun.cutBase;
         score *= timingAlignment;
@@ -1175,6 +1366,13 @@ export class AIController extends BaseController {
         if (distance > maxEffReach) {
             approachScore = 0.35 * Math.min(1, distanceHunger + 0.5);
         }
+        // === Step 新增：throw_windup suppress ===
+        // opp 在抬手准备投掷 + projectile 可被斩时，suppress approach
+        // 原因：AI approach 会改变 release 时的距离，导致 reactive cut timing 窗口不稳定
+        // 让 AI 保持距离原地等 reactive cut 窗口
+        if (sit.opp?.phase === "throw_windup" && sit.predictedProjectileCuttable === true) {
+            approachScore *= 0.1;  // 几乎归零，但不完全 0（避免 tie-break 问题）
+        }
         // 攻击圈内不需要 approach（hold/attack 应该赢）
         approachScore *= advMult;
 
@@ -1189,6 +1387,12 @@ export class AIController extends BaseController {
                 && sit.now - this.lastAttackTime < this.attackCooldownMs) {
                 holdScore += 0.08;
             }
+        }
+        // === Step 新增：throw_windup hold 保底 ===
+        // opp 在抬手准备投掷 + projectile 可被斩时，给 hold 一个小保底分
+        // 让 AI 原地站住等 reactive cut 窗口，而不是 approach 改变距离
+        if (sit.opp?.phase === "throw_windup" && sit.predictedProjectileCuttable === true) {
+            holdScore = Math.max(holdScore, 0.05);
         }
         // hold 不乘 Posture multiplier（是基线）
 

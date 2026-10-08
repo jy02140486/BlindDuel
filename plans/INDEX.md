@@ -1,6 +1,20 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：Phase 4 aiProfile 角色级配置落地（见下方 Update Log）。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。
+> 当前进行中：无活跃计划。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。Phase 5 统一预测架构（predictedOpponentEvents + predictionAccuracy 旋钮）待定。
+
+## Update Log (2026-10-08)
+- **投掷物预测-拦截机制（reactive cut + preemptive cut）**：按计划 `plans/26.10.7 投掷物预测-拦截机制计划.MD` Step 1-4 全部落地，Step 5 文档同步完成
+- **Step 1 预测链**：`AIController.#buildSituation` 新增 `predictedProjectileTTI` / `predictedProjectileCuttable` / `predictedProjectileDistance` / `throwRemainingMs` 四字段（公式：throwRemaining = startupMs - oppNormTime×totalMs；flightMs = distance/speed×1000；predictedTTI = throwRemaining + flightMs）
+- **Step 2 evaluator 重构**：`#evaluateProjectileDefense` 加 `options.overrideTTI` 参数 + `effectiveThreat` 合成对象，无真实 projectile 时也能产出评分；`timingAlignment` 重构为二元判断（tti < activeStart → 0，否则 1.0）——物理语义：weaponbox 先激活就能斩到，不存在 too late；`distanceAlignment` 预测 weaponbox 激活时刻 projectile 距离而非当前距离
+- **Step 3 决策接入 + 5 层 gate**：① opp.phase=throw_windup ② predictedTTI≠null ③ cuttable=true ④ flightMs≤820ms（≤4.92m）⑤ throwRemainingMs≤570ms（opp 在 weaponbox 结束前 release）；gate DEFER 时走 reactive path（等 projectile 发射后再斩）；gate VIABLE 时 preemptive cut 候选进 pool 竞争
+- **Step 4 throw_windup suppress**：`#scorePositioning` 在 throw_windup + cuttable 时 approach ×0.1 + hold 保底 0.05，AI 原地站住等 reactive；preemptive evaluator 禁掉 dodge（isPreemptive 守卫），避免 commit dodge 锁 300ms 耽误 reactive 时机
+- **Step 5 文档同步**：`docs/AI系统说明.MD` 补 projectile defense 全链路（§1 Situation 预测字段 / §2 ProjectileDefs + 6 个方法 / §5 timingAlignment 物理模型 + 5 层 gate / §8 日志关键词 / §10 B4-B6 新缺口）；`docs/战斗规则说明.MD` 新增 §4 投掷物结算（ProjectileContactResolver 管道 + Cut First/Hit Second 两阶段 + 防御有效性表）；`PROJECT_CONTEXT.md` §3 补 ProjectileDefs/ThrowComponent/ProjectileContactResolver 链路
+- **迭代中修的 bug**：① 旧 timingAlignment 有 too-early 衰减（tti<activeStart 给折扣）→ 直接 0 ② 旧 distanceAlignment 用当前距离而非预测距离 → 预测 activeStart 时刻 ③ preemptive evaluator 早期产出 dodge → 加 isPreemptive 守卫 ④ gate cutoff=820ms 太宽导致早期瞎 commit swing 挥空 → 加第 ⑤ 层 throwRemainingMs ≤ 570ms 门控
+- **物理边界结论**：reactive cut 在 distance 2.5m-6.5m 可靠工作（80%+ 成功率）；preemptive cut 只有 distance ≤ 2.5m 且 throwRemaining ≤ 100ms 才有 1-2 个决策 tick 窗口；极近距离（< 2.5m）reactive cut 物理不可能（flightMs < swing startupMs=420ms），需 BACKLOG B4 拦截 throw（直接打 opp 打断投掷）解决
+- **能力 × 偏好 → 性格矩阵（未来统一预测架构方向）**：predictionAccuracy 旋钮（0.0→退化到老 AI 无 projectile 预测 / 1.0→完美 preemptive）+ cutBase / dodgeBase 偏好调性格
+- 涉及文件：AIController.js（全部 4 个新方法 + #buildSituation + #makeDecision gate + #scoreCutForProjectile distanceAlignment + #scorePositioning suppress）
+- 设计参考：`plans/26.10.7 投掷物预测-拦截机制计划.MD`
+- 下一步：Phase 5 统一预测架构（predictedOpponentEvents[] + predictionAccuracy 旋钮）一次性解决 B1（opp 招式区分）/ B4（拦截 throw）/ B5（preemptive strafe）/ B6（预测能力调节）
 
 ## Update Log (2026-09-22)
 - **AI 多层决策解耦 Phase 0-3 全部落地**：Memory → Posture → Situation → Utility 四层分离架构
@@ -180,6 +194,12 @@
 ## 进行中
 
 无进行中计划。
+
+## 最近归档（2026-10-08）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [26.10.7 投掷物预测-拦截机制计划.MD](26.10.7%20投掷物预测-拦截机制计划.MD) | AI 看到 opp 抬手（throw_windup）就预测 projectile 轨迹，提前决策斩落或等 projectile 出来再反应 | Step 1-4 全部落地：预测链、evaluator 重构、决策接入 + 5 层 gate、throw_windup positioning suppress；Step 5 文档同步完成。物理边界：reactive cut 2.5m-6.5m 可靠，preemptive cut 仅极窄窗口（≤2.5m + throwRemaining≤100ms），极近距离 gap 留到 BACKLOG B4 拦截 throw 补。详见上方 Update Log
 
 ## 待办入口
 

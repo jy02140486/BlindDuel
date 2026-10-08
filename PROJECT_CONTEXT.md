@@ -44,13 +44,17 @@ py .\.serve.ps1
 - 状态图定义：`Data/StateGraphDef/LongSwordMan.json`
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
-- 战斗接触解析：`scripts/Systems/ContactResolver.js`
-- 战斗系统编排：`scripts/Systems/CombatSystem.js`
-- AI 系统（四层分离架构，详见 `docs/AI系统说明.MD`）：
-  - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning）
-  - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach）
+- 战斗接触解析：`scripts/Systems/ContactResolver.js`（传统 attack-shield / attack-hitbox 两阶段）
+- 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
+- AI 系统（四层分离架构，含投掷物防御 reactive + preemptive 双路径，详见 `docs/AI系统说明.MD`）：
+  - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment）
+  - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach + throw state cross-reference 校验 projectileType vs ProjectileDefs）
   - Layer 0 纯数据：`scripts/Systems/AI/CombatMemory.js`（pressure/outcomes/getAdaptation）
   - Layer 1 慢变量姿态：`scripts/Systems/AI/CombatPosture.js`（attackMult/defenseMult/low-pass smoothing）
+- 投掷物静态定义：`Data/ProjectileDefs.js`（speed, cuttable, damage, getProjectileDef 工具函数）
+- 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
+- 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync）
+- 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
 - 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
@@ -267,6 +271,8 @@ InputSystem (scripts/Systems/InputSystem.js)
      -> CombatMemory (scripts/Systems/AI/CombatMemory.js)     // Layer 0
      -> CombatPosture (scripts/Systems/AI/CombatPosture.js)   // Layer 1
      -> AIKnowledgeRegistry (scripts/Systems/AI/AIKnowledgeRegistry.js)
+     -> ProjectileDefs (Data/ProjectileDefs.js)               // 投掷物 static def
+     -> ProjectileManager (scripts/Systems/ProjectileManager.js) // BattleMode 注入
   -> NpcController (scripts/Systems/NpcController.js)
   -> TestController (scripts/Systems/TestController.js)
   -> DummyController (scripts/Systems/DummyController.js)

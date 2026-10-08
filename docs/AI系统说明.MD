@@ -1,7 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-09-22 — CombatMemory → CombatPosture → AIController 完整链路
->
+> 更新：2026-10-08 — 投掷物防御系统（reactive cut + preemptive cut）
+> 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
 
 ---
@@ -13,7 +13,7 @@
 | 层 | 频率 | 职责 | 不做 | 配置/代码位置 |
 |---|---|---|---|---|
 | **Memory** | 事件驱动 + 每帧 tick | 纯历史记录（outcomes, commits, pressure）| 不修改任何分数 | `AI/CombatMemory.js` · `_pressureDecayBase` |
-| **Situation** | 200ms 决策时构建 | 当前快变量感知（oppPhase/distance/oppVuln...）| 不记录历史 | `AIController.#buildSituation` · 硬编码 |
+| **Situation** | 200ms 决策时构建 | 当前快变量感知（oppPhase/distance/oppVuln...）+ throw_windup 预测（predictedTTI/Cuttable/Distance/throwRemainingMs）+ in-flight projectile threats[] | 不记录历史 | `AIController.#buildSituation` · 硬编码 |
 | **Posture** | 500ms tick | 慢变量姿态 → multipliers（1.0=neutral）| 不做 distanceHunger（快变量）| `AI/CombatPosture.js` · `DEFAULT_POSTURE_TUNING` + `aiProfile` 角色级 override |
 | **Utility** | 200ms | 哪个动作现在最合适（scoreAttack/Defense/Positioning）| 不做 "想不想打"（Posture 管）| `AIController.#scoreAttack/Defense/Positioning` · `Data/AITuning.js` 系统级默认 + `aiProfile.attackPreferences/repetitionCostRate` 角色级 override |
 
@@ -29,12 +29,16 @@ Memory → Situation+Posture → Utility → Action → Outcome → Memory
 scripts/Systems/AI/
 ├── AIController.js        # 主决策：fixedUpdate→makeDecision→executeCommitted
 │   #scoreAttack / #scoreDefense / #scorePositioning
-├── AIKnowledgeRegistry.js # 武器 knowledge：#getMaxReach() / #getClosestMinReach()
+│   #evaluateProjectileDefense / #findBestSlashForProjectile / #scoreCutForProjectile
+│   #scoreDodgeForProjectile / #computeTimingAlignment
+├── AIKnowledgeRegistry.js # 武器 knowledge：#getMaxReach() / #getClosestMinReach() + throw state cross-reference
 ├── CombatMemory.js        # Layer 0: 纯数据。onOutcome() / getAdaptation() / tick()
 └── CombatPosture.js       # Layer 1: 慢变量。attackMult/defenseMult/advanceMult/retreatMult
 
-scripts/CombatSystem.js → 产出 outcome，喂 AIController.onCombatResult()
-Data/AITuning.js          # 系统级默认 tuning（全部 neutral baseline）
+Data/AITuning.js          # 系统级默认 tuning（含 projectileDefense: {cutBase, dodgeBase, cutTooSlowSpan}）
+Data/ProjectileDefs.js    # 投掷物静态定义（speed, cuttable, damage）
+
+scripts/CombatSystem.js → 产出 outcome + projectile events，喂 AIController.onCombatResult()
 ```
 
 ---
@@ -120,9 +124,32 @@ attackMult ∈ [0.6, 1.4]，defenseMult ∈ [0.7, 1.3]，advance/retreat ∈ [0.
 |------|--------|-----------------|----------|
 | `#scoreAttack` | N attacks | `attackMultiplier` + `attackPreferences[stateName]` | distance, oppPhase, oppThreat, oppVuln, adaptation, startupFactor |
 | `#scoreDefense` | N guards/dodges | `defenseMultiplier` | oppThreat, oppPhase, defensiveReadiness(opp idle) |
-| `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs maxEffReach, closestMinReach |
+| `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs maxEffReach, closestMinReach. **throw_windup 时 approach ×0.1 + hold 保底 0.05**（抑制靠近，等 projectile 出来再反应）| 
+| `#evaluateProjectileDefense` | up to 2（dodge + cut）| 各自 base × defense/attackMult | **reactive**: activeProjectileThreats[].estTTI/distance/cuttable. **preemptive**: predictedProjectileTTI + 5 层 gate |
 
 所有分数进 pool → 排序 → **最高分 > 0 就执行**（无 threshold 硬门控）。
+
+### projectile defense 物理模型
+
+两条路径共享同一个评分函数，5 层 gate 决定 preemptive 要不要跳：
+
+```
+preemptive gate 5 层门控：
+  ① opp.phase === "throw_windup"
+  ② predictedProjectileTTI != null
+  ③ predictedProjectileCuttable === true
+  ④ flightMs ≤ 820ms（距离 ≤ 4.92m，物理上能 preemptive cut）
+  ⑤ throwRemainingMs ≤ 570ms（opp 在 weaponbox 结束前 release，避免挥空）
+```
+
+### timingAlignment 物理语义（二元判断）
+
+```
+tti < activeStart → timingAlignment = 0   // weaponbox 还没激活 projectile 就到了 → 物理不可能命中
+tti ≥ activeStart → timingAlignment = 1.0 // weaponbox 能先激活，distanceAlignment 管 reach 覆盖
+```
+
+物理语义：projectile 是恒速直线飞行物体，不存在 "too late"——weaponbox 激活后 projectile 继续飞，只要在 reach 内就能斩到。cutScore = cutBase(0.65) × timingAlignment × distanceAlignment × attackMult。
 
 ### #scoreAttack 完整链路
 
@@ -265,6 +292,10 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | `[AI-Diag] best=` | 每次决策第一名 |
 | `top3=` | 前三名分数分布 |
 | `POS:` | approach/hold/retreat 分数 |
+| `[AI-Diag] oppThrow=` | opp 抬手时的预测链输出（predictedTTI / throwRemaining / predictedFlight / predDist）| 
+| `[AI-Diag] preemptive_gate:` | preemptive 门控结果（VIABLE / SKIP / DEFER → reactive）| 
+| `[AI-Diag] preemptive_cut:` | preemptive cut 候选详情（timingAlignment / score）| 
+| `[AI-Diag] activeProjectileThreats=` | projectile 发射后 in-flight threat 列表 | 
 | `[Phase0] oppIdleMs=` | Memory pressure + Posture target/current + label |
 | `pressure=` | 被击压力值 |
 | `→ DEFENSIVE/CAUTIOUS/AGGRESSIVE` | Posture 标签变化 |
@@ -292,8 +323,8 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 ## 10. Backlog（已知表达缺口）
 
 > 触发场景：设计 Rabble（精于防反、opp 出重击→伺机轻击截断、积极走位）
-> 分析结论：现有 7 个 knob 能配出 ~70% 效果（更会防、偏好轻击、人格切换快），但三个核心特征表达不了。
-> 优先级：Phase 4 先落地现有 7 个 knob，跑 Rabble 草案 profile 实际看效果；缺口留到 Phase 5 按需补。
+> 分析结论：现有 7 个 knob 能配出 ~70% 效果（更会防、偏好轻击、人格切换快）。投掷物防御系统落地后暴露了三个新缺口（B4-B6），且原有三个缺口（B1-B3）都需要统一预测层才能解决。
+> 缺口分层：**Phase 4 先落地现有 7 个 knob**；Phase 5 补统一预测层（predictedOpponentEvents），一次性解决 B1/B4/B5；B2/B3 独立。
 
 ### Rabble 草案（现有 knob 最大化）
 
@@ -329,6 +360,31 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | 影响 | Rabble 的"精于防反"只能靠 `baseDefense` 拉整体防御意愿，无法让 parry 比 guard 分更高 |
 | 未来补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称） |
 
+### 缺口 B4：近距离投掷无法拦截 throw
+
+| 项 | 说明 |
+|----|------|
+| 现状 | AI 在 throw_windup 期间不能主动攻击 opp（只有 attack 候选，但 rf=0 因为 dist > effR 是常态）| 
+| 物理边界 | dist < effR（swing≈3m）时，reactive cut 物理上不可能（flightMs < swing startupMs=420ms）；preemptive cut 窗口极窄（1-2 tick）。唯一可靠方案是**在 windup 期间直接打 opp 打断投掷**（hitstun 让 projectile 不飞）|
+| 想让 AI 做到 | opp 抬手且在攻击 reach 内 → 抢先 swing opp 打断 throw，而不是等 projectile 出来再斩 |
+| 未来补法 | `predictedOpponentEvents[]` 统一预测层 → AI 看到 opp_throw 事件在 reach 内 → #scoreAttack 加 preemptiveBonus（和现有 startup preemptive 类似但专门针对 throw_windup）| 
+
+### 缺口 B5：preemptive dodge（throw_windup 期间提前侧移）
+
+| 项 | 说明 |
+|----|------|
+| 现状 | preemptive evaluator 里 dodge 被 `isPreemptive` 守卫禁掉了；throw_windup 期间 positioning approach 被 suppress ×0.1 + hold 保底 → AI 强制原地站住 |
+| 想让 AI 做到 | 看到抬手后向 projectile 轨迹垂直方向侧移几步（strafe），不 commit 任何动作 → release 后斩/躲都有更好站位 |
+| 未来补法 | `predictedOpponentEvents[]` 统一预测层 → AI 知道 projectile trajectory → #scorePositioning 加 strafe 候选，目标是轨迹侧方 45° 扇区 |
+
+### 缺口 B6：没有 predictionAccuracy 旋钮（个体预测能力差异）
+
+| 项 | 说明 |
+|----|------|
+| 现状 | reactive 和 preemptive 是两条硬接的代码路径（5 层 gate + isPreemptive 守卫），没有单一旋钮控制 AI "能不能看到未来" |
+| 想让 AI 做到 | predictionAccuracy=0.0 → 退化到老 AI（只看 opp attackPhase，无 projectile 预测）；predictionAccuracy=1.0 → 完美 preemptive；中间值 → 偶尔时机不准 |
+| 未来补法 | 搭 `predictedOpponentEvents[]` 统一预测层，在生成时注入 predictionAccuracy 参数：oppActionIdentification（识别 throw=0.0）、timingPrecision（release 估计±400ms 噪声）、reactionDelayMs（抬手后多少 ms 才看到）| 
+
 ### 缺口 B3：positioning 只有一维推拉
 
 | 项 | 说明 |
@@ -343,5 +399,5 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 **不要为了一个角色一次加一堆 knob**。Phase 4 先落地现有 7 个 knob，跑 Rabble 草案 profile 实际看效果。三个缺口按以下顺序评估：
 
 1. **B2（defensePreferences）** — 改动最小（加一个字段 + 一处乘法），和 attackPreferences 对称，性价比最高。如果 Rabble 跑完发现"让 parry 比 guard 分高"确实需要，先补这个
-2. **B1（opp 招式区分）** — 中等改动。需要 Situation 加字段 + scoreAttack 改 startupFactor 公式。如果发现"preemptive 对 opp 轻击也想抢"是个问题，再补
+2. **B1/B4/B5/B6（统一预测层）** — 这四个缺口共享同一个根因：没有 `predictedOpponentEvents[]` 中间层。一次性搭好后，B1（opp 招式区分）、B4（拦截 throw）、B5（preemptive strafe）、B6（predictionAccuracy 旋钮）自然连通。规划为 Phase 5 核心工作
 3. **B3（positioning 侧移）** — 大改，涉及 movement 系统。最后考虑
