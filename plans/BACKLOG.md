@@ -42,71 +42,49 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 闪躲距离过长
 独立的防御/闪避决策序列？
 
-## AI 系统（Phase 4+）
+## AI 系统
 
-> 触发：设计 Rabble profile（精于防反、opp 出重击→伺机轻击截断、积极走位）时发现现有 7 个 knob 能配 ~70%，但三个核心特征表达不了。
-> 关联文档：`docs/AI系统说明.MD` Section 10、`plans/26.10.7 投掷物预测-拦截机制计划.MD`
-> 架构方向：throw preemptive cut 和 B1 共享同一上层能力（Predictive Opponent Modeling：Opponent Action → Future Events → Predicted Threat → Counter），但实施上按独立小步推进。
-> 原则：Phase 4 先落地现有 7 个 knob（见下 Rabble 草案），跑实际效果。缺口按 A→B→C 顺序，先验证单次预测链效果，再考虑统一抽象。
+> 关联：`plans/26.10.9 预测能力通用化计划.MD`（Phase 5 主计划）、`docs/AI系统说明.MD` §10
 
-### Rabble 草案（Phase 4 可直接用）
+### Phase 5：统一预测层（`predictedOpponentEvents[]`）
 
-```json
-{ "aiProfile": {
-  "baseAggression":0.9, "baseDefense":1.2, "decayAlpha":0.25,
-  "distanceAppetite":0.8, "retreatDesire":0.5, "repetitionCostRate":0.08,
-  "attackPreferences": {"thrust":1.5, "swing":0.6, "dash":1.2}
-}}
-```
+> 架构：prediction layer 只产纯时间线事件（不做 threatLevel/canPreempt 判断），评分函数消费 events。subsume 现有 throw preemptive 硬编码路径。
+> 覆盖缺口：**B1 + B4**（B5/B6 后移至 Post-Phase 5）
+>
+> Step 1 → B1（opp stateName / attackProfile 识别进 Situation）
+> Step 2a → 建立预测事件生成器，先只观测不迁移
+> Step 2b → 迁移现有 throw preemptive cut 到事件层（回归验收）
+> Step 3 → #scoreAttack 截击判断 + #scoreDefense 差异化防御（消费 events）
+> Step 4 → B4 近距离打断 throw（时间条件：T_my_active < T_release）
 
-预期效果：defenseMult 基准偏高→opp 出招时更早进 guard；alpha=0.25→攻防切换快；attackPreferences→优先 thrust。
-
-### A. 预测能力（Predictive Opponent Modeling）
-
-> 架构认知：Opponent Action → Future Events → Predicted Threat → Counter。
-> 让 AI 从"反应已发生的威胁"走向"围绕即将发生的威胁行动"。
-
-#### throw_windup preemptive cut（Phase 4.5，计划已创建）
-
-| 项 | 说明 |
-|----|------|
-| 现状 | opp 抬手（throw_windup）→ AI 只设 oppThreat=0.5，防御评分 return 0，什么也不做 |
-| 缺口 | 无法预测 "opp release → projectile flight → impact" 时间链，错过提前启动 slash 斩落的窗口 |
-| 补法 | `#buildSituation` 新增 predictedTTI（throwRemainingMs + distance/speed×1000）→ `#makeDecision` 门控 oppPhase=throw_windup && cuttable → 复用现有 `#scoreCutForProjectile`（overrideTTI）| 
-| 计划 | `plans/26.10.7 投掷物预测-拦截机制计划.MD` |
-| 优先级 | **高**（本次实现）| 
-
-#### B1: 不区分 opp 出什么招
+### 缺口 B1：不区分 opp 出什么招
 
 | 项 | 说明 |
 |----|------|
 | 现状 | `Situation` 只有 oppPhase + oppVulnerable + oppThreat，没有 opp 当前 stateName / attackProfile |
-| 缺口 | 无法针对 opp 招式类型差异化 preemptive（opp 出 swing 想截断，出 thrust 赶不上就不抢）|
-| 补法 | 1) `#buildSituation` 从 opp 已 committed 的 state 查当前 attackProfile；2) `#scoreAttack` 的 startupFactor 改成和 opp startupMs 比 |
-| 优先级 | 中 |
+| 想让 AI 做到 | opp 出 swing（startup 长）→ 用 thrust 截断；opp 出 thrust（startup 短）→ 不抢先 |
+| 补法 | Phase 5 Step 1：`#buildSituation` 从 opp committed state 查 attackProfile（AIKnowledgeRegistry 已缓存） |
 
-### B. 策略表达（Policy Expression）
+### 缺口 B4：近距离 reach 内无法打断 throw
 
-> 人格层：让 AI 以不同权重/偏好做动作选择。正交于预测层。
+| 项 | 说明 |
+|----|------|
+| 现状 | throw_windup 期间 reach 内，reactive cut 物理上不可能（flightMs 太短）；唯一可靠方案是 windup 期间 hitstun opp 打断 |
+| 补法 | Phase 5 Step 4。**时间条件**：T_my_active < T_release（我的攻击先于 release 激活），不是 throwReleaseMs ≤ ownStartupMs |
 
-#### B2: 没有 defensePreferences
+### 缺口 B2：没有 defensePreferences
 
 | 项 | 说明 |
 |----|------|
 | 现状 | `aiProfile` 只有 `attackPreferences`，没有 per-defense-state 偏好 |
-| 缺口 | Rabble 想让 parry 分比 guard 高做不到，只能靠 `baseDefense` 整体拉防御意愿 |
-| 补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称）|
-| 优先级 | 高（改动最小，性价比最高）|
+| 想让 AI 做到 | Rabble 偏好 parry 而弱 guard |
+| 补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称） |
+| 优先级 | 高（改动最小，性价比最高） |
 
-### C. 走位（Positioning）
+### Post-Phase 5（后移，不阻塞核心交付）
 
-> 空间维度：让 AI 不只是前后推拉。
-
-#### B3: positioning 只有一维推拉
-
-| 项 | 说明 |
-|----|------|
-| 现状 | approach/hold/retreat 只改前后距离，没有 strafe（左右侧移）|
-| 缺口 | "积极走位获取机会"想包括绕侧、拉角度，但 distanceAppetite 只能前后推拉 |
-| 补法 | 大改。两个方向：a) 加 `strafeLeft/strafeRight` 进候选池；b) 用更复杂的位置目标（opp 侧面 45° 扇区）。需和 combat movement 系统对齐 |
-| 优先级 | 低（大改，最后考虑）|
+| 缺口 | 说明 |
+|------|------|
+| **B5** 预测驱动的 positioning | "opp out of reach → advance" 太简化。是否前进取决于敌人 profile、自身攻击范围、opp 时序。先让 prediction 对 attack/defense 有明确收益再迭代 |
+| **B6** predictionAccuracy 旋钮 | `oppActionIdentification`/`timingPrecision`/`reactionDelayMs` 是三个不同维度，不应在基础预测层未稳定时一起实现；同一次 opp 动作内误差应保持稳定（避免每 tick 随机抖动） |
+| **B3** strafe 侧移 | 大改，涉及 combat movement 系统；当前 X-only 距离控制够用，最后考虑 |
