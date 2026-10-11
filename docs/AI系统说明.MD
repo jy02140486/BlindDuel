@@ -240,6 +240,120 @@ positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常�
 }}
 ```
 
+### Phase 5：三种性格 AI（角色固定 Rabble）
+
+以下配置基于 Phase 5 统一预测层，三种性格的区别在于**意图权重**（PROACTIVE/PREEMPTIVE/PUNISH 三路径的相对比例）+ **基础偏好**。attackIntentMode 是 debug 字段，正常游戏用 `"normal"`。
+
+#### 1. 均衡型（默认，Phase 4 Rabble 草案）
+
+三条意图路径自然竞争，events 消费已全部接线。如果已有 Rabble 草案就用那份，这里不重复。
+
+#### 2. 被动反应型 — 预测前时代的行为
+
+特点：base 驱动弱，主要靠 opp 出招后的 counter-attack 和 defense。看起来反应慢、容易被压、偶尔 opp recovery 时蹭一刀。
+
+```json
+{ "aiProfile": {
+  "baseAggression": 0.5,       // 主动进攻 multiplier 降低
+  "baseDefense": 1.1,          // 防御意愿偏高
+  "decayAlpha": 0.12,          // 人格切换慢（不容易突然 aggressive）
+  "distanceAppetite": 0.5,     // 靠近欲望低
+  "retreatDesire": 0.7,        // 想拉开距离
+  "repetitionCostRate": 0.05,  // 变招慢
+  "attackPreferences": {"thrust": 1.3, "swing": 0.8, "dash": 0.6}
+}}
+```
+
+系统级 tuning 覆盖（或直接改 `AITuning.js` 默认值）：
+```javascript
+attack: {
+  baseWeight: 0.25,      // 基础攻击分降低 → 进攻更保守
+  preemptiveBonus: 0.08, // 抢先截断奖励极低（几乎不主动 PREEMPTIVE）
+  vulnReward: 0.5,       // opp recovery 时的 PUNISH 奖励保留
+},
+projectileDefense: {
+  cutBase: 0.35,         // 斩落 projectile 的意愿降低
+  dodgeBase: 0.55,       // 更倾向 dodge（被动防御）
+},
+// 意图权重硬编码在 #scoreAttack 内，
+// 被动反应型不需要改 intentWeights——
+// 低 baseWeight + 低 preemptiveBonus 已经自然让 events 驱动的攻击意图不显著
+```
+
+**预期行为**：
+- opp idle 时 AI 保持距离（distanceAppetite 低 → approach 欲望弱）
+- opp startup 时 AI 主要靠 defense 层（guard/dodge），PREEMPTIVE bonus 几乎不触发
+- opp recovery 时 vulnReward 生效 → PUNISH 路径能打出一刀
+- 投掷物优先 dodge 而非 cut
+
+#### 3. 预测驱动型 — events 主导的等反制专家
+
+特点：base 驱动极弱，找到舒适距离后基本 hold，主要靠 opp 出招后的 MOVEMENT BUFF 或 opp 后摇反制。Events 层是主决策器。
+
+```json
+{ "aiProfile": {
+  "baseAggression": 0.3,       // 基础攻击意愿极低
+  "baseDefense": 0.9,          // 防御中等（防御层主要靠 events timing）
+  "decayAlpha": 0.18,          // 人格切换中等
+  "distanceAppetite": 0.4,     // 不主动追
+  "retreatDesire": 0.4,        // 也不太想退（找到舒适距离就 hold）
+  "repetitionCostRate": 0.08,  // 变招速度中等
+  "attackPreferences": {"thrust": 1.5, "swing": 0.5, "dash": 0.8}
+}}
+```
+
+系统级 tuning 覆盖：
+```javascript
+attack: {
+  baseWeight: 0.15,      // 基础攻击分极低 → PROACTIVE 几乎不触发
+  preemptiveBonus: 0.30, // 抢先截断奖励极高（events timing 精准时触发）
+  vulnReward: 0.55,      // opp recovery 反制奖励保留
+},
+projectileDefense: {
+  cutBase: 0.75,         // 斩落 projectile 意愿高（events timing 支撑 reactive/preemptive cut）
+  dodgeBase: 0.35,       // 不太想 dodge（更倾向 cut 或 hold）
+},
+// Positioning tuning：
+// 无额外改动，events 驱动的 positioningPlan 会自然找到舒适距离
+// PREEMPTIVE bonus 0.30 + positioning approach 加成 0.12
+// → opp startup 且 AI 在 edge 时会主动压进 range
+```
+
+**关键机制**：
+
+预测驱动型**不是纯 PREEMPTIVE-only**——它的 PROACTIVE/PUNISH/DEFENSE 路径仍然参与同池竞争，只是 base 权重极低导致 PROACTIVE 很少赢。真正的驱动源是：
+
+```
+opp startup → events 产 opp_attack_active_window(startMs=380ms)
+  → preemptiveBonus=0.30（极高）+ positioning approach 加成=0.12
+  → 即使 baseWeight 只有 0.15，PREEMPTIVE bonus 也能让 attack 赢
+
+opp idle → 无 events
+  → baseWeight=0.15 极轻，distanceAppetite=0.4
+  → hold 舒适（distanceHunger 在舒适距离附近≈0）→ 原地等
+
+opp recovery → events 为空
+  → vulnReward=0.55 + baseWeight=0.15 → PUNISH 路径能打出一刀
+  → 但不强行挤进去（retreatDesire=0.4 不会逼得太远）
+```
+
+**预期行为**：
+- opp idle 时 AI 在舒适距离 hold 住（positioningPlan recommend=hold，events 为空时退化到静态阈值）
+- opp startup 时 AI 计算 PREEMPTIVE 可行性：赶得上 → 压进 range 抢先截断；赶不上 → hold 等 active 结束
+- opp recovery 时 AI 不主动进，但 vulnReward 能驱动 PUNISH 反制
+- 投掷物优先 cut（events timing 精确支撑 reactive/preemptive 双路径）
+
+**与被动反应型的本质区别**：
+
+| 维度 | 被动反应型 | 预测驱动型 |
+|------|-----------|-----------|
+| baseWeight | 0.25（低） | 0.15（极低） |
+| preemptiveBonus | 0.08（几乎没有） | 0.30（极高） |
+| events 的角色 | 辅助信息（events 有但不显著驱动决策） | 核心驱动（events timing 决定 PREEMPTIVE/PUNISH 是否触发） |
+| opp idle 时 | 有点想靠近（distanceAppetite 0.5） | hold 舒适（distanceAppetite 0.4 + baseWeight 0.15 → hold 赢） |
+| opp startup 时 | 主要靠 defense guard/dodge | PREEMPTIVE 截断（events 计算 timing 可行性后压进 range） |
+| 节奏感 | 慢、稳定、防御姿态 | 等待、精准、一击反制 |
+
 ---
 
 ## 7. 调参索引（按目标反查）
@@ -325,6 +439,8 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 > 触发场景：设计 Rabble（精于防反、opp 出重击→伺机轻击截断、积极走位）
 > 分析结论：现有 7 个 knob 能配出 ~70% 效果（更会防、偏好轻击、人格切换快）。投掷物防御系统落地后暴露了三个新缺口（B4-B6），且原有三个缺口（B1-B3）都需要统一预测层才能解决。
 > 缺口分层：**Phase 4 先落地现有 7 个 knob**；Phase 5 补统一预测层（predictedOpponentEvents），一次性解决 B1/B4/B5；B2/B3 独立。
+>
+> **2026-10-12 更新**：Phase 5 核心 + B5 positioning 全部落地。详见 `plans/26.10.9 预测能力通用化计划.MD`。以下缺口状态以 ✅/⌛标记。
 
 ### Rabble 草案（现有 knob 最大化）
 
@@ -342,14 +458,12 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 - alpha=0.25 → opp 一出招迅速切防御，一收招迅速切攻击
 - attackPreferences → 优先出 thrust
 
-### 缺口 B1：不区分 opp 出什么招
+### 缺口 B1：不区分 opp 出什么招 ✅ 已解决（Phase 5 Step 1-3a）
 
 | 项 | 说明 |
 |----|------|
-| 现状 | `Situation` 只有 oppPhase（startup/active/recovery）+ oppVulnerable + oppThreat，没有 opp 当前 stateName / attackProfile |
-| 想让 AI 做到 | opp 出 swing（重击 startup 长）→ 用 thrust 截断；opp 出 thrust（轻击 startup 短）→ 不抢先（自己赶不上）|
-| 影响 | 无法针对 opp 招式类型差异化 preemptiveBonus |
-| 未来补法 | 1) `#buildSituation` 里从 opp 的 committed state 查当前 attackProfile；2) `#scoreAttack` 的 startupFactor 改成和 opp startupMs 比，不是只和自己最快招比 |
+| 解决方式 | `Situation.opp` 扩展为 `{phase, stateName, attackProfile, vulnerable, threat}`；`predictedOpponentEvents[]` 生成 `opp_attack_active_window` 事件带 trajectory 和 timing 属性；`#scoreAttack` preemptive bonus 根据 oppTrajectory（slash vs thrust）缩放 |
+| 验收 | opp 出 swing（trajectory=slash）→ PREEMPTIVE full bonus；opp 出 thrust（trajectory=thrust）→ PREEMPTIVE mult=0.3 或 0（赶不上时）|
 
 ### 缺口 B2：没有 defensePreferences
 
@@ -360,22 +474,21 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | 影响 | Rabble 的"精于防反"只能靠 `baseDefense` 拉整体防御意愿，无法让 parry 比 guard 分更高 |
 | 未来补法 | `aiProfile.defensePreferences: {guard_low:1.0, guard_high:0.6, parry:1.8}` + `#scoreDefense` 末尾乘入（和 attackPreferences 对称） |
 
-### 缺口 B4：近距离投掷无法拦截 throw
+### 缺口 B4：近距离投掷无法拦截 throw ✅ 意外实现（Phase 5 Step 4）
 
 | 项 | 说明 |
 |----|------|
-| 现状 | AI 在 throw_windup 期间不能主动攻击 opp（只有 attack 候选，但 rf=0 因为 dist > effR 是常态）| 
-| 物理边界 | dist < effR（swing≈3m）时，reactive cut 物理上不可能（flightMs < swing startupMs=420ms）；preemptive cut 窗口极窄（1-2 tick）。唯一可靠方案是**在 windup 期间直接打 opp 打断投掷**（hitstun 让 projectile 不飞）|
-| 想让 AI 做到 | opp 抬手且在攻击 reach 内 → 抢先 swing opp 打断 throw，而不是等 projectile 出来再斩 |
-| 未来补法 | `predictedOpponentEvents[]` 统一预测层 → AI 看到 opp_throw 事件在 reach 内 → #scoreAttack 加 preemptiveBonus（和现有 startup preemptive 类似但专门针对 throw_windup）| 
+| 解决方式 | 未显式加 throw interrupt bonus。`attackIntentMode=preemptive_only` 下 commonW 在 opp committed state（含 throw_windup）时 = 1.0 → common 基分（0.4）> hold（0.15）→ AI commit attack → hitstun 打断投掷 |
+| 验收 | preemptive_only 模式下近距离 reach 内 AI 主动 swing opp 打断投掷，远距离正常走 preemptive cut / reactive 路径 |
 
-### 缺口 B5：preemptive dodge（throw_windup 期间提前侧移）
+### 缺口 B5：preemptive dodge（throw_windup 期间提前侧移）✅ 已落地（Phase 5 B5 Step 1+2）
 
 | 项 | 说明 |
 |----|------|
-| 现状 | preemptive evaluator 里 dodge 被 `isPreemptive` 守卫禁掉了；throw_windup 期间 positioning approach 被 suppress ×0.1 + hold 保底 → AI 强制原地站住 |
-| 想让 AI 做到 | 看到抬手后向 projectile 轨迹垂直方向侧移几步（strafe），不 commit 任何动作 → release 后斩/躲都有更好站位 |
-| 未来补法 | `predictedOpponentEvents[]` 统一预测层 → AI 知道 projectile trajectory → #scorePositioning 加 strafe 候选，目标是轨迹侧方 45° 扇区 |
+| 注意 | 原设想是**strafe 侧移**（B3 才是侧移大改）。Phase 5 先落地**events 驱动的 positioning 评分加成** |
+| 实现 | `#buildPositioningPlan(sit)` 遍历 predictedOpponentEvents，计算 moveSpeed=0.4 m/s 约束下（窗口内最多移动 ~15cm）的阈值跨越可行性 → `#scorePositioning` 根 plan.recommend 微调 approach/hold/retreat 三候选评分：retreat=+0.15（opp reach 边缘内避弹）、approach=+0.12（PREEMPTIVE 边缘压线）、hold=+0.08 + approach×0.5（都赶不上时明确 hold）|
+| 约束 | moveIntent 只有方向（-1/0/1），无精确距离控制 → positioning 是方向控制系统，events 只微调相对优先级，不重写静态阈值 |
+| 退化 | 无 events 时 posPlan=null → 完全跳过加成 → 零回归 |
 
 ### 缺口 B6：没有 predictionAccuracy 旋钮（个体预测能力差异）
 
@@ -399,5 +512,7 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 **不要为了一个角色一次加一堆 knob**。Phase 4 先落地现有 7 个 knob，跑 Rabble 草案 profile 实际看效果。三个缺口按以下顺序评估：
 
 1. **B2（defensePreferences）** — 改动最小（加一个字段 + 一处乘法），和 attackPreferences 对称，性价比最高。如果 Rabble 跑完发现"让 parry 比 guard 分高"确实需要，先补这个
-2. **B1/B4/B5/B6（统一预测层）** — 这四个缺口共享同一个根因：没有 `predictedOpponentEvents[]` 中间层。一次性搭好后，B1（opp 招式区分）、B4（拦截 throw）、B5（preemptive strafe）、B6（predictionAccuracy 旋钮）自然连通。规划为 Phase 5 核心工作
-3. **B3（positioning 侧移）** — 大改，涉及 movement 系统。最后考虑
+2. **B1/B4/B5（统一预测层核心）** — ✅ Phase 5 全部落地。共享根因 `predictedOpponentEvents[]` 已建，B1（opp 招式区分）、B4（拦截 throw 意外实现）、B5（events 驱动 positioning 评分加成）自然连通
+3. **B6（predictionAccuracy 旋钮）** — ⌛ 仍在 backlog。events 层已稳定，随时可在生成时注入噪声参数（oppActionIdentification / timingPrecision / reactionDelayMs），属于 tuning 层改动，不阻塞任何现有功能
+4. **B2（defensePreferences）** — ⌛ 仍在 backlog。改动极小（加字段 + 一处乘法），等角色 profile 需要时补
+5. **B3（positioning 侧移）** — ⌛ 仍在 backlog。大改，涉及 movement 系统，最后考虑

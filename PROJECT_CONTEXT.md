@@ -46,7 +46,7 @@ py .\.serve.ps1
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`（传统 attack-shield / attack-hitbox 两阶段）
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
-- AI 系统（四层分离架构，含投掷物防御 reactive + preemptive 双路径，详见 `docs/AI系统说明.MD`）：
+- AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径，详见 `docs/AI系统说明.MD`）：
   - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment）
   - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach + throw state cross-reference 校验 projectileType vs ProjectileDefs）
   - Layer 0 纯数据：`scripts/Systems/AI/CombatMemory.js`（pressure/outcomes/getAdaptation）

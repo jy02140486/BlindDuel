@@ -94,6 +94,13 @@ export class AIController extends BaseController {
         this.debugVisible = options.debugVisible ?? true;
         this.#initDebugVisuals();
         this.#updateDebugVisuals();
+
+        // Step C: 攻击意图模式（独立于 tuning，用于隔离 PROACTIVE/PREEMPTIVE/PUNISH 三条路径）
+        // normal — 三条路径全开（正常游戏行为）
+        // proactive_only — 关掉 PREEMPTIVE 和 PUNISH（只剩 opp.idle 时的主动进攻）
+        // preemptive_only — 只剩 PREEMPTIVE（opp.startup 抢先截断）
+        // punish_only — 只剩 PUNISH（opp.recovery 惩罚攻击）
+        this.attackIntentMode = options.attackIntentMode ?? "normal";
     }
 
     setOpponent(opponent) {
@@ -301,7 +308,9 @@ export class AIController extends BaseController {
         }
 
         // Phase 2: Positioning 三候选（正式进入同池竞争）
-        const pos = this.#scorePositioning(sit);
+        // B5: 先生成 positioningPlan（events 驱动的阈值跨越可行性），接入评分微调
+        const _posPlan = this.#buildPositioningPlan(sit);
+        const pos = this.#scorePositioning(sit, _posPlan);
 
         // Phase 3 Step 7: 投掷物防御候选
         // 两条路径：reactive（in-flight projectile）+ preemptive（throw_windup 预测）
@@ -315,14 +324,17 @@ export class AIController extends BaseController {
         projResults.push(...reactiveResults);
 
         // --- preemptive 路径：opp 抬手预测 projectile ---
-        // 三层门控：
-        //   ① oppPhase=throw_windup ② 有 predictedTTI ③ projectile 可被斩
-        //   ④ 【新增 viability gate】飞行时间足够短（距离够近），让 release 瞬间 timingAlignment ≥ 0.5
-        //      —— 远距离（flightMs > viableFlightCutoff）时 preemptive 物理上不可能，跳过整个路径
-        //      —— 避免 preemptive dodge 在 throw_windup 早期触发，堵死 release 后的 reactive 路径
-        if (sit.opp.phase === "throw_windup"
-            && sit.predictedProjectileTTI != null
-            && sit.predictedProjectileCuttable === true) {
+        // Step 2b 迁移：从统一 events 层读，不再依赖 sit.predictedProjectile* 孤立字段
+        // 门控简化：arrivalEvent != null 已隐含「cuttable + 有预测到达时刻」两个条件
+        // 加上 oppPhase=throw_windup 确保只有 throw_windup 阶段触发
+        const arrivalEvent = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_projectile_arrival_estimate"
+        );
+        const releaseEvent = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_throw_release"
+        );
+
+        if (sit.opp.phase === "throw_windup" && arrivalEvent && releaseEvent) {
 
             // 找到所有 slash 中最早的 activeEnd（最快的斩招）
             const slashAttacks = (this.kbProfile?.attacks ?? [])
@@ -331,30 +343,23 @@ export class AIController extends BaseController {
             if (slashAttacks.length > 0) {
                 const bestActiveEnd = Math.min(...slashAttacks.map(
                     s => s.timing.startupMs + s.timing.activeMs));
-                const oppThrowProfile = sit.opp.throwProfile;
-                const projectileSpeed = oppThrowProfile?.speed ?? 6;
-                const predictedFlightMs = (sit.predictedProjectileDistance / projectileSpeed) * 1000;
-
-                // 单一物理门控：projectile 到达 AI 的时刻 ≤ weaponbox 结束时刻
-                // AI commit at T=0 → weaponbox = [activeStart, bestActiveEnd]
-                // opp release at T+throwRem → projectile 到达 = T+throwRem+flightMs = T+predictedTTI
-                // 物理条件：throwRem+flightMs ≤ bestActiveEnd → predictedTTI ≤ bestActiveEnd
-                const _canPreemptive = sit.predictedProjectileTTI <= bestActiveEnd;
+                const _canPreemptive = arrivalEvent.startMs <= bestActiveEnd;
+                const flightMs = arrivalEvent.startMs - releaseEvent.startMs;
 
                 if (this.debugVisible) {
                     console.log(
-                        `[AI-Diag] preemptive_gate: predictedTTI=${sit.predictedProjectileTTI.toFixed(0)}ms ` +
+                        `[AI-Diag] preemptive_gate: predictedTTI=${arrivalEvent.startMs.toFixed(0)}ms ` +
                         `bestActiveEnd=${bestActiveEnd}ms ` +
-                        `flightMs=${predictedFlightMs.toFixed(0)}ms → ` +
+                        `flightMs=${flightMs.toFixed(0)}ms → ` +
                         `${_canPreemptive ? "VIABLE" : "SKIP (tts>activeEnd, projectile arrives after weaponbox ends)"}`
                     );
                 }
 
                 if (_canPreemptive) {
                     const preemptiveResults = this.#evaluateProjectileDefense(sit, {
-                        overrideTTI: sit.predictedProjectileTTI,
+                        overrideTTI: arrivalEvent.startMs,
                         overrideCuttable: true,
-                        overrideDistance: sit.predictedProjectileDistance,
+                        overrideDistance: arrivalEvent.properties.estimatedDistance,
                         isPreemptive: true,
                     });
                     projResults.push(...preemptiveResults);
@@ -459,31 +464,6 @@ export class AIController extends BaseController {
                 oppPhase = "throw_windup";
             }
         }
-
-        // === Step 1 新增：throw_windup 预测外推 ===
-        // opp 抬手时，从 throwProfile + projectileDef 预测 release → impact 的 TTI
-        // 物理假设：直线恒速飞行（与 reactive 路径的 estTimeToCurrentPositionMs 简化模型一致）
-        let predictedProjectileTTI = null;
-        let predictedProjectileCuttable = false;
-        let predictedProjectileDistance = null;
-        let predictedFlightMs = 0;
-        let throwRemainingMs = 0;
-
-        if (oppPhase === "throw_windup" && oppThrowProfile) {
-            const totalMs = oppThrowProfile.timing.totalMs;
-            const startupMs = oppThrowProfile.timing.startupMs;
-            const elapsedMs = oppNormTime * totalMs;        // 从动画进度算已过时间
-            throwRemainingMs = Math.max(0, startupMs - elapsedMs);  // 距 release 还剩多久
-
-            // throwProfile 已由 AIKnowledgeRegistry cross-reference 校验过，speed/cuttable 直接读
-            const projectileSpeed = oppThrowProfile.speed ?? 6;  // fallback 默认值
-            predictedFlightMs = (distance / projectileSpeed) * 1000;
-
-            predictedProjectileTTI = throwRemainingMs + predictedFlightMs;
-            predictedProjectileCuttable = oppThrowProfile.cuttable === true;
-            predictedProjectileDistance = distance;
-        }
-        // ============================================
 
         // opponent threat：综合 phase + reach + distance + self 当前状态
         // threat 必须随距离连续衰减到 0，超远距离 threat≈0 → 防御评分直接被门控挡掉
@@ -631,16 +611,12 @@ export class AIController extends BaseController {
         if (this.debugVisible) {
             if (oppThrowProfile) {
                 const _tp = oppThrowProfile;
-                const _predInfo = oppPhase === "throw_windup" && predictedProjectileTTI != null
-                    ? ` predictedTTI=${predictedProjectileTTI.toFixed(0)}ms ` +
-                      `throwRemaining=${throwRemainingMs.toFixed(0)}ms ` +
-                      `predictedFlight=${predictedFlightMs.toFixed(0)}ms ` +
-                      `predDist=${predictedProjectileDistance?.toFixed(2) ?? "?"}`
-                    : "";
+                // Step 2b: 旧 _predInfo 已删除（引用已迁移字段 predictedProjectileTTI/throwRemainingMs 等）
+                // events 诊断日志 [AI-Diag] predictedEvents=... 已覆盖 release startMs 和 arrival startMs
                 console.log(
                     `[AI-Diag] oppThrow=${_tp.stateName} projectileType=${_tp.projectileType} ` +
                     `cuttable=${_tp.cuttable} startupMs=${_tp.timing.startupMs}ms oppPhase=throw_windup ` +
-                    `oppThreat=${oppThreat.toFixed(2)}${_predInfo}`
+                    `oppThreat=${oppThreat.toFixed(2)}`
                 );
             }
             if (activeProjectileThreats.length > 0) {
@@ -655,6 +631,14 @@ export class AIController extends BaseController {
         }
         // ===============================================
 
+        // === Phase 5 Step 2a: 统一预测事件生成器 ===
+        // 根据 opp 当前 state + KB profile 生成未来时间线事件
+        // 第一版：只观测不消费（评分函数仍读旧字段）
+        const predictedOpponentEvents = this.#buildPredictedOpponentEvents(
+            oppState, oppNormTime, oppAttackProfile, oppThrowProfile,
+            oppPhase, distance
+        );
+
         const situation = {
             distance,
             self:   { stateName: selfState, def: selfDef, normTime: selfNormTime },
@@ -666,11 +650,6 @@ export class AIController extends BaseController {
             oppVulnerable,
             // Phase 3 Step 6 新增
             activeProjectileThreats,
-            // Step 1 新增：throw_windup 预测（仅 oppPhase=throw_windup 时非 null）
-            predictedProjectileTTI,
-            predictedProjectileCuttable,
-            predictedProjectileDistance,
-            throwRemainingMs,
             // Phase 0 新增
             oppIdleMs,
             oppLastActiveMs,
@@ -679,6 +658,8 @@ export class AIController extends BaseController {
             preferredCombatRange,
             distanceError,
             now,
+            // Phase 5 Step 2a: 统一预测层
+            predictedOpponentEvents,
             selfMobility: {
                 hasTrait: selfMobilityTrait?.enabled === true,
                 hasActiveBoost: selfHasMobilityBoost,
@@ -689,6 +670,121 @@ export class AIController extends BaseController {
         // 缓存，供 Phase 0 Posture.update 消费（每 decision tick 一次）
         this._lastSituation = situation;
         return situation;
+    }
+
+    /**
+     * Phase 5 Step 2a: 根据 opp 当前 committed state + KB profile 生成未来事件时间线
+     * 纯数据层 — 不做战术判断，只产出时间线事件，不消费任何评分函数
+     *
+     * 事件类型：
+     *   "opp_attack_active_window"        // 普通攻击 weaponbox 激活窗口
+     *   "opp_throw_release"               // 投掷物 release 时刻（瞬时）
+     *   "opp_projectile_arrival_estimate" // 投掷物预计到达时刻（瞬时）
+     *
+     * 时间基准：startMs / endMs = "距现在多少 ms"
+     * 上限：最多 5 个事件，startMs > 2000ms 丢弃（太远的未来不关心）
+     */
+    #buildPredictedOpponentEvents(oppState, oppNormTime, oppAttackProfile, oppThrowProfile, oppPhase, distance) {
+        const events = [];
+        const MAX_EVENTS = 5;
+        const MAX_FUTURE_MS = 2000;
+
+        // === 1. 普通攻击 active window ===
+        // 只有 opp 还在 startup 阶段（weaponbox 尚未激活）才产事件
+        // active / recovery 阶段不产 — 已经在进行中了，没有"未来"可预测
+        if (oppAttackProfile && oppPhase === "startup") {
+            const timing = oppAttackProfile.timing;
+            const reach = oppAttackProfile.range?.maxReach ?? 0;
+            const startupMs = timing.startupMs ?? 0;
+            const activeMs = timing.activeMs ?? 0;
+            const elapsedMs = oppNormTime * timing.totalMs;
+            const remainingStartupMs = Math.max(0, startupMs - elapsedMs);
+
+            events.push({
+                eventType: "opp_attack_active_window",
+                startMs: remainingStartupMs,
+                endMs: remainingStartupMs + activeMs,
+                sourceState: oppState,
+                properties: {
+                    startupMs,
+                    activeDurationMs: activeMs,
+                    recoveryMs: timing.recoveryMs ?? 0,
+                    reach,
+                    trajectory: oppAttackProfile.trajectory ?? null,
+                    weight: oppAttackProfile.weight ?? null,
+                }
+            });
+        }
+
+        // === 2. 投掷物事件链 ===
+        // throw 状态产两个瞬时事件：release → arrival estimate
+        // 时间计算逻辑与 #buildSituation 里的 throw_windup 预测完全一致（保持同一物理模型）
+        if (oppThrowProfile) {
+            const timing = oppThrowProfile.timing;
+            const startupMs = timing.startupMs ?? 0;
+            const elapsedMs = oppNormTime * timing.totalMs;
+            const throwReleaseRemainingMs = Math.max(0, startupMs - elapsedMs);
+            const projectileSpeed = oppThrowProfile.speed ?? 6;
+            const flightMs = (distance / projectileSpeed) * 1000;
+            const tti = throwReleaseRemainingMs + flightMs;
+
+            // 事件 1: release 时刻（瞬时）
+            events.push({
+                eventType: "opp_throw_release",
+                startMs: throwReleaseRemainingMs,
+                endMs: throwReleaseRemainingMs,
+                sourceState: oppState,
+                properties: {
+                    startupMs,
+                    projectileType: oppThrowProfile.projectileType,
+                    cuttable: oppThrowProfile.cuttable,
+                    speed: projectileSpeed,
+                }
+            });
+
+            // 事件 2: projectile 预计到达时刻（瞬时）
+            if (oppThrowProfile.cuttable) {
+                events.push({
+                    eventType: "opp_projectile_arrival_estimate",
+                    startMs: tti,
+                    endMs: tti,
+                    sourceState: oppState,
+                    properties: {
+                        projectileType: oppThrowProfile.projectileType,
+                        cuttable: oppThrowProfile.cuttable,
+                        speed: projectileSpeed,
+                        estimatedDistance: distance,
+                    }
+                });
+            }
+        }
+
+        // === 3. 排序 + 裁剪 ===
+        events.sort((a, b) => a.startMs - b.startMs);
+        const filtered = events
+            .filter(e => e.startMs <= MAX_FUTURE_MS)
+            .slice(0, MAX_EVENTS);
+
+        // === 4. 诊断日志 ===
+        if (this.debugVisible && filtered.length > 0) {
+            const summary = filtered.map(e =>
+                `${e.eventType}(start=${e.startMs.toFixed(0)}ms,end=${e.endMs.toFixed(0)}ms,src=${e.sourceState})`
+            ).join(", ");
+            console.log(`[AI-Diag] predictedEvents=${filtered.length} [${summary}] oppPhase=${oppPhase}`);
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Phase 5 Step 2b: 从 predictedOpponentEvents 数组里查第一个匹配 eventType 的事件
+     * @param {Array} events - predictedOpponentEvents
+     * @param {string} eventType - 要找的事件类型
+     * @returns {object|null} - 事件对象或 null
+     */
+    #findPredictedEvent(events, eventType) {
+        if (!events || events.length === 0) return null;
+        return events.find(e => e.eventType === eventType) ?? null;
     }
 
     /**
@@ -811,8 +907,25 @@ export class AIController extends BaseController {
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
         const baseScore = score;
 
+        // === Step B: 意图分项诊断 ===
+        // 记录每个分项归属，最后输出 breakdown 日志
+        // 归属规则（来自 Step A 审计）：
+        //   common: 所有基础/风险/历史类分项，不区分意图
+        //   preemptive: events.startup 时的抢先加分（唯一的 PREEMPTIVE 入口）
+        //   punish: opp.recovery 时 vulnReward 的主要贡献
+        let _breakdown = { common: score, preemptive: 0, punish: 0 };
+
         const canAttack = sit.now - this.lastAttackTime >= this.attackCooldownMs;
-        if (!canAttack) score -= this.tuning.attack.cooldownPenalty; // 冷却中 → 大幅扣分
+        // cooldownPenalty scope: 只惩罚 opp 空闲时的主动追击
+        // 豁免：opp.startup — PREEMPTIVE 被迫应对，冷却中也该能触发
+        // 仍扣：opp.active — opp 正在打，冷却中不该硬上
+        // 仍扣：opp.recovery — opp 还没恢复好，冷却中不该连打（vulnReward 等冷却完再拿）
+        const oppInStartup = sit.opp?.phase === "startup";
+        if (!canAttack && !oppInStartup) {
+            const _cdPenalty = this.tuning.attack.cooldownPenalty;
+            score -= _cdPenalty;
+            _breakdown.common -= _cdPenalty;
+        }
 
         // ---- Phase 2: 克制关系查询 ----
         // 我的攻击 → opponent 当前防御状态，能不能打中？
@@ -827,15 +940,21 @@ export class AIController extends BaseController {
             // opponent dodge 了或 guard 防住了 → 大幅扣分
             const penalty = interaction.parryable ? this.tuning.attack.parryRiskPenalty : this.tuning.attack.missPenalty; // parry 更危险（有反击）
             score -= penalty;
+            _breakdown.common -= penalty;
         } else if (sit.opp.guardType && !interaction.blocked) {
             // opponent 在 guard 但防不住我的攻击 → 加分（抓漏洞）
-            score += this.tuning.attack.guardLeakBonus;
+            const _leak = this.tuning.attack.guardLeakBonus;
+            score += _leak;
+            _breakdown.common += _leak;
         }
         // --------------------------------
 
         // opponent vulnerability 高 → 加分（punish 窗口）
         const vulnDelta = sit.oppVulnerable * this.tuning.attack.vulnReward;
         score += vulnDelta;
+        // vulnReward 语义：opp.recovery 时 0.8 → PUNISH 主贡献
+        // opp.startup 时 0.3 → 和 PREEMPTIVE 轻微重叠（Step C 再明确归属）
+        _breakdown.punish += vulnDelta;
 
         // Bug 2 fix: opp 有招在身上（任何阶段）→ 攻击风险高 → 扣分
         // sit.oppThreat 已经编码了 phase + range + distance，不需要额外检查
@@ -843,16 +962,60 @@ export class AIController extends BaseController {
         if (sit.opp.phase !== "none") {
             threatPenaltyApplied = sit.oppThreat * this.tuning.attack.threatPenalty;
             score -= threatPenaltyApplied;
+            _breakdown.common -= threatPenaltyApplied;
         }
 
-        // opponent 在 startup 且我能在他 active 前出手 → 加分（抢先）
-        if (sit.opp.phase === "startup" && timing) {
+        // Phase 5 Step 3a: preemptive bonus 迁移到 events 层
+        // 旧逻辑 bug: 用 sit.opp.remainingMs（整个 state 剩余时间）→ 比真正 timeUntilActive 大得多
+        // 新逻辑: 从 events 查 opp_attack_active_window.startMs（精确的距 opp weaponbox 激活还剩多久）
+        const oppAtkWindow = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_attack_active_window"
+        );
+        if (oppAtkWindow && timing) {
             const myStartupMs = timing.startupMs ?? 0;
-            if (myStartupMs <= sit.opp.remainingMs) score += this.tuning.attack.preemptiveBonus;
+            const oppTimeUntilActive = oppAtkWindow.startMs;
+
+            // 物理条件：我的攻击能在 opp weaponbox 激活前先激活 + 够得着
+            if (myStartupMs < oppTimeUntilActive
+                && sit.distance <= effectiveRange) {
+
+                // trajectory-aware scaling（B1 gap: AI 区分 opp 招式类型）
+                // opp 出 thrust（快招）→ AI 很难真抢先，抑制 bonus
+                // opp 出 slash（慢招）→ AI 容易抢先，full bonus
+                // trajectory=null（dash 等）→ 默认 full
+                const oppTrajectory = oppAtkWindow.properties.trajectory;
+                let preemptiveMult = 1.0;
+                if (oppTrajectory === "thrust") {
+                    const oppStartupMs = oppAtkWindow.properties.startupMs ?? 250;
+                    if (myStartupMs >= oppStartupMs) {
+                        preemptiveMult = 0;   // 我不比 opp 快，根本赶不上
+                    } else {
+                        preemptiveMult = 0.3; // 勉强能赶（需 opp 已过部分 startup），小奖励
+                    }
+                }
+
+                const bonus = this.tuning.attack.preemptiveBonus * preemptiveMult;
+                score += bonus;
+                _breakdown.preemptive += bonus;
+                // === DIAGNOSTIC LOG: PREEMPTIVE 专属标记 ===
+                // grep PREEMPTIVE 即可确认哪个 attack 是新拦截逻辑触发的
+                if (this.debugVisible) {
+                    console.log(
+                        `[AI-Diag] PREEMPTIVE: attack=${attack.stateName} preempts ${oppAtkWindow.sourceState} ` +
+                        `(myStartup=${myStartupMs}ms < oppTimeUntilActive=${oppTimeUntilActive.toFixed(0)}ms, ` +
+                        `oppTrajectory=${oppTrajectory ?? "?"}, mult=${preemptiveMult}, bonus=+${bonus.toFixed(2)})`
+                    );
+                }
+                // ==========================================
+            }
         }
 
         // 距离接近 range 上限 → 微加分（稳定命中点，Step 1：与 effectiveRange 对齐）
-        if (sit.distance >= range && sit.distance <= effectiveRange) score += this.tuning.attack.rangeEdgeBonus;
+        if (sit.distance >= range && sit.distance <= effectiveRange) {
+            const _reb = this.tuning.attack.rangeEdgeBonus;
+            score += _reb;
+            _breakdown.common += _reb;
+        }
 
         // ---- Phase 3 Feedback Memory: Adaptation 调节器 ----
         // 改调 CombatMemory.getAdaptation（映射后的 outcomes，per-state tracking）
@@ -863,9 +1026,11 @@ export class AIController extends BaseController {
         if (adaptation.consecutiveFail >= 2) {
             failDelta = -(this.tuning.attack.feedbackFailPenalty * adaptation.consecutiveFail);
             score += failDelta;
+            _breakdown.common += failDelta;
         } else if (adaptation.consecutiveFail === 1) {
             failDelta = -(this.tuning.attack.feedbackFailPenalty * 0.5);
             score += failDelta;
+            _breakdown.common += failDelta;
         }
 
         // 成功累积奖励（保持惯性，封顶 Step 3: 只反映最近短期成功）
@@ -874,6 +1039,7 @@ export class AIController extends BaseController {
         if (cappedSuccess >= 1) {
             successDelta = this.tuning.attack.feedbackSuccessBonus * cappedSuccess;
             score += successDelta;
+            _breakdown.common += successDelta;
         }
 
         // ---- Feedback Memory Step 4: Continuity 调节器 ----
@@ -882,6 +1048,7 @@ export class AIController extends BaseController {
         if (attack.stateName === this.#lastCommittedState && adaptation.consecutiveFail < 2) {
             continuityDelta = this.tuning.attack.continuityBonus;
             score += continuityDelta;
+            _breakdown.common += continuityDelta;
         }
 
         // ---- Repetition Cost: 重复行为成本（Step 2）----
@@ -895,11 +1062,49 @@ export class AIController extends BaseController {
             const rcMax  = this.tuning.attack.repetitionCostMax ?? 0.18;
             repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
             score -= repetitionCost;
+            _breakdown.common -= repetitionCost;
         }
+
+        // === Step C: 意图级权重（绕过共享乘数，让三条进攻意图可独立配置）===
+        const _mode = this.attackIntentMode ?? "normal";
+        const oppIsIdle = sit.opp?.phase === "none";
+        let commonW = 1.0, preemptiveW = 1.0, punishW = 1.0;
+        switch (_mode) {
+            case "proactive_only":
+                preemptiveW = 0.0; punishW = 0.0; break;
+            case "preemptive_only":
+                // 只保留 PREEMPTIVE：common 减半（够抢攻击但不主动追）
+                if (oppIsIdle) commonW = 0.0;  // opp 空闲时 common 归零 → 不主动追
+                preemptiveW = 1.0; punishW = 0.0; break;
+            case "punish_only":
+                if (oppIsIdle) commonW = 0.0;  // opp 空闲时 common 归零 → 不主动追
+                preemptiveW = 0.0; punishW = 1.0; break;
+            case "normal":
+            default:
+                break;
+        }
+        _breakdown.common     *= commonW;
+        _breakdown.preemptive *= preemptiveW;
+        _breakdown.punish     *= punishW;
+        score = _breakdown.common + _breakdown.preemptive + _breakdown.punish;
 
         // ---- Phase 3: Startup Utility ----
         const startupFactor = this.#computeStartupFactor(attack, sit);
         score *= startupFactor;
+
+        // === Step B FINAL: 输出意图分项 breakdown ===
+        // 放在所有加法完成后（还没乘 rangeFactor/postureMult）
+        // 只在有非 common 分项时输出（避免刷屏）
+        if (this.debugVisible && (_breakdown.preemptive > 0 || _breakdown.punish > 0)) {
+            const _total = _breakdown.common + _breakdown.preemptive + _breakdown.punish;
+            console.log(
+                `[AI-Diag] attackBreakdown(${attack.stateName}): ` +
+                `common=${_breakdown.common.toFixed(2)}` +
+                `${_breakdown.preemptive > 0 ? ` +PREEMPTIVE=${_breakdown.preemptive.toFixed(2)}` : ``}` +
+                `${_breakdown.punish > 0 ? ` +PUNISH=${_breakdown.punish.toFixed(2)}` : ``}` +
+                ` → rawTotal=${_total.toFixed(2)} (×startupFactor=${startupFactor.toFixed(2)})`
+            );
+        }
 
         // ---- Phase 2: Continuous Range Utility（距离平滑衰减）----
         score *= rangeFactor;
@@ -970,11 +1175,22 @@ export class AIController extends BaseController {
 
         // --- 问题 2b: 现在是不是正确时机？---
         if (oppPhase === "startup") {
-            // timeUntilActive = 距对手 weaponbox 激活还有多久
-            const totalMs = oppAtk.timing.totalMs;
-            const startupMs = oppAtk.timing.startupMs;
-            const elapsedMs = sit.opp.normTime * totalMs;
-            const timeUntilActive = startupMs - elapsedMs;
+            // Phase 5 Step 3b: timeUntilActive 从统一 events 层读
+            // opp_attack_active_window.startMs 数值等价于 startupMs - elapsedMs（logs 已验证）
+            // 但 events 是统一数据源，减少多处重复计算
+            const oppAtkWindow = this.#findPredictedEvent(
+                sit.predictedOpponentEvents, "opp_attack_active_window"
+            );
+            let timeUntilActive;
+            if (oppAtkWindow) {
+                timeUntilActive = oppAtkWindow.startMs;
+            } else {
+                // Fallback: events 缺失时手动计算（理论上 opp startup 总会产 events）
+                const totalMs = oppAtk.timing.totalMs;
+                const startupMs = oppAtk.timing.startupMs;
+                const elapsedMs = sit.opp.normTime * totalMs;
+                timeUntilActive = startupMs - elapsedMs;
+            }
 
             // AI 每隔 decisionIntervalMs 才能做一次决策 + 防御瞬时生效
             // 窗口定义：timeUntilActive 在 [0, decisionBuffer] 之间 = 该按了
@@ -996,7 +1212,7 @@ export class AIController extends BaseController {
                     `[AI-Diag] defenseScore ${kind}:${defenseAction.stateName} ` +
                     `startup timing → timeUntilActive=${timeUntilActive.toFixed(0)}ms ` +
                     `decisionBuffer=${decisionBuffer} urgency=${urgency.toFixed(2)} ` +
-                    `(normTime=${sit.opp.normTime.toFixed(3)} startupMs=${startupMs})`
+                    `(src=events oppTrajectory=${oppAtkWindow?.properties?.trajectory ?? "?"})`
                 );
             }
             // ===============================================
@@ -1326,6 +1542,162 @@ export class AIController extends BaseController {
     }
 
     /**
+     * B5 Step 1: 根据 predictedOpponentEvents 生成 positioningPlan
+     * 纯数据层 — 只计算阈值跨越可行性，不做任何评分消费（Step 2 才接入 #scorePositioning）
+     *
+     * 核心约束: AI moveSpeed=0.4 m/s，一个典型 opp startup 窗口（~380ms）内 AI 最多移动 ~0.15m
+     * 可行性判断 = 距离差 / moveSpeed ≤ event.startMs / 1000
+     *
+     * 事件消费优先级：opp_attack_active_window > opp_throw_release
+     * （同一个 tick 可能有多个 events，取最早的窗口，因为最早的事件最紧迫）
+     *
+     * @param {object} sit - 决策时刻 Situation 对象
+     * @returns {object|null} plan - 如果有 events 则返回 plan，否则 null
+     *   {
+     *     recommend: "retreat" | "approach" | "hold",
+     *     primaryEvent: Event,
+     *     retreatViable: boolean,    // 退到安全阈值内是否赶得上
+     *     approachViable: boolean,   // 压进目标阈值内是否赶得上
+     *     holdViable: boolean,       // hold 是否在所有事件下都合理
+     *     distance: number,
+     *     moveSpeed: number,
+     *     moveLimitMs: number,       // 窗口内可移动的距离上限（米）
+     *   }
+     */
+    #buildPositioningPlan(sit) {
+        const events = sit.predictedOpponentEvents;
+        if (!events || events.length === 0) return null;
+
+        const moveSpeed = this.kbProfile?.movement?.moveSpeed ?? 0.4;
+        const distance = sit.distance;
+
+        // 复用 positioning 的 effectiveRange 计算（和 #scoreAttack/#scorePositioning 对齐）
+        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            return disp < 0 ? -disp : 0;
+        }));
+        const selfEffRange = this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
+
+        // 安全余量: 阈值跨越后再留 15cm buffer
+        const SAFETY_BUFFER = 0.15;
+
+        // --- 优先处理 opp_attack_active_window（最常见、影响最直接）---
+        const activeWindow = this.#findPredictedEvent(events, "opp_attack_active_window");
+        if (activeWindow) {
+            const startMs = activeWindow.startMs;
+            const moveLimit = moveSpeed * (startMs / 1000);
+            const oppReach = activeWindow.properties?.reach ?? 3.0;
+
+            // 场景 A: 我在 opp reach 边缘内 → 退到 reach 外 + buffer
+            // distToEscape = 我在 opp reach 内多少（正数=在 reach 内需要退）
+            const oppReachInner = oppReach - distance;  // >0 表示我在 opp reach 里
+            const distToEscape = oppReachInner + SAFETY_BUFFER;  // 退到 oppReach+SAFETY_BUFFER
+            const retreatTimeMs = (distToEscape / moveSpeed) * 1000;
+            const retreatViable = oppReachInner > 0 && distToEscape <= moveLimit && retreatTimeMs <= startMs;
+
+            // 场景 B: 我在 PREEMPTIVE range 边缘外 → 压进 selfEffRange 内 - buffer
+            // distToPreemptive = 我离 selfEffRange 还差多少（正数=还差需要压）
+            const distToPreemptive = distance - (selfEffRange - SAFETY_BUFFER);
+            const approachTimeMs = (Math.max(0, distToPreemptive) / moveSpeed) * 1000;
+            const approachViable = distToPreemptive > 0 && distToPreemptive <= moveLimit && approachTimeMs <= startMs;
+
+            // 推荐逻辑：两个都可行选收益更大的，都不可行则 hold
+            let recommend = "hold";
+            let holdViable = true;
+            if (retreatViable && !approachViable) {
+                recommend = "retreat";
+                holdViable = false;  // retreat 可行时 hold 次优
+            } else if (approachViable && !retreatViable) {
+                recommend = "approach";
+                holdViable = false;  // approach 可行时 hold 次优
+            } else if (retreatViable && approachViable) {
+                // 都可行：prefer approach（PREEMPTIVE 截断是更强的奖励）
+                recommend = "approach";
+                holdViable = false;
+            }
+            // 都不可行 → recommend=hold
+
+            // Step 1 日志：只观测，先跑几轮验证数值
+            if (this.debugVisible) {
+                const _distInOppReach = oppReachInner > 0
+                    ? `${oppReachInner.toFixed(2)}m内`
+                    : `${(-oppReachInner).toFixed(2)}m外`;
+                console.log(
+                    `[AI-Diag] positioningPlan: moveSpeed=${moveSpeed.toFixed(2)} 窗口可移=${moveLimit.toFixed(3)}m ` +
+                    `dist=${distance.toFixed(2)} selfEffR=${selfEffRange.toFixed(2)} oppReach=${oppReach.toFixed(2)} ` +
+                    `oppReach内${_distInOppReach} ` +
+                    `| retreat: 退${distToEscape.toFixed(2)}m/${retreatTimeMs.toFixed(0)}ms≤${startMs.toFixed(0)} → ${retreatViable ? "✅" : "❌"} ` +
+                    `| approach: 压${Math.max(0, distToPreemptive).toFixed(2)}m/${approachTimeMs.toFixed(0)}ms≤${startMs.toFixed(0)} → ${approachViable ? "✅" : "❌"} ` +
+                    `| recommend=${recommend}`
+                );
+            }
+
+            return {
+                recommend,
+                primaryEvent: activeWindow,
+                retreatViable,
+                approachViable,
+                holdViable,
+                distance,
+                moveSpeed,
+                moveLimitMs: startMs,
+                moveLimitDist: moveLimit,
+                oppReach,
+                selfEffRange,
+                oppReachInner,
+                distToPreemptive,
+            };
+        }
+
+        // --- 处理 throw 事件链（opp_throw_release + opp_projectile_arrival_estimate）---
+        // 目前只做 arrival 时刻的 cut 窗口预判
+        const releaseEvent = this.#findPredictedEvent(events, "opp_throw_release");
+        const arrivalEvent = this.#findPredictedEvent(events, "opp_projectile_arrival_estimate");
+        if (releaseEvent && arrivalEvent) {
+            const startMs = releaseEvent.startMs;  // release 窗口
+            const moveLimit = moveSpeed * (startMs / 1000);
+            const releaseTimeMs = (distance / moveSpeed) * 1000;
+            const selfEffReachForCut = selfEffRange;  // cut projectile 也要够得着
+
+            // 场景: 我能不能在 release 前压到 cut range 内
+            const distToCutRange = distance - selfEffReachForCut;
+            const approachViable = distToCutRange > 0
+                && distToCutRange <= moveLimit
+                && releaseTimeMs <= startMs;
+
+            // retreat 对 projectile 没用（projectile 会飞过来）→ recommend hold
+            const retreatViable = false;
+
+            // 日志
+            if (this.debugVisible) {
+                console.log(
+                    `[AI-Diag] positioningPlan: moveSpeed=${moveSpeed.toFixed(2)} 窗口可移=${moveLimit.toFixed(3)}m ` +
+                    `dist=${distance.toFixed(2)} selfEffR=${selfEffReachForCut.toFixed(2)} ` +
+                    `| throw_release 在 ${startMs.toFixed(0)}ms ` +
+                    `| approach: 压${distToCutRange.toFixed(2)}m/${releaseTimeMs.toFixed(0)}ms≤${startMs.toFixed(0)} → ${approachViable ? "✅" : "❌"} ` +
+                    `| recommend=${approachViable ? "approach" : "hold"}`
+                );
+            }
+
+            return {
+                recommend: approachViable ? "approach" : "hold",
+                primaryEvent: releaseEvent,
+                retreatViable,
+                approachViable,
+                holdViable: !approachViable,
+                distance,
+                moveSpeed,
+                moveLimitMs: startMs,
+                moveLimitDist: moveLimit,
+                selfEffRange: selfEffReachForCut,
+                distToPreemptive: Math.max(0, distToCutRange),
+            };
+        }
+
+        return null;
+    }
+
+    /**
      * Phase 2: Positioning Utility — approach / hold / retreat 三候选正式评分
      *
      * 替代旧的硬编码 #executePositioning 阈值逻辑。
@@ -1335,7 +1707,7 @@ export class AIController extends BaseController {
      * 三个 positioning 动作乘入 Posture multiplier（advance/retreat）
      * hold 不乘 multiplier（是基线）
      */
-    #scorePositioning(sit) {
+    #scorePositioning(sit, posPlan = null) {
         const closestMinReach = this.#getClosestMinReach();
         // 和 #scoreAttack 的 effectiveRange 对齐：maxReach + forward displacement boost + rangeBuffer
         const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
@@ -1370,8 +1742,20 @@ export class AIController extends BaseController {
         // opp 在抬手准备投掷 + projectile 可被斩时，suppress approach
         // 原因：AI approach 会改变 release 时的距离，导致 reactive cut timing 窗口不稳定
         // 让 AI 保持距离原地等 reactive cut 窗口
-        if (sit.opp?.phase === "throw_windup" && sit.predictedProjectileCuttable === true) {
+        // Step 2b: 从统一 events 层查 arrivalEvent（存在即隐含 cuttable=true）
+        const _hasCuttableThrow = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_projectile_arrival_estimate"
+        ) != null;
+        if (sit.opp?.phase === "throw_windup" && _hasCuttableThrow) {
             approachScore *= 0.1;  // 几乎归零，但不完全 0（避免 tie-break 问题）
+        }
+        // Phase 5: opp 普通 attack startup 也 suppress approach
+        // 让 AI 原地 hold 住等 preemptive window，而不是往前冲错过时机
+        // 条件：opp 有明确的 attack active window 事件（startup 中）
+        const _oppInAttackStartup = sit.opp?.phase === "startup"
+            && this.#findPredictedEvent(sit.predictedOpponentEvents, "opp_attack_active_window") != null;
+        if (_oppInAttackStartup) {
+            approachScore *= 0.1;
         }
         // 攻击圈内不需要 approach（hold/attack 应该赢）
         approachScore *= advMult;
@@ -1391,7 +1775,8 @@ export class AIController extends BaseController {
         // === Step 新增：throw_windup hold 保底 ===
         // opp 在抬手准备投掷 + projectile 可被斩时，给 hold 一个小保底分
         // 让 AI 原地站住等 reactive cut 窗口，而不是 approach 改变距离
-        if (sit.opp?.phase === "throw_windup" && sit.predictedProjectileCuttable === true) {
+        // Step 2b: 复用上面的 _hasCuttableThrow（同一决策 tick 内不变）
+        if (sit.opp?.phase === "throw_windup" && _hasCuttableThrow) {
             holdScore = Math.max(holdScore, 0.05);
         }
         // hold 不乘 Posture multiplier（是基线）
@@ -1409,6 +1794,41 @@ export class AIController extends BaseController {
             retreatScore = Math.max(retreatScore, 0.3);
         }
         retreatScore *= retMult;
+
+        // === B5 Step 2: positioningPlan 评分加成 ===
+        // 在现有静态阈值全部算完之后微调，不覆盖原逻辑
+        // events 为空时 posPlan=null → 完全跳过，零回归
+        let _planBonusLog = "";
+        if (posPlan) {
+            const recommend = posPlan.recommend;
+            const before = { ap: approachScore, hd: holdScore, rt: retreatScore };
+
+            if (recommend === "retreat") {
+                // opp reach 边缘内 → 主动避弹加分
+                retreatScore += 0.15;
+                holdScore = Math.max(0, holdScore - 0.05);
+                _planBonusLog = `plan:retreat+0.15 hold-0.05`;
+            } else if (recommend === "approach") {
+                // PREEMPTIVE / cut 边缘外、赶得上 → 压线加分
+                // 注意：这在上面的 approach×0.1 抑制之后，能覆盖掉抑制效果
+                approachScore += 0.12;
+                _planBonusLog = `plan:approach+0.12`;
+            } else if (recommend === "hold") {
+                // 两个阈值跨越都赶不上 → 明确 hold，approach 压饿
+                holdScore += 0.08;
+                approachScore *= 0.5;
+                _planBonusLog = `plan:hold+0.08 approach×0.5`;
+            }
+
+            if (this.debugVisible && _planBonusLog) {
+                const after = { ap: approachScore, hd: holdScore, rt: retreatScore };
+                console.log(
+                    `[AI-Diag] posPlanBonus: ${_planBonusLog} ` +
+                    `before(a=${before.ap.toFixed(3)},h=${before.hd.toFixed(3)},r=${before.rt.toFixed(3)}) ` +
+                    `→ after(a=${after.ap.toFixed(3)},h=${after.hd.toFixed(3)},r=${after.rt.toFixed(3)})`
+                );
+            }
+        }
 
         // 加微小随机扰动打破 tie（和 attack/defense 一样）
         const jitter = (1 + (Math.random() - 0.5) * this.reactionVariance);

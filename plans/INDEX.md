@@ -1,6 +1,16 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：无活跃计划。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。Phase 5 统一预测架构（predictedOpponentEvents + predictionAccuracy 旋钮）待定。
+> 当前进行中：无活跃计划。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。
+
+## Update Log (2026-10-12)
+- **Phase 5 核心全部落地**：`predictedOpponentEvents[]` 统一预测层 + attack/defense/projectile 评分全迁移 + 攻击意图拆分（PROACTIVE/PREEMPTIVE/PUNISH 三条路径独立可调）
+- **B1（opp 招式区分）**：`Situation.opp` 扩展 `{phase, stateName, attackProfile}`，`opp_attack_active_window` 事件带 trajectory 属性区分 slash/thrust
+- **B4（近距离打断 throw）**：意外实现——common 基分在 throw_windup 时自然驱动 AI commit attack，hitstun 打断投掷
+- **B5（events 驱动 positioning）**：`#buildPositioningPlan(sit)` 遍历 events 计算 moveSpeed=0.4 m/s 约束下（窗口内最多移动 ~15cm）的阈值跨越可行性，输出 recommend=retreat/approach/hold；`#scorePositioning` 根据 plan 微调三候选评分（retreat+0.15 避弹、approach+0.12 压线、hold+0.08+approach×0.5 压饿）；events 为空时完全退化到静态阈值逻辑（零回归）
+- **B6（predictionAccuracy 旋钮）**：仍在 backlog，events 层已稳定，随时可接入噪声参数
+- 物理边界：moveSpeed=0.4 m/s 下 opp startup 窗口（300-500ms）内 AI 只能移动 ~15cm，positioning 主要作用于阈值跨越（opp reach 边缘退弹 / PREEMPTIVE 边缘压线），不做大范围 reposition
+- 涉及文件：`scripts/Systems/AI/AIController.js`（新增 `#buildPositioningPlan` + `#scorePositioning` 接入 plan 参数 + 调用点传 plan）
+- 设计参考：`plans/26.10.9 预测能力通用化计划.MD` §4 Post-Phase 5
 
 ## Update Log (2026-10-08)
 - **投掷物预测-拦截机制（reactive cut + preemptive cut）**：按计划 `plans/26.10.7 投掷物预测-拦截机制计划.MD` Step 1-4 全部落地，Step 5 文档同步完成
