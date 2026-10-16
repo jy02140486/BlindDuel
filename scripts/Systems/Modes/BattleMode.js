@@ -3,6 +3,7 @@ import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { STEP_TYPE } from "../SceneSequencer.js";
 import { ProjectileManager } from "../ProjectileManager.js";
 import { ThrowComponent } from "../../Components/ThrowComponent.js";
+import { getProjectileDef } from "../../../Data/ProjectileDefs.js";
 
 
 export class BattleMode extends BaseMode {
@@ -60,13 +61,31 @@ export class BattleMode extends BaseMode {
             entityPool: this.context.scene?.entityPool ?? null
         });
 
-        // ThrowComponent 装配 — 玩家从背包同步 dagger 数量作为初始弹药
-        // AI 路径延后：等 BattleDef 支持 throwAmmo 配置后再扩展
+        // ThrowComponent 装配（战斗 scope，exit 时统一置 null）
+        // - player：初始弹药从背包同步 dagger 数量（路径不变）
+        // - 非 player：读 BattleDef.combatantConfig[id].throwAmmo，正数才装配；缺省/0 = 无投掷能力
+        // 装配 key 用 BattleDef combatants 的 id（与 actorRegistry 成对遍历，不用实体自身 id）
         const { inventoryManager } = this.context;
-        for (const c of this._combatants ?? []) {
-            if (c?.kind === "player" && inventoryManager) {
+        for (const id of this._battleDef?.combatants ?? []) {
+            const c = actorRegistry?.get(id);
+            if (!c) continue;
+
+            if (c.kind === "player" && inventoryManager) {
                 const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
                 c.throwComponent = new ThrowComponent({ ammo });
+            } else if (c.kind !== "player") {
+                const throwAmmo = this._battleDef.combatantConfig?.[id]?.throwAmmo;
+                if (throwAmmo > 0) {
+                    c.throwComponent = new ThrowComponent({ ammo: throwAmmo });
+                }
+            }
+
+            // projectileType 单一真相源在 throw state（StateGraph）：取首个 throwActive state，
+            // 与 AIKnowledgeRegistry 扫描口径天然一致；无 throw state 时安全跳过（运行时默认 dagger）
+            const throwStateDef = Object.values(c.stateGraph?.states ?? {})
+                .find(s => s.throwActive === true);
+            if (c.throwComponent && throwStateDef?.projectileType) {
+                c.throwComponent.setProjectileType(throwStateDef.projectileType);
             }
         }
 
@@ -202,8 +221,14 @@ export class BattleMode extends BaseMode {
 
         // Build matching Projectile sprite pattern:
         // root TransformNode (world space) → plane (local offset, bottom-anchored)
+        // 贴图/尺寸与实际投掷物同源（ProjectileDefs），不硬编码 dagger
         const pxToWorld = thrower.pxToWorld;
-        const frameW = 32, frameH = 6;
+        const projDef = getProjectileDef(thrower.throwComponent?.projectileTypeId ?? "dagger");
+        if (!projDef) {
+            console.warn("[BattleMode] throw_draw but unknown projectileType — no carried sprite");
+            return;
+        }
+        const frameW = projDef.frame?.w ?? 32, frameH = projDef.frame?.h ?? 6;
         const planeW = frameW * pxToWorld;
         const planeH = frameH * pxToWorld;
 
@@ -233,7 +258,7 @@ export class BattleMode extends BaseMode {
         plane.material = material;
 
         const texture = new BABYLON.Texture(
-            "./Art/Sprite/projectiles/proj_dagger.png", scene,
+            projDef.spriteUrl, scene,
             false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE
         );
         texture.hasAlpha = true;

@@ -307,6 +307,13 @@ export class AIController extends BaseController {
             scored.push({ kind: "guard", action: g, score: this.#scoreDefense(g, sit, "guard") });
         }
 
+        // Throw 候选（计划 Step 3）：独立 kind 进同一 Utility 池，无「远距离优先投掷」硬编码分支
+        // 评分内部门控 canThrow/物理射程；执行层 transition gate 为双层合法性兜底
+        this._throwDiag = [];
+        for (const t of this.kbProfile?.throws || []) {
+            scored.push({ kind: "throw", action: t, score: this.#scoreThrow(t, sit) });
+        }
+
         // Phase 2: Positioning 三候选（正式进入同池竞争）
         // B5: 先生成 positioningPlan（events 驱动的阈值跨越可行性），接入评分微调
         const _posPlan = this.#buildPositioningPlan(sit);
@@ -406,11 +413,23 @@ export class AIController extends BaseController {
 
             const _posDetail = `POS: approach=${pos.score.toFixed(3)} hold=${pos.holdScore.toFixed(3)} retreat=${pos.retreatScore.toFixed(3)}`;
 
+            const _throwBreakdown = (this._throwDiag || []).map(d => {
+                const ammoStr = d.ammo === null ? "-" : d.ammo;
+                if (d.gate) {
+                    return `${d.stateName}(ammo=${ammoStr} can=${d.can} dist=${d.dist.toFixed(2)} GATE:${d.gate})`;
+                }
+                return `${d.stateName}(ammo=${ammoStr} can=${d.can} dist=${d.dist.toFixed(2)} ` +
+                    `R_eff=${d.rEff.toFixed(2)} rf=${d.rf.toFixed(2)} riskA=${d.riskA.toFixed(2)} riskB=${d.riskB.toFixed(2)} ` +
+                    `idle=${d.idle >= 0 ? "+" : ""}${d.idle.toFixed(2)} recov=${d.recov.toFixed(2)} ` +
+                    `cd=${d.cd.toFixed(2)} rep=${d.rep.toFixed(2)} pref=${d.pref.toFixed(1)} → sc=${d.score.toFixed(3)})`;
+            }).join(", ");
+
             const _bestLabel = best?.action?.stateName ?? "(pos)";
             console.log(
                 `[AI-Diag] dist=${sit.distance.toFixed(2)} oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
                 `→ best=${best?.kind}:${_bestLabel}(${best?.score?.toFixed(3) ?? "0"}) ` +
-                `top3=[${_top3}] ${_posDetail} attacks: ${_atkBreakdown}`
+                `top3=[${_top3}] ${_posDetail} attacks: ${_atkBreakdown}` +
+                `${_throwBreakdown ? ` throws: ${_throwBreakdown}` : ""}`
             );
         }
         // ================================
@@ -1571,12 +1590,8 @@ export class AIController extends BaseController {
         const moveSpeed = this.kbProfile?.movement?.moveSpeed ?? 0.4;
         const distance = sit.distance;
 
-        // 复用 positioning 的 effectiveRange 计算（和 #scoreAttack/#scorePositioning 对齐）
-        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
-            const disp = a.activeDisplacement ?? a.displacement ?? 0;
-            return disp < 0 ? -disp : 0;
-        }));
-        const selfEffRange = this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
+        // 近战最远有效距离（和 #scorePositioning/#scoreThrow 同口径，计划 §5.3）
+        const selfEffRange = this.#getMeleeMaxEffReach();
 
         // 安全余量: 阈值跨越后再留 15cm buffer
         const SAFETY_BUFFER = 0.15;
@@ -1709,12 +1724,8 @@ export class AIController extends BaseController {
      */
     #scorePositioning(sit, posPlan = null) {
         const closestMinReach = this.#getClosestMinReach();
-        // 和 #scoreAttack 的 effectiveRange 对齐：maxReach + forward displacement boost + rangeBuffer
-        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
-            const disp = a.activeDisplacement ?? a.displacement ?? 0;
-            return disp < 0 ? -disp : 0;
-        }));
-        const maxEffReach = this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
+        // 近战最远有效距离：与 #scoreThrow 共用 #getMeleeMaxEffReach 唯一口径（计划 §5.3）
+        const maxEffReach = this.#getMeleeMaxEffReach();
         const distance = sit.distance;
 
         // distanceHunger: distance 在 maxEffReach*1.5 ~ maxEffReach*3 之间 smoothstep 从 0→1
@@ -1842,6 +1853,162 @@ export class AIController extends BaseController {
     }
 
     /**
+     * Throw 候选 Utility 评分（计划 §6）。
+     * 与 attack/defense/positioning 同池竞争；不加任何「远距离优先投掷」硬编码分支。
+     * 两类风险独立计分：A=release 前被近战打断；B=出手后被 slash 斩落（仅 cuttable）。
+     * 分项写入 this._throwDiag 供诊断日志；返回分允许为负（候选池惯例，不 clamp）。
+     */
+    #scoreThrow(t, sit) {
+        const tun = this.tuning.throw ?? {};
+        const diag = {
+            stateName: t.stateName,
+            ammo: this.character.throwComponent ? this.character.throwComponent.ammo : null,
+            can: 0,
+            dist: sit.distance,
+            rEff: t.flight?.effectiveRange ?? 0,
+            rf: 0, riskA: 0, riskB: 0, idle: 0, recov: 0, cd: 0, rep: 0,
+            pref: this.character.stateGraph?.aiProfile?.throwPreference ?? 1.0,
+            gate: null, score: 0,
+        };
+        this._throwDiag.push(diag);
+
+        // ---- 硬门控 1：无 ThrowComponent / 无弹（双层合法性的决策层）----
+        if (this.character.canThrow() !== true) {
+            diag.gate = "no_throw_component";
+            return 0;
+        }
+        diag.can = 1;
+
+        // ---- 距离模型：R_eff 来自弹道物理射程（KB 扫描期算好，评分层只读不算）----
+        const effectiveRange = t.flight?.effectiveRange ?? 0;
+        const smooth = this.tuning.attack.distanceStartupSmooth ?? 0.3;
+        const maxRange = effectiveRange * (1 + smooth);
+
+        // ---- 硬门控 2：物理不可达 ----
+        if (sit.distance > maxRange) {
+            diag.gate = "out_of_range";
+            return 0;
+        }
+
+        // ---- 距离三区间（rangeFactor，连续衰减非二元）；近战边界用唯一口径 ----
+        const maxEffMeleeReach = this.#getMeleeMaxEffReach();
+        let rangeFactor;
+        if (sit.distance <= maxEffMeleeReach) {
+            rangeFactor = tun.meleeZoneFactor ?? 0.35;   // 近战够得到，throw 留弹性不禁止
+        } else if (sit.distance <= effectiveRange) {
+            rangeFactor = 1.0;                            // 投掷甜点
+        } else {
+            // effectiveRange ~ effectiveRange×(1+smooth)：1→0 线性衰减
+            rangeFactor = Math.max(0, 1 - (sit.distance - effectiveRange) / (maxRange - effectiveRange));
+        }
+        diag.rf = rangeFactor;
+
+        let score = (tun.baseWeight ?? 0.35) * rangeFactor;
+        const startupMs = t.timing?.startupMs ?? 0;
+
+        // 对手近战最远有效距离（与 self 同构：maxReach + maxFwdBoost + rangeBuffer）
+        const _oppReaches = (this.opponentKB?.attacks ?? []).map(a => {
+            const r = a.range?.maxReach ?? 0;
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            return r + (disp < 0 ? -disp : 0);
+        });
+        const oppMaxEffReach = _oppReaches.length > 0 ? Math.max(..._oppReaches) + this.rangeBuffer : 0;
+        const oppCanReachMe = sit.distance <= oppMaxEffReach;
+
+        // ---- 风险 A：release 前被近战打断（独立项）----
+        let riskA = 0;
+        if (oppCanReachMe) {
+            if (sit.opp.phase === "active") {
+                // weaponbox 已在场且够得到 → 满额
+                riskA = tun.interruptRiskPenalty ?? 0.25;
+            } else if (sit.opp.phase === "startup") {
+                // 优先消费预测事件的 active_window.startMs；startup 阶段必有事件，无事件不伪造
+                const activeWindow = this.#findPredictedEvent(
+                    sit.predictedOpponentEvents, "opp_attack_active_window"
+                );
+                if (activeWindow) {
+                    const margin = tun.startupInterruptMarginMs ?? 50;
+                    // startMs ≤ startupMs 满额；startupMs~startupMs+margin 之间线性降到 0
+                    const f = Math.max(0, Math.min(1, (startupMs + margin - activeWindow.startMs) / margin));
+                    riskA = f * (tun.interruptRiskPenalty ?? 0.25);
+                }
+            }
+            // opp idle/none/recovery → 0；throw_windup → 0（对手无近战出手，其投掷物威胁由防御候选表达）
+        }
+        diag.riskA = riskA;
+        score -= riskA;
+
+        // ---- 风险 B：出手后被 slash 斩落（仅 cuttable；不可斩类型免 B 不免 A）----
+        let riskB = 0;
+        if (t.cuttable === true) {
+            const slashAttacks = (this.opponentKB?.attacks ?? []).filter(a => a.trajectory === "slash");
+            if (slashAttacks.length > 0) {
+                const oppActiveSlash = sit.opp.phase === "active"
+                    && sit.opp.attackProfile?.trajectory === "slash";
+                let factor;
+                if (oppActiveSlash) {
+                    factor = 1.0;   // weaponbox 可能已在场
+                } else {
+                    // opp 反应线 = 最快 slash startup + 反应延迟；飞行时间占比即被斩可行性
+                    const flightMs = sit.distance / Math.max(1e-6, t.speed ?? 6) * 1000;
+                    const fastestSlashStartup = Math.min(...slashAttacks.map(s => s.timing?.startupMs ?? 0));
+                    const cutReadyMs = fastestSlashStartup + (this.tuning.defense?.reflexMaxMs ?? 0);
+                    factor = cutReadyMs > 0 ? Math.min(1, flightMs / cutReadyMs) : 0;
+                }
+                riskB = factor * (tun.cutRiskPenalty ?? 0.20);
+            }
+        }
+        diag.riskB = riskB;
+        score -= riskB;
+
+        // ---- 相位/窗口加减项 ----
+        let idleBonus = 0;
+        if (sit.opp.phase === "none") {
+            idleBonus = tun.idleOpportunityBonus ?? 0.05;  // 弱主动机会
+        }
+        // recovery 不凭相位加分：仅当预测事件证明「release+飞到时 opp 仍未恢复」才加分。
+        // 当前预测层在 recovery 阶段不产事件（计划 §12 Backlog: recovery 精确剩余时间）→ v1 恒 0。
+        const recoveryBonus = 0;
+        // startup/active：无加分，仅承受风险 A
+        diag.idle = idleBonus;
+        diag.recov = recoveryBonus;
+        score += idleBonus + recoveryBonus;
+
+        // ---- 冷却：throw 独立节奏间隔（throw.cooldownMs，默认回退 attackCooldownMs）----
+        // 共享 lastAttackTime：throw→throw 受长间隔约束形成「扔-推进」交替；attack→throw 同受约束
+        // （近战连击优先）；throw→attack 不受影响（attack 仍读 500ms，投完可立刻贴脸近战）。
+        // 不享 startup 豁免（对手 startup 时扔东西是风险动作，风险 A 另计）。
+        let cdPenalty = 0;
+        const throwCooldownMs = tun.cooldownMs ?? this.attackCooldownMs;
+        if (sit.now - this.lastAttackTime < throwCooldownMs) {
+            cdPenalty = this.tuning.attack.cooldownPenalty ?? 0.5;
+            score -= cdPenalty;
+        }
+        diag.cd = cdPenalty;
+
+        // ---- 重复成本（复用 #consecutiveAttackUsage，key=throw stateName）----
+        const usageCount = (this.#consecutiveAttackUsage?.stateName === t.stateName)
+            ? this.#consecutiveAttackUsage.count
+            : 0;
+        let repetitionCost = 0;
+        if (usageCount >= 2) {
+            const rcRate = tun.repetitionCostRate ?? this.tuning.attack.repetitionCostRate ?? 0.06;
+            const rcMax = tun.repetitionCostMax ?? this.tuning.attack.repetitionCostMax ?? 0.18;
+            repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
+            score -= repetitionCost;
+        }
+        diag.rep = repetitionCost;
+
+        // ---- 终分：进攻行为乘 posture.attackMultiplier；throwPreference 直读 stateGraph（方案 a）----
+        score *= this.combatPosture.attackMultiplier;
+        score *= diag.pref;
+        score *= (1 + (Math.random() - 0.5) * this.reactionVariance);  // tie-break 扰动
+
+        diag.score = score;
+        return score;
+    }
+
+    /**
      * 执行 committed action
      * Phase 0: 同时记录 COMMIT 到 CombatMemory
      * Phase 2: positioning kind（approach/hold/retreat）只设 moveIntent，不 queueCommand
@@ -1872,16 +2039,17 @@ export class AIController extends BaseController {
         // Phase 0: 记录 COMMIT
         this.combatMemory.pushCommit(kind, action.stateName);
 
-        if (kind === "attack") {
+        if (kind === "attack" || kind === "throw") {
+            // 近战↔投掷共享冷却（计划 §2.7）
             this.lastAttackTime = performance.now();
-            // Step 1: Repetition Cost 计数器更新
+            // Repetition Cost：key=stateName，throw→throw 计成本，throw→近战 key 不同自然切换
             if (this.#consecutiveAttackUsage?.stateName === action.stateName) {
                 this.#consecutiveAttackUsage.count++;
             } else {
                 this.#consecutiveAttackUsage = { stateName: action.stateName, count: 1 };
             }
         } else {
-            // dodge / guard 打断连续 attack → reset
+            // dodge / guard 打断连续 attack/throw → reset（positioning 在上方提前 return 处 reset）
             this.#consecutiveAttackUsage = null;
         }
     }
@@ -1934,6 +2102,19 @@ export class AIController extends BaseController {
             }
         }
         return max;
+    }
+
+    /**
+     * 近战最远有效距离 — positioning / buildPositioningPlan / #scoreThrow 的唯一口径。
+     * = 所有 attack 最大 maxReach + 最大前冲位移 boost + rangeBuffer。
+     * 禁止 throw 等其它评分自造第二份近战边界（计划 §5.3）。
+     */
+    #getMeleeMaxEffReach() {
+        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            return disp < 0 ? -disp : 0;
+        }));
+        return this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
     }
 
     /**

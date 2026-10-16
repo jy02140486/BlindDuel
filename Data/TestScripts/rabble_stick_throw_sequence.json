@@ -1,0 +1,10 @@
+{
+  "name": "rabble_stick_throw_loop",
+  "loop": true,
+  "sequenceLabel": "rabble-throw-test",
+  "steps": [
+    { "waitMs": 1000 },
+    { "command": "throw", "waitMs": 1100 },
+    { "waitMs": 1500 }
+  ]
+}

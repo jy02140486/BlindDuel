@@ -2,6 +2,16 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前进行中：无活跃计划。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。
 
+## Update Log (2026-10-16)
+- **AI 进攻性投掷（RabbleStick 扔石头）全部落地**：按 `plans/archived/26.10.14 AI-Rabblestick投掷能力计划.MD` Step 1-4 + §10 资产接线
+- **决策层**：`#scoreThrow` 以 `kind:"throw"` 进统一 Utility 池（无距离硬编码分支）；距离三区间（近战圈 meleeZoneFactor=0.35 / 甜点 1.0 / 边缘线性衰减）+ 双独立风险（A 释放前被近战打断，最高 0.25；B release 后被斩落 `min(1,flight/cutReady)`，仅 cuttable）+ idle 机会分；终分 ×attackMultiplier×aiProfile.throwPreference；X 键诊断新增 `throws:` 行（gate 失败也输出原因）
+- **知识层**：AIKnowledgeRegistry v5，throw profile 增 flight 块；射程用含手部释放高度的真实落地方程 `t=(vy+√(vy²+2gh))/g`（h 取 release 帧 collider root/hand 锚点），×rangeConservatism=0.85；旧 2vy/g 对称弧仅作无锚点兜底
+- **装配/弹药**：BattleDef 新增 `combatantConfig[id].throwAmmo`（AI 弹药归属战斗实例），BattleMode 按 id 配对装配 ThrowComponent，projectileType 从首个 throwActive state 派生；持物阶段 sprite 贴图/尺寸改为从 ProjectileDefs 数据驱动（去除 dagger 硬编码）
+- **节奏修复（实测驱动）**：throw 动画 ~1050ms 吞掉共享 500ms attackCooldown 导致站桩连扔 → 新增 `AITuning.throw.cooldownMs=3000` 独立阈值，仍共享 lastAttackTime：throw→throw / attack→throw 受限，throw→attack 不受限
+- **资产**：RabbleStick StateGraph throw state（projectileType=rock，throwReleaseFrame=5）+ Factory clip + Manifest 三件套 + events(draw=1/release=4) + hand 锚点；ProjectileDefs 新增 rock；TestController 支持 SceneDef entity 级 `testScript` 覆盖
+- **接线修正**：`#isCommitted()` 白名单补 throwActive；近战最远有效距离统一口径 `#getMeleeMaxEffReach()`（maxReach+maxFwdBoost+rangeBuffer）
+- **当前状态**：DEBUG_INFINITE_AMMO 已置 false；机制代码保留，各战斗 combatantConfig.throwAmmo 暂全部移除，未来按需逐战斗开启
+
 ## Update Log (2026-10-12)
 - **Phase 5 核心全部落地**：`predictedOpponentEvents[]` 统一预测层 + attack/defense/projectile 评分全迁移 + 攻击意图拆分（PROACTIVE/PREEMPTIVE/PUNISH 三条路径独立可调）
 - **B1（opp 招式区分）**：`Situation.opp` 扩展 `{phase, stateName, attackProfile}`，`opp_attack_active_window` 事件带 trajectory 属性区分 slash/thrust
@@ -204,6 +214,12 @@
 ## 进行中
 
 无进行中计划。
+
+## 最近归档（2026-10-16）
+
+| 计划 | 目标 | 完成内容 |
+|------|------|----------|
+| [archived/26.10.14 AI-Rabblestick投掷能力计划.MD](archived/26.10.14%20AI-Rabblestick投掷能力计划.MD) | AI 获得进攻性投掷能力（rabble 扔 rock），与近战交替进行 | Step 1-4 + §10 全部落地：BattleDef throwAmmo 装配、KB v5 弹道射程（含释放高度）、#scoreThrow 同池候选（双风险/三区间/独立 3s 节奏冷却）、全套 rabble throw 资产（StateGraph/Factory/Manifest/events/hand/rock）、TestController 独立验证、端到端验收。实测修正两处：射程计入手高、throw 独立冷却防站桩连扔。详见上方 Update Log |
 
 ## 最近归档（2026-10-08）
 

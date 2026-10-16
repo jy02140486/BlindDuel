@@ -1,4 +1,5 @@
 import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
+import { AITuning } from "../../../Data/AITuning.js";
 
 /**
  * AIKnowledgeRegistry - 全局 AI 知识缓存系统
@@ -8,8 +9,10 @@ import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
 
 export class AIKnowledgeRegistry {
     /** Schema version — bump when scan logic changes to force re-scan of cached profiles.
-     *  v1=初始, v2=minReach, v3=新增 throw 状态扫描（Phase 2 Step 4） */
-    static #SCHEMA_VERSION = 3;
+     *  v1=初始, v2=minReach, v3=新增 throw 状态扫描（Phase 2 Step 4）,
+     *  v4=throw profile 增加弹道物理射程 flight 块,
+     *  v5=射程计入手部释放高度（真实落地方程，替代地面起落地面对称弧假设） */
+    static #SCHEMA_VERSION = 5;
 
     // 全局缓存: characterId -> { versionHash, profile }
     static #cache = new Map();
@@ -177,6 +180,7 @@ export class AIKnowledgeRegistry {
                     stateName,
                     stateDef,
                     clipDef,
+                    pxToWorld,
                     warnings
                 );
                 if (profile) {
@@ -193,7 +197,10 @@ export class AIKnowledgeRegistry {
         const _atkSummary = attackProfiles.map(a =>
             `${a.stateName}(minR=${(a.range?.minReach ?? 0).toFixed(2)}, maxR=${a.range?.maxReach?.toFixed(2) ?? "?"})`
         ).join(", ");
-        console.log(`[AI KB] ${character.id} re-scan v${this.#SCHEMA_VERSION}: attacks=[${_atkSummary}]`);
+        const _throwSummary = throwProfiles.map(t =>
+            `${t.stateName}(${t.projectileType} R_eff=${t.flight?.effectiveRange?.toFixed(2) ?? "?"})`
+        ).join(", ");
+        console.log(`[AI KB] ${character.id} re-scan v${this.#SCHEMA_VERSION}: attacks=[${_atkSummary}]${_throwSummary ? ` throws=[${_throwSummary}]` : ""}`);
 
         const traits = character.stateGraph?.characterTraits || null;
 
@@ -561,7 +568,7 @@ export class AIKnowledgeRegistry {
      * startupMs = 前 throwReleaseFrame 帧的 duration 累加
      * 语义：for (let i=0; i<throwReleaseFrame; i++) → release 帧开始时触发
      */
-    static #scanThrowState(stateName, stateDef, clipDef, warnings) {
+    static #scanThrowState(stateName, stateDef, clipDef, pxToWorld, warnings) {
         const projectileType = stateDef.projectileType;
         const throwReleaseFrame = stateDef.throwReleaseFrame ?? 0;
 
@@ -593,16 +600,49 @@ export class AIKnowledgeRegistry {
             totalMs += f.durationMs ?? 100;
         }
 
+        // 弹道物理射程（与 Projectile.fixedUpdate 真实积分一致）：
+        // 投掷物从手部锚点（离地 h）出生，X 匀速 + Y 重力，落到 thrower groundY 销毁。
+        //   h + vy·t - 0.5·g·t² = 0 → 正根 t = (vy + √(vy²+2gh)) / g（vy 任意符号）
+        // 手高帧：throwReleaseFrame 约定为 1-based 帧号（events sidecar frame 为 0-based，差 1，
+        // 同 longswordman 3/2），release 事件在进入该帧时触发。
+        const releaseFrameIdx = Math.max(0, throwReleaseFrame - 1);
+        const releaseAnchors = clipDef.colliderData?.frames?.[releaseFrameIdx]?.anchors;
+        let releaseHeight = 0;
+        if (releaseAnchors?.root && releaseAnchors?.hand) {
+            releaseHeight = Math.max(0, releaseAnchors.root.cy - releaseAnchors.hand.cy) * pxToWorld;
+        }
+
+        const speed = def.speed ?? 6;
+        const launchVy = def.launchVy ?? 0;
+        const gravity = def.gravity ?? 0;
+        let landingFlightMs;
+        if (gravity > 0 && releaseHeight > 0) {
+            landingFlightMs = (launchVy + Math.sqrt(launchVy * launchVy + 2 * gravity * releaseHeight)) / gravity * 1000;
+        } else if (launchVy > 0 && gravity > 0) {
+            // 无手高数据兜底：地面起落地面对称弧 t = 2·vy/g
+            landingFlightMs = (2 * launchVy / gravity) * 1000;
+        } else {
+            // 直射且无手高数据：lifetimeMs 兜底
+            landingFlightMs = def.lifetimeMs ?? 0;
+        }
+        const physicalRange = speed * (landingFlightMs / 1000);
+        const rangeConservatism = AITuning.throw?.rangeConservatism ?? 0.85;
+
         return {
             stateName,
             projectileType,
             cuttable: def.cuttable ?? true,
             damage: def.damage ?? 1,
-            speed: def.speed ?? 6,
+            speed,
             timing: {
                 startupMs,
                 totalMs,
                 releaseFrame: throwReleaseFrame
+            },
+            flight: {
+                landingFlightMs,
+                physicalRange,
+                effectiveRange: physicalRange * rangeConservatism,
             }
         };
     }

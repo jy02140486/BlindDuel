@@ -1,0 +1,259 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_throw.json",
+                   "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_throw.png",
+                   "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_throw.png",
+                   "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_throw.png",
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-10-15T07:03:11.8995681Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "rabble_stick_throw 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  88.5,
+                                         "cy":  67,
+                                         "w":  69,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  2622
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "rabble_stick_throw 1.ase",
+                       "frameRect":  {
+                                         "x":  192,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  86.5,
+                                         "cy":  80,
+                                         "w":  61,
+                                         "h":  46,
+                                         "angle":  90,
+                                         "pixelCount":  2806
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  {
+                                                    "cx":  59,
+                                                    "cy":  122
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "rabble_stick_throw 2.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  123,
+                                         "cy":  58,
+                                         "w":  61,
+                                         "h":  35,
+                                         "angle":  90,
+                                         "pixelCount":  2135
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  {
+                                                    "cx":  107,
+                                                    "cy":  70
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "rabble_stick_throw 3.ase",
+                       "frameRect":  {
+                                         "x":  576,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  136.5,
+                                         "cy":  62.5,
+                                         "w":  64,
+                                         "h":  36,
+                                         "angle":  90,
+                                         "pixelCount":  2304
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  {
+                                                    "cx":  166,
+                                                    "cy":  34
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "rabble_stick_throw 4.ase",
+                       "frameRect":  {
+                                         "x":  768,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_4",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  106,
+                                         "cy":  64.5,
+                                         "w":  69,
+                                         "h":  64,
+                                         "angle":  0,
+                                         "pixelCount":  4416
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  {
+                                                    "cx":  54,
+                                                    "cy":  42
+                                                }
+                                   }
+                   },
+                   {
+                       "frameIndex":  5,
+                       "frameName":  "rabble_stick_throw 5.ase",
+                       "frameRect":  {
+                                         "x":  960,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  93.5,
+                                         "cy":  62.5,
+                                         "w":  68,
+                                         "h":  34,
+                                         "angle":  90,
+                                         "pixelCount":  2312
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  6,
+                       "frameName":  "rabble_stick_throw 6.ase",
+                       "frameRect":  {
+                                         "x":  1152,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_6",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  88.5,
+                                         "cy":  67,
+                                         "w":  69,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  2622
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  88.752,
+                                                    "cy":  119.614
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}

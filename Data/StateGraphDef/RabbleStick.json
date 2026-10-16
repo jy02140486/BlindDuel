@@ -16,7 +16,7 @@
     }
   },
   "inputs": {
-    "commands": ["thrust", "swing", "hit", "dodge", "guard", "dash"],
+    "commands": ["thrust", "swing", "hit", "dodge", "guard", "dash", "throw"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -38,6 +38,12 @@
           "to": "swing",
           "when": [
             { "command": "swing" }
+          ]
+        },
+        {
+          "to": "throw",
+          "when": [
+            { "command": "throw" }
           ]
         },
         {
@@ -86,6 +92,12 @@
           "to": "swing",
           "when": [
             { "command": "swing" }
+          ]
+        },
+        {
+          "to": "throw",
+          "when": [
+            { "command": "throw" }
           ]
         },
         {
@@ -181,6 +193,22 @@
         }
       ],
       "frameSpeeds": [0,0.2,-1.4]
+    },
+    "throw": {
+      "clip": "throw",
+      "allowMoveInput": false,
+      "loop": false,
+      "throwActive": true,
+      "projectileType": "rock",
+      "throwReleaseFrame": 5,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
     },
     "hit": {
       "clip": "hit",

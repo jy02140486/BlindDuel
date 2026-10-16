@@ -1,6 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-08 — 投掷物防御系统（reactive cut + preemptive cut）
+> 更新：2026-10-16 — AI 进攻性投掷（#scoreThrow 同池候选 + 弹道射程 flight 块 + throw 独立节奏冷却）
+> 上一次：2026-10-08 — 投掷物防御系统（reactive cut + preemptive cut）
 > 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
 
@@ -15,7 +16,7 @@
 | **Memory** | 事件驱动 + 每帧 tick | 纯历史记录（outcomes, commits, pressure）| 不修改任何分数 | `AI/CombatMemory.js` · `_pressureDecayBase` |
 | **Situation** | 200ms 决策时构建 | 当前快变量感知（oppPhase/distance/oppVuln...）+ throw_windup 预测（predictedTTI/Cuttable/Distance/throwRemainingMs）+ in-flight projectile threats[] | 不记录历史 | `AIController.#buildSituation` · 硬编码 |
 | **Posture** | 500ms tick | 慢变量姿态 → multipliers（1.0=neutral）| 不做 distanceHunger（快变量）| `AI/CombatPosture.js` · `DEFAULT_POSTURE_TUNING` + `aiProfile` 角色级 override |
-| **Utility** | 200ms | 哪个动作现在最合适（scoreAttack/Defense/Positioning）| 不做 "想不想打"（Posture 管）| `AIController.#scoreAttack/Defense/Positioning` · `Data/AITuning.js` 系统级默认 + `aiProfile.attackPreferences/repetitionCostRate` 角色级 override |
+| **Utility** | 200ms（决策 tick 100ms） | 哪个动作现在最合适（scoreAttack/Defense/Positioning/Throw）| 不做 "想不想打"（Posture 管）| `AIController.#scoreAttack/Defense/Positioning/Throw` · `Data/AITuning.js` 系统级默认（含 throw 块）+ `aiProfile.attackPreferences/throwPreference` 角色级 override |
 
 ```
 Memory → Situation+Posture → Utility → Action → Outcome → Memory
@@ -28,10 +29,11 @@ Memory → Situation+Posture → Utility → Action → Outcome → Memory
 ```
 scripts/Systems/AI/
 ├── AIController.js        # 主决策：fixedUpdate→makeDecision→executeCommitted
-│   #scoreAttack / #scoreDefense / #scorePositioning
+│   #scoreAttack / #scoreDefense / #scorePositioning / #scoreThrow
+│   #getMeleeMaxEffReach (近战最远有效距离唯一口径) / #isCommitted (含 throwActive)
 │   #evaluateProjectileDefense / #findBestSlashForProjectile / #scoreCutForProjectile
 │   #scoreDodgeForProjectile / #computeTimingAlignment
-├── AIKnowledgeRegistry.js # 武器 knowledge：#getMaxReach() / #getClosestMinReach() + throw state cross-reference
+├── AIKnowledgeRegistry.js # 武器 knowledge（v5）：#getMaxReach() / #getClosestMinReach() + throw state 扫描（含 flight 弹道射程）
 ├── CombatMemory.js        # Layer 0: 纯数据。onOutcome() / getAdaptation() / tick()
 └── CombatPosture.js       # Layer 1: 慢变量。attackMult/defenseMult/advanceMult/retreatMult
 
@@ -126,6 +128,7 @@ attackMult ∈ [0.6, 1.4]，defenseMult ∈ [0.7, 1.3]，advance/retreat ∈ [0.
 | `#scoreDefense` | N guards/dodges | `defenseMultiplier` | oppThreat, oppPhase, defensiveReadiness(opp idle) |
 | `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs maxEffReach, closestMinReach. **throw_windup 时 approach ×0.1 + hold 保底 0.05**（抑制靠近，等 projectile 出来再反应）| 
 | `#evaluateProjectileDefense` | up to 2（dodge + cut）| 各自 base × defense/attackMult | **reactive**: activeProjectileThreats[].estTTI/distance/cuttable. **preemptive**: predictedProjectileTTI + 5 层 gate |
+| `#scoreThrow` | N throws（`kbProfile.throws[]`）| `attackMultiplier` × `aiProfile.throwPreference` | distance/R_eff 三区间、风险 A（释放前被打断）、风险 B（被斩落）、throw.cooldownMs、ammo、repetition |
 
 所有分数进 pool → 排序 → **最高分 > 0 就执行**（无 threshold 硬门控）。
 
@@ -196,6 +199,36 @@ retreat:  distance ≤ closestMinReach+0.3 ? 0.5×retreatMult : oppThreat>thresh
 ```
 
 positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。hold 保底 0.15 防止 AI 原地不动。
+
+### #scoreThrow 完整链路（AI 进攻性投掷，2026-10-16）
+
+throw 以独立 `kind:"throw"` 候选进同一 Utility 池，无任何距离硬编码分支。KB 扫描 `throwActive:true` state 产出 throw profile，射程含手部释放高度：
+
+```
+flight: t = (launchVy + √(launchVy² + 2g·h)) / g    // h = release 帧（throwReleaseFrame-1）collider root/hand 锚点高度差
+R_eff = speed · t · rangeConservatism(0.85)           // 无锚点才回退 2vy/g 对称弧 / lifetimeMs
+```
+
+```
+base = throw.baseWeight(0.35)
+  × 距离三区间：d ≤ #getMeleeMaxEffReach()（近战圈）→ meleeZoneFactor(0.35，非零不硬禁）
+               d ≤ R_eff → 1.0（甜点）；R_eff < d ≤ R_eff×(1+distanceStartupSmooth) → 线性衰减
+  + idleOpportunityBonus(0.05)
+  - 风险 A（释放前被近战打断，最高 0.25）：opp active 且够得到我 → 满额；opp startup 按
+    opp_attack_active_window.startMs 与 throw startup 对比 0→1；throw_windup/idle/recovery → 0
+  - 风险 B（释放后被斩落，仅 cuttable）：min(1, flightMs/cutReadyMs)，
+    cutReadyMs = 最快 slash startup + defense.reflexMaxMs；opp 当前 active slash → 1.0
+  - throw.cooldownMs(3000) 冷却惩罚（共享 lastAttackTime，不享 startup 豁免）
+  - repetitionCostRate × 连续次数（封顶同 attack）
+最终 ×= posture.attackMultiplier × aiProfile.throwPreference（缺省 1.0），负分不 clamp
+
+硬门控：canThrow() !== true（无 ThrowComponent / 弹药 0）→ GATE:no_throw_component
+        d > R_eff×(1+distanceStartupSmooth) → GATE:out_of_range
+```
+
+**弹药来源**：AI 走 `BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配）；玩家走背包 InventoryManager。`projectileType` 从 stateGraph 首个 throwActive state 派生。
+
+**节奏设计（实测修正）**：throw 动画约 1050ms，会完全吞掉 500ms 的 attackCooldown 导致站桩连扔；故 throw 用独立 `throw.cooldownMs=3000` 但仍共享 `lastAttackTime`——throw→throw / attack→throw 受其约束（形成「扔一次 → 走位推进 → 近战接管」交替），throw→attack 不受限（投完可立即贴脸近战，attack 仍读 500ms）。
 
 ---
 
@@ -410,6 +443,7 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | `[AI-Diag] preemptive_gate:` | preemptive 门控结果（VIABLE / SKIP / DEFER → reactive）| 
 | `[AI-Diag] preemptive_cut:` | preemptive cut 候选详情（timingAlignment / score）| 
 | `[AI-Diag] activeProjectileThreats=` | projectile 发射后 in-flight threat 列表 | 
+| `throws: throw(...)` | throw 候选评分行：ammo/can/dist/R_eff/rf/riskA/riskB/idle/recov/cd/rep/pref/sc；gate 失败也输出（GATE:no_throw_component / out_of_range）| 
 | `[Phase0] oppIdleMs=` | Memory pressure + Posture target/current + label |
 | `pressure=` | 被击压力值 |
 | `→ DEFENSIVE/CAUTIOUS/AGGRESSIVE` | Posture 标签变化 |
@@ -431,6 +465,8 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | Posture 里算 distanceHunger | distance 是快变量（每帧变），Posture 是慢变量（500ms tick），频率不匹配 |
 | riskTolerance 整个乘 attack score | 这不是"风险偏好"，真要 risk 控制改 threatPenalty 权重 |
 | outcome 枚举冲突（clash 算不算）| clash 跳过，不干扰连续计数 |
+| throw 与 attack 共用 500ms 冷却 | throw 动画 ~1050ms 会吞掉冷却导致站桩连扔（2026-10-16 日志证实）→ throw 独立 cooldownMs=3000，共享 lastAttackTime |
+| #isCommitted 靠"非 idle/move 自动跳过" | 实际是显式白名单；新增 throwActive 状态必须同步加入，否则 throw 执行期间每 tick 重决策 |
 
 ---
 

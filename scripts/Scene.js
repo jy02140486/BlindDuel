@@ -618,7 +618,8 @@ export class Scene {
         const controllerType = rabbleDef?.controller ?? "dummy";
         if (controllerType === "test") {
             const archetype = rabbleDef?.archetype ?? "";
-            const scriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
+            const defaultScriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
+            const scriptKey = rabbleDef?.testScript ?? defaultScriptKey;
             const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
             this.rabbleController = new TestController(rabbleStick, scriptConfig);
         } else if (controllerType === "ai") {

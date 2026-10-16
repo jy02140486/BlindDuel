@@ -46,14 +46,15 @@ py .\.serve.ps1
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`（传统 attack-shield / attack-hitbox 两阶段）
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
-- AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径，详见 `docs/AI系统说明.MD`）：
+- AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径与进攻性 throw 候选 #scoreThrow，详见 `docs/AI系统说明.MD`）：
   - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment）
-  - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach + throw state cross-reference 校验 projectileType vs ProjectileDefs）
+  - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach；throw state 扫描含 flight 弹道射程——含手部释放高度的落地方程 ×rangeConservatism；校验 projectileType vs ProjectileDefs）
   - Layer 0 纯数据：`scripts/Systems/AI/CombatMemory.js`（pressure/outcomes/getAdaptation）
   - Layer 1 慢变量姿态：`scripts/Systems/AI/CombatPosture.js`（attackMult/defenseMult/low-pass smoothing）
 - 投掷物静态定义：`Data/ProjectileDefs.js`（speed, cuttable, damage, getProjectileDef 工具函数）
 - 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
-- 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync）
+- 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync；DEBUG_INFINITE_AMMO 正式环境必须 false）
+  - AI 弹药/装配：`BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配；projectileType 从 stateGraph 首个 throwActive state 派生）；玩家弹药走背包
 - 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）

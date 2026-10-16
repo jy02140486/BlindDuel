@@ -30,16 +30,16 @@ export const ProjectileDefs = {
     // --- 未来投掷物预留（本次不动，AI 后续也不引用）---
     rock: {
         typeId: "rock",
-        speed: 5,
-        launchVy: 1.2,
-        gravity: 4,
+        speed: 16,
+        launchVy: 0.1,
+        gravity: 32,
         arcHeight: 2.0,
         damage: 1,
         cuttable: false,          // 石头只能闪避
         lifetimeMs: 4000,
         spriteUrl: "./Art/Sprite/projectiles/proj_rock.png",
-        frame: { w: 20, h: 20 },
-        sourceSize: { w: 20, h: 20 },
+        frame: { w: 12, h: 12 },
+        sourceSize: { w: 12, h: 12 },
     },
 
     spear: {

@@ -16,8 +16,8 @@ import { getProjectileDef } from "../../Data/ProjectileDefs.js";
  */
 export class ThrowComponent {
     static MAX_AMMO = 99;
-    // DEBUG: 设成 true 就无限弹药（测试 AI 投掷物应对用）
-    static DEBUG_INFINITE_AMMO = true;
+    // DEBUG: 设成 true 就无限弹药（仅用于调试 AI 投掷行为；正式验收必须为 false）
+    static DEBUG_INFINITE_AMMO = false;
 
     /**
      * @param {object} config

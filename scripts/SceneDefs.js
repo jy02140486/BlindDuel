@@ -83,6 +83,10 @@ export function createEntityFromDef(scene, assets, entityDef) {
 export const BATTLE_FIELD_1 = {
     id: "battle_field_1",
     combatants: ["hero", "enemy_1"],
+    // 每战斗人员配置：AI throwAmmo 缺省/0 = 无投掷能力（不装配 ThrowComponent）；player 弹药走背包
+    combatantConfig: {
+        enemy_1: { throwAmmo: 3 },
+    },
     stageBounds: { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
     onVictory: {
@@ -182,6 +186,9 @@ export const BATTLE_FIELD_1 = {
 export const BATTLE_FIELD_2 = {
     id: "battle_field_2",
     combatants: ["hero", "enemy_1"],
+    combatantConfig: {
+        enemy_1: { throwAmmo: 3 },
+    },
     stageBounds: { minX: -0.5, maxX: 12, minY: -4.85, maxY: -4.75 },
     battleYBaseline: -4.8,
     onVictory: {
@@ -271,6 +278,9 @@ export const BATTLE_FIELD_2 = {
 export const PROLOGUE_BATTLE = {
     id: "prologue_battle",
     combatants: ["hero", "enemy_1"],
+    combatantConfig: {
+        enemy_1: { throwAmmo: 3 },
+    },
     stageBounds: { minX: -8, maxX: 4, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
     onVictory: {
@@ -288,6 +298,9 @@ export const PROLOGUE_BATTLE = {
 export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
     id: "battle_field_tavern_room_post_charlotte_kidnapped",
     combatants: ["hero", "enemy_1"],     // ← 这个 enemy 要跟 sceneDef 里的 entity id 对上
+    combatantConfig: {
+        enemy_1: { throwAmmo: 3 },
+    },
     stageBounds: { minX: -4.85, maxX: 4.63, minY: -2.88, maxY: -2.43 },
     battleYBaseline: -2.97,
     onVictory: {

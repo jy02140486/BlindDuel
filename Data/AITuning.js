@@ -73,6 +73,22 @@ export const AITuning = {
         distanceStartupSmooth: 0.3,  // startup factor 开始衰减的距离窗口
     },
 
+    // === 投掷偏好（AI 进攻性投掷，计划 §7）===
+    throw: {
+        baseWeight: 0.35,            // 低于 attack.baseWeight(0.4)，但量级同档可竞争
+        rangeConservatism: 0.85,     // R_effective = R_physical × 0.85（扫描期注入）
+        meleeZoneFactor: 0.35,       // 近战区间 throw 距离系数（非零，留弹性不硬禁）
+        interruptRiskPenalty: 0.25,  // 风险 A（release 前被近战打断）满额扣分
+        startupInterruptMarginMs: 50,
+        cutRiskPenalty: 0.20,        // 风险 B（出手后被 slash 斩落，仅 cuttable）满额扣分
+        idleOpportunityBonus: 0.05,  // opp idle 时弱主动机会
+        recoveryPunishBonus: 0.15,   // opp recovery 窗口（需预测事件证明，无数据不加分）
+        cooldownMs: 3000,            // 投掷节奏间隔（实测修正：throw 动画 ~1050ms，共享 500ms 冷却被动画吞掉导致连扔）；共享 lastAttackTime 时间戳
+        repetitionCostRate: 0.06,    // 与 attack 持平（弹药本身限流，不加重）
+        repetitionCostMax: 0.18,
+        // distanceStartupSmooth / cooldownPenalty 显式复用 attack 字段；reflexMaxMs 复用 defense
+    },
+
     // === 防御偏好 ===
     defense: {
         activationThreshold: 0.3,  // oppThreat < 此值时防御评分归零

@@ -6,6 +6,7 @@ export const ASSET_MANIFEST = {
     },
     testScripts: {
         rabbleBasicSequence: "./Data/TestScripts/rabble_stick_basic_sequence.json",
+        rabbleThrowSequence: "./Data/TestScripts/rabble_stick_throw_sequence.json",
         manatarmsBasicSequence: "./Data/TestScripts/manatarms_basic_sequence.json"
     },
     atlas: {
@@ -44,6 +45,7 @@ export const ASSET_MANIFEST = {
             clash: "./Art/Sprite/rabble_stick/rabble_stick_clash.json",
             dash: "./Art/Sprite/rabble_stick/rabble_stick_dash.json",
             die: "./Art/Sprite/rabble_stick/rabble_stick_die.json",
+            throw: "./Art/Sprite/rabble_stick/rabble_stick_throw.json",
             CS_turnaround: "./Art/Sprite/rabble_stick/rabble_stick_CS_turnaround.json"
         },
         manatarms: {
@@ -108,6 +110,7 @@ export const ASSET_MANIFEST = {
             dash: "./Data/CollisionMask/rabble_stick/rabble_stick_dash.collider.json",
             dodge: "./Data/CollisionMask/rabble_stick/rabble_stick_Dodge.collider.json",
             die: "./Data/CollisionMask/rabble_stick/rabble_stick_die.collider.json",
+            throw: "./Data/CollisionMask/rabble_stick/rabble_stick_throw.collider.json",
             CS_turnaround: "./Data/CollisionMask/rabble_stick/rabble_stick_CS_turnaround.collider.json"
         },
         manatarms: {
@@ -131,7 +134,8 @@ export const ASSET_MANIFEST = {
         },
         rabble: {
             swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",
-            thrust: "./Data/AnimationEvents/rabble_stick/rabble_stick_thrust.events.json"
+            thrust: "./Data/AnimationEvents/rabble_stick/rabble_stick_thrust.events.json",
+            throw: "./Data/AnimationEvents/rabble_stick/rabble_stick_throw.events.json"
         }
     },
     rootMotion: {
