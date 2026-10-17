@@ -266,7 +266,7 @@ export class Scene {
 
         this.sharedContext = sharedContext;
 
-        // init 阶段已 spawn 的 enemy_1 此时 sharedContext 才就绪，补同步 rabbleController/rabbleStick
+        // init 阶段已 spawn 的首个 enemy 此时 sharedContext 才就绪，补同步 rabbleController/rabbleStick 兼容别名
         if (this.rabbleController) sharedContext.rabbleController = this.rabbleController;
         if (this.rabbleStick) sharedContext.rabbleStick = this.rabbleStick;
 

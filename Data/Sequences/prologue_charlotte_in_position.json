@@ -1,0 +1,19 @@
+{
+  "id": "prologue_charlotte_in_position",
+  "durationMs": 2500,
+  "tracks": [
+    {
+      "id": "companion.move_to_altar",
+      "kind": "actor",
+      "binding": { "actorId": "companion" },
+      "channel": "movement",
+      "clips": [
+        { "type": "callback", "atMs": 0, "fn": "enterCompanionIdle" },
+        { "type": "command", "atMs": 0, "command": "walk" },
+        { "type": "faceWorldX", "atMs": 0, "direction": 1 },
+        { "type": "moveActorTo", "startMs": 0, "durationMs": 2000, "x": -22, "y": 0 },
+        { "type": "command", "atMs": 2100, "command": "idle" }
+      ]
+    }
+  ]
+}

@@ -41,6 +41,7 @@ export class ExploreMode extends BaseMode {
             this.#syncTriggerEnabled();
             this.#updateSceneSwitchTrigger(character, tickCount);
             this.#checkBattleTrigger(character, sceneSequencer);
+            this.#checkSequenceTrigger(character, sceneSequencer);
             this.#checkScriptedCameraTrigger(character, sceneSequencer);
         }
 
@@ -237,8 +238,10 @@ export class ExploreMode extends BaseMode {
         }
 
         // 5. 解析本场 enter/exit 序列并固定进 session。
-        // 阶段 A 保持现行优先级（SceneDef 共享内联 → BattleDef → 代码 fallback）以满足 §7.1
-        // 行为等价门禁；§4.2 的「BattleDef 优先」随阶段 B 数据迁移翻转（解析点已唯一）。
+        // 优先级：BattleDef 优先 → SceneDef 默认 → 代码 fallback（计划 §4.2）。
+        // 阶段 A 曾刻意反转 SceneDef 默认优先，为维持原 prologue 入场表现的行为等价门禁；
+        // 阶段 B 翻转回来——SceneDef 默认 sequence 现已写作场景级通用（companion 固定向左撤退），
+        // 每场战斗只需 BattleDef 显式 override 极少数需要专属表演的情况。
         const enterSequence = this.#resolveEnterSequence(battleDef, sceneDef);
         const exitSequence = this.#resolveExitSequence(battleDef, sceneDef);
 
@@ -298,9 +301,11 @@ export class ExploreMode extends BaseMode {
      * BattleDef.enterSequence(battleDef) → 代码 fallback。
      */
     #resolveEnterSequence(battleDef, sceneDef) {
+        // BattleDef 优先：每场战斗可自定义入场；没写则 SceneDef 默认（场景级通用）
+        if (typeof battleDef.enterSequence === "function") return battleDef.enterSequence(battleDef);
+        if (battleDef.enterSequence) return JSON.parse(JSON.stringify(battleDef.enterSequence));
         const inlineSeq = sceneDef?.enterBattleSequence;
         if (inlineSeq) return JSON.parse(JSON.stringify(inlineSeq));
-        if (typeof battleDef.enterSequence === "function") return battleDef.enterSequence(battleDef);
         return {
             id: "enter_battle_fallback",
             durationMs: 1000,
@@ -331,9 +336,9 @@ export class ExploreMode extends BaseMode {
      * BattleDef 上为跨战斗共享对象，此处深拷贝防止同一对象被多个 session/场次 sequencer 标注。
      */
     #resolveExitSequence(battleDef, sceneDef) {
+        if (battleDef.exitSequence) return JSON.parse(JSON.stringify(battleDef.exitSequence));
         const inlineSeq = sceneDef?.exitBattleSequence;
         if (inlineSeq) return JSON.parse(JSON.stringify(inlineSeq));
-        if (battleDef.exitSequence) return JSON.parse(JSON.stringify(battleDef.exitSequence));
         return null;
     }
 
@@ -422,6 +427,50 @@ export class ExploreMode extends BaseMode {
         };
 
         sceneSequencer.play(testSequence);
+    }
+
+    #checkSequenceTrigger(character, sceneSequencer) {
+        const { sceneDef, scene, questManager, worldState } = this.context;
+        const seqTriggers = sceneDef?.triggers?.filter(t => t.type === "sequence") ?? [];
+        if (!scene?.triggers || !seqTriggers.length || !worldState) return;
+        if (sceneSequencer?.isBusy?.()) return;
+
+        for (const triggerDef of seqTriggers) {
+            if (this._firedBattleTriggerIds.has(triggerDef.id)) continue; // 复用锁（sequence trigger 也一次性）
+            const trigger = scene.triggers.get(triggerDef.id);
+            if (!trigger || trigger.triggered) continue;
+
+            // condition 门禁（scenarioMin/Max/flagNot 等）
+            const cond = triggerDef.condition;
+            if (cond) {
+                if (cond.scenarioMin !== undefined && worldState.scenario < cond.scenarioMin) continue;
+                if (cond.scenarioMax !== undefined && worldState.scenario > cond.scenarioMax) continue;
+                if (cond.flagNot && worldState.flags?.[cond.flagNot]) continue;
+                if (cond.flagOn && !worldState.flags?.[cond.flagOn]) continue;
+            }
+
+            if (!trigger.checkOverlap(character)) continue;
+            if (!trigger.check(character)) continue;
+            this._firedBattleTriggerIds.add(triggerDef.id);
+
+            // 可选 scenario 推进（如 tutor→react 中间段：触发后从 102 升到 105 开启 gem cutscene）
+            if (typeof triggerDef.scenarioAdvance === "number") {
+                questManager?.advanceTo(triggerDef.scenarioAdvance);
+            }
+            // 可选 flag 置位
+            if (triggerDef.flagOnPlay) {
+                worldState.flags[triggerDef.flagOnPlay] = true;
+            }
+
+            // 播 sequence：从 URL 加载（与 cutsceneInvoker 同模式）
+            if (triggerDef.sequenceUrl) {
+                fetch(triggerDef.sequenceUrl, { cache: "no-cache" })
+                    .then(r => r.json())
+                    .then(seq => sceneSequencer.play(seq))
+                    .catch(err => console.warn(`[ExploreMode] sequence trigger "${triggerDef.id}" load failed`, err));
+            }
+            return;
+        }
     }
 
     enter(_payload) {

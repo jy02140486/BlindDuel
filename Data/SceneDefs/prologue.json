@@ -34,8 +34,9 @@
                     { "type": "callback", "atMs": 0, "fn": "enterCompanionIdle" },
                     { "type": "command", "atMs": 0, "command": "walk" },
                     { "type": "faceWorldX", "atMs": 0, "direction": 1 },
-                    { "type": "moveActorTo", "startMs": 0, "durationMs": 1000, "x": -9, "y": 0, "speed": 1.4 },
-                    { "type": "command", "atMs": 1000, "command": "idle" }
+                    
+                    { "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [-1, 0.1] },
+                    { "type": "command", "atMs": 3000, "command": "idle" }
                 ]
             },
             {
@@ -142,12 +143,54 @@
         },
         {
             "archetype": "rabble_stick",
-            "id": "enemy_1",
+            "id": "rabble_react",
             "name": "rabble_stick",
             "kind": "enemy",
             "pos": [3, 0, 0],
             "controller": "ai",
+            "aiProfile": {
+                "baseAggression": 0.6,
+                "baseDefense": 0.5,
+                "decayAlpha": 0.35,
+                "distanceAppetite": 0.55,
+                "retreatDesire": 0.4,
+                "throwPreference": null
+            },
+            "aiTuningOverrides": {},
             "spawnIf": { "scenarioMin": 105, "flagNot": "prologue_battle" }
+        },
+        {
+            "archetype": "rabble_stick",
+            "id": "rabble_tutor",
+            "name": "rabble_stick_tutor",
+            "kind": "enemy",
+            "pos": [-20.5, 0, 0],
+            "controller": "ai",
+            "aiProfile": {
+                "baseAggression": 0.55,
+                "baseDefense": 0.25,
+                "decayAlpha": 0.2,
+                "distanceAppetite": 0.6,
+                "retreatDesire": 0.3,
+                "attackPreferences": {
+                    "swing": 1.5,
+                    "thrust": 0.5,
+                    "slash": 0.5,
+                    "dash": 0.3
+                },
+                "throwPreference": null
+            },
+            "aiTuningOverrides": {
+                "decisionIntervalMs": 200,
+                "defense": {
+                    "reflexMaxMs": 400,
+                    "preemptiveBonus": 0.05
+                },
+                "attack": {
+                    "preemptiveBonus": 0.05
+                }
+            },
+            "spawnIf": { "flagNot": "prologue_battle_tutor" }
         },
         {
             "archetype": "pickable",
@@ -200,7 +243,8 @@
         "house_door": [-1, -1, 0],
         "battle_checkpoint": [-7, 0, 0],
         "from_prologue": [6, 0, 0],
-        "intro_start": [-20, 0, 0]
+        "intro_start": [-20, 0, 0],
+        "tutor_checkpoint": [-28, 0, 0]
     },
     "triggers": [
         {
@@ -231,6 +275,28 @@
             "checkpointSpawn": "battle_checkpoint",
             "condition": { "flagNot": "prologue_battle", "scenarioMin": 105 },
             "debugColor": [0, 1, 0],
+            "debugVisible": true
+        },
+        {
+            "type": "battle",
+            "id": "bt_prologue_tutor",
+            "pos": [-26, 0, 0],
+            "size": [2, 2, 2],
+            "battleId": "prologue_battle_tutor",
+            "checkpointSpawn": "tutor_checkpoint",
+            "condition": { "flagNot": "prologue_battle_tutor" },
+            "debugColor": [1, 1, 0],
+            "debugVisible": true
+        },
+        {
+            "type": "sequence",
+            "id": "cs_charlotte_in_position",
+            "pos": [-24.18, 0, 0],
+            "size": [2, 2, 2],
+            "condition": { "scenarioMin": 102, "scenarioMax": 104 },
+            "sequenceUrl": "Data/Sequences/prologue_charlotte_in_position.json",
+            "flagOnPlay": "prologue_charlotte_in_position_done",
+            "debugColor": [0.6, 0.3, 1],
             "debugVisible": true
         }
     ],

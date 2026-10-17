@@ -281,9 +281,9 @@ export const BATTLE_FIELD_2 = {
 
 export const PROLOGUE_BATTLE = {
     id: "prologue_battle",
-    combatants: ["hero", "enemy_1"],
+    combatants: ["hero", "rabble_react"],
     combatantConfig: {
-        enemy_1: { throwAmmo: 3 },
+        rabble_react: { throwAmmo: 3 },
     },
     stageBounds: { minX: -8, maxX: 4, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
@@ -294,8 +294,32 @@ export const PROLOGUE_BATTLE = {
         checkpoint: { spawnId: "house_door" },
     },
     duelCamera: BATTLE_FIELD_1.duelCamera,
-    enterSequence: BATTLE_FIELD_1.enterSequence,
-    exitSequence: BATTLE_FIELD_1.exitSequence,
+    // enter/exit sequence 不 override——走 SceneDef 默认 enterBattleSequence
+    // （含 companion.retreat 轨道，prologue 主线需要 Charlotte 向左撤退）
+};
+
+// ---------------------------------------------------------------------------
+// Prologue 左侧 tutor 教学战（必选，弱 AI 预测、swing 偏好，引导 guard）
+// 与 prologue_battle 独立：各打一次，顺序任选；tutor 胜利仅置位 flag，不推进主线 scenario
+// ---------------------------------------------------------------------------
+export const PROLOGUE_BATTLE_TUTOR = {
+    id: "prologue_battle_tutor",
+    combatants: ["hero", "rabble_tutor"],
+    combatantConfig: {
+        rabble_tutor: { throwAmmo: 0 }, // 教学战不启用投掷能力，聚焦近身 guard 引导
+    },
+    stageBounds: { minX: -32, maxX: -19, minY: -0.05, maxY: 0.05 },
+    battleYBaseline: 0,
+    onVictory: {
+        scenario: 102,  // 进入 tutor→react 之间的 Charlotte 就位中间剧情段
+        flags: ["prologue_battle_tutor"],
+        // 不推进 checkpoint；两场必选，最终由 react 胜利 checkpoint 推进
+    },
+    duelCamera: BATTLE_FIELD_1.duelCamera,
+    // 序章只有 enterBattleSequence 内联于 prologue.json（含 Charlotte 撤退轨道），
+    // 它绑定 hero+companion——tutor 左侧入场无需 companion 表演，直接走 BattleDef fallback
+    // （ExploreMode.resolveEnterSequence 已在 SceneDef 内联优先级之后找 BattleDef.enterSequence，
+    // 此键留空即走代码默认 fallback，不影响 ExploreMode 原路径）
 };
 
 // ---------------------------------------------------------------------------
@@ -402,6 +426,7 @@ export const BATTLE_DEFS = {
     [BATTLE_FIELD_1.id]: BATTLE_FIELD_1,
     [BATTLE_FIELD_2.id]: BATTLE_FIELD_2,
     [PROLOGUE_BATTLE.id]: PROLOGUE_BATTLE,
+    [PROLOGUE_BATTLE_TUTOR.id]: PROLOGUE_BATTLE_TUTOR,
     [BATTLE_FIELD_EP1_TAVERN_ROOM.id]: BATTLE_FIELD_EP1_TAVERN_ROOM,
 };
 
