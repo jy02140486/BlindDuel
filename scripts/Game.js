@@ -123,6 +123,8 @@ export class Game {
             cameraBasePosition: new BABYLON.Vector3(0, 8, -25),
             cameraTarget: new BABYLON.Vector3(0, 0, 0),
             smoothedFighterDistance: 0,
+            // BattleSession 生命周期槽位（pending）：ExploreMode trigger 命中后写入，BattleMode.exit 清理
+            pendingBattleSession: null,
         };
 
         this.cameraManager = new CameraManager(this.sharedContext);

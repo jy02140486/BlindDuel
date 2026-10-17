@@ -4,6 +4,7 @@ import { WalkAreaSampler } from "../WalkAreaSampler.js";
 import { FACING_MODE } from "../../Enties/CharacterBase.js";
 import { getItemDef } from "../../../Data/ItemDefs.js";
 import { getSceneDefSync, getSceneDef } from "../../SceneDefRegistry.js";
+import { createBattleSession } from "../BattleSession.js";
 
 
 export class ExploreMode extends BaseMode {
@@ -202,73 +203,149 @@ export class ExploreMode extends BaseMode {
     }
 
     #checkBattleTrigger(character, sceneSequencer) {
-        const battleTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "battle") ?? [];
-        let pendingBattleDef = null;
-        let matchedTriggerDef = null;
-        const triggers = this.context.scene.triggers;
-        if (!triggers) return;
+        const { sceneDef, scene, battleDefs, actorRegistry } = this.context;
+        const battleTriggers = sceneDef?.triggers?.filter(t => t.type === "battle") ?? [];
+        if (!scene?.triggers || !battleTriggers.length) return;
+
+        // 1+2. 收集当前与 hero 重叠的未消费 battle trigger，选中心距 hero 最近的一个；
+        // 严格小于比较使等距时自然保持 JSON 顺序兜底。用无副作用的 checkOverlap 收集，
+        // 只对选中者调 check()（会 latch triggered），避免落选 trigger 被提前锁死。
+        let winner = null; // { triggerDef, trigger, distSq }
         for (const triggerDef of battleTriggers) {
-            // 跳过本次 ExploreMode 期间已处理过的 trigger
             if (this._firedBattleTriggerIds.has(triggerDef.id)) continue;
-            const trigger = triggers.get(triggerDef.id);
-            if (trigger && trigger.check(character)) {
-                this._firedBattleTriggerIds.add(triggerDef.id);
-                pendingBattleDef = this.context.battleDefs?.[triggerDef.battleId];
-                matchedTriggerDef = triggerDef;
-                break;
+            const trigger = scene.triggers.get(triggerDef.id);
+            // triggered 锁存守卫与旧 check() 路径一致（check 内部先查 triggered 再查 overlap）
+            if (!trigger || trigger.triggered || !trigger.checkOverlap(character)) continue;
+            const dx = trigger.position.x - character.root.position.x;
+            const dy = trigger.position.y - character.root.position.y;
+            const distSq = dx * dx + dy * dy;
+            if (!winner || distSq < winner.distSq) {
+                winner = { triggerDef, trigger, distSq };
             }
         }
-        if (!pendingBattleDef) return;
-        this.context.pendingBattleDef = pendingBattleDef;
+        if (!winner) return;
 
-        let enterBattleSequence;
-        const inlineSeq = this.context.sceneDef?.enterBattleSequence;
-        if (inlineSeq) {
-            enterBattleSequence = JSON.parse(JSON.stringify(inlineSeq));
-            for (const track of enterBattleSequence.tracks) {
-                for (const clip of track.clips) {
-                    if (clip.type === "switchMode" && clip.modeId === "battle") {
-                        clip.payload = { ...(clip.payload || {}), battleDef: pendingBattleDef };
-                    }
+        const { triggerDef, trigger } = winner;
+
+        // 3. BattleDef 缺失：明确报错并中止（不锁 trigger、不存 checkpoint、不入序列）
+        const battleDef = battleDefs?.[triggerDef.battleId];
+        if (!battleDef) {
+            console.error(
+                `[ExploreMode] battle trigger "${triggerDef.id}" references unknown battleId "${triggerDef.battleId}"; battle entry aborted`
+            );
+            return;
+        }
+
+        // 5. 解析本场 enter/exit 序列并固定进 session。
+        // 阶段 A 保持现行优先级（SceneDef 共享内联 → BattleDef → 代码 fallback）以满足 §7.1
+        // 行为等价门禁；§4.2 的「BattleDef 优先」随阶段 B 数据迁移翻转（解析点已唯一）。
+        const enterSequence = this.#resolveEnterSequence(battleDef, sceneDef);
+        const exitSequence = this.#resolveExitSequence(battleDef, sceneDef);
+
+        // 6. 本场战败恢复 spawn（trigger AABB 内的点不安全；未配置时 fallback 首个 spawn）
+        const retryCheckpointSpawnId = triggerDef.checkpointSpawn
+            ?? Object.keys(sceneDef.spawns ?? {})[0]
+            ?? "house_door";
+
+        // 4+7. 严格 1v1 校验通过后生成 pending session；配置/实体错误在入场序列之前暴露
+        let session;
+        try {
+            session = createBattleSession({
+                triggerId: triggerDef.id,
+                battleDef,
+                actorRegistry,
+                retryCheckpointSpawnId,
+                enterSequence,
+                exitSequence,
+            });
+        } catch (err) {
+            console.error(
+                `[ExploreMode] battle entry from trigger "${triggerDef.id}" failed validation:`,
+                err.message,
+            );
+            return;
+        }
+
+        // 全部校验通过后才消费 trigger（check 内部 latch triggered 并触发 onEnter），
+        // 再加 ExploreMode 本次存活期的运行时锁；若此刻 trigger 刚被禁用则放弃本次。
+        if (!trigger.check(character)) return;
+        this._firedBattleTriggerIds.add(triggerDef.id);
+
+        // pending 阶段：入场镜头/双方从 pendingBattleSession 读（Timeline/Camera 第 4 步切换消费方）
+        this.context.pendingBattleSession = session;
+        // 兼容字段：TimelineSequencer.battleYBaseline 与未改造的 BattleMode 仍在读，第 4/5 步后摘除
+        this.context.pendingBattleDef = battleDef;
+
+        // 入场 blend 启动前应用本场镜头参数（duel rig 的 zoom/高度映射），
+        // 必须在 sceneSequencer.play 之前：首个 cameraBlend clip atMs=0 即读 rig 参数（§4.4）
+        if (battleDef.duelCamera) {
+            this.context.cameraManager?.applyRigConfig?.("duel", battleDef.duelCamera);
+        }
+
+        // switchMode("battle") clip 统一注入 battleDef + session（内联/BattleDef/fallback 三源一致）
+        this.#injectBattleSwitchPayload(enterSequence, battleDef, session);
+
+        // 失败重试 checkpoint（阶段 A 维持现行保存行为；第 5 步拆分 retry/进度 checkpoint 语义）
+        // 不传 useHeroPos：restoreCheckpoint 时用 retryCheckpointSpawnId 对应点，避免重置后立即重入 trigger
+        this.context.game?.saveCheckpoint(sceneDef.id, retryCheckpointSpawnId);
+
+        sceneSequencer.play(enterSequence);
+    }
+
+    /**
+     * 解析本场入场序列（解析结果固定进 BattleSession，消费方不再各查各的）。
+     * 现行优先级：SceneDef.enterBattleSequence（深拷贝，避免 sequencer 运行时标注污染数据）→
+     * BattleDef.enterSequence(battleDef) → 代码 fallback。
+     */
+    #resolveEnterSequence(battleDef, sceneDef) {
+        const inlineSeq = sceneDef?.enterBattleSequence;
+        if (inlineSeq) return JSON.parse(JSON.stringify(inlineSeq));
+        if (typeof battleDef.enterSequence === "function") return battleDef.enterSequence(battleDef);
+        return {
+            id: "enter_battle_fallback",
+            durationMs: 1000,
+            tracks: [
+                {
+                    id: "camera",
+                    kind: "camera",
+                    binding: { cameraId: "duel" },
+                    channel: "blend",
+                    clips: [
+                        { type: "cameraBlend", startMs: 0, durationMs: 800, to: "duel" }
+                    ]
+                },
+                {
+                    id: "mode",
+                    kind: "mode",
+                    clips: [
+                        { type: "switchMode", atMs: 800, modeId: "battle" }
+                    ]
+                }
+            ]
+        };
+    }
+
+    /**
+     * 解析本场退场序列：SceneDef.exitBattleSequence → BattleDef.exitSequence；
+     * 两者皆无时返回 null，由结算侧走代码 fallback。
+     * BattleDef 上为跨战斗共享对象，此处深拷贝防止同一对象被多个 session/场次 sequencer 标注。
+     */
+    #resolveExitSequence(battleDef, sceneDef) {
+        const inlineSeq = sceneDef?.exitBattleSequence;
+        if (inlineSeq) return JSON.parse(JSON.stringify(inlineSeq));
+        if (battleDef.exitSequence) return JSON.parse(JSON.stringify(battleDef.exitSequence));
+        return null;
+    }
+
+    // 给序列中所有 switchMode("battle") clip 注入本场 battleDef 与 session
+    #injectBattleSwitchPayload(sequence, battleDef, session) {
+        for (const track of sequence.tracks ?? []) {
+            for (const clip of track.clips ?? []) {
+                if (clip.type === "switchMode" && clip.modeId === "battle") {
+                    clip.payload = { ...(clip.payload || {}), battleDef, session };
                 }
             }
-        } else {
-            enterBattleSequence = pendingBattleDef.enterSequence?.(pendingBattleDef) ?? {
-                id: "enter_battle_fallback",
-                durationMs: 1000,
-                tracks: [
-                    {
-                        id: "camera",
-                        kind: "camera",
-                        binding: { cameraId: "duel" },
-                        channel: "blend",
-                        clips: [
-                            { type: "cameraBlend", startMs: 0, durationMs: 800, to: "duel" }
-                        ]
-                    },
-                    {
-                        id: "mode",
-                        kind: "mode",
-                        clips: [
-                            { type: "switchMode", atMs: 800, modeId: "battle", payload: { battleDef: pendingBattleDef } }
-                        ]
-                    }
-                ]
-            };
         }
-
-        const { game, sceneDef } = this.context;
-        if (game) {
-            // 战斗 trigger 内的位置不安全（重置后会立即再触发），
-            // 用 matchedTriggerDef.checkpointSpawn 指定的安全 spawn 点；未配置时 fallback 到首个 spawn。
-            // 不传 useHeroPos：heroPos=null，_loadSceneInternal 会用 spawnId 对应点。
-            const checkpointSpawn = matchedTriggerDef?.checkpointSpawn
-                ?? Object.keys(sceneDef.spawns)[0]
-                ?? "house_door";
-            game.saveCheckpoint(sceneDef.id, checkpointSpawn);
-        }
-
-        sceneSequencer.play(enterBattleSequence);
     }
 
     #checkScriptedCameraTrigger(character, sceneSequencer) {

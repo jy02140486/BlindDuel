@@ -77,7 +77,12 @@ export class AIController extends BaseController {
         this.combatMemory = new CombatMemory();
 
         // === Layer 1: CombatPosture（Phase 0 新增，500ms 慢变量）===
-        this.combatPosture = new CombatPosture(this.combatMemory);
+        // 实例级 aiProfile 的姿态类 knob（baseAggression/baseDefense/decayAlpha/
+        // distanceAppetite/retreatDesire）经 tuning.aiProfile 注入；无 profile 时 {} = 系统默认
+        this.combatPosture = new CombatPosture(
+            this.combatMemory,
+            this.#extractPostureOverrides(this.tuning?.aiProfile)
+        );
 
         // === Projectile defense 依赖（Phase 3 Step 5）===
         // ProjectileManager 在 BattleMode.enter() 时才创建 — 通过 setProjectileManager() 延迟注入
@@ -101,6 +106,20 @@ export class AIController extends BaseController {
         // preemptive_only — 只剩 PREEMPTIVE（opp.startup 抢先截断）
         // punish_only — 只剩 PUNISH（opp.recovery 惩罚攻击）
         this.attackIntentMode = options.attackIntentMode ?? "normal";
+    }
+
+    /**
+     * 从 aiProfile 提取作用于 Posture 层的旋钮（7 knob 中的 5 个姿态类）。
+     * repetitionCostRate 与 attackPreferences/throwPreference 属 Utility 层，在评分处直读。
+     * 无 profile 或字段非 number 时缺省（由 CombatPosture 的 DEFAULT_POSTURE_TUNING 兜底）。
+     */
+    #extractPostureOverrides(profile) {
+        if (!profile) return {};
+        const out = {};
+        for (const key of ["baseAggression", "baseDefense", "decayAlpha", "distanceAppetite", "retreatDesire"]) {
+            if (typeof profile[key] === "number") out[key] = profile[key];
+        }
+        return out;
     }
 
     setOpponent(opponent) {
@@ -1077,7 +1096,8 @@ export class AIController extends BaseController {
             : 0;
         let repetitionCost = 0;
         if (usageCount >= 2) {
-            const rcRate = this.tuning.attack.repetitionCostRate ?? 0.06;
+            // aiProfile.repetitionCostRate（性格 knob，Utility 层）优先于系统级 tuning
+            const rcRate = this.tuning.aiProfile?.repetitionCostRate ?? this.tuning.attack.repetitionCostRate ?? 0.06;
             const rcMax  = this.tuning.attack.repetitionCostMax ?? 0.18;
             repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
             score -= repetitionCost;
@@ -1867,7 +1887,10 @@ export class AIController extends BaseController {
             dist: sit.distance,
             rEff: t.flight?.effectiveRange ?? 0,
             rf: 0, riskA: 0, riskB: 0, idle: 0, recov: 0, cd: 0, rep: 0,
-            pref: this.character.stateGraph?.aiProfile?.throwPreference ?? 1.0,
+            // 统一偏好读取路径：实例注入 tuning.aiProfile 优先，StateGraph 共享 profile 兜底，缺省 1.0
+            pref: this.tuning?.aiProfile?.throwPreference
+                ?? this.character.stateGraph?.aiProfile?.throwPreference
+                ?? 1.0,
             gate: null, score: 0,
         };
         this._throwDiag.push(diag);

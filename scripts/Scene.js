@@ -41,7 +41,8 @@ export class Scene {
         this._entityById = null;
         this._sceneAssets = null;
         this._sceneDef = null;
-        this._rabbleControllerBound = false;
+        // 多敌人同场景时，通用别名 rabbleStick/"enemy" 冲突 warning 只报一次
+        this._enemyAliasWarned = false;
         this._debugVisible = true;
     }
 
@@ -95,12 +96,12 @@ export class Scene {
             this._spawnEntity(entityDef);
         }
         const character = this._entityById.get("hero");
-        const rabbleStick = this._entityById.get("enemy_1");
+        // 兼容别名：取第一个 kind=enemy 实体（controller 已在 _spawnEntity 中按各自 entityDef 独立创建）。
+        // 多敌人场景主路径必须用显式 id（BattleSession / actorRegistry），不得依赖此别名。
+        const rabbleStick = this.entityPool.find(e => e.kind === "enemy") ?? null;
 
-        // --- 临时：只加载 hero 时，rabbleStick 可能不存在 ---
-        // TODO: 恢复多实体后删除这行
         if (!rabbleStick) {
-            console.warn("[Scene] rabbleStick not found — running in single-entity debug mode");
+            console.warn("[Scene] no enemy entity found — running in single-entity debug mode");
         }
 
         // --- 从 SceneDef 创建触发器 ---
@@ -136,11 +137,11 @@ export class Scene {
         character.controller = this._game.playerController;
         console.log("[Scene] B8: using game.inputSystem + game.playerController");
         character.buffsProvider = this._game.playerController;
-        if (rabbleStick) {
-            this._initRabbleController(sceneDef.entities, rabbleStick, character);
-        } else {
-            this.rabbleController = null;
-        }
+        // 敌人 controller 已在 _spawnEntity 阶段为每个 enemy 独立创建（含实例级
+        // aiProfile / aiTuningOverrides 注入）；此处只同步「第一个敌人」兼容别名，
+        // 供旧序列与 BattleMode 使用（阶段 A 后续步骤逐步摘除对别名的依赖）
+        this.rabbleController = rabbleStick?.controller ?? null;
+        this.rabbleStick = rabbleStick;
 
         // NPC 控制器：NpcController + setupDebugVisual + applyInitialState
         // 已在 _spawnEntity 内部完成，此处无需重复创建。
@@ -149,8 +150,10 @@ export class Scene {
         // 动态 spawn 路径则直接用 _spawnEntity 里的那次调用。
 
         // --- 战斗系统与边界 ---
-        // combatSystem/cameraRig 等 Game 稳定对象直接经 this._game 访问，不再存别名
-        const firstBattleTrigger = sceneDef.triggers?.find(t => t.type === "battle");
+        // combatSystem/cameraRig 等 Game 稳定对象直接经 this._game 访问，不再存别名。
+        // 安全默认：不再从「第一个 battle trigger」推断全局 stageBounds/duelCamera（多战斗重构 §4.4）——
+        // duelCamera 在 trigger 命中后的 pending 阶段按本场 BattleDef 应用；
+        // stageBounds 在 BattleMode.enter 按本场 BattleDef 应用（StageBoundary 仅战斗期间参与 clamp）。
         const DEFAULT_DUEL_CAMERA = {
             zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
             orthoMinWidth: 16, orthoMaxWidth: 32,
@@ -159,17 +162,7 @@ export class Scene {
             targetAspect: 16 / 9,
         };
         const DEFAULT_STAGE_BOUNDS = { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 };
-        let stageBounds;
-        let duelCameraCfg;
-        if (firstBattleTrigger) {
-            const battleDef = battleDefs[firstBattleTrigger.battleId];
-            stageBounds = battleDef.stageBounds;
-            duelCameraCfg = battleDef.duelCamera;
-        } else {
-            stageBounds = DEFAULT_STAGE_BOUNDS;
-            duelCameraCfg = DEFAULT_DUEL_CAMERA;
-        }
-        this.stageBoundary = new StageBoundary(this.scene, stageBounds);
+        this.stageBoundary = new StageBoundary(this.scene, DEFAULT_STAGE_BOUNDS);
         // WalkArea：构建 _walkAreas 有序数组（stageMask 优先 > walkAreas 数组 > walkArea 单对象），调 _applyWalkArea() 评估首个命中
         this._walkAreas = [];
         if (stageMaskData?.walkArea) {
@@ -194,17 +187,8 @@ export class Scene {
         const cameraRig = this._game.cameraRig;
         const exploreCameraRig = this._game.exploreCameraRig;
         const scriptedCameraRig = this._game.scriptedCameraRig;
-        Object.assign(cameraRig, {
-            zoomMinDistance: duelCameraCfg.zoomMinDistance,
-            zoomMaxDistance: duelCameraCfg.zoomMaxDistance,
-            orthoMinWidth: duelCameraCfg.orthoMinWidth,
-            orthoMaxWidth: duelCameraCfg.orthoMaxWidth,
-            perspMinDistance: duelCameraCfg.perspMinDistance,
-            perspMaxDistance: duelCameraCfg.perspMaxDistance,
-            minCameraHeight: duelCameraCfg.minCameraHeight,
-            maxCameraHeight: duelCameraCfg.maxCameraHeight,
-            targetAspect: duelCameraCfg.targetAspect,
-        });
+        // 场景加载只复位为安全默认；本场镜头参数改由 pending 阶段 applyRigConfig("duel", battleDef.duelCamera) 应用
+        cameraRig.applyConfig(DEFAULT_DUEL_CAMERA);
 
         // --- explore rig 场景级参数（无声明则用默认）---
         exploreCameraRig.resetConfig();
@@ -344,8 +328,13 @@ export class Scene {
             }
         }
         this.exploreMode?._collisionSystem?.setDebugVisible?.(v);
-        if (this.rabbleController?.setDebugVisible) {
-            this.rabbleController.setDebugVisible(v);
+        // 每个敌人独立 controller 的调试可视化（如 AIController 三色环），统一受 X 键控制
+        if (this.entityPool) {
+            for (const entity of this.entityPool) {
+                if (entity.kind === "enemy" && typeof entity.controller?.setDebugVisible === "function") {
+                    entity.controller.setDebugVisible(v);
+                }
+            }
         }
         this.sceneVisualSystem?.setDebugVisible?.(v);
     }
@@ -577,19 +566,34 @@ export class Scene {
             if (entity.name) this._actorRegistry.set(entity.name, entity);
         }
 
-        // 敌人 controller 绑定（如果还没绑过）
-        if ((entityDef.id === "enemy_1" || entityDef.kind === "enemy") && !this._rabbleControllerBound) {
-            this._initRabbleController(this._sceneDef.entities, entity, this._entityById.get("hero"));
-            // sharedContext 可能在 init 阶段还未赋值，延迟同步到 sharedContext 就绪后做
-            if (this.sharedContext) {
-                this.sharedContext.rabbleController = this.rabbleController;
-                this.sharedContext.rabbleStick = entity;
-            }
-            if (this._actorRegistry) this._actorRegistry.set("enemy", entity);
-            // 同步 root disc + CollisionComponent boxes 与全局 _debugVisible
-            // AIController 三色环已在 _initRabbleController 构造时通过 debugVisible 选项同步
+        // 敌人 controller：每个 kind=enemy 实体按自己的 entityDef 独立创建（多战斗重构 §4.1）
+        if (entityDef.kind === "enemy") {
+            const controller = this._initEnemyController(
+                entityDef, entity, this._entityById.get("hero")
+            );
+            // 同步 root disc + CollisionComponent boxes 与全局 _debugVisible；
+            // AIController 三色环已在 _initEnemyController 构造时通过 debugVisible 选项同步
             if (typeof entity.setCollisionVisible === "function") {
                 entity.setCollisionVisible(this._debugVisible);
+            }
+
+            // 兼容别名 rabbleStick/rabbleController/"enemy"：只绑定第一个敌人。
+            // 多敌人同场景时 BattleDef 与新 sequence 必须使用显式 id（如 rabble_tutor/rabble_react）
+            if (!this.rabbleController) {
+                this.rabbleController = controller;
+                this.rabbleStick = entity;
+                // sharedContext 在 init 阶段还未赋值，延迟到 init 末尾统一同步
+                if (this.sharedContext) {
+                    this.sharedContext.rabbleController = controller;
+                    this.sharedContext.rabbleStick = entity;
+                }
+                if (this._actorRegistry) this._actorRegistry.set("enemy", entity);
+            } else if (this.rabbleStick && this.rabbleStick !== entity && !this._enemyAliasWarned) {
+                this._enemyAliasWarned = true;
+                console.warn(
+                    `[Scene] multiple enemies present: generic alias "enemy"/rabbleStick/rabbleController `
+                    + `stays bound to "${this.rabbleStick.id}"; BattleDefs and sequences must reference explicit ids`
+                );
             }
         }
 
@@ -613,22 +617,68 @@ export class Scene {
         return entity;
     }
 
-    _initRabbleController(entityDefs, rabbleStick, hero = null) {
-        const rabbleDef = entityDefs.find(e => e.id === "enemy_1" || e.kind === "enemy");
-        const controllerType = rabbleDef?.controller ?? "dummy";
+    /**
+     * 为单个 enemy 实体创建独立 controller（多战斗重构 §4.1）。
+     * controller 归属实体自身（entity.controller），Scene 不再维护场景级 controller 单例；
+     * 场景上的 rabbleController 仅是「第一个敌人」兼容别名。
+     * AI 类型时通过 _buildInstanceAiTuning 注入实例专属 tuning，禁止污染全局 AITuning。
+     */
+    _initEnemyController(entityDef, enemy, hero = null) {
+        const controllerType = entityDef?.controller ?? "dummy";
+        let controller;
         if (controllerType === "test") {
-            const archetype = rabbleDef?.archetype ?? "";
+            const archetype = entityDef?.archetype ?? "";
             const defaultScriptKey = archetype === "manatarms_sword" ? "manatarmsBasicSequence" : "rabbleBasicSequence";
-            const scriptKey = rabbleDef?.testScript ?? defaultScriptKey;
+            const scriptKey = entityDef?.testScript ?? defaultScriptKey;
             const scriptConfig = this._sceneAssets?.testScripts?.[scriptKey] ?? {};
-            this.rabbleController = new TestController(rabbleStick, scriptConfig);
+            controller = new TestController(enemy, scriptConfig);
         } else if (controllerType === "ai") {
-            this.rabbleController = new AIController(rabbleStick, { opponent: hero, debugVisible: this._debugVisible, aiTuning: AITuning });
+            const aiTuning = this._buildInstanceAiTuning(entityDef);
+            controller = new AIController(enemy, {
+                opponent: hero,
+                debugVisible: this._debugVisible,
+                aiTuning,
+            });
         } else {
-            this.rabbleController = new DummyController(rabbleStick);
+            controller = new DummyController(enemy);
         }
-        rabbleStick.controller = this.rabbleController;
-        this._rabbleControllerBound = true;
+        enemy.controller = controller;
+        return controller;
+    }
+
+    /**
+     * 构建实例专属 AI tuning（多战斗重构 §4.1 / §5.2）。
+     * - 无 aiProfile 且无 aiTuningOverrides：直接返回全局 AITuning（行为零差异、零额外分配）。
+     * - 否则深拷贝全局 AITuning → 深合并 aiTuningOverrides（嵌套叶子如 attack.preemptiveBonus、
+     *   defense.reflexMaxMs）→ 挂载 entityDef.aiProfile（7 个性格 knob，同时供 Posture/Utility 两层读取）。
+     * 严禁原地修改全局 AITuning 单例。
+     */
+    _buildInstanceAiTuning(entityDef) {
+        const profile = entityDef?.aiProfile;
+        const overrides = entityDef?.aiTuningOverrides;
+        const hasProfile = !!(profile && typeof profile === "object");
+        const hasOverrides = !!(overrides && typeof overrides === "object");
+        if (!hasProfile && !hasOverrides) return AITuning;
+
+        const tuning = JSON.parse(JSON.stringify(AITuning));
+        if (hasOverrides) this._deepMergePlain(tuning, overrides);
+        if (hasProfile) tuning.aiProfile = { ...profile };
+        return tuning;
+    }
+
+    // 嵌套 plain object 深合并：仅覆盖 overrides 显式声明的叶子字段（数组按整体替换）
+    _deepMergePlain(target, overrides) {
+        for (const key of Object.keys(overrides)) {
+            const ov = overrides[key];
+            const tv = target[key];
+            if (ov && typeof ov === "object" && !Array.isArray(ov)
+                && tv && typeof tv === "object" && !Array.isArray(tv)) {
+                this._deepMergePlain(tv, ov);
+            } else {
+                target[key] = ov;
+            }
+        }
+        return target;
     }
 
     _onWorldStateChange() {

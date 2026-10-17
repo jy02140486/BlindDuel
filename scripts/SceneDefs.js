@@ -91,6 +91,8 @@ export const BATTLE_FIELD_1 = {
     battleYBaseline: 0,
     onVictory: {
         flags: ["battle_field_1"],
+        // 胜利后推进进度 checkpoint（ep1_tavern 首个安全 spawn）；未声明则保留入场前 retry checkpoint
+        checkpoint: { spawnId: "house_door" },
     },
     duelCamera: {
         zoomMinDistance: 3.2,
@@ -195,6 +197,8 @@ export const BATTLE_FIELD_2 = {
         scenario: SCENARIO.BATTLE_1_COMPLETED,
         flags: ["battle_field_2"],
         questStages: [{ id: "dagger", stage: 2 }],
+        // 胜利后推进进度 checkpoint（ep1_tavern_hall 首个安全 spawn）
+        checkpoint: { spawnId: "house_door" },
     },
     duelCamera: {
         zoomMinDistance: 2.4,
@@ -286,6 +290,8 @@ export const PROLOGUE_BATTLE = {
     onVictory: {
         scenario: SCENARIO.BATTLE_1_COMPLETED,
         flags: ["prologue_battle"],
+        // 胜利后推进进度 checkpoint（prologue 首个安全 spawn；战败仍回 trigger 的 battle_checkpoint）
+        checkpoint: { spawnId: "house_door" },
     },
     duelCamera: BATTLE_FIELD_1.duelCamera,
     enterSequence: BATTLE_FIELD_1.enterSequence,
@@ -306,6 +312,8 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
     onVictory: {
         // 打赢后要设什么 flag？推进什么 scenario？
         flags: ["battle_field_tavern_room_post_charlotte_kidnapped"],
+        // 胜利后推进进度 checkpoint（ep1_tavern_room 首个安全 spawn room_left）
+        checkpoint: { spawnId: "room_left" },
     },
      duelCamera: {
         zoomMinDistance: 2.4,

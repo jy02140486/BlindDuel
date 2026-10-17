@@ -131,6 +131,14 @@ export class CameraManager {
         this.rigs.set(id, rigAdapter);
     }
 
+    // 向指定 rig 转发本场配置（如 pending 阶段应用 BattleDef.duelCamera，多战斗重构 §4.4）
+    applyRigConfig(rigId, cfg) {
+        const rig = this.rigs.get(rigId);
+        if (rig && typeof rig.applyConfig === "function") {
+            rig.applyConfig(cfg);
+        }
+    }
+
     switchRig(nextRigId, payload) {
         const nextRig = this.rigs.get(nextRigId);
         if (!nextRig) {

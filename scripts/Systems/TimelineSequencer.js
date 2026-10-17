@@ -629,15 +629,21 @@ const ACTION_HANDLERS = {
 
             console.log(`[TimelineSeq] cameraBlend START to="${toRigId}" durationMs=${clip.durationMs} activeRig=${cameraManager.activeRigId} startGameTime=${state.startGameTime.toFixed(1)}`);
 
-            const { character, rabbleStick } = ctx;
+            // 战斗双方优先取 pendingBattleSession（多战斗重构 §4.3）；
+            // 全局别名 character/rabbleStick 仅作无 session 直入路径的兼容兜底
+            const session = ctx.pendingBattleSession;
+            const hero = session?.player ?? ctx.character;
+            const foe = session?.opponent ?? ctx.rabbleStick;
             let frameCtx = null;
 
-            if (toRigId === "duel" && character && rabbleStick) {
-                const heroPos = character.root.position;
-                const opponentPos = rabbleStick.root.position;
+            if (toRigId === "duel" && hero && foe) {
+                const heroPos = hero.root.position;
+                const opponentPos = foe.root.position;
                 const centerX = (heroPos.x + opponentPos.x) * 0.5;
                 const centerZ = (heroPos.z + opponentPos.z) * 0.5;
-                const battleYBaseline = ctx.pendingBattleDef?.battleYBaseline ?? opponentPos.y;
+                const battleYBaseline = session?.battleDef?.battleYBaseline
+                    ?? ctx.pendingBattleDef?.battleYBaseline
+                    ?? opponentPos.y;
                 const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
                 if (ctx.sharedData) {
                     ctx.sharedData.cameraBlendFighterDistance = fighterDistance;
@@ -647,8 +653,8 @@ const ACTION_HANDLERS = {
                     target: new BABYLON.Vector3(centerX, battleYBaseline, centerZ),
                     fighterDistance
                 };
-            } else if (toRigId === "explore" && character) {
-                const pos = character.root.position;
+            } else if (toRigId === "explore" && ctx.character) {
+                const pos = ctx.character.root.position;
                 frameCtx = {
                     target: new BABYLON.Vector3(pos.x, pos.y, pos.z)
                 };
@@ -755,14 +761,15 @@ const ACTION_HANDLERS = {
                 if (typeof sharedFD === "number") {
                     payload = { ...(payload || {}), fighterDistance: sharedFD };
                 } else {
-                    const { character, rabbleStick } = ctx;
-                    if (character && rabbleStick) {
-                        const heroPos = character.root.position;
-                        const opponentPos = rabbleStick.root.position;
-                        const fighterDistance = Math.abs(opponentPos.x - heroPos.x);
+                    // fighterDistance 兜底：优先 pendingBattleSession 的本场双方，别名仅兼容
+                    const session = ctx.pendingBattleSession;
+                    const hero = session?.player ?? ctx.character;
+                    const foe = session?.opponent ?? ctx.rabbleStick;
+                    if (hero && foe) {
+                        const fighterDistance = Math.abs(foe.root.position.x - hero.root.position.x);
                         payload = { ...(payload || {}), fighterDistance };
                     } else {
-                        console.warn(`[TimelineSeq] WARN: switchMode to "battle" but character=${character ? "ok" : "MISSING"} rabbleStick=${rabbleStick ? "ok" : "MISSING"}. fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
+                        console.warn(`[TimelineSeq] WARN: switchMode to "battle" but hero=${hero ? "ok" : "MISSING"} opponent=${foe ? "ok" : "MISSING"} (pendingBattleSession=${session ? "ok" : "MISSING"}). fighterDistance not passed to BattleMode. First tick will use stale/zero value, causing camera zoom drift.`);
                     }
                 }
             }

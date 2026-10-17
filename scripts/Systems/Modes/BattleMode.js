@@ -9,21 +9,39 @@ import { getProjectileDef } from "../../../Data/ProjectileDefs.js";
 export class BattleMode extends BaseMode {
     constructor(context) {
         super("battle", context);
+        // BattleSession 生命周期槽位（active）：enter({ session }) 时设置，exit 时置 null
+        this._activeSession = null;
     }
 
     enter(payload) {
         const { cameraManager, actorRegistry } = this.context;
-        const battleDef = payload?.battleDef;
+
+        // active session：优先 switchMode clip 注入的 payload.session（ExploreMode 第 3 步），
+        // 兜底 sharedContext.pendingBattleSession。本场 player/opponent 只从 session 身份获取，
+        // 不再依赖 combatants 数组位置或全局敌人别名（多战斗重构 §4.5）。
+        const session = payload?.session ?? this.context.pendingBattleSession ?? null;
+        this._activeSession = session;
 
         if (typeof payload?.fighterDistance === "number") {
             this.context.smoothedFighterDistance = payload.fighterDistance;
         }
 
-        if (battleDef) {
-            this._battleDef = battleDef;
-            this._combatants = battleDef.combatants
-                .map(id => actorRegistry?.get(id))
-                .filter(Boolean);
+        if (session) {
+            this._battleDef = session.battleDef;
+            this._combatantEntries = [
+                { id: session.playerId, entity: session.player },
+                { id: session.opponentId, entity: session.opponent },
+            ];
+            this._combatants = [session.player, session.opponent];
+        } else {
+            // 无 session 直入路径（主流程不再产生）：保留旧式解析并告警，避免直接崩溃
+            const battleDef = payload?.battleDef;
+            console.warn("[BattleMode] enter without BattleSession — falling back to battleDef.combatants array order");
+            this._battleDef = battleDef ?? null;
+            this._combatantEntries = (battleDef?.combatants ?? [])
+                .map(id => ({ id, entity: actorRegistry?.get(id) }))
+                .filter(e => e.entity);
+            this._combatants = this._combatantEntries.map(e => e.entity);
         }
 
         // 设计规范（见 plans/统一时间源与 Render 采样架构设计.MD §6.5）：
@@ -66,15 +84,15 @@ export class BattleMode extends BaseMode {
         // - 非 player：读 BattleDef.combatantConfig[id].throwAmmo，正数才装配；缺省/0 = 无投掷能力
         // 装配 key 用 BattleDef combatants 的 id（与 actorRegistry 成对遍历，不用实体自身 id）
         const { inventoryManager } = this.context;
-        for (const id of this._battleDef?.combatants ?? []) {
-            const c = actorRegistry?.get(id);
+        // 按 session 身份条目装配（id 用于查 combatantConfig，entity 是本场 live 实体）
+        for (const { id, entity: c } of this._combatantEntries ?? []) {
             if (!c) continue;
 
             if (c.kind === "player" && inventoryManager) {
                 const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
                 c.throwComponent = new ThrowComponent({ ammo });
-            } else if (c.kind !== "player") {
-                const throwAmmo = this._battleDef.combatantConfig?.[id]?.throwAmmo;
+            } else {
+                const throwAmmo = this._battleDef?.combatantConfig?.[id]?.throwAmmo;
                 if (throwAmmo > 0) {
                     c.throwComponent = new ThrowComponent({ ammo: throwAmmo });
                 }
@@ -130,6 +148,9 @@ export class BattleMode extends BaseMode {
         this.context.target = null;
         this.context.fighterDistance = null;
         this.context.pendingBattleDef = null;
+        // BattleSession 生命周期收尾：active 与 pending 均不得跨战斗/跨场景残留
+        this._activeSession = null;
+        this.context.pendingBattleSession = null;
 
         // Clean up all projectiles when battle ends — avoid Babylon resource leaks
         // and prevent projectiles from carrying over to explore mode.
@@ -155,7 +176,6 @@ export class BattleMode extends BaseMode {
         const {
             inputSystem,
             playerController,
-            rabbleController,
             pushboxResolver,
             stageBoundary,
             combatSystem,
@@ -168,7 +188,8 @@ export class BattleMode extends BaseMode {
 
         inputSystem.fixedUpdate(tickCount);
         playerController.fixedUpdate(dtMs, tickCount);
-        rabbleController.fixedUpdate(dtMs, tickCount);
+        // 只驱动本场 session 的对手 controller；其它敌人在 ExploreMode 下仅推进自身动画（§4.5）
+        opponent?.controller?.fixedUpdate?.(dtMs, tickCount);
 
         for (const c of combatants) {
             c.fixedUpdate(dtMs, tickCount);
@@ -374,20 +395,23 @@ export class BattleMode extends BaseMode {
         const combatants = this._combatants ?? [];
         if (combatants.length < 2) return;
 
-        const [character, rabbleStick] = combatants;
+        // 身份来自 BattleSession（enter 时按 [player, opponent] 装配），不靠数组位置猜
+        const [player, opponent] = combatants;
 
-        if (!character.isDead && !rabbleStick.isDead) return;
+        if (!player.isDead && !opponent.isDead) return;
 
-        if (character.isDead) {
+        if (player.isDead) {
             this.#handleDefeat(sceneSequencer);
             return;
         }
 
-        // 优先使用 sceneDef 中内联的 exitBattleSequence（数据驱动）；否则 fallback 到 battleDef.exitSequence
+        // 退场序列：session 在 trigger 命中时已按「SceneDef 内联 → BattleDef」解析并深拷贝；
+        // 无 session 的兼容路径再现场解析，最后统一代码 fallback。
         const inlineExitSeq = this.context.sceneDef?.exitBattleSequence;
-        const exitBattleSequence = inlineExitSeq
-            ? JSON.parse(JSON.stringify(inlineExitSeq))
-            : (this._battleDef?.exitSequence ?? {
+        const exitBattleSequence = this._activeSession?.exitSequence
+            ?? (inlineExitSeq ? JSON.parse(JSON.stringify(inlineExitSeq)) : null)
+            ?? this._battleDef?.exitSequence
+            ?? {
                 id: "exit_battle_fallback",
                 durationMs: 1000,
                 tracks: [
@@ -408,7 +432,7 @@ export class BattleMode extends BaseMode {
                         ]
                     }
                 ]
-            });
+            };
 
         const { questManager } = this.context;
         if (questManager && this._battleDef?.onVictory) {
@@ -422,14 +446,21 @@ export class BattleMode extends BaseMode {
             }
         }
 
-        if (rabbleStick.isDead) {
-            const { game, sceneDef } = this.context;
-            if (game) {
-                // 胜利后存档：战场位置不安全（可能被其他系统假设为已清理），
-                // 不传 useHeroPos，重置时 fallback 到 spawnId 对应点
-                const spawnId = Object.keys(sceneDef.spawns)[0] ?? "house_door";
-                game.saveCheckpoint(sceneDef.id, spawnId);
-            }
+        // 进度 checkpoint（§4.6）：仅当 BattleDef.onVictory.checkpoint 显式声明时更新。
+        // 未声明（如可选战斗）时保留入场前由 trigger.checkpointSpawn 保存的失败重试 checkpoint，
+        // 不再默认用 Object.keys(sceneDef.spawns)[0] 把全局复活点推到战斗位置附近。
+        const cpPolicy = this._battleDef?.onVictory?.checkpoint;
+        const { game, sceneDef } = this.context;
+        if (cpPolicy?.spawnId && game) {
+            // 战场实时位置不安全，默认不存 heroPos；仅策略显式 useHeroPos:true 时存实时位置
+            game.saveCheckpoint(sceneDef.id, cpPolicy.spawnId, {
+                useHeroPos: cpPolicy.useHeroPos === true,
+            });
+        } else {
+            console.log(
+                `[BattleMode] battle "${this._battleDef?.id}" won without onVictory.checkpoint policy `
+                + `— keep current (retry) checkpoint`
+            );
         }
 
         sceneSequencer.play(exitBattleSequence);

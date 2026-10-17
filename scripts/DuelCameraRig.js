@@ -37,6 +37,27 @@ export class DuelCameraRig {
         this.debugPanel = this.#createDebugPanel();
     }
 
+    /**
+     * 应用本场 duelCamera 配置（多战斗重构 §4.4 pending 阶段：入场 blend 之前调用）。
+     * 只覆盖 cfg 显式提供的有限数值键；未声明字段保留 rig 当前值（构造时已有安全默认），
+     * 不允许任一场战斗的配置污染为 undefined。
+     */
+    applyConfig(cfg = {}) {
+        if (!cfg || typeof cfg !== "object") return;
+        const keys = [
+            "zoomMinDistance", "zoomMaxDistance",
+            "orthoMinWidth", "orthoMaxWidth",
+            "perspMinDistance", "perspMaxDistance",
+            "minCameraHeight", "maxCameraHeight",
+            "targetAspect", "smoothing",
+        ];
+        for (const key of keys) {
+            if (typeof cfg[key] === "number" && Number.isFinite(cfg[key])) {
+                this[key] = cfg[key];
+            }
+        }
+    }
+
     enter(ctx) {
         const state = ctx?.cameraManager?.state;
         if (state) {
