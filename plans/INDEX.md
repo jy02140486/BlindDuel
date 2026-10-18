@@ -1,6 +1,18 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：无活跃计划。剩余事项以 `BACKLOG.md` 和专项实施文档为入口。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。
+> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` —— 阶段 A（BattleSession 抽象 + 每敌人独立 controller + 全链路 session 绑定 + checkpoint 语义分离）与阶段 B（prologue 双敌人双 trigger + 新 sequence trigger type + AI profile 实例级注入）已全部落地，回归验证中。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。
+
+## Update Log (2026-10-18)
+- **单场景多战斗重构（阶段 A+B）全部落地**：按 `plans/26.10.16 单场景多战斗重构计划.MD` 执行，prologue 场景正式拥有两场必选战斗（tutor 教学 + react 主线），无全局单例残留
+- **阶段 A 核心交付**：新建 `scripts/Systems/BattleSession.js`（createBattleSession 严格 1v1 校验 + 每场独立 session 对象，绑定 playerId/opponentId/battleDef/enterSequence/exitSequence/retryCheckpointSpawnId）；Scene 初始化去除第一个 trigger 推断全局镜头参数（stageBounds 改 BattleMode.enter 时应用，duelCamera 改 ExploreMode 在入场前应用本场值）；Scene 去除 `_rabbleControllerBound` 全局锁 → 每敌人独立 controller（`Scene._initEnemyController` 替代旧 `_initRabbleController`）；`DuelCameraRig.applyConfig(cfg)` 只接受有限 number 键，Scene 与 BattleMode 间零参数污染
+- **阶段 A 接线**：ExploreMode trigger 命中后经 `createBattleSession()` 构建，多 trigger 重叠取距离最近；写入 `context.pendingBattleSession`；TimelineSequencer duel blend 中心点/Y baseline/fighterDistance 改从 session 实时读取；BattleMode `enter({session})` 保存 `this._activeSession`，player/opponent/CombatSystem/ProjectileManager 全部从 session 取，不再按数组位置猜身份；exit 清理 active + pending + 本场投掷物
+- **checkpoint 两类语义分离**：入场前 `trigger.checkpointSpawn` → retry checkpoint；胜利后**仅当** `onVictory.checkpoint = {spawnId, useHeroPos?}` 显式声明时 → 进度 checkpoint；隐式首键推进删除；为四场现有 BattleDef 补上与其旧隐式值完全相同的显式策略
+- **阶段 B 核心交付**：prologue enemies `enemy_1` 拆为 `rabble_react`（主线，pos x=3）+ 新增 `rabble_tutor`（左侧教学，pos x=-20.5，无 scenarioMin 门槛开场即生）；SceneDef trigger 新增 `type=sequence`（`cs_charlotte_in_position`，pos x=-15，scenario 102~104 有效，播放 `prologue_charlotte_in_position` sequence 把 Charlotte moveActorTo 到 altar 附近并 idle 锚定）；新建 `Data/Sequences/prologue_charlotte_in_position.json`
+- **BattleDef enterSequence 优先语义**：ExploreMode `#resolveEnterSequence` 改为 BattleDef.enterSequence → SceneDef 默认 enterBattleSequence → 代码 fallback 三级优先级；tutor 战斗在 BattleDef 上写简化 override（hero draw + camera blend + switchMode battle，跳过 companion.retreat 轨道）；react 主线回退 SceneDef 默认（含 Charlotte 向左撤退 2s 至 stageBounds minX 外）
+- **AI 实例级配置通道**：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat、projectileDefense.dodgeBase/cutBase 等）→ 挂载 `aiProfile`；新建 `Data/AIProfiles.js`（tutorial / normal / elite / boss 四档 profile knob）；`AIController` 新增 `#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate 全部走实例 profile 优先 → StateGraph profile 兜底路径
+- **tutor vs react 实际差异**：tutor `decisionIntervalMs:200`（反应更慢）+ `aiProfile:{baseDefense:0.25,decayAlpha:0.2,attack:swing×1.5,dash×0.3}` → 中距离 swing 显著偏好、dash 频率压低、防御意愿仅 react 一半；react 主线保持默认 100ms + normal 档 profile
+- **生命周期清理**：ExploreMode `#checkSequenceTrigger` 修复重复调用（每帧一次）；companion.retreat 轨道旧硬编码目标点（x=-9）改为 `moveActorByDirection dir[-1,0.1] durationMs:2000`（场景级默认意图，任意战斗都合理，tutor 战斗通过 BattleDef override 跳过）；战败复活 retry checkpoint 由 `trigger.checkpointSpawn` 绑定本场 safe spawn（tutor 战斗 checkpointSpawn=tutor_checkpoint x=-27，复活在 trigger 左侧 1m，转身就回到战斗）
+- **设计参考**：`plans/26.10.16 单场景多战斗重构计划.MD`、`plans/commits_detailed/26.10.17 单场景多战斗重构-session抽象.MD`、`plans/commits_detailed/26.10.18 单场景多战斗重构计划-prologue增加教学战，流程调整.MD`
 
 ## Update Log (2026-10-16)
 - **AI 进攻性投掷（RabbleStick 扔石头）全部落地**：按 `plans/archived/26.10.14 AI-Rabblestick投掷能力计划.MD` Step 1-4 + §10 资产接线

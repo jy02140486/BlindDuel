@@ -55,13 +55,17 @@ py .\.serve.ps1
 - 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
 - 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync；DEBUG_INFINITE_AMMO 正式环境必须 false）
   - AI 弹药/装配：`BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配；projectileType 从 stateGraph 首个 throwActive state 派生）；玩家弹药走背包
+- AI 实例级配置注入：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `entityDef.aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat 等）→ 挂载 `entityDef.aiProfile`；`AIController.#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate 全部走实例 profile 优先 → StateGraph profile 兜底
 - 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）
 - 跟随行为：`scripts/Systems/NpcBehaviors/FollowingBehavior.js`（同伴跟随）
 - 帧时钟（权威时间源）：`scripts/Systems/FrameClock.js`（全游戏唯一时钟，Hybrid 模型 fixedTime + accumulator，详见 `plans/archived/统一时间源与 Render 采样架构设计.MD`）
 - 时间控制系统：`scripts/Systems/TimeControlSystem.js`
-- 游戏模式管理器：`scripts/Systems/GameModeManager.js`
+- 战斗会话抽象：`scripts/Systems/BattleSession.js`（`createBattleSession` 严格 1v1 校验 + 每场独立 session 对象；绑定 playerId/opponentId/battleDef/enterSequence/exitSequence/retryCheckpointSpawnId）
+- 游戏模式管理器：`scripts/Systems/GameModeManager.js`（持有 ExploreMode / BattleMode 实例，负责模式切换 + 序列播放 + pending/active session 转移）
+- 探索模式：`scripts/Systems/Modes/ExploreMode.js`（驱动场景探索、多 trigger 重叠取最近、写入 pendingBattleSession、入场前应用本场 duelCamera + 播放入场序列；sequence trigger type=sequence 支持非战斗过场）
+- 战斗模式：`scripts/Systems/Modes/BattleMode.js`（`enter({session})` 保存 activeSession，player/opponent/CombatSystem/ProjectileManager 全从 session 取，不再按数组位置猜身份；exit 清理 active+pending+本场投掷物；stageBounds 在场内应用）
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）
 - 时间轴序列器：`scripts/Systems/TimelineSequencer.js`（多 track + clip + callback handler，文档见 `docs/TimelineSequencer.md`）
 - 过场序列文件：`Data/Sequences/*.json`（prologue_intro / prologue_outro / prologue_cs_rabble_flee）
@@ -74,7 +78,7 @@ py .\.serve.ps1
 - 推盒解析器：`scripts/Systems/PushboxResolver.js`
 - 探索碰撞系统：`scripts/Systems/ExploreCollisionSystem.js`
 - 角色工厂：`scripts/CharacterFactory.js`（四条装配路径：hero / rabble / traveller / merchant）
-- 场景/战斗定义：`scripts/SceneDefs.js`（SceneDef + BattleDef 硬编码数据 + `createEntityFromDef` 工厂）
+- 场景/战斗定义：`scripts/SceneDefs.js`（SceneDef + BattleDef 硬编码数据 + `createEntityFromDef` 工厂；BattleDef 支持 `enterSequence` / `exitSequence` override 覆盖 SceneDef 默认；`onVictory.checkpoint = {spawnId}` 显式进度 checkpoint 策略，与入场前 `trigger.checkpointSpawn` 的失败 retry checkpoint 语义分离）
 - 场景定义注册表：`scripts/SceneDefRegistry.js`（硬编码 SceneDef 注册 + 异步 fetch JSON 缓存 + 同步查表 fallback）
 - Prologue 场景定义：`Data/SceneDefs/prologue.json`（首个外部化 SceneDef，三层视差环境）
 - 场景里程碑定义：`Data/ScenarioMilestones.js`（scenario 枚举常量）
@@ -97,6 +101,7 @@ py .\.serve.ps1
 - 音频工具用户文档：`docs/Audio Tools User Guide.MD`
 - 游戏入口：`scripts/Game.js`（WorldState / QuestManager / InventoryManager / AudioManager / Scene 的顶层组装）
 - AI 系统说明：`docs/AI系统说明.MD`（四层架构 + 配置位置 + 调参索引 + aiProfile 指南）
+- AI Profile 档位：`Data/AIProfiles.js`（tutorial / normal / elite / boss 四档 knob：baseDefense/decayAlpha/distanceAppetite/retreatDesire + Posture 层 5 个姿态旋钮 + attack 偏好分等）
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
