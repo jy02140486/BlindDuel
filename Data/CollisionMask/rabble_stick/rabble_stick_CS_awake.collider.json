@@ -1,0 +1,97 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_CS_awake.json",
+                   "collisionPng":  "Data/RootMotion/rabble_stick/rabble_stick_CS_awake.png",
+                   "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_CS_awake.png",
+                   "pushboxPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-10-17T17:10:25.6920275Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "rabble_stick_CS_awake 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  85,
+                                                    "cy":  122
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "rabble_stick_CS_awake 1.ase",
+                       "frameRect":  {
+                                         "x":  160,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  85,
+                                                    "cy":  122
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "rabble_stick_CS_awake 2.ase",
+                       "frameRect":  {
+                                         "x":  320,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  85,
+                                                    "cy":  122
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}

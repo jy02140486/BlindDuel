@@ -271,6 +271,12 @@
       "allowMoveInput": false,
       "loop": false,
       "transitions": []
+    },
+    "CS_awake": {
+      "clip": "CS_awake",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
     }
   }
 }

@@ -53,6 +53,18 @@
       ]
     },
     {
+      "id": "tutor.awake",
+      "kind": "actor",
+      "binding": { "actorId": "rabble_tutor" },
+      "clips": [
+        { "type": "setVisibility", "atMs": 0, "visible": true },
+        { "type": "faceWorldX", "atMs": 0, "direction": 1 },
+        { "type": "command", "atMs": 0, "command": "CS_awake", "pause": true },
+        { "type": "resumeAnimation","atMs": 2000 },
+        { "type": "command", "atMs": 3900, "command": "idle" }
+      ]
+    },
+    {
       "id": "camera.back",
       "kind": "camera",
       "binding": { "cameraId": "explore" },

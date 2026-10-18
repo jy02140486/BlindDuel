@@ -241,6 +241,12 @@ export function createRabbleStickCharacter(scene, assets) {
                 colliderData: assets.colliders.rabble.CS_turnaround,
                 loop: false
             },
+            CS_awake: {
+                spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_CS_awake.png",
+                atlasData: assets.atlas.rabble.CS_awake,
+                colliderData: assets.colliders.rabble.CS_awake,
+                loop: false
+            },
             throw: {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_throw.png",
                 atlasData: assets.atlas.rabble.throw,
