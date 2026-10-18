@@ -291,8 +291,8 @@
         {
             "type": "sequence",
             "id": "cs_charlotte_in_position",
-            "pos": [-24.18, 0, 0],
-            "size": [2, 2, 2],
+            "pos": [-21.18, 0, 0],
+            "size": [8, 2, 2],
             "condition": { "scenarioMin": 102, "scenarioMax": 104 },
             "sequenceUrl": "Data/Sequences/prologue_charlotte_in_position.json",
             "flagOnPlay": "prologue_charlotte_in_position_done",
