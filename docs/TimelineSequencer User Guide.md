@@ -348,11 +348,12 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 | `dir` | `[number, number]` | 是 | 方向向量 `[x, y]`，不要求归一化；clip 内部再 normalize，非归一化输入也能用 |
 | `durationMs` | number | 是 | 持续时长（ms） |
 | `speed` | number | 否 | 速度覆盖值（世界单位/秒）；省略则每帧用 `actor.getEffectiveSpeed()`，buff / `moveSpeedBonus` 自动生效 |
+| `yBaseline` | number | 否 | 可选 Y 轴终点世界坐标值。存在时 Y 轴**忽略 `dir[1]`**，独立从起始 Y 线性收敛到 `yBaseline`，结束时精确落位 |
 
 **行为**：
-- `start`：解析 actor；归一化 `dir`（`mag <= 0.0001` 时 warn 并 invalid）；设 `actor.controlledBySequence = true` + `actor.supportsRenderSampling = true`（与 `moveActorTo` 同机制，两标记配套）。
-- `update`：每帧 `pos += dir × effectiveSpeed × dtSec` 累加位移；同步写 `moveIntent = dir`（驱动 walk 动画）；返回 `true` 保持 active。
-- `end`：清 `moveIntent = {0,0}`；设 `controlledBySequence = false` + `supportsRenderSampling = false` 并重置 `_renderTransformSynced`（同 `moveActorTo` 机制，避免 sequencer 退出后从过期快照 lerp 跳变）；**不切回 idle**，动画状态切换由编排者负责（同 `moveActorTo` 约定）。
+- `start`：解析 actor；归一化 `dir`（`mag <= 0.0001` 时 warn 并 invalid）；若 `yBaseline` 是 number，记录 `yStart = 当前 Y`、`yEnd = yBaseline`、`yStep = (yEnd - yStart) / durationMs`；设 `actor.controlledBySequence = true` + `actor.supportsRenderSampling = true`（与 `moveActorTo` 同机制，两标记配套）。
+- `update`：X 轴始终 `pos.x += dir[0] × effectiveSpeed × dtSec`；Y 轴分岔——未指定 `yBaseline` 时 `pos.y += dir[1] × effectiveSpeed × dtSec`（原有行为），指定时 `pos.y = yStart + yStep × localMs`（绝对时间线性收敛，`dir[1]` 不参与）；`moveIntent` 在 `yBaseline` 模式下 Y 分量置 0，避免误导 controller；返回 `true` 保持 active。
+- `end`：若 `yBaseline` 生效则强制 `pos.y = yEnd` 消除浮点累积误差；清 `moveIntent = {0,0}`；设 `controlledBySequence = false` + `supportsRenderSampling = false` 并重置 `_renderTransformSynced`（同 `moveActorTo` 机制，避免 sequencer 退出后从过期快照 lerp 跳变）；**不切回 idle**，动画状态切换由编排者负责（同 `moveActorTo` 约定）。
 
 **速度来源**：
 - 默认用 `actor.getEffectiveSpeed()`（数据驱动，buff / 速度模式自动生效；**距离不可预测**）。
@@ -379,6 +380,11 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 **速度 override 示例**（45° 方向，距离 = 3.0 × 1.5 = 4.5 世界单位）：
 ```jsonc
 { "type": "moveActorByDirection", "startMs": 500, "durationMs": 1500, "dir": [0.707, 0.707], "speed": 3.0 }
+```
+
+**yBaseline 示例**（水平退开 + Y 轴独立收敛到战场后方，`dir[1]` 被忽略）：
+```jsonc
+{ "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [-1, 0.1], "yBaseline": -0.8 }
 ```
 
 **已知限制**：不走碰撞（穿 staticBlockers / 超 walkArea 不 clamp）；`dir = [0,0]` 会在 start 阶段 warn 并 invalid；不自动切回 idle。

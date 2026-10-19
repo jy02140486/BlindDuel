@@ -35,8 +35,8 @@
                     { "type": "command", "atMs": 0, "command": "walk" },
                     { "type": "faceWorldX", "atMs": 0, "direction": 1 },
                     
-                    { "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [-1, 0.1] },
-                    { "type": "command", "atMs": 3000, "command": "idle" }
+                    { "type": "moveActorByDirection", "startMs": 0, "durationMs": 2000, "dir": [-1, 0.1], "yBaseline": 0.8 },
+                    { "type": "command", "atMs": 2100, "command": "idle" }
                 ]
             },
             {

@@ -558,6 +558,14 @@ const ACTION_HANDLERS = {
             state.ny = dir[1] / mag;
             state.useClipSpeed = typeof clip.speed === "number";
             state.clipSpeed = state.useClipSpeed ? clip.speed : 0;
+            // yBaseline：可选 Y 轴终点，存在时 Y 轴独立线性收敛替代 dir[1] 位移
+            state.useYBaseline = typeof clip.yBaseline === "number";
+            if (state.useYBaseline) {
+                state.yStart = actor.root.position.y;
+                state.yEnd = clip.yBaseline;
+                const dur = Math.max(clip.durationMs || 1, 1);
+                state.yStep = (state.yEnd - state.yStart) / dur;
+            }
             if ("controlledBySequence" in actor) {
                 actor.controlledBySequence = true;
             }
@@ -565,7 +573,8 @@ const ACTION_HANDLERS = {
                 actor.supportsRenderSampling = true;
             }
             const speedSource = state.useClipSpeed ? `clip(${state.clipSpeed})` : "actor.getEffectiveSpeed";
-            console.log(`[TimelineSeq] moveActorByDirection START dir=(${state.nx.toFixed(3)},${state.ny.toFixed(3)}) durationMs=${clip.durationMs} speedSource=${speedSource}`);
+            const yInfo = state.useYBaseline ? ` yBaseline=${state.yEnd}(from ${state.yStart.toFixed(2)})` : "";
+            console.log(`[TimelineSeq] moveActorByDirection START dir=(${state.nx.toFixed(3)},${state.ny.toFixed(3)}) durationMs=${clip.durationMs} speedSource=${speedSource}${yInfo}`);
         },
         update(ctx, clip, state, localMs, dtMs) {
             if (state.invalid) return false;
@@ -574,16 +583,27 @@ const ACTION_HANDLERS = {
             const effectiveSpeed = state.useClipSpeed
                 ? state.clipSpeed
                 : (typeof actor.getEffectiveSpeed === "function" ? actor.getEffectiveSpeed() : 0);
+            // X 轴：始终由 dir[0] 决定
             actor.root.position.x += state.nx * effectiveSpeed * dtSec;
-            actor.root.position.y += state.ny * effectiveSpeed * dtSec;
+            // Y 轴分岔：指定 yBaseline 时独立线性收敛，否则继续用 dir[1]
+            if (state.useYBaseline) {
+                actor.root.position.y = state.yStart + state.yStep * localMs;
+            } else {
+                actor.root.position.y += state.ny * effectiveSpeed * dtSec;
+            }
             if (typeof actor.setMoveIntent === "function") {
-                actor.setMoveIntent({ x: state.nx, y: state.ny });
+                const intentY = state.useYBaseline ? 0 : state.ny;
+                actor.setMoveIntent({ x: state.nx, y: intentY });
             }
             return true;
         },
         end(ctx, clip, state) {
             if (state.invalid) return;
             const actor = state.actor;
+            // 精确保底：yBaseline 模式下消除浮点累积误差，确保 Y 精确落位
+            if (state.useYBaseline) {
+                actor.root.position.y = state.yEnd;
+            }
             const finalX = actor.root.position.x;
             const finalY = actor.root.position.y;
             if (typeof actor.setMoveIntent === "function") {
