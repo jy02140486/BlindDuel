@@ -7,6 +7,9 @@
         "orthoWidth": 26
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "onEnterDirectives": [
+        { "type": "advanceScenario", "value": 100 }
+    ],
     "introSequenceUrl": "Data/Sequences/prologue_intro.json",
     "outroSequenceUrl": "Data/Sequences/prologue_outro.json",
     "ambient": ["forest_ambient"],

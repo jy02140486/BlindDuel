@@ -48,9 +48,10 @@
       "channel": "movement",
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 400, "durationMs":1100, "x": -29.5, "y": 0.7, "speed": 1.4 },
-        { "type": "command", "atMs": 1600, "command": "idle" },
-        { "type": "callback", "atMs": 0, "fn": "enterCompanionFollowing" }
+        { "type": "faceWorldX", "atMs": 0, "direction": 1 },
+        { "type": "moveActorTo", "startMs": 400, "durationMs":1100, "x": -29.5, "y": 0.7, "speed": 1.4, "startPos": [-31.5, 0]},
+        { "type": "command", "atMs": 1500, "command": "idle" },
+         { "type": "callback", "atMs": 1600, "fn": "enterCompanionFollowing" }
       ]
     },
     {

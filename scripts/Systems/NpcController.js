@@ -137,11 +137,35 @@ export class NpcController {
         this._idleBehavior.enter(npc, {});
     }
 
-    enterFollowing(npc) {
+    enterFollowing(npc, followOffset = null) {
         this.state = "following";
-        if (!this._followingBehavior) {
-            this._followingBehavior = new FollowingBehavior();
+
+        // 解析 followOffset：调用方显式传时优先；否则从 npcDef.initialStateMap 匹配当前 scenario 自我解析
+        // 覆盖两种调用路径：applyInitialState（带 followOffset）和 intro callback enterCompanionFollowing（不传）
+        let resolvedOffset = followOffset;
+        if (!resolvedOffset) {
+            const map = this.npcDef?.initialStateMap;
+            if (Array.isArray(map)) {
+                for (const entry of map) {
+                    if (entry.state === "following" && this._matchCondition(entry.if)) {
+                        resolvedOffset = entry.followOffset ?? null;
+                        break;
+                    }
+                }
+            }
         }
+
+        if (this._followingBehavior) {
+            // 已有实例：只覆盖 offset 字段，保留 FollowingBehavior 自身的速度/增益等默认配置
+            if (resolvedOffset) {
+                Object.assign(this._followingBehavior.options, resolvedOffset);
+            }
+        } else {
+            // 首次创建
+            const opts = resolvedOffset ? { ...resolvedOffset } : {};
+            this._followingBehavior = new FollowingBehavior(opts);
+        }
+
         this._behavior = this._followingBehavior;
         if (typeof npc.setFollowing === "function") npc.setFollowing(true);
         // Show target disc when entering following (controlled by global debug flag)
@@ -163,8 +187,10 @@ export class NpcController {
                 const target = entry.state;
                 console.log(`[NpcCtrl] applyInitialState ${npc.id} scenario=${worldState.scenario} match=${JSON.stringify(entry.if)} → ${target}`);
                 if (target === "following") {
-                    this.enterFollowing(npc);
+                    // followOffset 可选；存在时传给 FollowingBehavior 构造，配置实例化跟随位置偏好
+                    this.enterFollowing(npc, entry.followOffset ?? null);
                     // 进入 following 时立即 teleport 到 hero 旁，避免依赖后续 fixedUpdate 拉回
+                    // offsetX/offsetY 自动从刚构造的 behavior.options 读取（followOffset 已生效）
                     if (hero) {
                         const offsetX = this._followingBehavior?.options?.targetOffsetX ?? 1.0;
                         const heroPos = hero.root.position;
