@@ -2,16 +2,22 @@ export const NPC_DEFS = {
     companion: {
         id: "companion",
         name: "Charlotte",
-        idle: { clip: "observe" },
+        idle: {
+            clip: "observe",
+            clipMap: [
+                { if: { scenarioMin: 103, scenarioMax: 104 }, clip: "observe" },
+                { if: {}, clip: "idle" }
+            ]
+        },
         // 初始状态由 scenario 进度派生（非 cutscene flag）：
         // scenario >= 105 (PROLOGUE_CHARLOTTE_JOIN) 后跟随，之前 idle。
         // 重置/跨场景时按当前 scenario 重新评估，与 checkpoint 自然兼容。
         initialStateMap: [
             // scenario=105 第一场战斗：Charlotte 退到左侧后方（targetOffsetX 为负 = hero 的左侧）
             // 避免大敌当前时走在 hero 右侧像引路 NPC
-            { if: { scenarioMin: 100, scenarioMax: 103 }, state: "following", followOffset: { targetOffsetX: -0.8, targetOffsetY: 0.3 } },
+            { if: { scenarioMin: 100, scenarioMax: 101 }, state: "following", followOffset: { targetOffsetX: -0.8, targetOffsetY: 0.3 } },
             // scenario>=106 tutor 战斗及之后：恢复默认右侧跟随（FollowingBehavior 内部默认 targetOffsetX=2.0）
-            { if: { scenarioMin: 106, scenarioMax: 109 }, state: "following" },
+            { if: { scenarioMin: 102, scenarioMax: 109 }, state: "following" },
             { if: {}, state: "idle" }
         ],
         dialogues: [

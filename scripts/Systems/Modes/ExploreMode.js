@@ -610,7 +610,6 @@ export class ExploreMode extends BaseMode {
         const companion = this.interactables.find(n => n.id === "companion");
         if (companion?.npcController && companion.npcController.state !== "following") {
             companion.npcController.enterFollowing(companion);
-            console.log("[ExploreMode] companion enterFollowing triggered by sequence");
         }
     }
 
@@ -618,7 +617,6 @@ export class ExploreMode extends BaseMode {
         const companion = this.interactables.find(n => n.id === "companion");
         if (companion?.npcController) {
             companion.npcController.enterIdle(companion);
-            console.log("[ExploreMode] companion enterIdle triggered by sequence");
         }
     }
 

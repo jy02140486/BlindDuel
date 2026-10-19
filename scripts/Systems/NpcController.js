@@ -134,21 +134,47 @@ export class NpcController {
         if (this._targetDisc) {
             this._targetDisc.setEnabled(false);
         }
+        // 动态解析 idle clip：每次进入 idle 都重新评估 clipMap
+        // （scenario/flag 可能已变化，与 FollowingBehavior followOffset 的 self-resolve 模式对称）
+        const def = this.npcDef?.idle;
+        let clip = def?.clip ?? "idle";
+        if (Array.isArray(def?.clipMap) && def.clipMap.length > 0) {
+            for (const entry of def.clipMap) {
+                if (this._matchCondition(entry.if)) {
+                    clip = entry.clip ?? clip;
+                    break;
+                }
+            }
+        }
+        this._idleBehavior.options.clip = clip;
         this._idleBehavior.enter(npc, {});
     }
 
     enterFollowing(npc, followOffset = null) {
         this.state = "following";
 
-        // 解析 followOffset：调用方显式传时优先；否则从 npcDef.initialStateMap 匹配当前 scenario 自我解析
-        // 覆盖两种调用路径：applyInitialState（带 followOffset）和 intro callback enterCompanionFollowing（不传）
+        // 解析 followOffset：区分三种情况解决旧 offset 残留问题
+        // 1. 调用方显式传 followOffset → 直接用（如 applyInitialState 带 followOffset 调用）
+        // 2. self-resolve 命中条目 && 条目声明了 followOffset → 用条目值
+        // 3. self-resolve 命中条目 && 条目没声明 followOffset → 显式重置为默认值
+        //    （不能用 resolvedOffset=null 跳过 Object.assign，否则 scenario 变化后旧 offset 残留）
         let resolvedOffset = followOffset;
-        if (!resolvedOffset) {
+        let resolveSource = followOffset ? "caller" : "none";
+        const needsSelfResolve = !followOffset;
+
+        if (needsSelfResolve) {
             const map = this.npcDef?.initialStateMap;
             if (Array.isArray(map)) {
                 for (const entry of map) {
                     if (entry.state === "following" && this._matchCondition(entry.if)) {
-                        resolvedOffset = entry.followOffset ?? null;
+                        if (entry.followOffset !== undefined) {
+                            resolvedOffset = entry.followOffset;
+                            resolveSource = `def.initialStateMap[${JSON.stringify(entry.if)}].followOffset`;
+                        } else {
+                            // 条目未声明 followOffset → 显式重置为 FollowingBehavior 默认值
+                            resolvedOffset = { targetOffsetX: 2.0, targetOffsetY: 0 };
+                            resolveSource = `def.initialStateMap[${JSON.stringify(entry.if)}] → use defaults (no followOffset declared)`;
+                        }
                         break;
                     }
                 }
@@ -156,19 +182,16 @@ export class NpcController {
         }
 
         if (this._followingBehavior) {
-            // 已有实例：只覆盖 offset 字段，保留 FollowingBehavior 自身的速度/增益等默认配置
             if (resolvedOffset) {
                 Object.assign(this._followingBehavior.options, resolvedOffset);
             }
         } else {
-            // 首次创建
             const opts = resolvedOffset ? { ...resolvedOffset } : {};
             this._followingBehavior = new FollowingBehavior(opts);
         }
 
         this._behavior = this._followingBehavior;
         if (typeof npc.setFollowing === "function") npc.setFollowing(true);
-        // Show target disc when entering following (controlled by global debug flag)
         if (this._targetDisc) {
             this._targetDisc.setEnabled(this._debugVisible === true);
         }
@@ -185,7 +208,6 @@ export class NpcController {
         for (const entry of map) {
             if (this._matchCondition(entry.if, worldState)) {
                 const target = entry.state;
-                console.log(`[NpcCtrl] applyInitialState ${npc.id} scenario=${worldState.scenario} match=${JSON.stringify(entry.if)} → ${target}`);
                 if (target === "following") {
                     // followOffset 可选；存在时传给 FollowingBehavior 构造，配置实例化跟随位置偏好
                     this.enterFollowing(npc, entry.followOffset ?? null);
