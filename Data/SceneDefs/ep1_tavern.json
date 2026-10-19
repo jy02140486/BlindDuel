@@ -11,7 +11,7 @@
     "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
     "ambient": ["forest_ambient"],
     "onEnterDirectives": [
-        { "type": "advanceScenario", "value": 110 }
+        { "type": "advanceScenario", "value": 200 }
     ],
     "entities": [
         {
@@ -53,7 +53,8 @@
             "name": "Charlotte",
             "kind": "npc",
             "pos": [-30, -0.7, 0],
-            "controller": "npc"
+            "controller": "npc",
+            "spawnIf": { "flagNot": "intro_played_ep1_tavern" }
         }
     ],
     "walkAreas": [
@@ -66,7 +67,7 @@
     "cameraBoundaries": [
   { "if": {}, "minY": -2.72}],
     "spawns": {
-        "house_door": [-12.33, -0.4, 0]
+        "house_door": [-19.33, -0.4, 0]
     },
     "triggers": [
         {

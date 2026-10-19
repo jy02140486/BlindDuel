@@ -167,7 +167,7 @@
             "id": "rabble_tutor",
             "name": "rabble_stick_tutor",
             "kind": "enemy",
-            "pos": [-20.5, 0, 0],
+            "pos": [-21.5, 0, 0],
             "controller": "ai",
             "aiProfile": {
                 "baseAggression": 0.55,

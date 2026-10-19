@@ -90,16 +90,10 @@
                 "atlasKey": "dagger",
                 "textureUrl": "./Art/Sprite/items/dagger.png"
             }
-        },
-        {
-            "archetype": "rabble_stick",
-            "id": "enemy_1",
-            "name": "rabble_stick",
-            "kind": "enemy",
-            "pos": [8.47, -4.92],
-            "controller": "ai",
-            "spawnIf": { "flagNot": "battle_field_2" }
         }
+    ],
+    "cameraBoundaries": [
+  { "if": {}, "minY": -6, "maxY": 6.24, "minX": -13.64, "maxX": 14.64}
     ],
     "walkAreas": [
         { "if": {}, "minX": -6.75, "maxX": 13.98, "minY": -4.77, "maxY": -1.65 }
@@ -116,7 +110,6 @@
             "size": [2, 2, 2],
             "targetScene": "ep1_tavern",
             "targetSpawn": "house_door",
-            "condition": { "scenarioMin": 110 },
             "debugColor": [0, 1, 1],
             "debugVisible": true,
             "arrow": {
@@ -145,16 +138,6 @@
                 "scale": 0.4,
                 "frameMs": 250
             }
-        },
-        {
-            "type": "battle",
-            "id": "bt_field_2",
-            "pos": [2.47, -4.90, 0],
-            "size": [1, 2, 3],
-            "battleId": "battle_field_2",
-            "condition": { "flagNot": "battle_field_2" },
-            "debugColor": [0, 1, 0],
-            "debugVisible": false
         }
     ],
     "environment": {
@@ -174,8 +157,7 @@
                         "x": 0,
                         "y": 8,
                         "width": 48,
-                        "height": 32,
-                        "alphaIndex": 0
+                        "height": 32
                     }
                 ]
             },
@@ -187,40 +169,47 @@
                 "loopX": false,
                 "elements": [
                     {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/road.png",
+                        "kind": "tile",
+                        "x": 3.7,
+                        "y": 1.5,
+                        "width": 90.42,
+                        "height": 8.16,
+                        "tileSize": { "width": 45.21, "height": 4.08 },
+                        "loop": true
+                    },
+                    {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/grasstop_1.png",
+                        "atlas": "Art/Environment/grasstop_1.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": -1.5,
+                        "width": 64,
+                        "height": 16.3,
+                        "tileSize": { "width": 44, "height": 2.028},
+                        "loop": true
+                    },
+                    {
+                        "id": "ground_2",
+                        "texture": "Art/Environment/grasstop_2.png",
+                        "atlas": "Art/Environment/grasstop_2.json",
+                        "kind": "animated_tile",
+                        "x": 3,
+                        "y": -11,
+                        "width": 64,
+                        "height": 32,
+                        "tileSize": { "width": 33.92, "height": 2.24},
+                        "loop": true
+                    }, {
                         "id": "indoor_floor",
                         "texture": "Art/Environment/Tavern_indoorstage.png",
                         "kind": "single",
                         "x": 0,
                         "y": 0,
                         "width": 32.4,
-                        "height": 12.0,
-                        "alphaIndex": 3
-                    },
-                    {
-                        "id": "ground_1",
-                        "texture": "Art/Environment/grassbase.png",
-                        "atlas": "Art/Environment/grassbase.json",
-                        "kind": "animated_tile",
-                        "x": 0,
-                        "y": -0.8,
-                        "width": 64,
-                        "height": 8,
-                        "tileSize": { "width": 1.28, "height": 1.28 },
-                        "loop": true,
-                        "alphaIndex": 2
-                    },
-                    {
-                        "id": "ground_2",
-                        "texture": "Art/Environment/grasstop.png",
-                        "atlas": "Art/Environment/grasstop.json",
-                        "kind": "animated_tile",
-                        "x": 0,
-                        "y": 3.3,
-                        "width": 64,
-                        "height": 0.32,
-                        "tileSize": { "width": 1.28, "height": 0.32 },
-                        "loop": true,
-                        "alphaIndex": 2
+                        "height": 12.0
                     }
                 ]
             },
@@ -238,8 +227,7 @@
                         "x": 0,
                         "y": 4,
                         "width": 32,
-                        "height": 4.5,
-                        "alphaIndex": 0
+                        "height": 4.5
                     }
                 ]
             }

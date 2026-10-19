@@ -37,7 +37,7 @@
       "clips": [
         { "type": "inputLock", "atMs": 0, "locked": true },
         { "type": "command", "atMs": 200, "command": "walk" },
-        { "type": "moveActorTo", "startMs": 200, "durationMs": 1500, "x": -30, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
+        { "type": "moveActorTo", "startMs": 200, "durationMs": 1500, "x": -29, "y": 0, "speed": 1.4 , "startPos": [-32, 0]},
         { "type": "inputLock", "atMs": 3900, "locked": false }
       ]
     },
@@ -49,7 +49,7 @@
       "clips": [
         { "type": "command", "atMs": 600, "command": "walk" },
         { "type": "faceWorldX", "atMs": 0, "direction": 1 },
-        { "type": "moveActorTo", "startMs": 400, "durationMs":1100, "x": -29.5, "y": 0.7, "speed": 1.4, "startPos": [-31.5, 0]},
+        { "type": "moveActorTo", "startMs": 400, "durationMs":1100, "x": -28.5, "y": 0.7, "speed": 1.4, "startPos": [-31.5, 0]},
         { "type": "command", "atMs": 1500, "command": "idle" },
          { "type": "callback", "atMs": 1600, "fn": "enterCompanionFollowing" }
       ]

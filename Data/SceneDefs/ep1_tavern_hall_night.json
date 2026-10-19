@@ -1,0 +1,172 @@
+{
+    "id": "ep1_tavern_hall_night",
+    "exploreCamera": {
+        "followDistance": 17,
+        "followHeight": 3.5,
+        "smoothing": 0.12,
+        "orthoWidth": 26
+    },
+    "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
+    "stageMask": "tavern_indoor",
+    "entities": [
+        {
+            "archetype": "hero_longsword",
+            "id": "hero",
+            "name": "hero",
+            "kind": "player",
+            "pos": [0, 0],
+            "controller": "player"
+        },
+        {
+            "archetype": "rabble_stick",
+            "id": "enemy_1",
+            "name": "rabble_stick",
+            "kind": "enemy",
+            "pos": [8.47, -4.92],
+            "controller": "ai",
+            "spawnIf": { "flagNot": "battle_field_2" }
+        }
+    ],
+    "walkAreas": [
+        { "if": {}, "minX": -6.75, "maxX": 13.98, "minY": -4.77, "maxY": -1.65 }
+    ],
+    "cameraBoundaries": [
+    { "if": {}, "minY": -6, "maxY": 6.24, "minX": -13.64, "maxX": 14.64}
+    ],
+    "spawns": {
+        "house_door": [-2.09, -1, 0],
+        "house_door_room": [-5.91, -2.81, 0]
+    },
+    "triggers": [
+        {
+            "type": "sceneSwitch",
+            "id": "exit_house",
+            "pos": [-2, -1, 0],
+            "size": [2, 2, 2],
+            "targetScene": "ep1_tavern_night",
+            "targetSpawn": "house_door",
+            "debugColor": [0, 1, 1],
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "left",
+                "direction": "left",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
+        },
+        {
+            "type": "battle",
+            "id": "bt_field_2",
+            "pos": [2.47, -4.90, 0],
+            "size": [1, 2, 3],
+            "battleId": "battle_field_2",
+            "condition": { "flagNot": "battle_field_2" },
+            "debugColor": [0, 1, 0],
+            "debugVisible": false
+        }
+    ],
+    "environment": {
+        "layers": [
+            {
+                "id": "BG_FAR",
+                "z": 40,
+                "parallaxFactor": 0.15,
+                "renderingGroupId": 0,
+                "loopX": true,
+                "loopWidth": 40,
+                "elements": [
+                    {
+                        "id": "sky_1",
+                        "texture": "Art/Environment/skybase.png",
+                        "kind": "tile",
+                        "x": 0,
+                        "y": 8,
+                        "width": 48,
+                        "height": 32
+                    }
+                ]
+            },
+            {
+                "id": "STAGE",
+                "z": 10,
+                "parallaxFactor": 1.0,
+                "renderingGroupId": 0,
+                "loopX": false,
+                "elements": [
+                    {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/road.png",
+                        "kind": "tile",
+                        "x": 3.7,
+                        "y": 1.5,
+                        "width": 90.42,
+                        "height": 8.16,
+                        "tileSize": { "width": 45.21, "height": 4.08 },
+                        "loop": true
+                    },
+                    {
+                        "id": "ground_1",
+                        "texture": "Art/Environment/grasstop_1.png",
+                        "atlas": "Art/Environment/grasstop_1.json",
+                        "kind": "animated_tile",
+                        "x": 0,
+                        "y": -1.5,
+                        "width": 64,
+                        "height": 16.3,
+                        "tileSize": { "width": 44, "height": 2.028},
+                        "loop": true
+                    },
+                    {
+                        "id": "ground_2",
+                        "texture": "Art/Environment/grasstop_2.png",
+                        "atlas": "Art/Environment/grasstop_2.json",
+                        "kind": "animated_tile",
+                        "x": 3,
+                        "y": -11,
+                        "width": 64,
+                        "height": 32,
+                        "tileSize": { "width": 33.92, "height": 2.24},
+                        "loop": true
+                    },
+                    {
+                        "id": "night_tint",
+                        "kind": "color_filter",
+                        "color": { "r": 15, "g": 22, "b": 30, "a": 0.84 },
+                        "x": 0,
+                        "y": 8,
+                        "width": 48,
+                        "height": 32
+                    }, {
+                        "id": "indoor_floor",
+                        "texture": "Art/Environment/Tavern_indoorstage.png",
+                        "kind": "single",
+                        "x": 0,
+                        "y": 0,
+                        "width": 32.4,
+                        "height": 12.0
+                    }
+                ]
+            },
+            {
+                "id": "FG_DECOR",
+                "z": -10,
+                "parallaxFactor": 1.35,
+                "renderingGroupId": 2,
+                "elements": [
+                    {
+                        "id": "beamraft_1",
+                        "texture": "Art/Environment/beamraft.png",
+                        "kind": "tile",
+                        "tileSize": { "width": 6.4, "height": 4.8 },
+                        "x": 0,
+                        "y": 4,
+                        "width": 32,
+                        "height": 4.5
+                    }
+                ]
+            }
+        ]
+    }
+}

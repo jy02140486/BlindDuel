@@ -331,12 +331,11 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
     combatantConfig: {
         enemy_1: { throwAmmo: 3 },
     },
-    stageBounds: { minX: -4.85, maxX: 4.63, minY: -2.88, maxY: -2.43 },
+    stageBounds: { minX: -4.85, maxX: 4.63, minY: -3.02, maxY: -2.92 },
     battleYBaseline: -2.97,
     onVictory: {
-        // 打赢后要设什么 flag？推进什么 scenario？
+        scenario: 202,
         flags: ["battle_field_tavern_room_post_charlotte_kidnapped"],
-        // 胜利后推进进度 checkpoint（ep1_tavern_room 首个安全 spawn room_left）
         checkpoint: { spawnId: "room_left" },
     },
      duelCamera: {

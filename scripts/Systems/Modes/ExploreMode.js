@@ -139,7 +139,7 @@ export class ExploreMode extends BaseMode {
         const triggers = this.context.scene.triggers;
         if (!triggers) return;
 
-        const { inputSystem, scene } = this.context;
+        const { inputSystem } = this.context;
 
         const sceneSwitchTriggers = this.context.sceneDef?.triggers?.filter(t => t.type === "sceneSwitch") ?? [];
         for (const triggerDef of sceneSwitchTriggers) {
@@ -151,26 +151,56 @@ export class ExploreMode extends BaseMode {
                 this._currentSceneSwitchTrigger = { trigger, triggerDef };
                 if (inputSystem.consumeAction("interact", tickCount)) {
                     this._currentSceneSwitchTrigger = null;
-                    const game = this.context.game;
-                    // 优先同步查缓存（已 resolve 过的场景），fallback 异步 fetch（首次访问的 JSON 场景）
-                    const cached = getSceneDefSync(triggerDef.targetScene);
-                    if (cached) {
-                        game.requestSceneSwitch(cached, triggerDef.targetSpawn);
-                    } else {
-                        getSceneDef(triggerDef.targetScene).then(targetDef => {
-                            if (targetDef) {
-                                game.requestSceneSwitch(targetDef, triggerDef.targetSpawn);
-                            } else {
-                                console.warn(`[ExploreMode] targetScene not found: ${triggerDef.targetScene}`);
-                            }
-                        });
-                    }
+                    const resolved = this.#resolveSceneSwitchTarget(triggerDef);
+                    if (!resolved) return;
+                    this.#executeSceneSwitch(resolved.targetScene, resolved.targetSpawn);
                     return;
                 }
                 return;
             }
         }
         this._currentSceneSwitchTrigger = null;
+    }
+
+    /**
+     * 解析 sceneSwitch trigger 的目标场景与 spawn。
+     * 新写法：triggerDef.routes[] 按条件数组遍历（首个匹配生效，`if:{}` 作 catch-all）。
+     * 旧写法 fallback：triggerDef.targetScene / triggerDef.targetSpawn 直读。
+     * 全部不匹配返回 null（本次跳过切换）。
+     */
+    #resolveSceneSwitchTarget(triggerDef) {
+        const { scene, worldState } = this.context;
+
+        if (Array.isArray(triggerDef.routes) && triggerDef.routes.length > 0) {
+            for (const route of triggerDef.routes) {
+                if (scene._evaluateCondition(route.if, worldState)) {
+                    return { targetScene: route.scene, targetSpawn: route.spawn };
+                }
+            }
+            console.warn(
+                `[ExploreMode] sceneSwitch "${triggerDef.id}" has routes but none matched; skipping`
+            );
+            return null;
+        }
+
+        return { targetScene: triggerDef.targetScene, targetSpawn: triggerDef.targetSpawn };
+    }
+
+    /** 执行场景切换：同步查缓存优先，异步 fetch 兜底。 */
+    #executeSceneSwitch(targetScene, targetSpawn) {
+        const game = this.context.game;
+        const cached = getSceneDefSync(targetScene);
+        if (cached) {
+            game.requestSceneSwitch(cached, targetSpawn);
+        } else {
+            getSceneDef(targetScene).then(targetDef => {
+                if (targetDef) {
+                    game.requestSceneSwitch(targetDef, targetSpawn);
+                } else {
+                    console.warn(`[ExploreMode] targetScene not found: ${targetScene}`);
+                }
+            });
+        }
     }
 
     #syncTriggerEnabled() {

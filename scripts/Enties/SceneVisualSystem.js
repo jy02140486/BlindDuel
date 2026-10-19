@@ -257,6 +257,10 @@ export class SceneVisualSystem {
             await this._createAnimatedTileElement(layer, elementConfig);
             return;
         }
+        if (elementConfig.kind === "color_filter") {
+            this._createColorFilterElement(layer, elementConfig);
+            return;
+        }
 
         // 创建平面网格
         const plane = BABYLON.MeshBuilder.CreatePlane(
@@ -333,6 +337,67 @@ export class SceneVisualSystem {
         };
         
         layer.elements.push(element);
+    }
+
+    /**
+     * 创建颜色滤镜元素：程序化生成纯色 RGBA DynamicTexture，强制透明混合。
+     * 用于叠加染色/蒙层效果（如夜晚滤镜），不依赖外部 PNG 资源。
+     * JSON 配置示例：
+     * {
+     *   "kind": "color_filter",
+     *   "color": { "r": 0, "g": 20, "b": 60, "a": 0.35 },
+     *   "x": 0, "y": 8, "width": 48, "height": 32
+     * }
+     */
+    _createColorFilterElement(layer, elementConfig) {
+        const { r = 0, g = 0, b = 0, a = 1 } = elementConfig.color || {};
+
+        // 创建平面网格
+        const plane = BABYLON.MeshBuilder.CreatePlane(
+            `element_${elementConfig.id}`,
+            { width: elementConfig.width, height: elementConfig.height },
+            this.scene
+        );
+        plane.position.x = elementConfig.x;
+        plane.position.y = elementConfig.y;
+        plane.position.z = elementConfig.zOffset || 0;
+        plane.parent = layer.root;
+
+        // 程序化生成纯色 RGBA 纹理（4x4 足够大，避免潜在边缘插值问题）
+        const TEX_SIZE = 4;
+        const dynamicTex = new BABYLON.DynamicTexture(
+            `color_${elementConfig.id}`,
+            TEX_SIZE, TEX_SIZE,
+            this.scene
+        );
+        const ctx = dynamicTex.getContext();
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+        ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+        dynamicTex.update();
+        dynamicTex.hasAlpha = true;
+
+        // 材质：与 tile 相同基础配置，但强制 ALPHA_BLEND + 关 depthWrite
+        const material = new BABYLON.StandardMaterial(`mat_${elementConfig.id}`, this.scene);
+        material.diffuseTexture = dynamicTex;
+        material.alphaMode = BABYLON.Engine.ALPHA_BLEND;
+        material.disableDepthWrite = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.backFaceCulling = false;
+        material.disableLighting = true;
+        material.specularColor = new BABYLON.Color3(0, 0, 0);
+        material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        plane.material = material;
+
+        // 渲染组 + alphaIndex + flipX（与 tile 相同）
+        plane.renderingGroupId = layer.config.renderingGroupId;
+        plane.alphaIndex = this._resolveAlphaIndex(elementConfig);
+        if (elementConfig.flipX) plane.rotation.y = Math.PI;
+
+        layer.elements.push({
+            mesh: plane,
+            config: elementConfig,
+            originalX: elementConfig.x
+        });
     }
 
     /**
