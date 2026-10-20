@@ -1,0 +1,42 @@
+{ "frames": {
+   "rabble_stick_CS_awake 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 1000
+   },
+   "rabble_stick_CS_awake 1.ase": {
+    "frame": { "x": 160, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 500
+   },
+   "rabble_stick_CS_awake 2.ase": {
+    "frame": { "x": 320, "y": 0, "w": 160, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
+    "sourceSize": { "w": 160, "h": 128 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\rabblestick\\rabble_stick_CS_awake.png",
+  "format": "RGBA8888",
+  "size": { "w": 480, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
+   { "name": "rootmotion", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

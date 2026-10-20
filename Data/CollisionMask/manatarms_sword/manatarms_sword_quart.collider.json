@@ -1,11 +1,9 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.png",
-                   "rootAtlasJson":  "Data/RootMotion/manatarms/manatarms_sword_quart.json",
-                   "rootAtlasPng":  "Data/RootMotion/manatarms/manatarms_sword_quart.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_quart.png",
+                   "pushboxPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -28,10 +26,11 @@
                                            ],
                    "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-27T11:58:44.8557830Z"
+                   "generatedAtUtc":  "2026-10-20T15:38:00.3569372Z"
                },
     "frames":  [
                    {
@@ -82,7 +81,8 @@
                                        "root":  {
                                                     "cx":  90,
                                                     "cy":  143
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -133,7 +133,8 @@
                                        "root":  {
                                                     "cx":  90,
                                                     "cy":  143
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -184,7 +185,8 @@
                                        "root":  {
                                                     "cx":  90,
                                                     "cy":  143
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -224,7 +226,8 @@
                                        "root":  {
                                                     "cx":  88,
                                                     "cy":  143
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]

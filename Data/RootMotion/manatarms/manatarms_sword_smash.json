@@ -5,7 +5,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
-    "duration": 100
+    "duration": 20
    },
    "manatarms_sword_smash 1.ase": {
     "frame": { "x": 128, "y": 0, "w": 128, "h": 128 },
@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
-    "duration": 400
+    "duration": 300
    },
    "manatarms_sword_smash 2.ase": {
     "frame": { "x": 256, "y": 0, "w": 128, "h": 128 },
@@ -21,7 +21,15 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
     "sourceSize": { "w": 128, "h": 128 },
-    "duration": 400
+    "duration": 500
+   },
+   "manatarms_sword_smash 3.ase": {
+    "frame": { "x": 384, "y": 0, "w": 128, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+    "sourceSize": { "w": 128, "h": 128 },
+    "duration": 200
    }
  },
  "meta": {
@@ -29,7 +37,7 @@
   "version": "1.1-dev",
   "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\manatarms_sword\\manatarms_sword_smash.png",
   "format": "RGBA8888",
-  "size": { "w": 384, "h": 128 },
+  "size": { "w": 512, "h": 128 },
   "scale": "1",
   "frameTags": [
   ],

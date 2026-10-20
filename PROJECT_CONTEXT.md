@@ -44,7 +44,7 @@ py .\.serve.ps1
 - 状态图定义：`Data/StateGraphDef/LongSwordMan.json`
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
-- 战斗接触解析：`scripts/Systems/ContactResolver.js`（传统 attack-shield / attack-hitbox 两阶段）
+- 战斗接触解析：`scripts/Systems/ContactResolver.js`（三阶段判定：hitbox→weaponbox 武器侧判定→shield 判定与破盾路径；guardType="shield" 时 heavy slash → shieldBroken 触发 stunned 硬直，其他攻击被挡）
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
 - AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径与进攻性 throw 候选 #scoreThrow，详见 `docs/AI系统说明.MD`）：
   - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment）
@@ -105,11 +105,12 @@ py .\.serve.ps1
 - 计划文档：`plans/` 目录（已完成计划归档在 `plans/archived/`）
 
 资源：
-- 动画图集：`Art/Sprite/longswordman/`、`Art/Sprite/rabble_stick/`、`Art/Sprite/NPCs/`
-- 碰撞蒙版图集：`Data/CollisionMask/longswordman/`、`Data/CollisionMask/rabble_stick/`
-- 根运动数据：`Data/RootMotion/longswordman/`、`Data/RootMotion/rabble_stick/`、`Data/RootMotion/NPCs/`
+- 动画图集：`Art/Sprite/longswordman/`、`Art/Sprite/rabble_stick/`、`Art/Sprite/manatarms_sword/`、`Art/Sprite/NPCs/`
+- 碰撞蒙版图集：`Data/CollisionMask/longswordman/`、`Data/CollisionMask/rabble_stick/`、`Data/CollisionMask/manatarms_sword/`
+- 根运动数据：`Data/RootMotion/longswordman/`、`Data/RootMotion/rabble_stick/`、`Data/RootMotion/manatarms/`、`Data/RootMotion/NPCs/`
 - NPC 占用盒数据：`Data/RootMotion/NPCs/*.occupancy.json`
 - 碰撞扫描输出：`Data/CollisionMask/**/*.collider.json`
+- 推盒扫描源：`Data/PushBox/<char>/*.png`（pushbox mask atlas，`extract_collision_boxes.ps1 -PushBoxPng` 参数传入生成）
 - 音频原始合包：`Audio/sfx/_raw/*.wav` + `sliceinfo.txt`（不入 AssetManifest）
 - 音频切片中间产物：`Audio/sfx/<合包名>/slice_NN.wav`（仍为源格式）
 - 音乐资源：`Audio/music/*.wav`（待定）
@@ -128,9 +129,10 @@ py .\.serve.ps1
 ## 5. 当前碰撞数据与约定
 1. 扫描颜色约定：
    - `#FFFF00`：`hitbox`
-   - `#FF0000`：`weaponbox` + `subtype = strong_blade`（强剑身/防御侧，刀背）
+   - `#FF0000`：`weaponbox` + `subtype = strong_blade`（强剑身/防御侧，刀背；Manatarms 的 strong_blade 同时也是常驻 shield box）
    - `#E37800`：`weaponbox` + `subtype = weak_blade`（弱剑身/攻击侧，刀刃）
    - `#7082C1`：`root`
+   - pushbox 扫描颜色：查 `extract_collision_boxes.ps1` 脚本内 `PushBoxColor` 变量
 2. 每帧可有多个矩形，导出为 OBB：`cx, cy, w, h, angle`。
 3. 跨帧 `id` 采用跟踪分配（位置连续性优先，尺寸变化允许）。
 4. 碰撞盒厚度约定：`40`（2D 数据无厚度，先固定）。
@@ -138,7 +140,7 @@ py .\.serve.ps1
 6. `.collider.json` 中约定：
    - `frames[].boxes[]`：碰撞盒
    - `frames[].anchors.root`：root 锚点
-7. 当前 `pushbox` 概念仍保留，但本轮尚未新增其扫描颜色与运行时逻辑。
+7. 当前 `pushbox` 已实现：`scripts/tools/extract_collision_boxes.ps1` 支持 `-PushBoxPng` 参数扫描 pushbox 颜色（运行时为 `type="pushbox"`），`scripts/Systems/PushboxResolver.js` 从 snapshot.boxes 过滤 type==="pushbox" 做角色间分离，防止角色穿模。
 8. 当前 `weaponbox` 采用 `type = weaponbox` + `subtype = strong_blade / weak_blade`，不新增独立顶层 type。
 9. NPC 使用独立的轻量碰撞数据格式（`rootMotionOccupancyData`），由 `scripts/tools/extract_rootmotion_occupancy.ps1` 生成，仅含每帧 `anchors.root` + 固定尺寸 `occupancy.aabb`，不依赖 `.collider.json`。脚本必须扫 `Data/RootMotion/.../*.png`（root motion mask 专用 PNG，不是 `Art/Sprite` 复合 atlas——后者角色像素会覆盖 root 标记导致帧间扫描不一致）；`$OCCUPANCY_H` 固定为 `16`（不是 24），避免 AABB 中心在 root、高度过大下延导致碰撞范围虚大。
 

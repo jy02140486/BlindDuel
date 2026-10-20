@@ -5,7 +5,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 160 },
     "sourceSize": { "w": 160, "h": 160 },
-    "duration": 100
+    "duration": 20
    },
    "manatarms_sword_quart 1.ase": {
     "frame": { "x": 160, "y": 0, "w": 160, "h": 160 },
@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 160 },
     "sourceSize": { "w": 160, "h": 160 },
-    "duration": 400
+    "duration": 200
    },
    "manatarms_sword_quart 2.ase": {
     "frame": { "x": 320, "y": 0, "w": 160, "h": 160 },

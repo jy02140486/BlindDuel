@@ -18,13 +18,21 @@
             "controller": "player"
         },
         {
-            "archetype": "rabble_stick",
+            "archetype": "manatarms_sword",
             "id": "enemy_1",
-            "name": "rabble_stick",
+            "name": "manatarms",
             "kind": "enemy",
             "pos": [8.47, -4.92],
             "controller": "ai",
-            "spawnIf": { "flagNot": "battle_field_2" }
+            "spawnIf": { "flagNot": "battle_field_2" },
+            "aiTuningOverrides": {
+                "attack": {
+                    "baseWeight": 0.16,
+                    "repetitionCostRate": 0.32,
+                    "repetitionCostMax": 0.64,
+                    "preemptiveBonus": 0.20
+                }
+            }
         }
     ],
     "walkAreas": [
