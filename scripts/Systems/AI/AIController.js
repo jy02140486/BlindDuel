@@ -619,6 +619,10 @@ export class AIController extends BaseController {
         const selfMobilityTrait = this.kbProfile?.traits?.postDefenseMobility ?? null;
         const selfHasMobilityBoost = self.hasTag("postDefenseMobilityActive");
 
+        // 被动守卫识别：Manatarms 等有 config 级 guardType 但无原生 guard 状态的角色
+        const passiveGuardProfile = (this.kbProfile?.guards || []).find(g => g.passive === true);
+        const selfGuardType = passiveGuardProfile?.guardType ?? null;
+
         // === Phase 0: oppIdleMs / oppLastActiveMs 追踪 ===
         // oppLastActiveTs = opp 上一次 phase !== "none" 的时间戳
         // oppIdleMs = opp 连续 idle (phase === "none") 的时长
@@ -684,6 +688,7 @@ export class AIController extends BaseController {
                       attackProfile: oppAttackProfile, phase: oppPhase, remainingMs: oppRemainingMs,
                       guardType: oppGuardType, isDodging: oppIsDodging, canParry: oppCanParry,
                       throwProfile: oppThrowProfile },
+            selfGuardType,
             oppThreat,
             oppVulnerable,
             // Phase 3 Step 6 新增
@@ -998,7 +1003,18 @@ export class AIController extends BaseController {
         // sit.oppThreat 已经编码了 phase + range + distance，不需要额外检查
         let threatPenaltyApplied = 0;
         if (sit.opp.phase !== "none") {
-            threatPenaltyApplied = sit.oppThreat * this.tuning.attack.threatPenalty;
+            // 被动守卫减免：self 有 shield 且对手当前攻击能被挡 → threat 只算 10%
+            let effectiveThreat = sit.oppThreat;
+            if (sit.selfGuardType && sit.opp.attackProfile) {
+                const canBlock = ContactResolver.evaluateInteraction({
+                    offenseTrajectory: sit.opp.attackProfile.trajectory,
+                    offenseWeight: sit.opp.attackProfile.weight,
+                    defenseGuardType: sit.selfGuardType,
+                    defenseIsDodging: false,
+                }).blocked;
+                if (canBlock) effectiveThreat *= 0.1;
+            }
+            threatPenaltyApplied = effectiveThreat * this.tuning.attack.threatPenalty;
             score -= threatPenaltyApplied;
             _breakdown.common -= threatPenaltyApplied;
         }
@@ -1820,7 +1836,17 @@ export class AIController extends BaseController {
             retreatScore = 0.5; // 底线：真太近必须退
         }
         const hasBoost = sit.selfMobility?.hasActiveBoost === true;
-        const retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
+        let retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
+        // 被动守卫减免：self 有 shield 且对手当前攻击能被挡 → 不需要急着退
+        if (sit.selfGuardType && sit.opp.attackProfile) {
+            const canBlock = ContactResolver.evaluateInteraction({
+                offenseTrajectory: sit.opp.attackProfile.trajectory,
+                offenseWeight: sit.opp.attackProfile.weight,
+                defenseGuardType: sit.selfGuardType,
+                defenseIsDodging: false,
+            }).blocked;
+            if (canBlock) retreatThreatThreshold = Math.min(1, retreatThreatThreshold + 0.3);
+        }
         if (sit.oppThreat > retreatThreatThreshold && distance <= maxEffReach) {
             retreatScore = Math.max(retreatScore, 0.3);
         }
@@ -2050,8 +2076,12 @@ export class AIController extends BaseController {
             }
             // Phase 0: 记录 COMMIT（positioning 也算一次 commit）
             this.combatMemory.pushCommit(kind, kind);
-            // positioning 打断连续 attack
-            this.#consecutiveAttackUsage = null;
+            // positioning（hold/approach/retreat）完全不碰 consecutiveAttackUsage——
+            // 就让它 stale。attack commit 时 line 2095-2098 自然处理：
+            //   同一 attack → count++，不同 attack → count 重置为 1。
+            // 这样 smash→hold→smash 的 count 链是 1→(不变)→2，repitition 终于触发。
+            // Rabble thrust→hold→swing（不同 stateName）自然重置，不受影响。
+            // 语义上 hold 是等冷却还没换招，不该衰减 repitition 计数。
             return;
         }
 
@@ -2133,11 +2163,17 @@ export class AIController extends BaseController {
      * 禁止 throw 等其它评分自造第二份近战边界（计划 §5.3）。
      */
     #getMeleeMaxEffReach() {
-        const maxFwdBoost = Math.max(0, ...(this.kbProfile?.attacks || []).map(a => {
+        // 每个 attack 单独计算 maxReach + 自身前冲位移，再取 max
+        // 禁止跨 attack 取 max 再相加（数学上 max(A_i)+max(B_i) ≠ max(A_i+B_i)，
+        // 当 maxReach 和 maxFwdBoost 来自不同 attack 时会产生幻影射程）
+        const perAttackEffReach = (this.kbProfile?.attacks || []).map(a => {
+            const reach = a.range?.maxReach ?? 0;
             const disp = a.activeDisplacement ?? a.displacement ?? 0;
-            return disp < 0 ? -disp : 0;
-        }));
-        return this.#getMaxReach() + maxFwdBoost + this.rangeBuffer;
+            const fwdBoost = disp < 0 ? -disp : 0;
+            return reach + fwdBoost;
+        });
+        const maxPerAttack = perAttackEffReach.length > 0 ? Math.max(...perAttackEffReach) : 0;
+        return maxPerAttack + this.rangeBuffer;
     }
 
     /**

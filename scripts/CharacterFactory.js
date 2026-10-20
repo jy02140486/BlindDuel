@@ -166,7 +166,7 @@ export function createRabbleStickCharacter(scene, assets) {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "rabble_stick",
         kind: "enemy",
-        maxHp: 10,
+        maxHp: 2,
         deathState: "die",
         blocksMovement: false,
         interactable: false,
@@ -309,6 +309,18 @@ export function createManatarmsCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.png",
                 atlasData: assets.atlas.manatarms.knockdown,
                 colliderData: assets.colliders.manatarms.knockdown,
+                loop: false
+            },
+            clash: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_clash.png",
+                atlasData: assets.atlas.manatarms.clash,
+                colliderData: assets.colliders.manatarms.clash,
+                loop: false
+            },
+            stunned: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_stunned.png",
+                atlasData: assets.atlas.manatarms.stunned,
+                colliderData: assets.colliders.manatarms.stunned,
                 loop: false
             }
         }

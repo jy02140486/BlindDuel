@@ -73,6 +73,17 @@ export class CombatSystem {
                 continue;
             }
 
+            if (effect.type === "shield_broken") {
+                // shield 被 heavy slash 破盾 → 进 stunned 硬直
+                if (target.hasState("stunned")) {
+                    const kb = effect.context?.knockbackX ?? 0;
+                    if (kb !== 0) target.root.position.x += kb;
+                    target.enterState("stunned");
+                }
+                this._fxShake(0.15, 120);
+                continue;
+            }
+
             if (effect.type === "hitstop") {
                 if (typeof target.applyHitstop === "function") {
                     target.applyHitstop(effect.durationFrames);

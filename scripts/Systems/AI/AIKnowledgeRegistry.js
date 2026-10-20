@@ -189,14 +189,29 @@ export class AIKnowledgeRegistry {
             }
         }
 
+        // 被动守卫 profile：无原生 guardActive 状态但 config 级声明了 guardType 的角色（如 Manatarms）
+        const hasAnyGuardActive = Object.values(states).some(s => s.guardActive === true);
+        if (!hasAnyGuardActive && character.config?.guardType) {
+            guardProfiles.push({
+                stateName: "__passive__",
+                timing: null,
+                displacement: null,
+                frameSpeeds: [],
+                guardType: character.config.guardType,
+                canParry: false,
+                passive: true
+            });
+        }
+
         if (warnings.length > 0) {
             console.warn(`[AI KB] ${character.id} scan completed with ${warnings.length} warnings:`, warnings);
         }
 
-        // Schema v2+: 打印每个 attack 的 minReach 确认扫描正确
-        const _atkSummary = attackProfiles.map(a =>
-            `${a.stateName}(minR=${(a.range?.minReach ?? 0).toFixed(2)}, maxR=${a.range?.maxReach?.toFixed(2) ?? "?"})`
-        ).join(", ");
+        // Schema v2+: 打印每个 attack 的 timing + reach 确认扫描正确
+        const _atkSummary = attackProfiles.map(a => {
+            const t = a.timing || {};
+            return `${a.stateName}(startup=${t.startupMs ?? "?"}ms active=${t.activeMs ?? "?"}ms recov=${t.recoveryMs ?? "?"}ms minR=${(a.range?.minReach ?? 0).toFixed(2)} maxR=${a.range?.maxReach?.toFixed(2) ?? "?"} disp=${a.activeDisplacement?.toFixed(2) ?? "0"})`;
+        }).join(", ");
         const _throwSummary = throwProfiles.map(t =>
             `${t.stateName}(${t.projectileType} R_eff=${t.flight?.effectiveRange?.toFixed(2) ?? "?"})`
         ).join(", ");

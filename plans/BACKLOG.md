@@ -28,7 +28,7 @@
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 配音，格挡成功攻方播还是守方播，是不是跟动画播
 主人公clash也有加速奖励
-闪躲距离过长
+tavern hall night 摄像机限制不生效
 
 
 ## AI 系统

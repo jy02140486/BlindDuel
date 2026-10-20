@@ -1,0 +1,127 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_clash.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_clash.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_clash.png",
+                   "pushboxPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-10-20T12:18:53.5901333Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "manatarms_sword_clash 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  74.5,
+                                         "cy":  72.5,
+                                         "w":  48,
+                                         "h":  30,
+                                         "angle":  90,
+                                         "pixelCount":  1440
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  56,
+                                                    "cy":  127
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "manatarms_sword_clash 1.ase",
+                       "frameRect":  {
+                                         "x":  144,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  61.5,
+                                         "cy":  69.5,
+                                         "w":  46,
+                                         "h":  28,
+                                         "angle":  90,
+                                         "pixelCount":  1288
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  56,
+                                                    "cy":  127
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "manatarms_sword_clash 2.ase",
+                       "frameRect":  {
+                                         "x":  288,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  144
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  53.5,
+                                         "cy":  69.5,
+                                         "w":  48,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  1824
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  56,
+                                                    "cy":  127
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}

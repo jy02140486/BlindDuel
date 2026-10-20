@@ -1,6 +1,18 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` —— 阶段 A（BattleSession 抽象 + 每敌人独立 controller + 全链路 session 绑定 + checkpoint 语义分离）与阶段 B（prologue 双敌人双 trigger + 新 sequence trigger type + AI profile 实例级注入）已全部落地，回归验证中。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。
+> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` —— 阶段 A（BattleSession 抽象 + 每敌人独立 controller + 全链路 session 绑定 + checkpoint 语义分离）与阶段 B（prologue 双敌人双 trigger + 新 sequence trigger type + AI profile 实例级注入）已全部落地，回归验证中。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。ManatarmsSword 角色接入 + 盾牌破盾机制 + AI 被动守卫识别已落地（26.10.21）。
+
+## Update Log (2026-10-21)
+- **ManatarmsSword 角色接入 + 盾牌破盾机制 + AI 被动守卫识别全部落地**：按 `plans/26.10.20 ManAtArms人物接入计划.MD` 执行
+- **战斗规则**：ContactResolver 新增三阶段判定 hitbox→weaponbox→shield。`guardType: "shield"` 可被 `trajectory=slash && weight=heavy` 打破（shieldBroken），同时触发 stunned 硬直；stunned 期间 shield 消失（状态级 `passiveShieldDisabled: true`），可被正常 hit 扣血
+- **Character 状态级守卫开关**：CombatCharacter `passiveShieldDisabled: true` 配置字段——仅在指定状态下 config 级 guardType 不生效，其他状态保持原 shield 逻辑
+- **AI 被动守卫 profile**：AIKnowledgeRegistry 扫描完成后，若角色无任何 guardActive 状态但 config 级声明 guardType，自动生成标记为 `passive:true` 的虚拟 guard profile。AIController 从该 profile 读取 guardType，通过 ContactResolver.evaluateInteraction 判定当前对手攻击是否可被自身盾牌格挡，对 threatPenalty 做条件减免（可格挡时减至 10%）并调整 retreat 阈值。Manatarms（config 级 `guardType:"shield"` 无原生 guard 状态）自动生效；LongSwordMan、RabbleStick 等其他角色行为完全不受影响
+- **AIController 幻影射程 bug 修复**：`#getMeleeMaxEffReach()` 原公式 `maxReach + maxFwdBoost + rangeBuffer`（max 分离）错误，导致像 Manatarms（quart maxR=2.71 disp=-0.38，smash maxR=1.83 disp=-1.38）这样的角色 maxEffReach 被虚高到 4.29 world，AI 以为远在 maxEffReach 内而原地 hold 不动。正确公式：`Math.max(...attacks.map(a => a.maxReach + (-a.activeDisplacement))) + rangeBuffer`
+- **consecutiveAttackUsage 跨 positioning 累积**：AIController 在 positioning commit（hold/approach/retreat）时不再 reset/null consecutiveAttackUsage counter，让 repitition 罚分能跨 positioning 持续累积。修复了 Manatarms 等角色在近距离狂出同一招不换招的反馈锁死——counter 只有在不同 attack stateName 时才自然重置。对 Rabble 无副作用（不同 stateName 自然重置）
+- **资产与配置**：新增 ManatarmsSword StateGraph（quart/reverse_quart/smash/clash/stunned）+ clank/stunned 动画 atlas & collider；ep1_tavern_hall_night 场景 enemy 替换为 manatarms_sword + aiTuningOverrides instance 级调优（repetitionCostRate/Max、preemptiveBonus 等）
+- **工具链**：extract_collision_boxes.ps1 新增 `-PushBoxPng` 参数支持 pushbox 扫描，PushboxResolver 从 snapshot.boxes 过滤 type=="pushbox" 做角色间分离
+- **涉及文件**：ManatarmsStateGraph.json + AssetManifest.js + CharacterFactory.js + ContactResolver.js + CombatSystem.js + CombatCharacter.js（passiveShieldDisabled + getCombatSnapshot）+ AIKnowledgeRegistry.js（被动守卫 profile）+ AIController.js（selfGuardType + #getMeleeMaxEffReach + consecutiveAttackUsage）+ ep1_tavern_hall_night.json（instance override）
+- **设计参考**：`plans/26.10.20 ManAtArms人物接入计划.MD`、`plans/commits_detailed/26.10.21 引入ManAtArms和盾牌机制及相关AI系统扩展.MD`
 
 ## Update Log (2026-10-18)
 - **单场景多战斗重构（阶段 A+B）全部落地**：按 `plans/26.10.16 单场景多战斗重构计划.MD` 执行，prologue 场景正式拥有两场必选战斗（tutor 教学 + react 主线），无全局单例残留

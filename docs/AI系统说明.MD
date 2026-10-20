@@ -1,7 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-16 — AI 进攻性投掷（#scoreThrow 同池候选 + 弹道射程 flight 块 + throw 独立节奏冷却）
-> 上一次：2026-10-08 — 投掷物防御系统（reactive cut + preemptive cut）
+> 更新：2026-10-21 — ManatarmsSword 盾牌破盾机制 + AI 被动守卫 profile（selfGuardType + #scoreAttack threatPenalty 条件减免 + #scorePositioning retreat 阈值调整）+ consecutiveAttackUsage 跨 positioning 累积 + #getMeleeMaxEffReach 幻影射程 bug 修复
+> 上一次：2026-10-16 — AI 进攻性投掷（#scoreThrow 同池候选 + 弹道射程 flight 块 + throw 独立节奏冷却）
 > 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
 
@@ -190,8 +190,11 @@ score ×= posture.defenseMultiplier
 
 ```
 // ⚠️ 边界必须和 attack effectiveRange 对齐
-const maxFwdBoost = max(0, ...attacks.map(a => -a.activeDisplacement))
-const maxEffReach = maxAttack.maxReach + maxFwdBoost + rangeBuffer
+// 幻影射程 bug 修复（2026-10-21）：per-attack 求和后取 max，不是 max 分离
+// 错误：maxFwdBoost = max(-activeDisplacement) + maxReach（像 Manatarms quart/disp=-0.38,
+// smash/disp=-1.38 这样 maxR+maxDisp=2.71+1.38=4.09 虚高到超过任何单一攻击的真实可达）
+const maxAttackTotalReach = Math.max(...attacks.map(a => a.maxReach + (-a.activeDisplacement)))
+const maxEffReach = maxAttackTotalReach + rangeBuffer
 
 approach: distance > maxEffReach ? 0.35 × advanceMult × distanceHungerBoost : 0
 hold:     distance ∈ (closestMinReach, maxEffReach] ? 0.15 [+ cooldown 0.08] : 0
@@ -199,6 +202,8 @@ retreat:  distance ≤ closestMinReach+0.3 ? 0.5×retreatMult : oppThreat>thresh
 ```
 
 positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。hold 保底 0.15 防止 AI 原地不动。
+
+**consecutiveAttackUsage 跨 positioning 累积**（2026-10-21 修复）：positioning commit（hold/approach/retreat）**不重置** consecutiveAttackUsage counter——就让它 stale。只有在 attack commit 时 line 2095-2098 自然处理：同一 attack → count++，不同 stateName → count 重置为 1。这样 smash→hold→smash 的 count 链是 1→(不变)→2，repitition 终于能触发。对 Rabble 无副作用：thrust→hold→swing（不同 stateName）时 count 自然重置。
 
 ### #scoreThrow 完整链路（AI 进攻性投掷，2026-10-16）
 

@@ -121,7 +121,7 @@
       "clip": "smash",
       "attackActive": true,
       "attackWeight": "heavy",
-      "attackTrajectory": "slash",
+      "attackTrajectory": "thrust",
       "attackActiveFrames": [1, 2],
       "allowMoveInput": false,
       "loop": false,
@@ -133,7 +133,21 @@
           ]
         }
       ],
-      "frameSpeeds": [0,0.2,-3]
+      "frameSpeeds": [0,0.2,-2.4,-1.2]
+    },
+    "clash": {
+      "clip": "clash",
+      "allowMoveInput": false,
+      "loop": false,
+      "frameSpeeds": [0, 0],
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
     },
     "hit": {
       "clip": "hit",
@@ -148,11 +162,19 @@
         }
       ]
     },
-    "knockdown": {
-      "clip": "knockdown",
+    "stunned": {
+      "clip": "stunned",
       "allowMoveInput": false,
       "loop": false,
-      "transitions": []
+      "passiveShieldDisabled": true,
+      "transitions": [
+        {
+          "to": "idle",
+          "when": [
+            { "time": "normalized", "op": ">=", "value": 1.0 }
+          ]
+        }
+      ]
     },
     "defeated": {
       "clip": "knockdown",

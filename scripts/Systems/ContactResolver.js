@@ -89,7 +89,22 @@ export class ContactResolver {
                 if (guardType === "guard") {
                     if (trajectory !== "thrust") blocked = true;
                 } else if (guardType === "shield") {
-                    if (!(trajectory === "slash" && weight === "heavy")) blocked = true;
+                    if (!(trajectory === "slash" && weight === "heavy")) {
+                        blocked = true;  // 正常挡下（thrust / light slash）
+                    } else {
+                        // 破盾！heavy slash 击穿 shield
+                        // shield 吸收本次伤害 → invalidatedAttacks 跳过 Phase 2 命中（不扣血）
+                        invalidatedAttacks.add(offenseAttackId);
+                        effects.push({
+                            type: "shield_broken",
+                            targetId: defenseCharId,
+                            context: {
+                                attackerId: offenseCharId,
+                                attackInstanceId: offenseAttackId,
+                                knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX)
+                            }
+                        });
+                    }
                 } else {
                     blocked = true;
                 }
@@ -538,12 +553,17 @@ export class ContactResolver {
 
         // Guard 拦截判定（ContactResolver.resolve Phase 1 的同一规则）
         let blocked = false;
+        let shieldBroken = false;
         if (defenseGuardType === "guard") {
             // guard: 防 slash（light + heavy），不防 thrust
             if (offenseTrajectory !== "thrust") blocked = true;
         } else if (defenseGuardType === "shield") {
-            // shield: 防 thrust + light slash，不防 heavy slash
-            if (!(offenseTrajectory === "slash" && offenseWeight === "heavy")) blocked = true;
+            // shield: 防 thrust + light slash，唯独 heavy slash 破盾
+            if (!(offenseTrajectory === "slash" && offenseWeight === "heavy")) {
+                blocked = true;
+            } else {
+                shieldBroken = true;  // heavy slash 击穿 → 破盾硬直
+            }
         }
         // defenseGuardType 为 null 或其他 → 不拦截
 
@@ -551,9 +571,10 @@ export class ContactResolver {
 
         return {
             blocked,
+            shieldBroken,
             dodged: false,
             parryable,
-            willMiss: blocked // 对 AI 来说 blocked = 攻击打不中
+            willMiss: blocked  // 对 AI 来说 blocked = 攻击打不中；shieldBroken = 穿透但触发对手破盾（对 AI 算命中）
         };
     }
 }

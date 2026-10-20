@@ -11,7 +11,7 @@
     "postDefenseCounter": {
       "enabled": true,
       "triggers": ["guard_block", "parry"],
-      "durationMs": 500,
+      "durationMs": 1000,
       "allowedCommands": ["dash"]
     }
   },

@@ -1,0 +1,277 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_stunned.png",
+                   "pushboxPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-10-20T12:20:23.3851946Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "manatarms_sword_stunned 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_0",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  60.5,
+                                         "cy":  54,
+                                         "w":  51,
+                                         "h":  36,
+                                         "angle":  90,
+                                         "pixelCount":  1836
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "manatarms_sword_stunned 1.ase",
+                       "frameRect":  {
+                                         "x":  144,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_1",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  86,
+                                         "cy":  61.5,
+                                         "w":  52,
+                                         "h":  25,
+                                         "angle":  90,
+                                         "pixelCount":  1300
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "manatarms_sword_stunned 2.ase",
+                       "frameRect":  {
+                                         "x":  288,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_2",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  91.5,
+                                         "cy":  53,
+                                         "w":  47,
+                                         "h":  28,
+                                         "angle":  90,
+                                         "pixelCount":  1316
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "manatarms_sword_stunned 3.ase",
+                       "frameRect":  {
+                                         "x":  432,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_3",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  83,
+                                         "cy":  57.5,
+                                         "w":  48,
+                                         "h":  31,
+                                         "angle":  90,
+                                         "pixelCount":  1488
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "manatarms_sword_stunned 4.ase",
+                       "frameRect":  {
+                                         "x":  576,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_4",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  60.5,
+                                         "cy":  51.5,
+                                         "w":  56,
+                                         "h":  36,
+                                         "angle":  90,
+                                         "pixelCount":  2016
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  5,
+                       "frameName":  "manatarms_sword_stunned 5.ase",
+                       "frameRect":  {
+                                         "x":  720,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_5",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  60,
+                                         "cy":  53.5,
+                                         "w":  50,
+                                         "h":  35,
+                                         "angle":  90,
+                                         "pixelCount":  1750
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  6,
+                       "frameName":  "manatarms_sword_stunned 6.ase",
+                       "frameRect":  {
+                                         "x":  864,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_6",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  59.5,
+                                         "cy":  54.5,
+                                         "w":  60,
+                                         "h":  40,
+                                         "angle":  90,
+                                         "pixelCount":  2400
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  7,
+                       "frameName":  "manatarms_sword_stunned 7.ase",
+                       "frameRect":  {
+                                         "x":  1008,
+                                         "y":  0,
+                                         "w":  144,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+                                     {
+                                         "id":  "hitbox_7",
+                                         "type":  "hitbox",
+                                         "subtype":  null,
+                                         "cx":  61.5,
+                                         "cy":  53,
+                                         "w":  51,
+                                         "h":  38,
+                                         "angle":  90,
+                                         "pixelCount":  1938
+                                     }
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}
