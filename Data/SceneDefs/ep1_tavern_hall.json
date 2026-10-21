@@ -92,8 +92,8 @@
             }
         }
     ],
-    "cameraBoundaries": [
-  { "if": {}, "minY": -6, "maxY": 6.24, "minX": -13.64, "maxX": 14.64}
+      "cameraBoundaries": [
+    { "if": {}, "minY": -6.16, "maxY": 6.32, "minX": -13.64, "maxX": 16}
     ],
     "walkAreas": [
         { "if": {}, "minX": -6.75, "maxX": 13.98, "minY": -4.77, "maxY": -1.65 }

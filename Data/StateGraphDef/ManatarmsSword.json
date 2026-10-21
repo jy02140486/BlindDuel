@@ -160,7 +160,8 @@
             { "time": "normalized", "op": ">=", "value": 1.0 }
           ]
         }
-      ]
+      ],
+      "frameSpeeds": [0.4, -0.1]
     },
     "stunned": {
       "clip": "stunned",
@@ -174,7 +175,8 @@
             { "time": "normalized", "op": ">=", "value": 1.0 }
           ]
         }
-      ]
+      ],
+      "frameSpeeds": [0,1.2,0.74,0,0,0,0]
     },
     "defeated": {
       "clip": "knockdown",
