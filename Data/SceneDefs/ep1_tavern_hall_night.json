@@ -6,6 +6,7 @@
         "smoothing": 0.12,
         "orthoWidth": 26
     },
+    "introSequenceUrl": "Data/Sequences/ep1_cs_tavern_hall_night_intro.json",
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "stageMask": "tavern_indoor",
     "entities": [
@@ -14,7 +15,7 @@
             "id": "hero",
             "name": "hero",
             "kind": "player",
-            "pos": [0, 0],
+            "pos": [-5.790, -3.140],
             "controller": "player"
         },
         {
@@ -22,7 +23,7 @@
             "id": "enemy_1",
             "name": "manatarms",
             "kind": "enemy",
-            "pos": [8.47, -4.92],
+            "pos": [4.47, -4.92],
             "controller": "ai",
             "spawnIf": { "flagNot": "battle_field_2" },
             "aiTuningOverrides": {
@@ -35,15 +36,13 @@
             }
         }
     ],
-    "walkAreas": [
-        { "if": {}, "minX": -6.75, "maxX": 13.98, "minY": -4.77, "maxY": -1.65 }
-    ],
     "cameraBoundaries": [
     { "if": {}, "minY": -6.16, "maxY": 6.32, "minX": -13.64, "maxX": 16}
     ],
     "spawns": {
-        "house_door": [-2.09, -1, 0],
-        "house_door_room": [-5.91, -2.81, 0]
+        "enter_tavern_room": [-5.91, -2.81, 0],
+        "house_door_room": [-5.91, -2.81, 0],
+       "house_door": [-2.09, -1, 0] 
     },
     "triggers": [
         {
@@ -67,8 +66,8 @@
         {
             "type": "battle",
             "id": "bt_field_2",
-            "pos": [2.47, -4.90, 0],
-            "size": [1, 2, 3],
+            "pos": [-3, -2.90, 0],
+            "size": [5, 6, 4],
             "battleId": "battle_field_2",
             "condition": { "flagNot": "battle_field_2" },
             "debugColor": [0, 1, 0],

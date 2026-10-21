@@ -8,7 +8,6 @@
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
-    "ambient": ["forest_ambient"],
     "entities": [
         {
             "archetype": "hero_longsword",

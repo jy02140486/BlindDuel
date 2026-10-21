@@ -1,0 +1,46 @@
+{ "frames": {
+   "manatarms_sword_CS_provoke 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 192, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
+    "sourceSize": { "w": 192, "h": 128 },
+    "duration": 500
+   },
+   "manatarms_sword_CS_provoke 1.ase": {
+    "frame": { "x": 192, "y": 0, "w": 192, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
+    "sourceSize": { "w": 192, "h": 128 },
+    "duration": 500
+   },
+   "manatarms_sword_CS_provoke 2.ase": {
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 128 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 128 },
+    "sourceSize": { "w": 192, "h": 128 },
+    "duration": 1000
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\manatarms_sword\\manatarms_sword_CS_provoke.png",
+  "format": "RGBA8888",
+  "size": { "w": 576, "h": 128 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "whole", "opacity": 255, "blendMode": "normal" },
+   { "name": "weapon", "opacity": 255, "blendMode": "normal" },
+   { "name": "lowerbody", "opacity": 255, "blendMode": "normal" },
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "leftarm", "opacity": 255, "blendMode": "normal" },
+   { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
+   { "name": "rootmotion", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}

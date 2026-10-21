@@ -191,7 +191,7 @@ export const BATTLE_FIELD_2 = {
     combatantConfig: {
         enemy_1: { throwAmmo: 3 },
     },
-    stageBounds: { minX: -0.5, maxX: 12, minY: -4.85, maxY: -4.75 },
+    stageBounds: { minX: -6, maxX: 12, minY: -4.85, maxY: -4.75 },
     battleYBaseline: -4.8,
     onVictory: {
         scenario: SCENARIO.BATTLE_1_COMPLETED,
@@ -202,7 +202,7 @@ export const BATTLE_FIELD_2 = {
     },
     duelCamera: {
         zoomMinDistance: 2.4,
-        zoomMaxDistance: 5.0,
+        zoomMaxDistance: 12,
         orthoMinWidth: 12,
         orthoMaxWidth: 24,
         perspMinDistance: 12,

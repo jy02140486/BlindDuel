@@ -133,7 +133,7 @@
           ]
         }
       ],
-      "frameSpeeds": [0,0.2,-2.4,-1.2]
+      "frameSpeeds": [0,0.2,-2,-1.2]
     },
     "clash": {
       "clip": "clash",
@@ -180,6 +180,12 @@
     },
     "defeated": {
       "clip": "knockdown",
+      "allowMoveInput": false,
+      "loop": false,
+      "transitions": []
+    },
+    "CS_provoke": {
+      "clip": "CS_provoke",
       "allowMoveInput": false,
       "loop": false,
       "transitions": []

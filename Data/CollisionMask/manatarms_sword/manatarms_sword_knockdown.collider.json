@@ -1,11 +1,9 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.png",
-                   "rootAtlasJson":  "Data/RootMotion/manatarms/manatarms_sword_knockdown.json",
-                   "rootAtlasPng":  "Data/RootMotion/manatarms/manatarms_sword_knockdown.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_knockdown.png",
+                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_knockdown.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -28,10 +26,11 @@
                                            ],
                    "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T12:47:10.2244918Z"
+                   "generatedAtUtc":  "2026-10-21T15:54:08.5211708Z"
                },
     "frames":  [
                    {
@@ -54,13 +53,25 @@
                                          "h":  29,
                                          "angle":  90,
                                          "pixelCount":  1450
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  48,
+                                         "cy":  107,
+                                         "w":  61,
+                                         "h":  21,
+                                         "angle":  0,
+                                         "pixelCount":  1281
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  62.5,
                                                     "cy":  114.5
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -83,13 +94,25 @@
                                          "h":  22,
                                          "angle":  90,
                                          "pixelCount":  1034
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  39,
+                                         "cy":  110.5,
+                                         "w":  45,
+                                         "h":  28,
+                                         "angle":  0,
+                                         "pixelCount":  1260
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  57.5,
                                                     "cy":  118.5
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -112,13 +135,25 @@
                                          "h":  30,
                                          "angle":  90,
                                          "pixelCount":  1320
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  25,
+                                         "cy":  108,
+                                         "w":  49,
+                                         "h":  27,
+                                         "angle":  0,
+                                         "pixelCount":  1323
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  52,
                                                     "cy":  115
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -141,13 +176,25 @@
                                          "h":  32,
                                          "angle":  90,
                                          "pixelCount":  1280
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  11.5,
+                                         "cy":  108,
+                                         "w":  29,
+                                         "h":  22,
+                                         "angle":  90,
+                                         "pixelCount":  638
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  38,
                                                     "cy":  117
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -170,13 +217,25 @@
                                          "h":  33,
                                          "angle":  90,
                                          "pixelCount":  1353
+                                     },
+                                     {
+                                         "id":  "pushbox_4",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  12,
+                                         "cy":  103.5,
+                                         "w":  32,
+                                         "h":  25,
+                                         "angle":  90,
+                                         "pixelCount":  800
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  14,
                                                     "cy":  115
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]

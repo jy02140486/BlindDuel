@@ -3,7 +3,7 @@
                    "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.json",
                    "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.png",
                    "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_stunned.png",
-                   "pushboxPng":  null,
+                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_stunned.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -30,7 +30,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-20T12:20:23.3851946Z"
+                   "generatedAtUtc":  "2026-10-21T15:52:02.3561072Z"
                },
     "frames":  [
                    {
@@ -53,6 +53,17 @@
                                          "h":  36,
                                          "angle":  90,
                                          "pixelCount":  1836
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  59,
+                                         "cy":  104.5,
+                                         "w":  65,
+                                         "h":  18,
+                                         "angle":  0,
+                                         "pixelCount":  1170
                                      }
                                  ],
                        "anchors":  {
@@ -83,6 +94,17 @@
                                          "h":  25,
                                          "angle":  90,
                                          "pixelCount":  1300
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  72.5,
+                                         "cy":  109,
+                                         "w":  72,
+                                         "h":  17,
+                                         "angle":  0,
+                                         "pixelCount":  1224
                                      }
                                  ],
                        "anchors":  {
@@ -113,6 +135,17 @@
                                          "h":  28,
                                          "angle":  90,
                                          "pixelCount":  1316
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  75,
+                                         "cy":  102,
+                                         "w":  59,
+                                         "h":  23,
+                                         "angle":  0,
+                                         "pixelCount":  1357
                                      }
                                  ],
                        "anchors":  {
@@ -143,6 +176,17 @@
                                          "h":  31,
                                          "angle":  90,
                                          "pixelCount":  1488
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  80,
+                                         "cy":  106.5,
+                                         "w":  53,
+                                         "h":  20,
+                                         "angle":  0,
+                                         "pixelCount":  1060
                                      }
                                  ],
                        "anchors":  {
@@ -173,6 +217,17 @@
                                          "h":  36,
                                          "angle":  90,
                                          "pixelCount":  2016
+                                     },
+                                     {
+                                         "id":  "pushbox_4",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  60.5,
+                                         "cy":  106.5,
+                                         "w":  72,
+                                         "h":  16,
+                                         "angle":  0,
+                                         "pixelCount":  1152
                                      }
                                  ],
                        "anchors":  {
@@ -203,6 +258,17 @@
                                          "h":  35,
                                          "angle":  90,
                                          "pixelCount":  1750
+                                     },
+                                     {
+                                         "id":  "pushbox_5",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  59,
+                                         "cy":  105,
+                                         "w":  67,
+                                         "h":  19,
+                                         "angle":  0,
+                                         "pixelCount":  1273
                                      }
                                  ],
                        "anchors":  {
@@ -233,6 +299,17 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  2400
+                                     },
+                                     {
+                                         "id":  "pushbox_6",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  58,
+                                         "cy":  106,
+                                         "w":  67,
+                                         "h":  21,
+                                         "angle":  0,
+                                         "pixelCount":  1407
                                      }
                                  ],
                        "anchors":  {
@@ -263,6 +340,17 @@
                                          "h":  38,
                                          "angle":  90,
                                          "pixelCount":  1938
+                                     },
+                                     {
+                                         "id":  "pushbox_7",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  59.5,
+                                         "cy":  105.5,
+                                         "w":  66,
+                                         "h":  18,
+                                         "angle":  0,
+                                         "pixelCount":  1188
                                      }
                                  ],
                        "anchors":  {

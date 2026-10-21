@@ -1,0 +1,44 @@
+{
+  "id": "ep1_cs_tavern_hall_night_intro",
+  "durationMs": 5600,
+  "tracks": [
+    {
+      "id": "camera.movement",
+      "kind": "camera",
+      "binding": { "cameraId": "scripted" },
+      "channel": "frame",
+      "clips": [
+        { "type": "setCameraFrame", "atMs": 1000, "center": [3.83, -2.92, 0], "height": -2, "orthoWidth": 20 },
+        { "type": "cameraBlend", "startMs": 1000, "durationMs": 1000, "to": "scripted" },
+        { "type": "cameraBlend", "startMs": 4500, "durationMs": 1000, "to": "explore" }
+      ]
+    },{
+      "id": "hero.walk",
+      "kind": "actor",
+      "binding": { "actorId": "hero" },
+      "channel": "movement",
+      "clips": [
+        { "type": "inputLock", "atMs": 0, "locked": true },
+        { "type": "inputLock", "atMs": 5500, "locked": false }
+      ]
+    },
+    {
+      "id": "fx.fadein",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "enemy_1",
+      "kind": "actor",
+      "binding": { "actorId": "enemy_1" },
+      "clips": [
+        { "type": "command",       "atMs": 0, "command": "CS_provoke", "pause": true },
+        { "type": "resumeAnimation","atMs": 2000 },
+        { "type": "command",       "atMs": 5000, "command": "idle" }
+      ]
+    }
+    ]
+}

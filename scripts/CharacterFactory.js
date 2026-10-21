@@ -322,6 +322,12 @@ export function createManatarmsCharacter(scene, assets) {
                 atlasData: assets.atlas.manatarms.stunned,
                 colliderData: assets.colliders.manatarms.stunned,
                 loop: false
+            },
+            CS_provoke: {
+                spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_CS_provoke.png",
+                atlasData: assets.atlas.manatarms.CS_provoke,
+                colliderData: assets.colliders.manatarms.CS_provoke,
+                loop: false
             }
         }
     });

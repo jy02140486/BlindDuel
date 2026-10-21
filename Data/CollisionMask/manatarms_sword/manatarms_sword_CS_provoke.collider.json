@@ -1,0 +1,97 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/RootMotion/manatarms/manatarms_sword_CS_provoke.json",
+                   "collisionPng":  "Data/RootMotion/manatarms/manatarms_sword_CS_provoke.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_CS_provoke.png",
+                   "pushboxPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "generatedAtUtc":  "2026-10-21T06:12:20.0407790Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "manatarms_sword_CS_provoke 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "manatarms_sword_CS_provoke 1.ase",
+                       "frameRect":  {
+                                         "x":  192,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "manatarms_sword_CS_provoke 2.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}

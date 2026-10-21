@@ -3,7 +3,7 @@
                    "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.json",
                    "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.png",
                    "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_quart.png",
-                   "pushboxPng":  null,
+                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -30,7 +30,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-20T15:38:00.3569372Z"
+                   "generatedAtUtc":  "2026-10-21T15:48:36.7238795Z"
                },
     "frames":  [
                    {
@@ -75,6 +75,17 @@
                                          "h":  17,
                                          "angle":  90,
                                          "pixelCount":  714
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  81.5,
+                                         "cy":  139,
+                                         "w":  58,
+                                         "h":  19,
+                                         "angle":  0,
+                                         "pixelCount":  1102
                                      }
                                  ],
                        "anchors":  {
@@ -127,6 +138,17 @@
                                          "h":  17,
                                          "angle":  90,
                                          "pixelCount":  782
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  83.5,
+                                         "cy":  140,
+                                         "w":  60,
+                                         "h":  17,
+                                         "angle":  0,
+                                         "pixelCount":  1020
                                      }
                                  ],
                        "anchors":  {
@@ -179,6 +201,17 @@
                                          "h":  16.712,
                                          "angle":  -63.544,
                                          "pixelCount":  528
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  84.5,
+                                         "cy":  140,
+                                         "w":  48,
+                                         "h":  15,
+                                         "angle":  0,
+                                         "pixelCount":  720
                                      }
                                  ],
                        "anchors":  {
@@ -220,6 +253,17 @@
                                          "h":  32,
                                          "angle":  90,
                                          "pixelCount":  1792
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  81.5,
+                                         "cy":  141,
+                                         "w":  62,
+                                         "h":  13,
+                                         "angle":  0,
+                                         "pixelCount":  806
                                      }
                                  ],
                        "anchors":  {

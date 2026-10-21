@@ -1,11 +1,9 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.png",
-                   "rootAtlasJson":  "Data/RootMotion/manatarms/manatarms_sword_idle.json",
-                   "rootAtlasPng":  "Data/RootMotion/manatarms/manatarms_sword_idle.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_idle.png",
+                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_idle.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -28,10 +26,11 @@
                                            ],
                    "pushboxColor":  "#00FF88",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T11:16:56.8298784Z"
+                   "generatedAtUtc":  "2026-10-21T15:52:23.5897878Z"
                },
     "frames":  [
                    {
@@ -76,13 +75,25 @@
                                          "h":  17,
                                          "angle":  90,
                                          "pixelCount":  833
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  48.5,
+                                         "cy":  107,
+                                         "w":  56,
+                                         "h":  17,
+                                         "angle":  0,
+                                         "pixelCount":  952
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  60,
                                                     "cy":  111
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -127,13 +138,25 @@
                                          "h":  17,
                                          "angle":  90,
                                          "pixelCount":  833
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  48.5,
+                                         "cy":  107,
+                                         "w":  56,
+                                         "h":  17,
+                                         "angle":  0,
+                                         "pixelCount":  952
                                      }
                                  ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  60,
                                                     "cy":  111
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]
