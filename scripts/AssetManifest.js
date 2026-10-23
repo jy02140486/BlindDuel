@@ -58,7 +58,8 @@ export const ASSET_MANIFEST = {
             hit: "./Art/Sprite/manatarms_sword/manatarms_sword_hit.json",
             knockdown: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.json",
             clash: "./Art/Sprite/manatarms_sword/manatarms_sword_clash.json",
-            stunned: "./Art/Sprite/manatarms_sword/manatarms_sword_stunned.json"
+            stunned: "./Art/Sprite/manatarms_sword/manatarms_sword_stunned.json",
+            CS_provoke: "./Art/Sprite/manatarms_sword/manatarms_sword_CS_provoke.json"
         },
         npc: {
             traveller: "./Art/Sprite/NPCs/traveller.json",
@@ -126,7 +127,8 @@ export const ASSET_MANIFEST = {
             hit: "./Data/CollisionMask/manatarms_sword/manatarms_sword_hit.collider.json",
             knockdown: "./Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.collider.json",
             clash: "./Data/CollisionMask/manatarms_sword/manatarms_sword_clash.collider.json",
-            stunned: "./Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.collider.json"
+            stunned: "./Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.collider.json",
+            CS_provoke: "./Data/CollisionMask/manatarms_sword/manatarms_sword_CS_provoke.collider.json"
         }
     },
     animationEvents: {

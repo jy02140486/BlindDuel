@@ -376,6 +376,7 @@ export class CombatCharacter extends CharacterBase {
             stateName: this.currentStateName,
             frameIndex: this.animation.currentFrameIndex,
             rootPositionX: this.root.position.x,
+            facing: this.facing,
             attackInstanceId,
             stateEnterTick: this.stateEnterTick,
             dodgeActive: this.currentStateDef?.dodgeActive === true,

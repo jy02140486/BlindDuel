@@ -12,6 +12,8 @@ export class ContactResolver {
         this.defenseSuccessDedupe = new Set();
         // 攻击失效集合：被盾牌拦截或拼刀失败的攻击，跨帧保留直到攻击结束。
         this.invalidatedAttacks = new Set();
+        // 接触异常去重：同一攻击实例对同一目标、同一异常类型只记录一次日志。
+        this.contactExceptionDedupe = new Set();
         // 系统级战斗手感参数（嵌套对象，字段分组与 CombatTuning.js 一一对应）
         this.tuning = options.combatTuning ?? CombatTuning;
         this.debugTrace = options.debugTrace ?? false;
@@ -271,6 +273,8 @@ export class ContactResolver {
             });
         }
 
+        this.#detectContactExceptions(snapshots, frameContacts, effects, tickCount);
+
         return { frameContacts, effects };
     }
 
@@ -326,6 +330,13 @@ export class ContactResolver {
         for (const attackId of this.invalidatedAttacks) {
             if (!activeAttackIds.has(attackId)) {
                 this.invalidatedAttacks.delete(attackId);
+            }
+        }
+
+        for (const key of this.contactExceptionDedupe) {
+            const [attackId] = key.split("|");
+            if (!activeAttackIds.has(attackId)) {
+                this.contactExceptionDedupe.delete(key);
             }
         }
     }
@@ -576,5 +587,157 @@ export class ContactResolver {
             parryable,
             willMiss: blocked  // 对 AI 来说 blocked = 攻击打不中；shieldBroken = 穿透但触发对手破盾（对 AI 算命中）
         };
+    }
+
+    /**
+     * 检测接触异常并记录日志（纯观察，不产生任何游戏效果）。
+     * 两类异常：
+     *   Case 1 (Overshoot): active attack 的 weaponbox 越过了 target 的 hitbox，
+     *                      本帧无命中，也无 weapon-vs-hitbox 相交对——即空挥。
+     *   Case 2 (ShieldBypass): Phase 2 产生了 hit，target 有 active shield box，
+     *                         且攻击不是 heavy slash 但 guardDedupe 中没有
+     *                         对应 attackId|targetId——即 Phase 1 根本没发生
+     *                         shield-weaponbox 相交，本应被挡的攻击穿过了。
+     */
+    #detectContactExceptions(snapshots, frameContacts, effects, tickCount) {
+        if (snapshots.length < 2) return;
+        const snapshotById = new Map(snapshots.map((s) => [s.characterId, s]));
+
+        // Phase 2 命中记录：本帧哪些 attackInstanceId 实际命中了谁
+        const hitEffectMap = new Map(); // attackId -> Set<targetId>
+        for (const fx of effects) {
+            if (fx.type === "hit") {
+                const { attackInstanceId, attackerId, targetId } = fx.context;
+                if (attackInstanceId) {
+                    if (!hitEffectMap.has(attackInstanceId)) hitEffectMap.set(attackInstanceId, new Set());
+                    hitEffectMap.get(attackInstanceId).add(targetId);
+                }
+            }
+        }
+
+        // 构建 weapon-vs-hitbox 相交对的快速查找集，key: attackerId|weaponBoxId|targetId|hitboxId
+        const wvhKeySet = new Set();
+        for (const c of frameContacts.weaponVsHitbox) {
+            wvhKeySet.add(`${c.attackerId}|${c.weapon.id}|${c.targetId}|${c.hitbox.id}`);
+        }
+
+        // ---- 遍历所有 snapshot 对 ----
+        for (let i = 0; i < snapshots.length; i += 1) {
+            for (let j = 0; j < snapshots.length; j += 1) {
+                if (i === j) continue;
+                const attacker = snapshots[i];
+                const target = snapshots[j];
+
+                // 防御方在 dodgeActive 时 hitbox 无敌，异常判定无意义
+                if (target.dodgeActive) continue;
+
+                const attackBoxes = attacker.boxes.filter((b) => b.type === "weaponbox" && b.boxRole === "attack");
+                const hitboxes = target.boxes.filter((b) => b.type === "hitbox");
+                if (attackBoxes.length === 0 || hitboxes.length === 0) continue;
+
+                for (const weapon of attackBoxes) {
+                    const attackId = weapon.attackInstanceId;
+                    if (!attackId) continue;
+
+                    for (const hitbox of hitboxes) {
+                        // ---- Case 1: Overshoot ----
+                        const keyC1 = `${attackId}|${target.characterId}|Case1`;
+                        if (!this.contactExceptionDedupe.has(keyC1)) {
+                            const overshot = this.#isOvershoot(attacker, weapon, target, hitbox);
+                            if (overshot) {
+                                const noContact = !wvhKeySet.has(
+                                    `${attacker.characterId}|${weapon.id}|${target.characterId}|${hitbox.id}`
+                                );
+                                const noHit = !hitEffectMap.get(attackId)?.has(target.characterId);
+                                if (noContact && noHit) {
+                                    this.contactExceptionDedupe.add(keyC1);
+                                    this.#logContactException(
+                                        "Case1-Overshoot", tickCount,
+                                        attacker, target,
+                                        weapon, hitbox, null
+                                    );
+                                }
+                            }
+                        }
+
+                        // ---- Case 2: ShieldBypass ----
+                        const keyC2 = `${attackId}|${target.characterId}|Case2`;
+                        if (!this.contactExceptionDedupe.has(keyC2)) {
+                            const actuallyHit = hitEffectMap.get(attackId)?.has(target.characterId);
+                            if (actuallyHit) {
+                                const shieldBoxes = target.boxes.filter((b) => b.boxRole === "shield");
+                                for (const shield of shieldBoxes) {
+                                    const isHeavySlash = weapon.attackTrajectory === "slash" && weapon.attackWeight === "heavy";
+                                    const phase1Intercepted = this.guardDedupe.has(`${attackId}|${target.characterId}`);
+                                    // shield 应挡 light/thrust；heavy slash 破盾是正常设计，不算异常
+                                    if (!isHeavySlash && !phase1Intercepted) {
+                                        this.contactExceptionDedupe.add(keyC2);
+                                        this.#logContactException(
+                                            "Case2-ShieldBypass", tickCount,
+                                            attacker, target,
+                                            weapon, hitbox, shield
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 判断 weaponbox 是否按 facing 方向越过了 hitbox 的最远 X 边界。
+     * attacker.facing > 0 → 向右攻 → weapon.center.x > hitbox.center.x + hitbox.half.x
+     * attacker.facing < 0 → 向左攻 → weapon.center.x < hitbox.center.x - hitbox.half.x
+     */
+    #isOvershoot(attacker, weapon, target, hitbox) {
+        const dir = attacker.facing ?? 0;
+        if (dir === 0) {
+            // facing 不可用：用 rootPositionX 差值推断
+            const atkOnLeft = attacker.rootPositionX < target.rootPositionX;
+            return atkOnLeft
+                ? weapon.center.x > hitbox.center.x + hitbox.half.x
+                : weapon.center.x < hitbox.center.x - hitbox.half.x;
+        }
+        if (dir > 0) return weapon.center.x > hitbox.center.x + hitbox.half.x;
+        return weapon.center.x < hitbox.center.x - hitbox.half.x;
+    }
+
+    /**
+     * 输出 Contact Exception 日志。shieldBox 传 null 表示 Case 1。
+     */
+    #logContactException(caseType, tickCount, attacker, target, weapon, hitbox, shieldBox) {
+        const aState = `${attacker.stateName}@${attacker.frameIndex}`;
+        const tState = `${target.stateName}@${target.frameIndex}`;
+        const aFacing = attacker.facing >= 0 ? "+1" : "-1";
+        const wcx = weapon.center.x.toFixed(2);
+        const wcy = weapon.center.y.toFixed(2);
+        const hcx = hitbox.center.x.toFixed(2);
+        const hcy = hitbox.center.y.toFixed(2);
+        let parts = [
+            `Contact Exception [${caseType}] tick=${tickCount}`,
+            `| attacker=${attacker.characterId}(${aState}) facing=${aFacing}`,
+            `target=${target.characterId}(${tState})`,
+            `| weapon=${weapon.id} center=(${wcx},${wcy})`,
+            `hitbox=${hitbox.id} center=(${hcx},${hcy})`,
+        ];
+        if (shieldBox) {
+            const scx = shieldBox.center.x.toFixed(2);
+            const scy = shieldBox.center.y.toFixed(2);
+            parts.push(`shield=${shieldBox.id} center=(${scx},${scy})`);
+            parts.push(
+                `| weight=${weapon.attackWeight} trajectory=${weapon.attackTrajectory}`,
+                `guardType=${shieldBox.guardType}`
+            );
+        } else {
+            parts.push(
+                `| attackerRootX=${attacker.rootPositionX.toFixed(2)}`,
+                `targetRootX=${target.rootPositionX.toFixed(2)}`
+            );
+        }
+        console.log(parts.join(" "));
     }
 }

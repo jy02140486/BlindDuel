@@ -1,9 +1,9 @@
 ﻿{
     "source":  {
-                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.json",
-                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.png",
-                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_quart.png",
-                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_quart.png",
+                   "atlasJson":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_quart.json",
+                   "collisionPng":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_quart.png",
+                   "rootPng":  ".\\Data\\RootMotion\\manatarms\\manatarms_sword_quart.png",
+                   "pushboxPng":  ".\\Data\\PushBox\\manatarms_sword\\manatarms_sword_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -30,7 +30,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-21T15:48:36.7238795Z"
+                   "generatedAtUtc":  "2026-10-22T05:40:03.0708519Z"
                },
     "frames":  [
                    {
@@ -47,17 +47,6 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  84,
-                                         "cy":  67.5,
-                                         "w":  25,
-                                         "h":  22,
-                                         "angle":  0,
-                                         "pixelCount":  550
-                                     },
-                                     {
-                                         "id":  "hitbox_1",
-                                         "type":  "hitbox",
-                                         "subtype":  null,
                                          "cx":  67.096,
                                          "cy":  132.239,
                                          "w":  33.667,
@@ -69,12 +58,12 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  60,
-                                         "cy":  91.5,
-                                         "w":  42,
-                                         "h":  17,
+                                         "cx":  69,
+                                         "cy":  88,
+                                         "w":  51,
+                                         "h":  35,
                                          "angle":  90,
-                                         "pixelCount":  714
+                                         "pixelCount":  1785
                                      },
                                      {
                                          "id":  "pushbox_0",
@@ -107,7 +96,7 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_2",
+                                         "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  92,
@@ -118,7 +107,7 @@
                                          "pixelCount":  1085
                                      },
                                      {
-                                         "id":  "hitbox_3",
+                                         "id":  "hitbox_2",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  72.429,
@@ -170,7 +159,7 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_4",
+                                         "id":  "hitbox_3",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  76.487,
@@ -181,7 +170,7 @@
                                          "pixelCount":  599
                                      },
                                      {
-                                         "id":  "hitbox_5",
+                                         "id":  "hitbox_4",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  80.5,
@@ -192,7 +181,7 @@
                                          "pixelCount":  560
                                      },
                                      {
-                                         "id":  "hitbox_6",
+                                         "id":  "hitbox_5",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  67.199,
@@ -233,7 +222,7 @@
                                      },
                        "boxes":  [
                                      {
-                                         "id":  "hitbox_7",
+                                         "id":  "hitbox_6",
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  76,

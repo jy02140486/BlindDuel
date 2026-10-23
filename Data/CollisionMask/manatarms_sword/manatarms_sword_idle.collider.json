@@ -1,9 +1,9 @@
 ﻿{
     "source":  {
-                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.json",
-                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_idle.png",
-                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_idle.png",
-                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_idle.png",
+                   "atlasJson":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_idle.json",
+                   "collisionPng":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_idle.png",
+                   "rootPng":  ".\\Data\\RootMotion\\manatarms\\manatarms_sword_idle.png",
+                   "pushboxPng":  ".\\Data\\PushBox\\manatarms_sword\\manatarms_sword_idle.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -30,7 +30,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-21T15:52:23.5897878Z"
+                   "generatedAtUtc":  "2026-10-22T05:38:58.1367690Z"
                },
     "frames":  [
                    {
@@ -48,11 +48,11 @@
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  52,
-                                         "cy":  54,
-                                         "w":  57,
-                                         "h":  27,
-                                         "angle":  90,
-                                         "pixelCount":  1539
+                                         "cy":  32.5,
+                                         "w":  27,
+                                         "h":  14,
+                                         "angle":  0,
+                                         "pixelCount":  378
                                      },
                                      {
                                          "id":  "hitbox_1",
@@ -69,12 +69,12 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  29,
+                                         "cx":  43,
                                          "cy":  64,
                                          "w":  49,
-                                         "h":  17,
+                                         "h":  45,
                                          "angle":  90,
-                                         "pixelCount":  833
+                                         "pixelCount":  2205
                                      },
                                      {
                                          "id":  "pushbox_0",
@@ -111,11 +111,11 @@
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  52,
-                                         "cy":  54,
-                                         "w":  57,
-                                         "h":  27,
-                                         "angle":  90,
-                                         "pixelCount":  1539
+                                         "cy":  32.5,
+                                         "w":  27,
+                                         "h":  14,
+                                         "angle":  0,
+                                         "pixelCount":  378
                                      },
                                      {
                                          "id":  "hitbox_3",
@@ -132,12 +132,12 @@
                                          "id":  "weaponbox_strong_blade_1",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  29,
+                                         "cx":  46.503,
                                          "cy":  64,
-                                         "w":  49,
-                                         "h":  17,
-                                         "angle":  90,
-                                         "pixelCount":  833
+                                         "w":  49.215,
+                                         "h":  38.274,
+                                         "angle":  -89.665,
+                                         "pixelCount":  1860
                                      },
                                      {
                                          "id":  "pushbox_1",
