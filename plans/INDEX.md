@@ -1,6 +1,34 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` —— 阶段 A（BattleSession 抽象 + 每敌人独立 controller + 全链路 session 绑定 + checkpoint 语义分离）与阶段 B（prologue 双敌人双 trigger + 新 sequence trigger type + AI profile 实例级注入）已全部落地，回归验证中。Phase 5 统一预测架构（predictedOpponentEvents）已完成，B5 events 驱动 positioning 已完成（2026-10-12）。B6 predictionAccuracy 旋钮仍在 backlog。ManatarmsSword 角色接入 + 盾牌破盾机制 + AI 被动守卫识别已落地（26.10.21）。
+> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` 已全部落地；Clash Seeker（主动寻求拼刀）26.10.25 落地。Backlog B7 closestMinReach 退化 + 近距离长 startup 惩罚（26.10.25 发现，根因 smash.minReach=0.00 把 closestMinReach 拉成零，导致 positioning 全程 hold 定住 + 近距离主动出最慢招）。
+
+## Update Log (2026-10-25)
+- **Clash Seeker（主动寻求拼刀）全部落地**：按 `plans/26.10.22 防御缺口补完计划.MD` Step 1-4 执行
+- **系统级 tuning**：`Data/AITuning.js` 新增 `attack.clashSeeker = { baseBonus: 0.25 }`
+- **AIController 改动**：
+  - `#checkClashSeekerEligible`（6 项资格检查）+ `#computeClashSeekerBonus`（urgency×baseBonus×knob → 加分）两个独立私有方法
+  - 硬门控阶段（`distance > maxRange → return 0`）提前做 clash 资格检查 → 合格候选**放行** + 诊断输出；不合格候选原路径 return 0
+  - 加分在 preemptive/threat/vuln/feedback/repetition/startup 所有常规因子**之后**追加，独立于 rangeFactor 衰减
+  - oppAtkWindow 变量提前到硬门槛之前（原在 preemptive bonus 分支内），让资格检查能使用
+- **AI 行为**：Manatarms（`clashSeekerWeight=1.0`）在 opp 刚 startup 时主动选 smash（heavy）来 intercept 对手的 heavy attack（如 zornhut），触发 Phase 1 attack-vs-attack clash_tie → 双方 freezeImpact，Manatarms 不扣血
+- **smash 资产级治理**（修复 clash 被 shield_broken 抢走的路径）：
+  - StateGraph `attackActiveFrames: [1, 2]` → `[2]`（Frame 1 资产里没有 weak_blade，声明 active 是错的）
+  - CollisionMask `manatarms_sword_smash.png` Frame 2（第三格 x=256~384）擦掉 hitbox（黄 #FFFF00）和 strong_blade（红 #FF0000）像素，只留 weak_blade（橙 #E37800）+ pushbox（绿）
+  - **禁止直接手改 collider.json**（脚本生成物），必须用 `scripts/tools/extract_collision_boxes.ps1` 重新扫描
+- **ContactResolver 调试日志治理**：
+  - 6 处裸奔 `console.log`（P1-attack-vs-shield / P1-block-result×2 / P1-clash-check / P1-clash-tie / P2-hit）全部收归 `#trace()` 方法，受 `this.debugTrace` 开关（默认 false）统一控制
+  - clash-check / clash-tie 原注释写"额外输出一份到 console.log 不受 debugTrace 限制"的重复行已删除（`#trace()` 版本已在）
+- **Manatarms 个性化参数调整尝试（需求 1，backlog B7 根因未修）**：
+  - 尝试 `baseAggression:0.25 / attack.baseWeight:0.10` → attack 分数 < holdScore(0.15) → AI 全程 hold 定住
+  - 根因：`smash.minReach = 0.00` → `closestMinReach = 0` → positioning hold 区间覆盖 `(0, maxEffReach]` 全程，retreat 阈值退化为 `distance ≤ 0.3`（贴脸才退）
+  - 结论：先修 B7 根因（closestMinReach 退化），再调个性化参数才有意义
+- **Backlog B7 closestMinReach 退化**（`plans/BACKLOG.md` 新增条目）：
+  - 候选方案 A：配置层给所有 attack 补合理 minReach（smash 0.5，quart/reverse_quart 保持 1.03+）
+  - 候选方案 B：代码层 closestMinReach 排除"近距离 × 长 startup"攻击
+  - 候选方案 C：新增 `AITuning.attack.nearStartupPenalty`——近距离时乘 startup ratio 扣分
+- **文档同步**：`docs/AI系统说明.MD`（§1 时间戳 / §2 文件结构 / §5 #scoreAttack 链路加 clash seeker / §6 aiProfile knob 表加 clashSeekerWeight / §8 日志 grep 加 Resolver-Diag）+ `docs/战斗规则说明.MD`（§2.2 资产级治理路径 / §3 Phase 1 加 AI Clash Seeker 说明）+ `PROJECT_CONTEXT.md`（§3 ContactResolver + AI tuning 说明）
+- **设计参考**：`plans/26.10.22 防御缺口补完计划.MD`、`plans/BACKLOG.md`
+- **涉及文件**：Data/AITuning.js + AIController.js + Data/StateGraphDef/ManatarmsSword.json(attackActiveFrames) + Data/CollisionMask/manatarms_sword/manatarms_sword_smash.png + scripts/Systems/ContactResolver.js + Data/SceneDefs/ep1_tavern_hall_night.json(manatarms aiProfile) + docs/AI系统说明.MD + docs/战斗规则说明.MD
 
 ## Update Log (2026-10-21)
 - **ManatarmsSword 角色接入 + 盾牌破盾机制 + AI 被动守卫识别全部落地**：按 `plans/26.10.20 ManAtArms人物接入计划.MD` 执行

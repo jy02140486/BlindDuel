@@ -71,6 +71,13 @@ export const AITuning = {
         recoveryStartupBonus: 0.12,  // opp recovery 时快招的最大加分（ratio=1.0 最快招拿满额）
         activeStartupPenalty: 0.10,  // opp active + in-range 时长招的最大扣分（ratio→0 最慢招扣满，ratio=1.0 不扣）
         distanceStartupSmooth: 0.3,  // startup factor 开始衰减的距离窗口
+
+        // === Clash Seeker：主动寻求武器碰撞（防御缺口补完）===
+        // 不是新 kind，是同一 attack 候选的额外 bonus 分项
+        // 当 opp 正在 startup、双方 weaponbox active 窗口有 overlap、reachSum 够覆盖间距时触发
+        clashSeeker: {
+            baseBonus: 0.25,  // 基础 bonus，后续乘 timingAlign + urgencyMult
+        },
     },
 
     // === 投掷偏好（AI 进攻性投掷，计划 §7）===

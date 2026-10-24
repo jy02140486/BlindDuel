@@ -936,6 +936,12 @@ export class AIController extends BaseController {
         const minReach = attack.range?.minReach ?? 0;
         if (sit.distance < minReach) return 0; // weaponbox gap 覆盖不到对手
 
+        // === Clash Seeker 前置数据：oppAtkWindow（提前到距离门槛之前，供资格检查用）===
+        // 原位置 Line 1024（preemptive bonus 处），现提前到这里
+        const oppAtkWindow = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_attack_active_window"
+        );
+
         // ---- Phase 2: Continuous Range Utility ----
         // 硬门控改平滑衰减：距离在 effectiveRange ~ effectiveRange × (1 + rangeSmoothWindow) 之间
         // 线性衰减到 0，让 reach 稍小但有其他优势（startup 快、trajectory 好）的攻击不被直接挡掉
@@ -945,7 +951,64 @@ export class AIController extends BaseController {
         if (sit.distance > effectiveRange && sit.distance < maxRange) {
             rangeFactor = Math.max(0, 1 - (sit.distance - effectiveRange) / (maxRange - effectiveRange));
         }
-        if (sit.distance > maxRange) return 0;
+        let clashEligible = false;
+        if (sit.distance > maxRange) {
+            // === Clash Seeker 6 项资格检查 ===
+            // 资格独立于普通距离门：overlap + reachSum + weightMatch + knob 全满足才放行
+            clashEligible = this.#checkClashSeekerEligible(attack, sit, oppAtkWindow);
+
+            if (this.debugVisible) {
+                const clashSeekerWeight = this.tuning.aiProfile?.clashSeekerWeight ?? 0;
+                const oppPhase = sit.opp?.phase;
+                const oppPhaseOk = oppPhase === "startup";
+                const oppHasProfile = oppAtkWindow != null;
+
+                let timingOk = false;
+                let overlapStart = 0, overlapEnd = 0;
+                if (oppHasProfile && timing) {
+                    const myStartupMs = timing.startupMs ?? 0;
+                    const myActiveMs = timing.activeMs ?? 0;
+                    const myActiveStart = myStartupMs;
+                    const myActiveEnd = myStartupMs + myActiveMs;
+                    const oppTimeUntilActive = oppAtkWindow.startMs;
+                    const oppActiveMs = oppAtkWindow.properties?.activeDurationMs ?? 0;
+                    const oppActiveStart = oppTimeUntilActive;
+                    const oppActiveEnd = oppTimeUntilActive + oppActiveMs;
+                    overlapStart = Math.max(myActiveStart, oppActiveStart);
+                    overlapEnd = Math.min(myActiveEnd, oppActiveEnd);
+                    timingOk = overlapStart <= overlapEnd;
+                }
+
+                const oppReach = oppAtkWindow?.properties?.reach ?? 0;
+                const myEffR = effectiveRange;
+                const reachSum = myEffR + oppReach;
+                const reachSumOk = reachSum >= sit.distance;
+
+                const knobOk = clashSeekerWeight > 0;
+
+                // ⑥ weight matchup
+                const myWeight = attack.weight;
+                const oppWeight = oppAtkWindow?.properties?.weight ?? null;
+                const weightRank = { light: 0, heavy: 1 };
+                const weightOk = myWeight && oppWeight
+                    ? (weightRank[myWeight] ?? 0) >= (weightRank[oppWeight] ?? 0)
+                    : true; // null weight（如 dash）视为中性，不额外限制
+
+                console.log(
+                    `[AI-Diag] clashSeekCheck ${attack.stateName}(w=${myWeight}) oppPhase=${oppPhase}`
+                );
+                console.log(`  ① oppPhaseValid=${oppPhaseOk}`);
+                console.log(`  ② oppHasProfile=${oppHasProfile}`);
+                console.log(`  ③ timingOk=${timingOk} (overlap=[${overlapStart.toFixed(0)}, ${overlapEnd.toFixed(0)}]ms)`);
+                console.log(`  ④ reachSumOk=${reachSumOk} (${myEffR.toFixed(2)}+${oppReach.toFixed(2)}=${reachSum.toFixed(2)} ≥ ${sit.distance.toFixed(2)})`);
+                console.log(`  ⑤ knobOk=${knobOk} (clashSeekerWeight=${clashSeekerWeight})`);
+                console.log(`  ⑥ weightOk=${weightOk} (my=${myWeight} vs opp=${oppWeight})`);
+                console.log(`  → allClashEligible=${clashEligible}`);
+            }
+
+            if (!clashEligible) return 0;
+            // clash 合格 → 放行，rangeFactor 保持 1.0，继续往下走
+        }
 
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
         const baseScore = score;
@@ -956,7 +1019,7 @@ export class AIController extends BaseController {
         //   common: 所有基础/风险/历史类分项，不区分意图
         //   preemptive: events.startup 时的抢先加分（唯一的 PREEMPTIVE 入口）
         //   punish: opp.recovery 时 vulnReward 的主要贡献
-        let _breakdown = { common: score, preemptive: 0, punish: 0 };
+        let _breakdown = { common: score, preemptive: 0, punish: 0, clashSeeker: 0 };
 
         const canAttack = sit.now - this.lastAttackTime >= this.attackCooldownMs;
         // cooldownPenalty scope: 只惩罚 opp 空闲时的主动追击
@@ -1022,9 +1085,7 @@ export class AIController extends BaseController {
         // Phase 5 Step 3a: preemptive bonus 迁移到 events 层
         // 旧逻辑 bug: 用 sit.opp.remainingMs（整个 state 剩余时间）→ 比真正 timeUntilActive 大得多
         // 新逻辑: 从 events 查 opp_attack_active_window.startMs（精确的距 opp weaponbox 激活还剩多久）
-        const oppAtkWindow = this.#findPredictedEvent(
-            sit.predictedOpponentEvents, "opp_attack_active_window"
-        );
+        // oppAtkWindow 已在函数开头提前声明（供 clash seeker 资格检查用）
         if (oppAtkWindow && timing) {
             const myStartupMs = timing.startupMs ?? 0;
             const oppTimeUntilActive = oppAtkWindow.startMs;
@@ -1052,7 +1113,6 @@ export class AIController extends BaseController {
                 score += bonus;
                 _breakdown.preemptive += bonus;
                 // === DIAGNOSTIC LOG: PREEMPTIVE 专属标记 ===
-                // grep PREEMPTIVE 即可确认哪个 attack 是新拦截逻辑触发的
                 if (this.debugVisible) {
                     console.log(
                         `[AI-Diag] PREEMPTIVE: attack=${attack.stateName} preempts ${oppAtkWindow.sourceState} ` +
@@ -1060,7 +1120,28 @@ export class AIController extends BaseController {
                         `oppTrajectory=${oppTrajectory ?? "?"}, mult=${preemptiveMult}, bonus=+${bonus.toFixed(2)})`
                     );
                 }
-                // ==========================================
+            }
+        }
+
+        // === Clash Seeker Bonus（主动寻求武器碰撞）===
+        // 与 preemptive bonus 同级的 attack 分项，不冲突独立计算
+        // 只有 opp.startup + overlap + reachSum + weightMatch + knob 全满足才给分
+        if (oppAtkWindow && oppAtkWindow.startMs !== undefined) {
+            const clashSeekerWeight = this.tuning.aiProfile?.clashSeekerWeight ?? 0;
+            if (clashSeekerWeight > 0) {
+                const bonus = this.#computeClashSeekerBonus(attack, sit, oppAtkWindow);
+                if (bonus > 0) {
+                    const finalBonus = bonus * clashSeekerWeight;
+                    score += finalBonus;
+                    _breakdown.clashSeeker += finalBonus;
+
+                    if (this.debugVisible) {
+                        console.log(
+                            `[AI-Diag] CLASH_SEEKER: attack=${attack.stateName} vs opp=${oppAtkWindow.sourceState} ` +
+                            `(bonus=${bonus.toFixed(2)} × knob=${clashSeekerWeight} = +${finalBonus.toFixed(2)})`
+                        );
+                    }
+                }
             }
         }
 
@@ -1141,7 +1222,7 @@ export class AIController extends BaseController {
         _breakdown.common     *= commonW;
         _breakdown.preemptive *= preemptiveW;
         _breakdown.punish     *= punishW;
-        score = _breakdown.common + _breakdown.preemptive + _breakdown.punish;
+        score = _breakdown.common + _breakdown.preemptive + _breakdown.punish + _breakdown.clashSeeker;
 
         // ---- Phase 3: Startup Utility ----
         const startupFactor = this.#computeStartupFactor(attack, sit);
@@ -1150,13 +1231,15 @@ export class AIController extends BaseController {
         // === Step B FINAL: 输出意图分项 breakdown ===
         // 放在所有加法完成后（还没乘 rangeFactor/postureMult）
         // 只在有非 common 分项时输出（避免刷屏）
-        if (this.debugVisible && (_breakdown.preemptive > 0 || _breakdown.punish > 0)) {
-            const _total = _breakdown.common + _breakdown.preemptive + _breakdown.punish;
+        const _hasNonCommon = _breakdown.preemptive > 0 || _breakdown.punish > 0 || _breakdown.clashSeeker > 0;
+        if (this.debugVisible && _hasNonCommon) {
+            const _total = _breakdown.common + _breakdown.preemptive + _breakdown.punish + _breakdown.clashSeeker;
             console.log(
                 `[AI-Diag] attackBreakdown(${attack.stateName}): ` +
                 `common=${_breakdown.common.toFixed(2)}` +
                 `${_breakdown.preemptive > 0 ? ` +PREEMPTIVE=${_breakdown.preemptive.toFixed(2)}` : ``}` +
                 `${_breakdown.punish > 0 ? ` +PUNISH=${_breakdown.punish.toFixed(2)}` : ``}` +
+                `${_breakdown.clashSeeker > 0 ? ` +CLASH_SEEK=${_breakdown.clashSeeker.toFixed(2)}` : ``}` +
                 ` → rawTotal=${_total.toFixed(2)} (×startupFactor=${startupFactor.toFixed(2)})`
             );
         }
@@ -1173,6 +1256,112 @@ export class AIController extends BaseController {
         score *= pref;
 
         return score;
+    }
+
+    /**
+     * Clash Seeker 6 项资格检查（独立函数，给硬门槛绕过 + bonus 计算共用）
+     *
+     * 返回 true 当且仅当以下全部满足：
+     *   ① opp.phase === "startup"
+     *   ② oppAtkWindow 存在（opp 有明确 attack profile）
+     *   ③ overlap 时序（双方 weaponbox active 窗口有交集）
+     *   ④ reachSum 空间（myEffR + oppReach ≥ distance）
+     *   ⑤ clashSeekerWeight > 0
+     *   ⑥ weight matchup（myWeight ≥ oppWeight，拼刀不输）
+     *
+     * @param {object} attack - 攻击候选 profile
+     * @param {object} sit - 决策时刻 Situation
+     * @param {object|null} oppAtkWindow - opp_attack_active_window 事件
+     * @returns {boolean}
+     */
+    #checkClashSeekerEligible(attack, sit, oppAtkWindow) {
+        // ① opp 正在起手
+        if (sit.opp?.phase !== "startup") return false;
+
+        // ② opp 有明确 attack profile
+        if (!oppAtkWindow) return false;
+
+        // ⑤ aggressiveness knob（提前检查，避免后续无谓计算）
+        const clashSeekerWeight = this.tuning.aiProfile?.clashSeekerWeight ?? 0;
+        if (clashSeekerWeight <= 0) return false;
+
+        const timing = attack.timing;
+        if (!timing) return false;
+
+        // ③ overlap 时序（区间重叠，非单端检查）
+        const myStartupMs = timing.startupMs ?? 0;
+        const myActiveMs = timing.activeMs ?? 0;
+        const myActiveStart = myStartupMs;
+        const myActiveEnd = myStartupMs + myActiveMs;
+        const oppTimeUntilActive = oppAtkWindow.startMs;
+        const oppActiveMs = oppAtkWindow.properties?.activeDurationMs ?? 0;
+        const oppActiveStart = oppTimeUntilActive;
+        const oppActiveEnd = oppTimeUntilActive + oppActiveMs;
+        const overlapStart = Math.max(myActiveStart, oppActiveStart);
+        const overlapEnd = Math.min(myActiveEnd, oppActiveEnd);
+        if (overlapStart > overlapEnd) return false; // 无重叠窗口
+
+        // ④ reachSum 空间
+        // 先做空值保护再取负值，避免一元负号与 ?? 的优先级 NaN bug
+        const disp = attack.activeDisplacement ?? 0;
+        const myEffR = (attack.range?.maxReach ?? 0) + (disp < 0 ? -disp : 0) + this.rangeBuffer;
+        const oppReach = oppAtkWindow.properties?.reach ?? 0;
+        if (myEffR + oppReach < sit.distance) return false;
+
+        // ⑥ weight matchup：myWeight >= oppWeight（拼刀只能赢或平局，不能输）
+        // weight 不存在时视为中性（null weight 如 dash，不额外限制）
+        const myWeight = attack.weight;
+        const oppWeight = oppAtkWindow.properties?.weight ?? null;
+        if (myWeight && oppWeight) {
+            const weightRank = { light: 0, heavy: 1 };
+            if ((weightRank[myWeight] ?? 0) < (weightRank[oppWeight] ?? 0)) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Clash Seeker Bonus 计算（资格检查之外的评分部分）
+     *
+     * 基础分 baseBonus，乘两个调节器：
+     *   timingAlign — myActiveStart 越接近 oppActiveStart，越高（0.3~1.0）
+     *   urgencyMult — opp 攻击能被自己挡（有 shield）→ 0.5；挡不住 → 1.0
+     *
+     * @returns {number} bonus 值（0 或正数，无副作用）
+     */
+    #computeClashSeekerBonus(attack, sit, oppAtkWindow) {
+        // 资格检查（冗余但安全，确保单独调用时不会越界）
+        if (!this.#checkClashSeekerEligible(attack, sit, oppAtkWindow)) return 0;
+
+        const timing = attack.timing;
+        const oppTimeUntilActive = oppAtkWindow.startMs;
+
+        // baseBonus
+        let bonus = this.tuning.attack.clashSeeker?.baseBonus ?? 0.25;
+
+        // timingAlign：我 active 起点越接近对手 active 起点（在对手 active 之前），越高
+        // timingDiff 越小（我越早启动 vs opp 启动），越能在 overlap 区间靠前
+        const timingDiff = Math.abs((timing.startupMs ?? 0) - oppTimeUntilActive);
+        const timingAlign = Math.max(0.3, 1 - timingDiff / Math.max(1, oppTimeUntilActive));
+        bonus *= timingAlign;
+
+        // urgencyMult：opp 攻击我能不能防住？
+        // 防不住（如被动盾挡 heavy slash）→ 必须 rush，urgency=1.0
+        // 防住 → 个性表达，urgency=0.5
+        const selfGuardType = sit.selfGuardType ?? null;
+        let urgencyMult = 1.0;
+        if (selfGuardType && sit.opp?.attackProfile) {
+            const interaction = ContactResolver.evaluateInteraction({
+                offenseTrajectory: sit.opp.attackProfile.trajectory,
+                offenseWeight: sit.opp.attackProfile.weight,
+                defenseGuardType: selfGuardType,
+                defenseIsDodging: false,
+            });
+            if (interaction.blocked) urgencyMult = 0.5;
+        }
+        bonus *= urgencyMult;
+
+        return bonus;
     }
 
     /**

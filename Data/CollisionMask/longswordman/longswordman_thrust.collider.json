@@ -30,7 +30,7 @@
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-22T05:39:42.6385664Z"
+                   "generatedAtUtc":  "2026-10-24T17:02:25.0623053Z"
                },
     "frames":  [
                    {
@@ -143,8 +143,8 @@
                                          "id":  "pushbox_1",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  47.5,
-                                         "cy":  108.5,
+                                         "cx":  59.5,
+                                         "cy":  109.5,
                                          "w":  48,
                                          "h":  28,
                                          "angle":  0,
@@ -217,8 +217,8 @@
                                          "id":  "pushbox_2",
                                          "type":  "pushbox",
                                          "subtype":  null,
-                                         "cx":  60.5,
-                                         "cy":  107.5,
+                                         "cx":  67.5,
+                                         "cy":  111.5,
                                          "w":  48,
                                          "h":  28,
                                          "angle":  0,

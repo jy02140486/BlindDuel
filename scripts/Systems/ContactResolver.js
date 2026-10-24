@@ -66,12 +66,14 @@ export class ContactResolver {
                 const defenseCharId = isAAttack ? contact.characterB : contact.characterA;
                 const offenseAttackId = offenseBox.attackInstanceId;
 
-                // console.log(
-                //     `[Resolver-P1] tick=${tickCount} attack-vs-shield | ` +
-                //     `offense=${offenseCharId}(${offenseBox.id}) defense=${defenseCharId}(${defenseBox.id}) | ` +
-                //     `trajectory=${offenseBox.attackTrajectory} weight=${offenseBox.attackWeight} guardType=${defenseBox.guardType} | ` +
-                //     `attackId=${offenseAttackId} hasAttackId=${!!offenseAttackId}`
-                // );
+                const offenseSnap = snapshotById.get(offenseCharId);
+                const defenseSnap = snapshotById.get(defenseCharId);
+                this.#trace(
+                    `[Resolver-Diag] P1-attack-vs-shield tick=${tickCount} | ` +
+                    `offense=${offenseCharId}(${offenseSnap?.stateName}@${offenseSnap?.frameIndex}) box=${offenseBox.id}(role=${offenseBox.boxRole}) | ` +
+                    `defense=${defenseCharId}(${defenseSnap?.stateName}@${defenseSnap?.frameIndex}) box=${defenseBox.id}(role=${defenseBox.boxRole},guardType=${defenseBox.guardType}) | ` +
+                    `trajectory=${offenseBox.attackTrajectory} weight=${offenseBox.attackWeight} attackId=${offenseAttackId}`
+                );
 
                 if (!offenseAttackId) continue;
 
@@ -111,11 +113,6 @@ export class ContactResolver {
                     blocked = true;
                 }
 
-                // console.log(
-                //     `[Resolver-P1] tick=${tickCount} block-result | blocked=${blocked} ` +
-                //     `trajectory=${trajectory} weight=${weight} guardType=${guardType}`
-                // );
-
                 if (blocked) {
                     invalidatedAttacks.add(offenseAttackId);
                     const offenseSnapshot = snapshotById.get(offenseCharId);
@@ -132,6 +129,11 @@ export class ContactResolver {
                     //      不管 Math.abs(tickDiff) 多大都会被放行，导致 hold guard 100% 触发 parry
                     const isPreemptiveGuard = Math.abs(tickDiff) <= this.tuning.parry.preemptiveTickDiffMax;
                     const canParry = defenseBox.canParry && isPreemptiveGuard;
+
+                    this.#trace(
+                        `[Resolver-Diag] P1-block-result tick=${tickCount} | blocked=${blocked} canParry=${canParry} ` +
+                        `trajectory=${trajectory} weight=${weight} guardType=${guardType}`
+                    );
 
                     this.#trace(
                         `[ResolverPhase1] block offense=${offenseCharId} defense=${defenseCharId}` +
@@ -154,6 +156,12 @@ export class ContactResolver {
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.block.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.block.hitstopFrames });
                     }
+                } else {
+                    // blocked=false → 破盾路径（heavy slash 打穿 shield）
+                    this.#trace(
+                        `[Resolver-Diag] P1-block-result tick=${tickCount} | blocked=${blocked} (SHIELD_BROKEN) ` +
+                        `trajectory=${trajectory} weight=${weight} guardType=${guardType}`
+                    );
                 }
                 continue;
             }
@@ -174,12 +182,15 @@ export class ContactResolver {
             const posB = snapB?.rootPositionX ?? 0;
 
             this.#trace(
-                `[ResolverPhase1] clash-check A=${contact.characterA} B=${contact.characterB}` +
-                ` attackA=${attackA} attackB=${attackB} weightA=${weightA} weightB=${weightB}`
+                `[ResolverPhase1] clash-check tick=${tickCount} | ` +
+                `A=${contact.characterA}(${snapA?.stateName}@${snapA?.frameIndex}) boxA=${boxA.id}(role=${boxA.boxRole}) attackA=${attackA} weightA=${weightA} | ` +
+                `B=${contact.characterB}(${snapB?.stateName}@${snapB?.frameIndex}) boxB=${boxB.id}(role=${boxB.boxRole}) attackB=${attackB} weightB=${weightB}`
             );
 
+
             if (weightA === weightB) {
-                this.#trace(`[ResolverPhase1] clash-tie A=${contact.characterA} B=${contact.characterB}`);
+                this.#trace(`[ResolverPhase1] clash-tie A=${contact.characterA}(${snapA?.stateName}@${snapA?.frameIndex}) B=${contact.characterB}(${snapB?.stateName}@${snapB?.frameIndex})`);
+
                 invalidatedAttacks.add(attackA);
                 invalidatedAttacks.add(attackB);
                 effects.push(
@@ -200,8 +211,9 @@ export class ContactResolver {
 
             invalidatedAttacks.add(loserAttack);
             this.#trace(
-                `[ResolverPhase1] clash-lose winner=${winnerId} loser=${loserId}` +
-                ` winnerWeight=${heavyIsA ? weightA : weightB} loserWeight=${heavyIsA ? weightB : weightA}`
+                `[ResolverPhase1] clash-lose tick=${tickCount} | ` +
+                `winner=${winnerId}(${snapA?.characterId===winnerId ? snapA?.stateName+'@'+snapA?.frameIndex : snapB?.stateName+'@'+snapB?.frameIndex}) weight=${heavyIsA ? weightA : weightB} | ` +
+                `loser=${loserId}(${snapA?.characterId===loserId ? snapA?.stateName+'@'+snapA?.frameIndex : snapB?.stateName+'@'+snapB?.frameIndex}) weight=${heavyIsA ? weightB : weightA}`
             );
             effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
             effects.push({ type: "hitstop", targetId: loserId, durationFrames: this.tuning.clash.loseLoserHitstopFrames });
@@ -239,21 +251,15 @@ export class ContactResolver {
             const requestedKnockback = attackerImpact.attackKnockback ?? this.tuning.hit.victimKnockbackX;
             const knockback = this.#signedKnockback(targetPos, attackerPos, requestedKnockback);
 
-
-/*
-            const attackerSnap = snapshotById.get(contact.attackerId);
-            const targetSnap = snapshotById.get(contact.targetId);
             const w = contact.weapon;
             const h = contact.hitbox;
-            console.log(
-                `[HIT] ${contact.attackerId} -> ${contact.targetId} | ` +
-                `attackerState=${attackerSnap?.stateName} frame=${attackerSnap?.frameIndex} ` +
-                `targetState=${targetSnap?.stateName} frame=${targetSnap?.frameIndex} | ` +
-                `weaponBox=${w.id} center=(${w.center.x.toFixed(3)},${w.center.y.toFixed(3)}) half=(${w.half.x.toFixed(3)},${w.half.y.toFixed(3)}) | ` +
-                `hitbox=${h.id} center=(${h.center.x.toFixed(3)},${h.center.y.toFixed(3)}) half=(${h.half.x.toFixed(3)},${h.half.y.toFixed(3)}) | ` +
+            this.#trace(
+                `[Resolver-Diag] P2-hit tick=${tickCount} | ` +
+                `${contact.attackerId}(${attackerSnap?.stateName}@${attackerSnap?.frameIndex}) -> ${contact.targetId}(${targetSnap?.stateName}@${targetSnap?.frameIndex}) | ` +
+                `weaponBox=${w.id}(role=${w.boxRole},subtype=${w.subtype}) | hitbox=${h.id} | ` +
                 `distX=${Math.abs(w.center.x - h.center.x).toFixed(3)} sumHalfX=${(w.half.x + h.half.x).toFixed(3)} | ` +
                 `distY=${Math.abs(w.center.y - h.center.y).toFixed(3)} sumHalfY=${(w.half.y + h.half.y).toFixed(3)}`
-            );*/
+            );
 
             effects.push({
                 type: "hit",

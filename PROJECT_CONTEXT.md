@@ -44,7 +44,7 @@ py .\.serve.ps1
 - 状态图定义：`Data/StateGraphDef/LongSwordMan.json`
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
-- 战斗接触解析：`scripts/Systems/ContactResolver.js`（三阶段判定：hitbox→weaponbox 武器侧判定→shield 判定与破盾路径；guardType="shield" 时 heavy slash → shieldBroken 触发 stunned 硬直，其他攻击被挡）
+- 战斗接触解析：`scripts/Systems/ContactResolver.js`（三阶段判定：hitbox→weaponbox 武器侧判定→shield 判定与破盾路径；guardType="shield" 时 heavy slash → shieldBroken 触发 stunned 硬直，其他攻击被挡；Phase 1 attack-vs-attack clash 判定（拼刀）由 AI Clash Seeker 决策层主动触发——AI 选 heavy 攻击 intercept opp.startup，规则层按 weight 比较出 clash_tie / clash_lose。debug 日志统一走 `this.#trace()` 受 `debugTrace` 开关（默认 false）控制，不裸奔）
 - 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
 - AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径与进攻性 throw 候选 #scoreThrow，详见 `docs/AI系统说明.MD`）：
   - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment）
@@ -55,7 +55,7 @@ py .\.serve.ps1
 - 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
 - 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync；DEBUG_INFINITE_AMMO 正式环境必须 false）
   - AI 弹药/装配：`BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配；projectileType 从 stateGraph 首个 throwActive state 派生）；玩家弹药走背包
-- AI 实例级配置注入：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `entityDef.aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat 等）→ 挂载 `entityDef.aiProfile`；`AIController.#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate 全部走实例 profile 优先 → StateGraph profile 兜底
+- AI 实例级配置注入：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `entityDef.aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat、attack.clashSeeker.baseBonus 等）→ 挂载 `entityDef.aiProfile`；`AIController.#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate/**clashSeekerWeight** 全部走实例 profile 优先 → StateGraph profile 兜底
 - 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
 - NPC 控制器：`scripts/Systems/NpcController.js`
 - NPC 行为基类：`scripts/Systems/NpcBehaviors/NpcBehavior.js`（策略模式）

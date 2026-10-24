@@ -1,7 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-21 — ManatarmsSword 盾牌破盾机制 + AI 被动守卫 profile（selfGuardType + #scoreAttack threatPenalty 条件减免 + #scorePositioning retreat 阈值调整）+ consecutiveAttackUsage 跨 positioning 累积 + #getMeleeMaxEffReach 幻影射程 bug 修复
-> 上一次：2026-10-16 — AI 进攻性投掷（#scoreThrow 同池候选 + 弹道射程 flight 块 + throw 独立节奏冷却）
+> 更新：2026-10-25 — Clash Seeker（主动寻求拼刀）落地：#checkClashSeekerEligible 独立资格函数 6 项检查 + #computeClashSeekerBonus 评分模块；clashSeekerWeight 角色级 knob + AITuning.attack.clashSeeker.baseBonus 系统默认；smash 资产级修复（active 帧只留 weak_blade）让 attack-vs-attack clash 路径正确触发；ContactResolver 调试日志统一收归 #trace() 受 debugTrace 开关控制
+> 上一次：2026-10-21 — ManatarmsSword 盾牌破盾机制 + AI 被动守卫 profile + consecutiveAttackUsage 跨 positioning + 幻影射程 bug 修复
 > 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
 
@@ -33,6 +33,8 @@ scripts/Systems/AI/
 │   #getMeleeMaxEffReach (近战最远有效距离唯一口径) / #isCommitted (含 throwActive)
 │   #evaluateProjectileDefense / #findBestSlashForProjectile / #scoreCutForProjectile
 │   #scoreDodgeForProjectile / #computeTimingAlignment
+│   #checkClashSeekerEligible (6 项资格：oppPhase/staging window/时序重叠/reachSum/weight/knob)
+│   #computeClashSeekerBonus (urgency×baseBonus×knob → 加分)
 ├── AIKnowledgeRegistry.js # 武器 knowledge（v5）：#getMaxReach() / #getClosestMinReach() + throw state 扫描（含 flight 弹道射程）
 ├── CombatMemory.js        # Layer 0: 纯数据。onOutcome() / getAdaptation() / tick()
 └── CombatPosture.js       # Layer 1: 慢变量。attackMult/defenseMult/advanceMult/retreatMult
@@ -156,7 +158,6 @@ tti ≥ activeStart → timingAlignment = 1.0 // weaponbox 能先激活，distan
 
 ### #scoreAttack 完整链路
 
-```
 base = 0.4 (AITuning.attack.baseWeight)
   × rangeFactor (distance 在 [effectiveRange, effectiveRange*1.3] 窗口内衰减)
   + oppPhase 分支 (startup preemptive, active threat penalty, recovery punish)
@@ -167,9 +168,27 @@ base = 0.4 (AITuning.attack.baseWeight)
   + continuityBonus (上一招成功 + 本次 adaptation 不反对)
   - repetitionCostRate × (连续使用count-1)，封顶 repetitionCostMax
   + startupFactor (快招在 opp recovery 加分 / 慢招在 opp active 扣分)
+  + **clashSeekerBonus** (仅在 **硬门控阶段** 判断资格，**绕过** distance>maxRange → return 0；
+     `urgency = 1 - (tickDiff / oppStartupMs)`，`bonus = baseBonus(0.25) × urgency × aiProfile.clashSeekerWeight`)
 
-硬门控：distance < minReach → return 0
-        distance > effectiveRange*(1+distanceStartupSmooth) → return 0
+硬门控阶段（先算 clash seeker 资格）：
+  oppPhase !== "startup" → 6 项检查自然失败 → 走原 return 0 路径
+  oppPhase === "startup" 时：
+    ⑥ opp 有 opp_attack_active_window（events 驱动）
+    ③ 双方 weaponbox active 窗口重叠（overlapStart = max(myActiveStart, oppActiveStart),
+       overlapEnd = min(myActiveEnd, oppActiveEnd), overlapStart ≤ overlapEnd 才合格）
+    ④ reachSum = selfEffectiveRange + oppReach ≥ distance（两把武器 reach 加起来能不能覆盖间距）
+    ⑥ weight 够（attackWeight 是 heavy 且 oppWeight 是 heavy，或 light/heavy 任意组合都可 seek clash）
+    ⑥ aiProfile.clashSeekerWeight > 0
+    → 全合格 → **放行候选**（不 return 0），后续正常评分 + 加分
+    → 有一项不合格 → 原 return 0
+  distance < minReach → return 0（clash 也不能在 reach gap 里 seek）
+  distance > effectiveRange*(1+distanceStartupSmooth) → 非 clash 合格候选走 return 0
+
+**独立评分**：clash seeker 加分在所有常规因子之后追加（preemptive/threat/vuln/feedback/repetition/startup），
+保证它不被 rangeFactor 或 oppPhase 分支抵消——这是一个额外的 reactive 奖励项，而非替代常规评分。
+
+Clash Seeker **不受 rangeFactor 衰减**（clash 合格候选在硬门控已放行），让远距离 opp 刚起手时 AI 能 seek。
 
 baseAttackScore ×= posture.attackMultiplier × attackPreferences[stateName]
 ```
@@ -254,6 +273,11 @@ base = throw.baseWeight(0.35)
 | `retreatDesire` | 0.6 | retreatMultiplier 派生系数 | 假人=0.05, 精英=0.5 |
 | `repetitionCostRate` | 0.06 | 连续用同一 attack 成本 | 教学=0.02, 精英=0.10, Boss=0.08 |
 | `attackPreferences` | `{}` | per-attack 分数乘数（默认 1.0）| 教学={swing:1.6,thrust:0.4} |
+| **`clashSeekerWeight`** | **0.0（关闭）** | **clash seeker 加分乘数（reactive 抢拼刀权重）** | **Manatarms=1.0, 盾牌类角色≥1.0；无盾角色默认 0** |
+
+`clashSeekerWeight` 与 `AITuning.attack.clashSeeker.baseBonus(0.25)` 配合使用。
+0=完全不 seek（默认），1.0=满额 reactive 加分。只有 opp 真在 startup 时才触发，
+不算主动出击意愿调整（reactive 行为）。
 
 ### 三种敌人配置示例
 
@@ -444,17 +468,20 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | `[AI-Diag] best=` | 每次决策第一名 |
 | `top3=` | 前三名分数分布 |
 | `POS:` | approach/hold/retreat 分数 |
-| `[AI-Diag] oppThrow=` | opp 抬手时的预测链输出（predictedTTI / throwRemaining / predictedFlight / predDist）| 
-| `[AI-Diag] preemptive_gate:` | preemptive 门控结果（VIABLE / SKIP / DEFER → reactive）| 
-| `[AI-Diag] preemptive_cut:` | preemptive cut 候选详情（timingAlignment / score）| 
-| `[AI-Diag] activeProjectileThreats=` | projectile 发射后 in-flight threat 列表 | 
-| `throws: throw(...)` | throw 候选评分行：ammo/can/dist/R_eff/rf/riskA/riskB/idle/recov/cd/rep/pref/sc；gate 失败也输出（GATE:no_throw_component / out_of_range）| 
+| `[AI-Diag] clashSeekCheck` | distance>maxRange 硬门槛处的 clash seeker 6 项资格检查结果（①~⑥）| 
+| `[AI-Diag] CLASH_SEEKER:` | clash seeker bonus 计算输出（attack vs opp, bonus×knob=+值）| 
+| `[Resolver-Diag] P1-clash-check/tie/lose` | ContactResolver Phase 1 clash 判定详情（双方 state@frameIndex + weight）| 
+| `[Resolver-Diag] P1-attack-vs-shield` | 破盾/格挡路径详情 | 
+| `[Resolver-Diag] P2-hit` | Phase 2 命中详情（双方 state@frameIndex + hitbox 坐标）| 
+| `[AI-Diag] oppThrow=` | opp 抬手时的预测链输出 | 
+| `[AI-Diag] preemptive_gate:` | preemptive 门控结果 | 
+| `throws: throw(...)` | throw 候选评分行 | 
 | `[Phase0] oppIdleMs=` | Memory pressure + Posture target/current + label |
-| `pressure=` | 被击压力值 |
-| `→ DEFENSIVE/CAUTIOUS/AGGRESSIVE` | Posture 标签变化 |
 | `ReferenceError` / `EXCEPTION` | JS 运行时错误 |
 
-**Debug 开关**：按 X 键切换 `_debugVisible`，所有 `[AI-Diag]` 受此门控。
+**Debug 开关**：
+- `AI-Diag` 按 X 键切换 `_debugVisible`（AIController 层）
+- `Resolver-Diag` 走 `ContactResolver.debugTrace`（默认 false，需在 Game.js 里 `new CombatSystem({ debugTrace: true })` 开启）
 
 ---
 

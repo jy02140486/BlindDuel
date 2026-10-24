@@ -28,8 +28,9 @@
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 配音，格挡成功攻方播还是守方播，是不是跟动画播
 主人公clash也有加速奖励
-ManAtSword极近距离不退，远距离不做拦截,高频攻击
-
+ManAtSword极近距离不退
+盾格挡的后退
+破盾的被破方hitstop
 
 ## AI 系统
 
@@ -51,4 +52,4 @@ ManAtSword极近距离不退，远距离不做拦截,高频攻击
 | 缺口 | 说明 |
 |------|------|
 | **B6** predictionAccuracy 旋钮 | `oppActionIdentification`/`timingPrecision`/`reactionDelayMs` 是三个不同维度，不应在基础预测层未稳定时一起实现；同一次 opp 动作内误差应保持稳定（避免每 tick 随机抖动） |
-| **B3** strafe 侧移 | 大改，涉及 combat movement 系统；当前 X-only 距离控制够用，最后考虑 |
+| **B7** closestMinReach 退化 + 近距离长 startup 惩罚 | `Manatarms.smash.minReach = 0.00` 把 `#getClosestMinReach()` 拉成零 → positioning retreat 阈值退化为 `distance ≤ 0.3`（贴脸才退），hold 区间覆盖 `(0, maxEffReach]` 全程，导致「AI 全程 hold 定住」+「近距离主动出最慢招 smash」两个现象。候选方案：A) 配置层给所有 attack 补合理 minReach（smash 0.5，quart/reverse_quart 保持 1.03+）；B) 代码层 `closestMinReach` 排除「近距离 × 长 startup」攻击；C) 新增 `AITuning.attack.nearStartupPenalty` — 当 `distance < maxEffReach × 0.3` 时乘 startup ratio 扣分（让慢招在近处自动失权）。需求 2（近距离不出 smash、主动拉远）依赖根因修复后再调 `retreatDesire` 等参数才有实际意义（当前分数为 0 时乘数无效）。关联：26.10.24 Clash Seeker 调试期间发现 |

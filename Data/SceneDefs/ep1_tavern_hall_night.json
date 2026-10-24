@@ -26,12 +26,24 @@
             "pos": [4.47, -4.92],
             "controller": "ai",
             "spawnIf": { "flagNot": "battle_field_2" },
+            "aiProfile": {
+                "clashSeekerWeight": 1.0,
+                "baseAggression": 0.25,
+                "baseDefense": 0.75,
+                "retreatDesire": 0.55
+            },
             "aiTuningOverrides": {
                 "attack": {
-                    "baseWeight": 0.16,
+                    "baseWeight": 0.10,
                     "repetitionCostRate": 0.32,
                     "repetitionCostMax": 0.64,
                     "preemptiveBonus": 0.20
+                },
+                "defense": {
+                    "activeBase": 0.95,
+                    "startupCanActBase": 0.80,
+                    "startupTooLateBase": 0.40,
+                    "badDefensePenalty": 0.0
                 }
             }
         }
