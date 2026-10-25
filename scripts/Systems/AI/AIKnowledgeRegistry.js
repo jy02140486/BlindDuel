@@ -11,8 +11,9 @@ export class AIKnowledgeRegistry {
     /** Schema version — bump when scan logic changes to force re-scan of cached profiles.
      *  v1=初始, v2=minReach, v3=新增 throw 状态扫描（Phase 2 Step 4）,
      *  v4=throw profile 增加弹道物理射程 flight 块,
-     *  v5=射程计入手部释放高度（真实落地方程，替代地面起落地面对称弧假设） */
-    static #SCHEMA_VERSION = 5;
+     *  v5=射程计入手部释放高度（真实落地方程，替代地面起落地面对称弧假设）,
+     *  v6=#computeReach/#computeMinReach 修正旋转 AABB 的 X 轴投影（原代码忽略 angle，把所有 box 当轴对齐） */
+    static #SCHEMA_VERSION = 6;
 
     // 全局缓存: characterId -> { versionHash, profile }
     static #cache = new Map();
@@ -450,16 +451,33 @@ export class AIKnowledgeRegistry {
     }
 
     /**
+     * 计算旋转后 AABB 在 X 轴上的投影半宽。
+     * angle=0°/180° → halfProjX = w/2（轴对齐）
+     * angle=90°/270° → halfProjX = h/2（竖直）
+     * 公式同 ContactResolver #separatedOnAxis 投影口径。
+     */
+    static #boxHalfProjX(box) {
+        const wHalf = (box.w ?? 0) / 2;
+        const hHalf = (box.h ?? 0) / 2;
+        const thetaRad = (box.angle ?? 0) * Math.PI / 180;
+        const cos = Math.abs(Math.cos(thetaRad));
+        const sin = Math.abs(Math.sin(thetaRad));
+        return wHalf * cos + hHalf * sin;
+    }
+
+    /**
      * 计算单个 weaponbox 的向前攻击范围（root 到 weaponbox 远端的距离）
+     * 修正：用旋转后 AABB 的 X 轴投影半宽，而不是 w/2。
      */
     static #computeReach(box, anchor, facingRight, pxToWorld) {
+        const halfProjX = this.#boxHalfProjX(box);
         if (facingRight) {
             // 朝右：取 box 右端相对于 anchor 的距离
-            const rightEdge = box.cx + box.w / 2;
+            const rightEdge = box.cx + halfProjX;
             return (rightEdge - anchor.cx) * pxToWorld;
         } else {
             // 朝左：取 anchor 到 box 左端的距离
-            const leftEdge = box.cx - box.w / 2;
+            const leftEdge = box.cx - halfProjX;
             return (anchor.cx - leftEdge) * pxToWorld;
         }
     }
@@ -467,15 +485,17 @@ export class AIKnowledgeRegistry {
     /**
      * 计算单个 weaponbox 的贴脸无效区（root 到 weaponbox 近端的距离）
      * 表示：距离 < 此值时，weaponbox 完全覆盖不到对手
+     * 修正：用旋转后 AABB 的 X 轴投影半宽，而不是 w/2。
      */
     static #computeMinReach(box, anchor, facingRight, pxToWorld) {
+        const halfProjX = this.#boxHalfProjX(box);
         if (facingRight) {
             // 朝右：取 box 左端离 anchor 的距离
-            const leftEdge = box.cx - box.w / 2;
+            const leftEdge = box.cx - halfProjX;
             return Math.max(0, leftEdge - anchor.cx) * pxToWorld;
         } else {
             // 朝左：取 anchor 到 box 右端的距离
-            const rightEdge = box.cx + box.w / 2;
+            const rightEdge = box.cx + halfProjX;
             return Math.max(0, anchor.cx - rightEdge) * pxToWorld;
         }
     }
