@@ -19,6 +19,7 @@ export class AIController extends BaseController {
     #memory;
     #lastCommittedState;
     #consecutiveAttackUsage;  // { stateName, count } 连续使用同一 attack 的次数（非 attack 打断则 reset）
+    #holdCommitStart;          // 首次连续 commit hold 时的 timestamp（ms），非 hold commit 时重置
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
 
@@ -72,6 +73,9 @@ export class AIController extends BaseController {
 
         // Repetition Cost: 连续使用同一 attack 的次数（Step 1）
         this.#consecutiveAttackUsage = null;
+
+        // Hold 超时计时：hold commit 起始时间戳（null = 当前不在 hold 中）
+        this.#holdCommitStart = null;
 
         // === Layer 0: CombatMemory（Phase 0 新增）===
         this.combatMemory = new CombatMemory();
@@ -1949,18 +1953,20 @@ export class AIController extends BaseController {
      */
     #scorePositioning(sit, posPlan = null) {
         const closestMinReach = this.#getClosestMinReach();
-        // 近战最远有效距离：与 #scoreThrow 共用 #getMeleeMaxEffReach 唯一口径（计划 §5.3）
+        // 近战最远有效距离（物理硬门控，与 #scoreThrow 共用口径）
         const maxEffReach = this.#getMeleeMaxEffReach();
+        // 理想交战距离（所有攻击有效射程的中位数，用于 positioning 锚点）
+        const idealEffReach = this.#getIdealEffReach();
         const distance = sit.distance;
 
-        // distanceHunger: distance 在 maxEffReach*1.5 ~ maxEffReach*3 之间 smoothstep 从 0→1
+        // distanceHunger: distance 在 idealEffReach*1.5 ~ idealEffReach*3 之间 smoothstep 从 0→1
         const smoothstep = (x, e0, e1) => {
             if (e1 <= e0) return x <= e0 ? 0 : 1;
             const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
             return t * t * (3 - 2 * t);
         };
-        const farThreshold = maxEffReach * 3;
-        const nearFarZone = maxEffReach * 1.5;
+        const farThreshold = idealEffReach * 3;
+        const nearFarZone = idealEffReach * 1.5;
         const distanceHunger = smoothstep(distance, nearFarZone, farThreshold);
 
         // Posture multiplier（Phase 1 已接线）
@@ -1971,7 +1977,8 @@ export class AIController extends BaseController {
         // 远距离才想靠近（distanceHunger smoothstep 加权）
         // 分数低于 attack.baseWeight(0.4)，让 attack 在范围内赢
         let approachScore = 0;
-        if (distance > maxEffReach) {
+        // v2: approach 门槛改用 idealEffReach × 1.15，而非物理 maxEffReach
+        if (distance > idealEffReach * 1.15) {
             approachScore = 0.35 * Math.min(1, distanceHunger + 0.5);
         }
         // === Step 新增：throw_windup suppress ===
@@ -1998,10 +2005,31 @@ export class AIController extends BaseController {
 
         // === Hold ===
         // 攻击圈内保底（hold 住准备攻击）
-        // 分数低于 attack.baseWeight(0.4)，让 attack 正常赢
+        // v2: hold 门槛上界改用 idealEffReach × 1.15
+        // v2: holdScore 也乘 attackMultiplier（封顶 0.15）
+        //     - 防御型 attackMult 低 → hold 也低，attack 偶尔能赢打破 opp idle 僵局
+        //     - 攻击性 attackMult 高 → hold 封顶 0.15，attack 本来就赢
         let holdScore = 0;
-        if (distance > closestMinReach && distance <= maxEffReach) {
-            holdScore = 0.15;
+        if (distance > closestMinReach && distance <= idealEffReach * 1.15) {
+            // hold 意愿和攻击意愿正相关：不想打时也不想 hold 太死
+            holdScore = Math.min(0.15, 0.15 * this.combatPosture.attackMultiplier);
+
+            // 最长 hold 时间超时惩罚：连续 hold 超过 maxHoldMs → holdScore 归零
+            // 打破防御型角色 opp idle 时无限 hold 僵局
+            if (this.#holdCommitStart !== null) {
+                const holdDuration = performance.now() - this.#holdCommitStart;
+                const maxHoldMs = this.#getMaxHoldMs();
+                if (holdDuration > maxHoldMs) {
+                    holdScore = 0;
+                    if (this.debugVisible) {
+                        console.log(
+                            `[AI-Diag] holdTimeout: holdDuration=${(holdDuration/1000).toFixed(1)}s ` +
+                            `> maxHoldMs=${(maxHoldMs/1000).toFixed(1)}s → holdScore=0`
+                        );
+                    }
+                }
+            }
+
             // cooldown 中 → hold 加分（等攻击冷却）
             if (this.lastAttackTime !== null
                 && sit.now - this.lastAttackTime < this.attackCooldownMs) {
@@ -2012,7 +2040,8 @@ export class AIController extends BaseController {
         // opp 在抬手准备投掷 + projectile 可被斩时，给 hold 一个小保底分
         // 让 AI 原地站住等 reactive cut 窗口，而不是 approach 改变距离
         // Step 2b: 复用上面的 _hasCuttableThrow（同一决策 tick 内不变）
-        if (sit.opp?.phase === "throw_windup" && _hasCuttableThrow) {
+        // v2 fix: 加 holdScore > 0 门控 —— 静态 hold 无资格时（holdScore=0）不应保底 0.05
+        if (sit.opp?.phase === "throw_windup" && _hasCuttableThrow && holdScore > 0) {
             holdScore = Math.max(holdScore, 0.05);
         }
         // hold 不乘 Posture multiplier（是基线）
@@ -2021,8 +2050,13 @@ export class AIController extends BaseController {
         // 太近必须退（closestMinReach）
         // oppThreat 高也想拉开
         let retreatScore = 0;
-        if (distance <= closestMinReach + 0.3) {
-            retreatScore = 0.5; // 底线：真太近必须退
+        // v2: retreat 近距门槛改用 idealEffReach × 0.4，而非 closestMinReach + 0.3
+        if (distance <= idealEffReach * 0.4) {
+            retreatScore = 0.5; // 底线：距离理想值小于 40% 必须退
+        }
+        // v2: 物理贴脸绝对底线（closestMinReach 覆盖不到的 gap 场景）
+        if (distance <= closestMinReach) {
+            retreatScore = Math.max(retreatScore, 0.5);
         }
         const hasBoost = sit.selfMobility?.hasActiveBoost === true;
         let retreatThreatThreshold = hasBoost ? this.tuning.retreat.mobilityBoostThreat : this.tuning.retreat.normalThreat;
@@ -2061,9 +2095,15 @@ export class AIController extends BaseController {
                 _planBonusLog = `plan:approach+0.12`;
             } else if (recommend === "hold") {
                 // 两个阈值跨越都赶不上 → 明确 hold，approach 压饿
-                holdScore += 0.08;
-                approachScore *= 0.5;
-                _planBonusLog = `plan:hold+0.08 approach×0.5`;
+                // v2 fix: 加 holdScore > 0 门控 —— 静态 hold 无资格时（holdScore=0）不应凭空加 0.08
+                // 根因：旧代码无条件加，导致 dist>maxEffReach 时 holdScore=0.08 压制 approach 和 attack
+                if (holdScore > 0) {
+                    holdScore += 0.08;
+                    approachScore *= 0.5;
+                    _planBonusLog = `plan:hold+0.08 approach×0.5`;
+                } else {
+                    _planBonusLog = `plan:hold SKIP(holdScore=0,no static qual)`;
+                }
             }
 
             if (this.debugVisible && _planBonusLog) {
@@ -2263,8 +2303,26 @@ export class AIController extends BaseController {
             } else {
                 this.setMoveIntent({ x: 0, y: 0 });   // hold
             }
+            // 最长 hold 时间追踪：连续 hold 计时，非 hold 重置
+            if (kind === "hold") {
+                if (this.#holdCommitStart === null) {
+                    this.#holdCommitStart = performance.now();
+                }
+            } else {
+                this.#holdCommitStart = null;
+            }
             // Phase 0: 记录 COMMIT（positioning 也算一次 commit）
             this.combatMemory.pushCommit(kind, kind);
+
+            // hold 超时计时：hold 开始时记录，approach/retreat 立即清零
+            if (kind === "hold") {
+                if (this.#holdCommitStart === null) {
+                    this.#holdCommitStart = performance.now();
+                }
+            } else {
+                this.#holdCommitStart = null;
+            }
+
             // positioning（hold/approach/retreat）完全不碰 consecutiveAttackUsage——
             // 就让它 stale。attack commit 时 line 2095-2098 自然处理：
             //   同一 attack → count++，不同 attack → count 重置为 1。
@@ -2294,6 +2352,8 @@ export class AIController extends BaseController {
             // dodge / guard 打断连续 attack/throw → reset（positioning 在上方提前 return 处 reset）
             this.#consecutiveAttackUsage = null;
         }
+        // attack/defense/throw commit 都重置 hold 计时（positioning 分支内部自行处理）
+        this.#holdCommitStart = null;
     }
 
     /**
@@ -2330,6 +2390,7 @@ export class AIController extends BaseController {
         return Math.max(0, aiX - playerX);
     }
 
+
     /**
      * 获取最大攻击范围
      */
@@ -2363,6 +2424,55 @@ export class AIController extends BaseController {
         });
         const maxPerAttack = perAttackEffReach.length > 0 ? Math.max(...perAttackEffReach) : 0;
         return maxPerAttack + this.rangeBuffer;
+    }
+
+    /**
+     * 理想交战距离：所有攻击有效射程的中位数。
+     *
+     * 与 #getMeleeMaxEffReach() 的区别：
+     *   - #getMeleeMaxEffReach() 取 max 再加 rangeBuffer —— 物理最远 reach，用于 positioning/attack 的硬门控
+     *   - #getIdealEffReach() 取 median —— 多数攻击都舒服的距离，用于 positioning hold 曲线的锚点
+     *
+     * 中位数优于 max：max 是最远那招的极限，不是"多数攻击都舒服"的距离。
+     * 例如 Manatarms v6：smash=2.49, quart=2.73, reverse_quart=3.32 → median=2.73
+     */
+    #getIdealEffReach() {
+        const perAttackEffReach = (this.kbProfile?.attacks || []).map(a => {
+            const reach = a.range?.maxReach ?? 0;
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            const fwdBoost = disp < 0 ? -disp : 0;
+            return reach + fwdBoost;
+        });
+        if (perAttackEffReach.length === 0) return 0;
+        perAttackEffReach.sort((a, b) => a - b);
+        const mid = Math.floor(perAttackEffReach.length / 2);
+        return perAttackEffReach.length % 2 !== 0
+            ? perAttackEffReach[mid]
+            : (perAttackEffReach[mid - 1] + perAttackEffReach[mid]) / 2;
+    }
+
+    /**
+     * 最长 hold 时间（ms）
+     *
+     * 设计：
+     *   基数 = Σ 所有攻击的 timing.totalMs（startup + active + recovery 总时长）
+     *   maxHoldMs = totalAttackMs × (1 - aggression)
+     *
+     *   aggression = aiProfile.baseAggression（配置级固定值）
+     *
+     *   aggression=0（完全防御型）→ maxHoldMs = totalAttackMs（等完所有攻击动画）
+     *   aggression=1（完全侵略型）→ maxHoldMs = 0（立即过期）
+     *
+     * 目的：打破防御型角色 opp idle 时无限 hold 僵局。
+     *   超时后 holdScore 归零，attack 或 approach 自然赢。
+     */
+    #getMaxHoldMs() {
+        const attacks = this.kbProfile?.attacks || [];
+        const totalAttackMs = attacks.reduce((sum, a) => sum + (a.timing?.totalMs ?? 0), 0);
+        if (totalAttackMs === 0) return Infinity;  // 无攻击数据，不过期（安全兜底）
+
+        const aggression = this.tuning.aiProfile?.baseAggression ?? 1.0;
+        return totalAttackMs * (1 - aggression);
     }
 
     /**
