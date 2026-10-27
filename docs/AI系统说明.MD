@@ -1,7 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-25 — Clash Seeker（主动寻求拼刀）落地：#checkClashSeekerEligible 独立资格函数 6 项检查 + #computeClashSeekerBonus 评分模块；clashSeekerWeight 角色级 knob + AITuning.attack.clashSeeker.baseBonus 系统默认；smash 资产级修复（active 帧只留 weak_blade）让 attack-vs-attack clash 路径正确触发；ContactResolver 调试日志统一收归 #trace() 受 debugTrace 开关控制
-> 上一次：2026-10-21 — ManatarmsSword 盾牌破盾机制 + AI 被动守卫 profile + consecutiveAttackUsage 跨 positioning + 幻影射程 bug 修复
+> 更新：2026-10-26 — defensive chars 无限 hold 修复：idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控（修复上轮 clash seeker 被压制根因）。详见 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD`。
+> 上一次：2026-10-25 — Clash Seeker（主动寻求拼刀）落地
 > 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
 
@@ -128,7 +128,7 @@ attackMult ∈ [0.6, 1.4]，defenseMult ∈ [0.7, 1.3]，advance/retreat ∈ [0.
 |------|--------|-----------------|----------|
 | `#scoreAttack` | N attacks | `attackMultiplier` + `attackPreferences[stateName]` | distance, oppPhase, oppThreat, oppVuln, adaptation, startupFactor |
 | `#scoreDefense` | N guards/dodges | `defenseMultiplier` | oppThreat, oppPhase, defensiveReadiness(opp idle) |
-| `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs maxEffReach, closestMinReach. **throw_windup 时 approach ×0.1 + hold 保底 0.05**（抑制靠近，等 projectile 出来再反应）| 
+| `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs **idealEffReach**（中位数，非 max），closestMinReach 保留为物理贴脸底线。holdScore = Math.min(0.15, 0.15×attackMultiplier) 封顶 attack 基础分，连续 hold 超 #getMaxHoldMs（Σ attack.totalMs × (1 - aggression)）后强制归零。**throw_windup hold 保底 0.05 / posPlan hold bonus +0.08 均加 holdScore > 0 门控**（静态 hold 无资格时不凭空加分）|
 | `#evaluateProjectileDefense` | up to 2（dodge + cut）| 各自 base × defense/attackMult | **reactive**: activeProjectileThreats[].estTTI/distance/cuttable. **preemptive**: predictedProjectileTTI + 5 层 gate |
 | `#scoreThrow` | N throws（`kbProfile.throws[]`）| `attackMultiplier` × `aiProfile.throwPreference` | distance/R_eff 三区间、风险 A（释放前被打断）、风险 B（被斩落）、throw.cooldownMs、ammo、repetition |
 
@@ -170,7 +170,7 @@ base = 0.4 (AITuning.attack.baseWeight)
   + startupFactor (快招在 opp recovery 加分 / 慢招在 opp active 扣分)
   + **clashSeekerBonus** (仅在 **硬门控阶段** 判断资格，**绕过** distance>maxRange → return 0；
      `urgency = 1 - (tickDiff / oppStartupMs)`，`bonus = baseBonus(0.25) × urgency × aiProfile.clashSeekerWeight`)
-
+```
 硬门控阶段（先算 clash seeker 资格）：
   oppPhase !== "startup" → 6 项检查自然失败 → 走原 return 0 路径
   oppPhase === "startup" 时：
@@ -210,17 +210,33 @@ score ×= posture.defenseMultiplier
 ```
 // ⚠️ 边界必须和 attack effectiveRange 对齐
 // 幻影射程 bug 修复（2026-10-21）：per-attack 求和后取 max，不是 max 分离
-// 错误：maxFwdBoost = max(-activeDisplacement) + maxReach（像 Manatarms quart/disp=-0.38,
-// smash/disp=-1.38 这样 maxR+maxDisp=2.71+1.38=4.09 虚高到超过任何单一攻击的真实可达）
 const maxAttackTotalReach = Math.max(...attacks.map(a => a.maxReach + (-a.activeDisplacement)))
 const maxEffReach = maxAttackTotalReach + rangeBuffer
 
-approach: distance > maxEffReach ? 0.35 × advanceMult × distanceHungerBoost : 0
-hold:     distance ∈ (closestMinReach, maxEffReach] ? 0.15 [+ cooldown 0.08] : 0
-retreat:  distance ≤ closestMinReach+0.3 ? 0.5×retreatMult : oppThreat>threshold ? 0.3 : 0
+// ── 2026-10-26 重构：idealEffReach 中位数锚点 ──
+// 旧：positioning 用 maxEffReach 作 hold 上界 → 覆盖几乎所有战斗距离 → hold 全程赢
+// 新：median(per-attack eff reach) → Manatarms ≈ 2.73，缩窄 hold 区间
+//     closestMinReach 职责收窄：仅作 #scoreAttack 硬门控 + retreat 物理贴脸底线
+const idealEffReach = median(attacks.map(a => a.maxReach + (-a.activeDisplacement)))
+
+approach: distance > idealEffReach × 1.15 ? 0.35 × advanceMult × distanceHungerBoost : 0
+
+hold:     distance ∈ (closestMinReach, idealEffReach × 1.15]
+          ? Math.min(0.15, 0.15 × attackMultiplier)  // 封顶 attack 基础分
+            [+ cooldown 0.08]
+            // holdTimeout: 连续 hold commit 超 #getMaxHoldMs() 后强制归零
+          : 0
+
+retreat:  distance ≤ idealEffReach × 0.4 ? 0.5 × retreatMult
+          : distance ≤ closestMinReach ? 0.5           // 物理贴脸绝对底线
+          : oppThreat > threshold ? 0.3 : 0
+
+// posPlan hold bonus (+0.08) / throw_windup hold 保底 (+0.05) 均加 holdScore > 0 门控
+// → 静态 hold 无资格（holdScore=0）时不凭空加分
+// → 这行修复上轮 Step 2 收紧 hold 上界后 clash seeker 被压制的根因
 ```
 
-positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。hold 保底 0.15 防止 AI 原地不动。
+positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。holdScore 由固定 0.15 改为封顶 attackMultiplier × 0.15——防御型角色（attackMult=0.60）hold=0.09 ≈ attack 基础分，jitter 后偶尔 attack 赢；aggression 型封顶 0.15 不受影响。holdTimeout（Σ attack.totalMs × (1 - aggression)）防止 opp 长时间 idle 时无限 hold 僵局。
 
 **consecutiveAttackUsage 跨 positioning 累积**（2026-10-21 修复）：positioning commit（hold/approach/retreat）**不重置** consecutiveAttackUsage counter——就让它 stale。只有在 attack commit 时 line 2095-2098 自然处理：同一 attack → count++，不同 stateName → count 重置为 1。这样 smash→hold→smash 的 count 链是 1→(不变)→2，repitition 终于能触发。对 Rabble 无副作用：thrust→hold→swing（不同 stateName）时 count 自然重置。
 

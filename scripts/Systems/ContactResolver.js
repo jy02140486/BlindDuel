@@ -98,16 +98,23 @@ export class ContactResolver {
                     } else {
                         // 破盾！heavy slash 击穿 shield
                         // shield 吸收本次伤害 → invalidatedAttacks 跳过 Phase 2 命中（不扣血）
+                        const broken = this.tuning.shield;
                         invalidatedAttacks.add(offenseAttackId);
+                        // 防守方：shield_broken + freezeImpact（独立帧配置，解冻后自动进 stunned）
                         effects.push({
                             type: "shield_broken",
                             targetId: defenseCharId,
                             context: {
                                 attackerId: offenseCharId,
                                 attackInstanceId: offenseAttackId,
-                                knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX)
+                                knockbackX: this.#signedKnockback(offensePos, defensePos, broken.brokenDefenseKnockbackX),
+                                freezeImpactFrames: broken.brokenDefenseFreezeImpactFrames,
+                                // 攻方独立配置（破盾也有阻力但不进 clash）
+                                offenseKnockbackX: this.#signedKnockback(defensePos, offensePos, broken.brokenOffenseKnockbackX),
+                                offenseFreezeImpactFrames: broken.brokenOffenseFreezeImpactFrames
                             }
                         });
+                        // 攻击方：hitstop + shield_broken handler 里同步处理攻方 freezeImpact/击退
                     }
                 } else {
                     blocked = true;
@@ -115,6 +122,8 @@ export class ContactResolver {
 
                 if (blocked) {
                     invalidatedAttacks.add(offenseAttackId);
+                    // guard / shield 各自独立配置：t 为本场景对应的 tuning 对象
+                    const t = guardType === "shield" ? this.tuning.shield : this.tuning.block;
                     const offenseSnapshot = snapshotById.get(offenseCharId);
                     const guardSnapshot = snapshotById.get(defenseCharId);
                     const guardFrameIdx = guardSnapshot?.frameIndex ?? -1;
@@ -143,18 +152,20 @@ export class ContactResolver {
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "parry", effects);
                         // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 后走 clash（与拼刀统一），knockback 照给
                         // 注意：此处 attackerId 指向防守方（parry 来源），与普通 clash_lose 一致，
                         // 但缺少 contactType 字段，CombatSystem 用此区分 parried vs clash
-                        effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, this.tuning.block.knockbackX) } });
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, t.knockbackX) } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "guard_block", effects);
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: this.tuning.block.blockstunFrames });
-                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.block.hitstopFrames });
-                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.block.hitstopFrames });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
+                        // 攻击方：freezeImpact 让攻击中止，解冻后自动切 clash 状态（与 parry 一致的手动 push，不带 contactType）
+                        effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, t.knockbackX), freezeImpactFrames: t.offenseFreezeImpactFrames } });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: t.hitstopFrames });
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: t.hitstopFrames });
                     }
                 } else {
                     // blocked=false → 破盾路径（heavy slash 打穿 shield）

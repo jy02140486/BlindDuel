@@ -23,11 +23,33 @@ export const CombatTuning = {
     },
     block: {
         /** guard / clash 击退（双方互相推开的位移） */
-        knockbackX: 0.4,
+        knockbackX: 1,
         /** guard_block 双方 hitstop 帧 */
         hitstopFrames: 8,
-        /** guard_block blockstun 帧 */
-        blockstunFrames: 16,
+        /** guard_block 防守方状态机锁定帧（动画继续播，防止 guard→idle 过早） */
+        defenseLockFrames: 16,
+        /** guard_block 攻击方 freezeImpact 帧（解冻后自动切 clash 状态） */
+        offenseFreezeImpactFrames: 16,
+    },
+    shield: {
+        // === shield 正常挡下（light slash / thrust） ===
+        /** shield 正常挡时双方击退 */
+        knockbackX: 0.4,
+        /** shield 正常挡时双方 hitstop */
+        hitstopFrames: 8,
+        /** shield 正常挡时防守方状态机锁定帧 */
+        defenseLockFrames: 16,
+        /** shield 正常挡时攻击方 freezeImpact 帧 */
+        offenseFreezeImpactFrames: 16,
+        // === shield_broken（heavy slash 击穿盾） ===
+        /** 破盾时防守方被击飞距离 */
+        brokenDefenseKnockbackX: 0.6,
+        /** 破盾时攻击方轻微后退距离 */
+        brokenOffenseKnockbackX: 0.2,
+        /** 破盾时防守方 freezeImpact 帧（先切 stunned 动画再冻在此姿势，解冻后动画继续播） */
+        brokenDefenseFreezeImpactFrames: 16,
+        /** 破盾时攻击方 freezeImpact 帧（破盾也有阻力，冻此帧数后攻击动画继续播，不进 clash 状态） */
+        brokenOffenseFreezeImpactFrames: 20,
     },
     parry: {
         /** parry 双方 hitstop 帧 */

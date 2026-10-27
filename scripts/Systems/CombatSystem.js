@@ -63,10 +63,12 @@ export class CombatSystem {
             if (effect.type === "clash") {
                 const hitState = effect.context?.hitState ?? "clash";
                 const knockbackX = effect.context?.knockbackX ?? 0;
+                // 当帧立即击退（和 blockstun 时机同步，避免攻方击退延迟）
+                if (knockbackX !== 0) target.root.position.x += knockbackX;
                 if (typeof target.freezeImpact === "function") {
                     target.freezeImpact(effect.context?.freezeImpactFrames ?? this.tuning.hit.freezeImpactFrames, {
                         nextState: target.hasState(hitState) ? hitState : null,
-                        knockbackX: knockbackX
+                        knockbackX: 0  // 已当帧施加，避免解冻时重复推
                     });
                 }
                 this._fxShake(0.18, 120);
@@ -74,11 +76,30 @@ export class CombatSystem {
             }
 
             if (effect.type === "shield_broken") {
-                // shield 被 heavy slash 破盾 → 进 stunned 硬直
+                // shield 被 heavy slash 破盾
                 if (target.hasState("stunned")) {
                     const kb = effect.context?.knockbackX ?? 0;
+                    const freezeFrames = effect.context?.freezeImpactFrames ?? 0;
+                    // 击退当帧立即施加
                     if (kb !== 0) target.root.position.x += kb;
+                    // 先切 stunned 动画（重置到 stunned frame 0），再在 stunned 姿势上冻结
                     target.enterState("stunned");
+                    if (freezeFrames > 0 && typeof target.freezeImpact === "function") {
+                        target.freezeImpact(freezeFrames);  // nextState=null：解冻时动画从 stunned frame 0 继续播
+                    }
+                    // 攻方处理：击退 + freezeImpact（破盾也有阻力，但不进 clash 状态）
+                    const offenseId = effect.context?.attackerId;
+                    const offFreeze = effect.context?.offenseFreezeImpactFrames ?? 0;
+                    const offKb = effect.context?.offenseKnockbackX ?? 0;
+                    if (offenseId && (offFreeze > 0 || offKb !== 0)) {
+                        const offense = characters.find(c => c?.id === offenseId);
+                        if (offense) {
+                            if (offKb !== 0) offense.root.position.x += offKb;
+                            if (offFreeze > 0 && typeof offense.freezeImpact === "function") {
+                                offense.freezeImpact(offFreeze);  // nextState=null：解冻后攻击动画继续播
+                            }
+                        }
+                    }
                 }
                 this._fxShake(0.15, 120);
                 continue;
@@ -95,6 +116,8 @@ export class CombatSystem {
                 if (typeof target.applyBlockstun === "function") {
                     target.applyBlockstun(effect.durationFrames);
                 }
+                const kb = effect.context?.knockbackX ?? 0;
+                if (kb !== 0) target.root.position.x += kb;
                 this._fxShake(0.12, 100);
                 continue;
             }

@@ -1,6 +1,32 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：`plans/26.10.16 单场景多战斗重构计划.MD` 已全部落地；Clash Seeker（主动寻求拼刀）26.10.25 落地。Backlog B7 closestMinReach 退化 + 近距离长 startup 惩罚（26.10.25 发现，根因 smash.minReach=0.00 把 closestMinReach 拉成零，导致 positioning 全程 hold 定住 + 近距离主动出最慢招）。
+> 当前进行中：无。Clash Seeker（主动寻求拼刀）26.10.25 落地；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-10-26)
+- **防御型角色无限 hold 修复全部落地**：按 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD` v3 执行
+- **根因定位（上轮 Step 2 失败复盘）**：
+  - 距离模型用 maxEffReach(3.52) 作 hold 上界 → 覆盖几乎所有战斗距离
+  - holdScore 固定 0.15 不乘 posture multiplier，而 attack 被 baseWeight(0.10) × attackMultiplier(0.60) 双重压制到 0.06~0.10
+  - posPlan hold bonus (+0.08) 和 throw_windup hold 保底 (+0.05) **无条件叠加**——上轮收紧 hold 上界到 3.14 后，3.14~4.16 区间静态 hold 无资格但 posPlan 仍加 0.08 压制 attack 和 clash seeker（上轮 Step 2 失败的直接原因）
+- **距离模型重构**：
+  - 新增 `#getIdealEffReach()` 取所有攻击 per-attack 有效射程**中位数**（Manatarms ≈ 2.73）替代 maxEffReach 作 positioning 锚点
+  - approach/hold 资格上界 → `idealEffReach × 1.15`（缩窄 hold 区间）
+  - retreat 近距门槛 → `idealEffReach × 0.4`；closestMinReach 保留为物理贴脸绝对底线
+  - holdScore = `Math.min(0.15, 0.15 × attackMultiplier)` —— Manatarms attackMult=0.60 → holdScore=0.09 ≈ attack 基础分 0.09，jitter 后偶尔 attack 赢；aggression 型封顶 0.15 不受影响
+- **hold 超时强制打破机制**：
+  - 新增私有字段 `#holdCommitStart` 追踪连续 hold commit 的时间戳，非 hold commit 自动重置
+  - 新增 `#getMaxHoldMs()` = Σ attack.animation.totalMs × (1 - baseAggression)
+    → aggression=0.25（Manatarms）≈ 1500ms；aggression=1（侵略型）= 0ms
+  - 超时后 holdScore 强制归零，attack 或 approach 自然赢
+- **上轮失败根因修复**：
+  - posPlan hold bonus / throw_windup hold 保底 均加 `holdScore > 0` 资格门控
+  - 静态 hold 无资格（holdScore=0）时不凭空加分 → clash seeker 恢复正常
+- **已回退的尝试**：
+  - smoothstep 曲线化 hold 分数：衰减过快，dist=2.00 时 holdFactor=0.448 → holdScore=0.067 < attack 基础分 0.090，AI 疯狂出招视防御型设定如无物，已回退为封顶设计
+  - `#getMaxHoldMs()` 旧版残留（用 tuning.hold.maxHoldMs）导致 JS 语法错误 "getter and setter for private method should either be both static or non-static"，回退时必须彻底删旧代码
+- **回归验证**：Rabble 侵略型 tavern room 无异常；hold 超时 1.5s 后自动归零
+- **文档同步**：`docs/AI系统说明.MD`（头部时间戳 + #scorePositioning 公式代码块重写 + hold 封顶 + holdTimeout + 资格门控完整链路）+ `PROJECT_CONTEXT.md`（AI 系统条目补 idealEffReach 提及）
+- **涉及文件**：AIController.js（#getIdealEffReach + #getMaxHoldMs + #holdCommitStart + #scorePositioning 重写 + #executeCommitted hold 追踪）+ `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD` v3 + `docs/AI系统说明.MD`
 
 ## Update Log (2026-10-25)
 - **Clash Seeker（主动寻求拼刀）全部落地**：按 `plans/26.10.22 防御缺口补完计划.MD` Step 1-4 执行
