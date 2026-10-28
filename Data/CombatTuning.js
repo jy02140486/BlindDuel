@@ -23,7 +23,7 @@ export const CombatTuning = {
     },
     block: {
         /** guard / clash 击退（双方互相推开的位移） */
-        knockbackX: 1,
+        knockbackX: 0.3,
         /** guard_block 双方 hitstop 帧 */
         hitstopFrames: 8,
         /** guard_block 防守方状态机锁定帧（动画继续播，防止 guard→idle 过早） */

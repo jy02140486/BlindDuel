@@ -23,15 +23,6 @@
             "controller": "player"
         },
         {
-            "archetype": "rabble_stick",
-            "id": "enemy_1",
-            "name": "rabble_stick",
-            "kind": "enemy",
-            "pos": [3.2, 0],
-            "controller": "ai",
-            "spawnIf": { "flagNot": "battle_field_1" }
-        },
-        {
             "archetype": "npc_traveller",
             "id": "npc_1",
             "name": "npc",
@@ -87,16 +78,6 @@
                 "scale": 0.4,
                 "frameMs": 250
             }
-        },
-        {
-            "type": "battle",
-            "id": "bt_field_1",
-            "pos": [-6, 0, 0],
-            "size": [4, 8, 4],
-            "battleId": "battle_field_1",
-            "condition": { "flagNot": "battle_field_1" },
-            "debugColor": [0, 1, 0],
-            "debugVisible": false
         }
     ],
     "environment": {
@@ -236,8 +217,8 @@
                         "texture": "Art/Environment/FG_Fence.png",
                         "kind": "single",
                         "x": 4,
-                        "y": -0.2,
-                        "width": 8,
+                        "y": -1.2,
+                        "width": 12,
                         "height": 4,
                         "alphaIndex": 0
                     }

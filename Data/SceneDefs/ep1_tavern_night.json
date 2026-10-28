@@ -22,46 +22,28 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [3.2, 0],
+            "pos": [4.2, -0.4],
             "controller": "ai",
             "spawnIf": { "flagNot": "battle_field_1" }
         }
     ],
     "walkAreas": [
-        { "if": {}, "minX": -28, "maxX": -12, "minY": -1.8, "maxY": 0.4 ,
+        { "if": {}, "minX": -21, "maxX": 16, "minY": -1.8, "maxY": 0.4 ,
         "obstacles": [
         { "minX": -40.5, "maxX": -20.5, "minY": 0.4, "maxY": 0.6, "label": "grass_left" },
         { "minX": -17.2, "maxX": 20, "minY": 0.07, "maxY": 0.6, "label": "grass_right" }
     ]}
     ],
     "cameraBoundaries": [
-  { "if": {}, "minY": -2.72}],
+  { "if": {}, "minY": -2.72, "minX": -25, "maxX": 20}],
     "spawns": {
-        "house_door": [-12.33, -0.4, 0]
+        "house_door": [-19, 0, 0]
     },
     "triggers": [
         {
-            "type": "sceneSwitch",
-            "id": "enter_house",
-            "pos": [-19, 0, 0],
-            "size": [2, 2, 2],
-            "targetScene": "ep1_tavern_hall",
-            "targetSpawn": "house_door",
-            "debugColor": [0, 1, 1],
-            "debugVisible": true,
-            "arrow": {
-                "enabled": true,
-                "edge": "top",
-                "direction": "up",
-                "offset": 0.3,
-                "scale": 0.4,
-                "frameMs": 250
-            }
-        },
-        {
             "type": "battle",
             "id": "bt_field_1",
-            "pos": [-6, 0, 0],
+            "pos": [2, 0, 0],
             "size": [4, 8, 4],
             "battleId": "battle_field_1",
             "condition": { "flagNot": "battle_field_1" },
@@ -185,12 +167,20 @@
                         "texture": "Art/Environment/grasstop_2.png",
                         "atlas": "Art/Environment/grasstop_2.json",
                         "kind": "animated_tile",
-                        "x": -6.7,
+                        "x": 2.7,
                         "y": 0.4,
-                        "width": 22,
+                        "width": 42,
                         "height": 2.028,
                         "tileSize": { "width": 33.92, "height": 2.24},
                         "loop": true
+                    },{
+                        "id": "night_tint",
+                        "kind": "color_filter",
+                        "color": { "r": 15, "g": 22, "b": 30, "a": 0.84 },
+                        "x": -4,
+                        "y": 8,
+                        "width": 48,
+                        "height": 32
                     }
                 ]
             },
@@ -206,8 +196,8 @@
                         "texture": "Art/Environment/FG_Fence.png",
                         "kind": "single",
                         "x": 4,
-                        "y": -0.2,
-                        "width": 8,
+                        "y": -1.2,
+                        "width": 12,
                         "height": 4,
                         "alphaIndex": 0
                     }

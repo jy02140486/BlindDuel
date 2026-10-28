@@ -85,7 +85,7 @@ export const BATTLE_FIELD_1 = {
     combatants: ["hero", "enemy_1"],
     // 每战斗人员配置：AI throwAmmo 缺省/0 = 无投掷能力（不装配 ThrowComponent）；player 弹药走背包
     combatantConfig: {
-        enemy_1: { throwAmmo: 3 },
+        enemy_1: { throwAmmo: 5, maxHp: 7 },
     },
     stageBounds: { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
@@ -189,7 +189,7 @@ export const BATTLE_FIELD_2 = {
     id: "battle_field_2",
     combatants: ["hero", "enemy_1"],
     combatantConfig: {
-        enemy_1: { throwAmmo: 3 },
+        enemy_1: { throwAmmo: 0, maxHp: 6 },
     },
     stageBounds: { minX: -6, maxX: 12, minY: -4.85, maxY: -4.75 },
     battleYBaseline: -4.8,
@@ -261,7 +261,7 @@ export const BATTLE_FIELD_2 = {
                 binding: { cameraId: "explore" },
                 channel: "blend",
                 clips: [
-                    { type: "cameraBlend", startMs: 1000, durationMs: 5400, to: "explore" }
+                    { type: "cameraBlend", startMs: 1000, durationMs: 5500, to: "explore" }
                 ]
             },
             {
@@ -283,7 +283,7 @@ export const PROLOGUE_BATTLE = {
     id: "prologue_battle",
     combatants: ["hero", "rabble_react"],
     combatantConfig: {
-        rabble_react: { throwAmmo: 3 },
+        rabble_react: { throwAmmo: 0, maxHp: 5 },
     },
     stageBounds: { minX: -8, maxX: 4, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
@@ -306,7 +306,7 @@ export const PROLOGUE_BATTLE_TUTOR = {
     id: "prologue_battle_tutor",
     combatants: ["hero", "rabble_tutor"],
     combatantConfig: {
-        rabble_tutor: { throwAmmo: 0 }, // 教学战不启用投掷能力，聚焦近身 guard 引导
+        rabble_tutor: { throwAmmo: 0, maxHp: 3 }, // 教学战不启用投掷能力，聚焦近身 guard 引导
     },
     stageBounds: { minX: -32, maxX: -19, minY: -0.05, maxY: 0.05 },
     battleYBaseline: 0,
@@ -329,7 +329,7 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
     id: "battle_field_tavern_room_post_charlotte_kidnapped",
     combatants: ["hero", "enemy_1"],     // ← 这个 enemy 要跟 sceneDef 里的 entity id 对上
     combatantConfig: {
-        enemy_1: { throwAmmo: 3 },
+        enemy_1: { throwAmmo: 0, maxHp: 7 },
     },
     stageBounds: { minX: -4.85, maxX: 4.63, minY: -3.02, maxY: -2.92 },
     battleYBaseline: -2.97,

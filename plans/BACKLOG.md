@@ -28,8 +28,9 @@
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 配音，格挡成功攻方播还是守方播，是不是跟动画播
 主人公clash也有加速奖励
-盾格挡的后退
-破盾的被破方hitstop
+
+buff
+HP sync
 
 ## AI 系统
 

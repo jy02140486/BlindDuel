@@ -88,6 +88,13 @@ export class BattleMode extends BaseMode {
         for (const { id, entity: c } of this._combatantEntries ?? []) {
             if (!c) continue;
 
+            // maxHp override：BattleDef.combatantConfig[id].maxHp > 0 时覆盖 archetype 默认值
+            const overrideMaxHp = this._battleDef?.combatantConfig?.[id]?.maxHp;
+            if (overrideMaxHp && overrideMaxHp > 0) {
+                c.combat.maxHp = overrideMaxHp;
+                c.combat.hp = overrideMaxHp;  // 满血入场
+            }
+
             if (c.kind === "player" && inventoryManager) {
                 const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
                 c.throwComponent = new ThrowComponent({ ammo });
