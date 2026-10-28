@@ -33,6 +33,7 @@ buff
 
 more pickable daggars
 all pickables add hp
+blocked projectiles
 
 ## AI 系统
 
