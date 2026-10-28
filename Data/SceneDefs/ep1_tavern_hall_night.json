@@ -68,8 +68,8 @@
             "debugVisible": true,
             "arrow": {
                 "enabled": true,
-                "edge": "left",
-                "direction": "left",
+                "edge": "top",
+                "direction": "up",
                 "offset": 0.3,
                 "scale": 0.4,
                 "frameMs": 250
