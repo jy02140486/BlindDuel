@@ -500,7 +500,8 @@ export class BattleMode extends BaseMode {
             cameraManager,
             sceneVisualSystem,
             cameraBasePosition,
-            cameraTarget
+            cameraTarget,
+            hpBar
         } = this.context;
         const cameraRig = cameraManager?.activeRig;
         if (!cameraRig) {
@@ -509,6 +510,12 @@ export class BattleMode extends BaseMode {
 
         const combatants = this._combatants ?? [];
         if (combatants.length < 2) return;
+
+        // 同步左上角 HP overlay（与 ExploreMode.updateRender 对称）
+        const player = combatants[0];
+        if (hpBar && player?.hp !== undefined) {
+            hpBar.update(player.hp, player.maxHp);
+        }
 
         const heroPos = combatants[0].root.position;
         const opponentPos = combatants[1].root.position;

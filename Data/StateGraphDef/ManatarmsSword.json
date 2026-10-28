@@ -139,7 +139,7 @@
       "clip": "clash",
       "allowMoveInput": false,
       "loop": false,
-      "frameSpeeds": [0, 0],
+      "frameSpeeds": [0, 0.7],
       "transitions": [
         {
           "to": "idle",

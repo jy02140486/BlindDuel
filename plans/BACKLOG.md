@@ -30,7 +30,9 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 主人公clash也有加速奖励
 
 buff
-HP sync
+
+more pickable daggars
+all pickables add hp
 
 ## AI 系统
 
