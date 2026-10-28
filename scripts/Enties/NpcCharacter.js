@@ -1,5 +1,6 @@
 import { CharacterBase } from "./CharacterBase.js";
 import { NpcFrameComponent } from "../Components/NpcFrameComponent.js";
+import { ArrowIndicator } from "./ArrowIndicator.js";
 
 export class NpcCharacter extends CharacterBase {
     constructor(scene, config) {
@@ -155,6 +156,30 @@ export class NpcCharacter extends CharacterBase {
             minY: this.root.position.y - halfH,
             maxY: this.root.position.y + halfH
         };
+    }
+
+    queryHint(playerPos) {
+        if (!this._hintArrow) return null;
+        const controller = this.npcController;
+        if (!controller?._needsInteract) return null;
+        const dx = this.root.position.x - playerPos.x;
+        const dy = this.root.position.y - playerPos.y;
+        const r = controller.greetingRadius ?? 1.6;
+        if (dx * dx + dy * dy > r * r) return null;
+        const anchor = this.root.position.clone();
+        anchor.y += (this._hintOffset ?? 0.5);
+        return { anchor };
+    }
+
+    setupHintArrow(scene, config) {
+        this._hintArrow = new ArrowIndicator(scene, {
+            scale: config.scale ?? 0.4,
+            direction: config.direction ?? "down",
+            frameMs: config.frameMs ?? 250,
+            atlasUrl: config.atlasUrl,
+            id: config.id,
+        });
+        this._hintOffset = config.offset ?? 3.2;
     }
 
 }

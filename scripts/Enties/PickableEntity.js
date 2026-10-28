@@ -3,6 +3,8 @@
  * 轻量实体，不继承 CharacterBase。仅包含 sprite plane + 渲染设置。
  * 支持 Y 偏移让物品精灵显示在合适高度（接近手部）。
  */
+import { ArrowIndicator } from "./ArrowIndicator.js";
+
 export class PickableEntity {
     constructor(scene, config) {
         this.scene = scene;
@@ -125,6 +127,10 @@ export class PickableEntity {
 
     /** 被拾取：销毁 mesh */
     pickup() {
+        if (this._hintArrow) {
+            this._hintArrow.dispose();
+            this._hintArrow = null;
+        }
         if (this.debugPanel) {
             this.debugPanel.remove();
             this.debugPanel = null;
@@ -153,5 +159,26 @@ export class PickableEntity {
 
     get isDisposed() {
         return !this.root && !this.spritePlane;
+    }
+
+    queryHint(playerPos) {
+        if (this.isDisposed || !this._hintArrow) return null;
+        const dx = this.root.position.x - playerPos.x;
+        const dy = this.root.position.y - playerPos.y;
+        if (dx * dx + dy * dy > 1.6 * 1.6) return null;
+        const anchor = this.root.position.clone();
+        anchor.y += this.visualYOffset + (this._hintOffset ?? 0.3);
+        return { anchor };
+    }
+
+    setupHintArrow(scene, config) {
+        this._hintArrow = new ArrowIndicator(scene, {
+            scale: config.scale ?? 0.3,
+            direction: config.direction ?? "down",
+            frameMs: config.frameMs ?? 250,
+            atlasUrl: config.atlasUrl,
+            id: config.id,
+        });
+        this._hintOffset = config.offset ?? 0.4;
     }
 }

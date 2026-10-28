@@ -95,6 +95,20 @@ export class Scene {
             }
             this._spawnEntity(entityDef);
         }
+        // 为有 arrow 配置的实体创建 ArrowIndicator（由各实体类自己决定默认值）
+        for (let i = 0; i < this._sceneDef.entities.length; i++) {
+            const entityDef = this._sceneDef.entities[i];
+            if (!entityDef.arrow?.enabled) continue;
+            const entity = this._entityById.get(entityDef.id);
+            if (!entity) continue;
+            if (typeof entity.setupHintArrow === "function") {
+                entity.setupHintArrow(this.scene, {
+                    ...entityDef.arrow,
+                    id: entityDef.id,
+                    atlasUrl: entityDef.arrow.atlasUrl ?? "./Art/Sprite/UI/arrow.png",
+                });
+            }
+        }
         const character = this._entityById.get("hero");
         // 兼容别名：取第一个 kind=enemy 实体（controller 已在 _spawnEntity 中按各自 entityDef 独立创建）。
         // 多敌人场景主路径必须用显式 id（BattleSession / actorRegistry），不得依赖此别名。
@@ -504,6 +518,10 @@ export class Scene {
         }
         if (this.entityPool) {
             for (const entity of this.entityPool) {
+                if (entity._hintArrow) {
+                    entity._hintArrow.dispose();
+                    entity._hintArrow = null;
+                }
                 if (entity.dispose) entity.dispose();
             }
         }

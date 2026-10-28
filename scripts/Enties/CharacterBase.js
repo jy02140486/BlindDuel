@@ -752,4 +752,8 @@ export class CharacterBase {
         this.rootDebugMesh.setEnabled(value);
         this.collision?.setVisible(value);
     }
+
+    queryHint(playerPos) {
+        return null;
+    }
 }

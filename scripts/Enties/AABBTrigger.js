@@ -1,3 +1,5 @@
+import { ArrowIndicator } from "./ArrowIndicator.js";
+
 export class AABBTrigger {
     constructor(scene, position, size, options = {}) {
         this.scene = scene;
@@ -19,7 +21,7 @@ export class AABBTrigger {
         this.debugMesh.renderingGroupId = 3;
         this.debugMesh.setEnabled(options.debugVisible || false);
 
-        this._arrow = null;
+        this._hintArrow = null;
     }
 
     #createDebugMaterial(color) {
@@ -30,10 +32,13 @@ export class AABBTrigger {
         return mat;
     }
 
-    checkOverlap(entity) {
+    checkOverlap(entityOrPos) {
         if (!this._enabled) return false;
 
-        const entityPos = entity.root.position;
+        // 兼容三种输入：entity（有 .root.position）、带 .position 的对象、纯 Vector3
+        const entityPos = entityOrPos.root?.position
+            ?? entityOrPos.position
+            ?? entityOrPos;
         const halfW = this.size.width / 2;
         const halfH = this.size.height / 2;
         const halfD = this.size.depth / 2;
@@ -81,133 +86,53 @@ export class AABBTrigger {
     }
 
     setupArrow(config) {
-        if (this._arrow) {
-            this._arrow.dispose();
-            this._arrow = null;
+        if (this._hintArrow) {
+            this._hintArrow.dispose();
+            this._hintArrow = null;
         }
-        this._arrow = new ArrowIndicator(this.scene, this.position, this.size, config);
+        this._hintArrow = new ArrowIndicator(this.scene, config);
+        this._hintConfig = {
+            edge: config.edge ?? "bottom",
+            offset: config.offset ?? 0.3
+        };
+        // trigger 是静态的，anchor 预计算一次
+        this._hintAnchor = this._computeHintAnchor();
     }
 
     updateArrow(visible, dtMs) {
-        if (!this._arrow) return;
-        this._arrow.setVisible(visible);
-        if (visible) this._arrow.stepFrame(dtMs);
+        if (!this._hintArrow) return;
+        if (visible) {
+            this._hintArrow.setAnchor(this._hintAnchor);
+            this._hintArrow.setVisible(true);
+            this._hintArrow.tick(dtMs);
+        } else {
+            this._hintArrow.setVisible(false);
+        }
     }
 
     disposeArrow() {
-        if (this._arrow) {
-            this._arrow.dispose();
-            this._arrow = null;
+        if (this._hintArrow) {
+            this._hintArrow.dispose();
+            this._hintArrow = null;
         }
     }
-}
 
-class ArrowIndicator {
-    constructor(scene, triggerPosition, triggerSize, config) {
-        this.scene = scene;
-        this._triggerPosition = triggerPosition.clone();
-        this._triggerSize = { ...triggerSize };
-        this._frameCount = 4;
-        this._frameIndex = 0;
-        this._accumMs = 0;
-        this._frameMs = config.frameMs ?? 250;
-
-        const pxPerUnit = 32;
-        const scale = config.scale ?? 1.0;
-        const planeW = (32 / pxPerUnit) * scale;
-        const planeH = (48 / pxPerUnit) * scale;
-
-        const pos = this._computePosition(config.edge ?? "bottom", config.offset ?? 0.3);
-        const rot = this._computeRotation(config.direction ?? "up");
-
-        const id = config.id || "arrow";
-        this.plane = BABYLON.MeshBuilder.CreatePlane(`${id}_indicator`, {
-            width: planeW,
-            height: planeH
-        }, scene);
-        this.plane.position.copyFrom(pos);
-        this.plane.rotation.z = rot;
-        this.plane.renderingGroupId = 3;
-        this.plane.alphaIndex = 100;
-        this.plane.setEnabled(false);
-
-        this.material = new BABYLON.StandardMaterial(`${id}_arrow_mat`, scene);
-        this.material.emissiveColor = new BABYLON.Color3(1, 1, 1);
-        this.material.backFaceCulling = false;
-        this.material.useAlphaFromDiffuseTexture = true;
-        this.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-        this.material.disableLighting = true;
-        this.material.disableDepthWrite = true;
-        this.plane.material = this.material;
-
-        const tex = new BABYLON.Texture(
-            config.atlasUrl,
-            scene,
-            false,
-            true,
-            BABYLON.Texture.NEAREST_SAMPLINGMODE
-        );
-        tex.hasAlpha = true;
-        tex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-        tex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-        tex.uScale = 1 / this._frameCount;
-        tex.uOffset = 0;
-        this.material.diffuseTexture = tex;
-        this._texture = tex;
+    queryHint(playerPos) {
+        if (!this._enabled || this.triggered) return null;
+        if (!this.checkOverlap(playerPos)) return null;
+        return { anchor: this._hintAnchor };
     }
 
-    _computePosition(edge, offset) {
-        const p = this._triggerPosition;
-        const s = this._triggerSize;
-        const cx = p.x, cy = p.y, cz = p.z;
-        const halfW = s.width / 2;
-        const halfH = s.height / 2;
+    _computeHintAnchor() {
+        const p = this.position, s = this.size;
+        const halfW = s.width / 2, halfH = s.height / 2;
+        const { edge, offset } = this._hintConfig;
         switch (edge) {
-            case "top":    return new BABYLON.Vector3(cx, cy + halfH + offset, cz);
-            case "left":   return new BABYLON.Vector3(cx - halfW - offset, cy, cz);
-            case "right":  return new BABYLON.Vector3(cx + halfW + offset, cy, cz);
-            case "bottom":
-            default:       return new BABYLON.Vector3(cx, cy - halfH - offset, cz);
-        }
-    }
-
-    _computeRotation(direction) {
-        switch (direction) {
-            case "right":  return -Math.PI / 2;
-            case "down":   return Math.PI;
-            case "left":   return Math.PI / 2;
-            case "up":
-            default:       return 0;
-        }
-    }
-
-    setVisible(visible) {
-        if (this.plane) this.plane.setEnabled(visible);
-    }
-
-    stepFrame(dtMs) {
-        this._accumMs += dtMs;
-        while (this._accumMs >= this._frameMs) {
-            this._accumMs -= this._frameMs;
-            this._frameIndex = (this._frameIndex + 1) % this._frameCount;
-            if (this._texture) {
-                this._texture.uOffset = this._frameIndex / this._frameCount;
-            }
-        }
-    }
-
-    dispose() {
-        if (this.plane) {
-            this.plane.dispose();
-            this.plane = null;
-        }
-        if (this.material) {
-            this.material.dispose();
-            this.material = null;
-        }
-        if (this._texture) {
-            this._texture.dispose();
-            this._texture = null;
+            case "top":    return new BABYLON.Vector3(p.x, p.y + halfH + offset, p.z);
+            case "bottom": return new BABYLON.Vector3(p.x, p.y - halfH - offset, p.z);
+            case "left":   return new BABYLON.Vector3(p.x - halfW - offset, p.y, p.z);
+            case "right":  return new BABYLON.Vector3(p.x + halfW + offset, p.y, p.z);
+            default:       return new BABYLON.Vector3(p.x, p.y - halfH - offset, p.z);
         }
     }
 }

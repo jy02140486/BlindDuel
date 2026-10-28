@@ -45,7 +45,8 @@
             "kind": "npc",
             "pos": [-30, -0.7, 0],
             "controller": "npc",
-            "spawnIf": { "flagNot": "intro_played_ep1_tavern" }
+            "spawnIf": { "flagNot": "intro_played_ep1_tavern" },
+            "arrow": { "enabled": true, "offset": 0.5, "scale": 0.5 }
         }
     ],
     "walkAreas": [

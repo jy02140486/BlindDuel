@@ -131,7 +131,8 @@
             "name": "Charlotte",
             "kind": "npc",
             "pos": [-30, 0, 0],
-            "controller": "npc"
+            "controller": "npc",
+            "arrow": { "enabled": true }
         },
         {
             "archetype": "prop",
@@ -203,6 +204,7 @@
             "pos": [-18.0, -0.7],
             "controller": "none",
             "visualYOffset": 0,
+            "arrow": { "enabled": true },
             "itemDef": {
                 "id": "altar_gem",
                 "name": "祭坛宝石",

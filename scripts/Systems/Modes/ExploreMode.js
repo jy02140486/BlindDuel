@@ -25,6 +25,7 @@ export class ExploreMode extends BaseMode {
         this.enemies = [];
         this._playedCutsceneIds = new Set();
         this._cutsceneTimers = new Map();
+        this._hintSources = [];
         this._collisionSystem = new ExploreCollisionSystem();
         this._pickupSequence = null;
         this._giveSequence = null;
@@ -78,7 +79,7 @@ export class ExploreMode extends BaseMode {
 
         // 箭头显隐放在 sequencer 门控之外：sequencer 期间需强制隐藏箭头，
         // 避免玩家在 trigger 内时箭头亮起后穿过整个 cutscene
-        this.#updateTriggerArrows(character, dtMs, sequencerBusy);
+        this.#updateHintArrows(character.root.position, dtMs, sequencerBusy);
         this.#updateDialogueBubble();
 
         for (const prop of this.props) {
@@ -216,20 +217,24 @@ export class ExploreMode extends BaseMode {
         }
     }
 
-    #updateTriggerArrows(character, dtMs, sequencerBusy) {
-        const { sceneDef, scene } = this.context;
-        if (!sceneDef?.triggers || !scene?.triggers) return;
-
-        for (const triggerDef of sceneDef.triggers) {
-            if (!triggerDef.arrow) continue;
-            const trigger = scene.triggers.get(triggerDef.id);
-            if (!trigger?.updateArrow) continue;
-
-            const visible = !sequencerBusy
-                && trigger._enabled
-                && trigger.checkOverlap(character);
-
-            trigger.updateArrow(visible, dtMs);
+    #updateHintArrows(playerPos, dtMs, sequencerBusy) {
+        if (!this._hintSources.length) return;
+        const hidden = sequencerBusy;
+        for (const source of this._hintSources) {
+            const arrow = source._hintArrow;
+            if (!arrow) continue;
+            if (hidden || !source.queryHint) {
+                arrow.setVisible(false);
+                continue;
+            }
+            const hint = source.queryHint(playerPos);
+            if (hint) {
+                arrow.setAnchor(hint.anchor);
+                arrow.setVisible(true);
+                arrow.tick(dtMs);
+            } else {
+                arrow.setVisible(false);
+            }
         }
     }
 
@@ -661,12 +666,24 @@ export class ExploreMode extends BaseMode {
         this.pickables.length = 0;
         this.props.length = 0;
         this.enemies.length = 0;
+        this._hintSources.length = 0;
+
+        // 先收集 trigger 的 hint sources
+        const { scene } = this.context;
+        if (scene?.triggers) {
+            for (const trigger of scene.triggers.values()) {
+                if (trigger._hintArrow) this._hintSources.push(trigger);
+            }
+        }
 
         for (const entity of entityPool) {
             if (entity.kind === "player") {
                 this.dynamicActors.push(entity);
             } else if (entity.kind === "npc" && entity.isCompanion && typeof entity.getBlockerAabb === "function") {
                 this.dynamicActors.push(entity);
+            }
+            if (entity._hintArrow) {
+                this._hintSources.push(entity);
             }
             if (entity.kind === "enemy") {
                 this.enemies.push(entity);
