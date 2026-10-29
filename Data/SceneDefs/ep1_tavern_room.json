@@ -22,6 +22,26 @@
             "controller": "player"
         },
         {
+            "archetype": "pickable",
+            "id": "daggerpack_01",
+            "name": "daggerpack",
+            "kind": "pickable",
+            "pos": [3.7, -2],
+            "controller": "none",
+            "visualYOffset": 0.1,
+            "arrow": { "enabled": true },
+            "itemDef": {
+                "id": "daggerpack",
+                "name": "一袋匕首",
+                "consumeType": "pocket",
+                "throwable": true,
+                "atlasKey": "daggerpack",
+                "textureUrl": "./Art/Sprite/items/daggerpack.png",
+                "count": 5,
+                "yieldsItem": "dagger"
+            }
+        },
+        {
             "archetype": "prop",
             "id": "prop_charlotte_sleep",
             "name": "ep1_charlotte_sleep",

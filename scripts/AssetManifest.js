@@ -195,7 +195,9 @@ export const ASSET_MANIFEST = {
         ham: "./Art/Sprite/items/Ham.json",
         tea: "./Art/Sprite/items/Tea.json",
         dagger: "./Art/Sprite/items/dagger.json",
-        altar_gem: "./Art/Sprite/items/altar_gem.json"
+        daggerpack: "./Art/Sprite/items/daggerpack.json",
+        altar_gem: "./Art/Sprite/items/altar_gem.json",
+        music_sheet: "./Art/Sprite/items/MusicSheet.json"
     },
     audio: {
         clips: "./Data/Audio/audio_clips.json",

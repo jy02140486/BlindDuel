@@ -7,10 +7,12 @@ export class InventoryManager {
         this.items = [];
     }
 
-    addItem(itemDef) {
+    addItem(itemDef, count = 1) {
         if (!itemDef) return;
-        this.items.push({ ...itemDef, uid: `${itemDef.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` });
-        console.log(`[Inventory] + ${itemDef.name} (${this.items.length} items)`);
+        for (let i = 0; i < count; i++) {
+            this.items.push({ ...itemDef, uid: `${itemDef.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` });
+        }
+        console.log(`[Inventory] + ${itemDef.name}${count > 1 ? `×${count}` : ''} (${this.items.length} items)`);
     }
 
     removeItem(itemId) {

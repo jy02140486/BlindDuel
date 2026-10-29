@@ -62,6 +62,24 @@
         },
         {
             "archetype": "pickable",
+            "id": "dagger_01",
+            "name": "dagger",
+            "kind": "pickable",
+            "pos": [6.0, -0.4],
+            "controller": "none",
+            "visualYOffset": 1.2,
+            "arrow": { "enabled": true },
+            "itemDef": {
+                "id": "dagger",
+                "name": "匕首",
+                "consumeType": "pocket",
+                "throwable": true,
+                "atlasKey": "dagger",
+                "textureUrl": "./Art/Sprite/items/dagger.png"
+            }
+        },
+        {
+            "archetype": "pickable",
             "id": "tea_01",
             "name": "tea",
             "kind": "pickable",
@@ -80,20 +98,19 @@
         },
         {
             "archetype": "pickable",
-            "id": "dagger_01",
-            "name": "dagger",
+            "id": "music_sheet_01",
+            "name": "music_sheet",
             "kind": "pickable",
             "pos": [1.0, -3],
             "controller": "none",
             "visualYOffset": 1.5,
             "arrow": { "enabled": true },
             "itemDef": {
-                "id": "dagger",
-                "name": "匕首",
+                "id": "music_sheet",
+                "name": "乐谱",
                 "consumeType": "pocket",
-                "throwable": true,
-                "atlasKey": "dagger",
-                "textureUrl": "./Art/Sprite/items/dagger.png"
+                "atlasKey": "music_sheet",
+                "textureUrl": "./Art/Sprite/items/MusicSheet.png"
             }
         }
     ],

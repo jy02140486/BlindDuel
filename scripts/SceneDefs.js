@@ -196,7 +196,7 @@ export const BATTLE_FIELD_2 = {
     onVictory: {
         scenario: SCENARIO.BATTLE_1_COMPLETED,
         flags: ["battle_field_2"],
-        questStages: [{ id: "dagger", stage: 2 }],
+        questStages: [{ id: "music_sheet", stage: 2 }],
         // 胜利后推进进度 checkpoint（ep1_tavern_hall 首个安全 spawn）
         checkpoint: { spawnId: "house_door" },
     },

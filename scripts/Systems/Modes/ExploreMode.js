@@ -1016,7 +1016,13 @@ export class ExploreMode extends BaseMode {
                 this.context.buffBar?.update(this.context.playerController.buffs);
             }
             if (seq.consumeType === "pocket" && this.context.inventoryManager) {
-                this.context.inventoryManager.addItem(pickable.itemDef);
+                let itemDef = pickable.itemDef;
+                if (pickable.itemDef.yieldsItem) {
+                    const yielded = getItemDef(pickable.itemDef.yieldsItem);
+                    if (yielded) itemDef = yielded;
+                }
+                const count = pickable.itemDef.count ?? 1;
+                this.context.inventoryManager.addItem(itemDef, count);
                 this.context.inventoryBar?.update(this.context.inventoryManager.items);
             }
             pickable.spritePlane.rotation.z = 0;

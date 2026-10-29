@@ -58,21 +58,29 @@ export const NPC_DEFS = {
         dialogues: [
             {
                 priority: 100,
-                condition: { quest: "dagger", completed: true },
+                condition: { quest: "music_sheet", completed: true },
                 text: "👋👊",
             },
             {
                 priority: 90,
-                condition: { quest: "dagger", stage: 1, hasItem: "dagger" },
+                condition: { quest: "music_sheet", stage: 1, hasItem: "music_sheet" },
                 text: "👍",
-                action: "completeDaggerQuest",
-                giveItem: "dagger",
+                giveItem: "music_sheet",
+                action: [
+                    { type: "removeItem", item: "music_sheet" },
+                    { type: "completeQuest", id: "music_sheet" }
+                ],
             },
             {
                 priority: 0,
                 condition: {},
-                text: "🗡️",
-                action: "startDaggerQuest",
+                text: "🎵",
+                content: [
+                    { type: "image", src: "./Art/Sprite/items/MusicSheet.png", width: 20, height: 20, alt: "music_sheet" }
+                ],
+                action: [
+                    { type: "startQuest", id: "music_sheet" }
+                ],
             },
         ],
     },

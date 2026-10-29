@@ -44,17 +44,6 @@ export class QuestManager {
         }
     }
 
-    startDaggerQuest() {
-        this.startQuest("dagger");
-    }
-
-    completeDaggerQuest() {
-        if (this.inventory) {
-            this.inventory.removeItem("dagger");
-        }
-        this.completeQuest("dagger");
-    }
-
     executeAction(actionName) {
         if (typeof this[actionName] === "function") {
             this[actionName]();

@@ -125,15 +125,15 @@ export class PickableEntity {
         }
     }
 
-    /** 被拾取：销毁 mesh */
-    pickup() {
-        if (this._hintArrow) {
-            this._hintArrow.dispose();
-            this._hintArrow = null;
-        }
+    /** 销毁（Scene dispose 链路 + pickup 共用） */
+    dispose() {
         if (this.debugPanel) {
             this.debugPanel.remove();
             this.debugPanel = null;
+        }
+        if (this._hintArrow) {
+            this._hintArrow.dispose();
+            this._hintArrow = null;
         }
         if (this.spritePlane) {
             this.spritePlane.dispose();
@@ -155,6 +155,11 @@ export class PickableEntity {
             this.root.dispose();
             this.root = null;
         }
+    }
+
+    /** 被拾取：销毁 mesh */
+    pickup() {
+        this.dispose();
     }
 
     get isDisposed() {
