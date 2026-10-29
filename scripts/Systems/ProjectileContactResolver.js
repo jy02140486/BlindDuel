@@ -3,7 +3,15 @@
 // Independent from ContactResolver (character↔character) — no shared state, no dedup.
 // Two-phase: cut-first (weaponbox ↔ projectile), hit-second (surviving projectile ↔ hitbox).
 
+import { getProjectileDef } from "../../Data/ProjectileDefs.js";
+
 export class ProjectileContactResolver {
+    // === 弹飞（deflect）随机公式常量 ===
+    // 所有 projectile 的弹飞速度/旋转参数都从这些常量算，不单独配置。
+    static DEFLECT_X_RATIO = 0.25;        // 弹飞水平速度上限 = 0.25 × 掷出时水平速度
+    static DEFLECT_SPIN_MIN = 1080;         // 弹飞旋转角速度下限（度/秒）
+    static DEFLECT_SPIN_MAX = 2060;        // 弹飞旋转角速度上限（度/秒）
+
     constructor(options = {}) {
         this.debugTrace = options.debugTrace ?? false;
     }
@@ -40,13 +48,15 @@ export class ProjectileContactResolver {
             }
         }
 
-        // Track which projectiles were cut this tick — they skip hit phase
-        const cutIds = new Set();
+        // Track which projectiles entered a "terminal or deflect" state this tick — SubPhase B skips them
+        // (covers both projectiles that will be destroyed and projectiles that will be deflected)
+        const deflectIds = new Set();
 
         // ===== SubPhase A: projectile ↔ weaponbox (CUT FIRST) =====
         for (const proj of projectiles) {
             if (proj.isDestroyed) continue;
-            if (!proj.cuttable) continue;  // only cuttable projectiles can be cut
+            if (proj.state !== "flying") continue;    // 弹飞中的 projectile 不参与判定
+            if (!proj.cuttable) continue;              // only cuttable projectiles can be cut
 
             const projBox = proj.getCombatBox();
 
@@ -58,7 +68,7 @@ export class ProjectileContactResolver {
                 if (this.#intersects(projBox, box)) {
                     this.#trace(`[ProjectileResolver] cut proj=${proj.id} by ${snap.characterId} box=${box.id}`);
 
-                    // projectile_cut: informational effect (no character-side processing needed yet)
+                    // 无论 destroy 还是 deflect，都先推 projectile_cut（informational + hitstop 4帧）
                     effects.push({
                         type: "projectile_cut",
                         targetId: proj.id,
@@ -70,14 +80,27 @@ export class ProjectileContactResolver {
                         }
                     });
 
-                    // projectile_destroy: CombatSystem uses this to call pm.requestDestroy
-                    effects.push({
-                        type: "projectile_destroy",
-                        targetId: proj.id,
-                        context: { reason: "cut" }
-                    });
+                    // === 查 ProjectileDefs 决定响应 ===
+                    const def = getProjectileDef(proj.projectileType);
+                    const response = def?.contactResponses?.weaponCut ?? "destroy";  // fallback: 兼容没有配置的旧 projectile
 
-                    cutIds.add(proj.id);
+                    if (response === "deflect") {
+                        const deflectConfig = this.#buildDeflectConfig(proj);
+                        effects.push({
+                            type: "projectile_deflect",
+                            targetId: proj.id,
+                            context: { deflectConfig, contactType: "weaponCut" }
+                        });
+                    } else {
+                        // destroy — 现有逻辑
+                        effects.push({
+                            type: "projectile_destroy",
+                            targetId: proj.id,
+                            context: { reason: "cut" }
+                        });
+                    }
+
+                    deflectIds.add(proj.id);  // 两种情况都标记，SubPhase B 跳过
                     break;  // one projectile can only be cut once per tick
                 }
             }
@@ -86,7 +109,8 @@ export class ProjectileContactResolver {
         // ===== SubPhase B: surviving projectile ↔ hitbox (HIT SECOND) =====
         for (const proj of projectiles) {
             if (proj.isDestroyed) continue;
-            if (cutIds.has(proj.id)) continue;  // already cut this tick — skip hit phase
+            if (proj.state !== "flying") continue;    // 弹飞中的 projectile 不参与判定
+            if (deflectIds.has(proj.id)) continue;     // 本 tick 已被 cut/弹飞 — 跳过
 
             const projBox = proj.getCombatBox();
 
@@ -101,9 +125,19 @@ export class ProjectileContactResolver {
                 if (this.#intersects(projBox, box)) {
                     this.#trace(`[ProjectileResolver] hit proj=${proj.id} → ${snap.characterId}`);
 
-                    // Reuse "hit" effect type — CombatSystem already knows how to process it.
-                    // BUT: set attackHitstopFrames to 0 so the owner doesn't get hitstop
-                    // (projectile owner already released the throw — no melee-style hitstop for owner).
+                    // === 查 ProjectileDefs 决定响应 ===
+                    const def = getProjectileDef(proj.projectileType);
+                    const response = def?.contactResponses?.characterHit ?? "destroy";
+                    const kbMultiplier = def?.hitKnockbackMultiplier ?? 1.0;
+
+                    // knockbackX 用 ProjectileDefs 的 multiplier（替代硬编码 1.0）
+                    const knockback = this.#signedKnockback(
+                        box.center.x,
+                        projBox.center.x,
+                        kbMultiplier
+                    );
+
+                    // hit effect — 无论 destroy 还是 deflect 都正常结算伤害
                     effects.push({
                         type: "hit",
                         targetId: snap.characterId,
@@ -115,24 +149,30 @@ export class ProjectileContactResolver {
                             contactType: "projectile_vs_hitbox",
                             damage: proj.damage,
                             hitState: "hit",
-                            knockbackX: this.#signedKnockback(
-                                box.center.x,
-                                projBox.center.x,
-                                1.0
-                            ),
+                            knockbackX: knockback,
                             attackHitstopFrames: 0,    // NO hitstop for projectile owner
                             pushbackMultiplier: 0.05,
                             source: "projectile"
                         }
                     });
 
-                    // Destroy projectile on hit
-                    effects.push({
-                        type: "projectile_destroy",
-                        targetId: proj.id,
-                        context: { reason: "hit" }
-                    });
+                    if (response === "deflect") {
+                        const deflectConfig = this.#buildDeflectConfig(proj);
+                        effects.push({
+                            type: "projectile_deflect",
+                            targetId: proj.id,
+                            context: { deflectConfig, contactType: "characterHit" }
+                        });
+                    } else {
+                        // destroy — 现有逻辑
+                        effects.push({
+                            type: "projectile_destroy",
+                            targetId: proj.id,
+                            context: { reason: "hit" }
+                        });
+                    }
 
+                    deflectIds.add(proj.id);  // 标记，本 tick 不再重复 hit
                     break;  // one projectile can only hit one character per tick
                 }
             }
@@ -201,5 +241,32 @@ export class ProjectileContactResolver {
 
     #trace(message) {
         if (this.debugTrace) console.log(message);
+    }
+
+    /**
+     * 为一个 projectile 生成弹飞（deflect）时的新速度和旋转参数。
+     * 全随机：x 符号随机，y 符号随机，spin 符号随机。
+     * 两个 SubPhase 共用此方法，保证弹飞行为统一。
+     * @param {Projectile} proj
+     * @returns {{ newVelX: number, newVelY: number, spinDegPerSec: number }}
+     */
+    #buildDeflectConfig(proj) {
+        const randSign = () => Math.random() < 0.5 ? -1 : 1;
+        const Ctor = ProjectileContactResolver;
+
+        // x: 符号随机，绝对值 ∈ [0, 0.25 × 掷出时水平速度]
+        const xMax = Math.abs(proj.initialVelX ?? proj.velocity.x);
+        const newVelX = randSign() * Math.random() * xMax * Ctor.DEFLECT_X_RATIO;
+
+        // y: 符号随机，绝对值 ∈ [0, 掷出时 launchVy]
+        // launchVy 是构造时的初始向上速度，不是弹飞时刻被 gravity 积分后的当前 velocity.y
+        const yMax = proj.launchVy ?? 0;
+        const newVelY = randSign() * Math.random() * yMax;
+
+        // spin: 符号随机，绝对值 ∈ [90, 360] 度/秒
+        const spinMag = Ctor.DEFLECT_SPIN_MIN + Math.random() * (Ctor.DEFLECT_SPIN_MAX - Ctor.DEFLECT_SPIN_MIN);
+        const spinDegPerSec = randSign() * spinMag;
+
+        return { newVelX, newVelY, spinDegPerSec };
     }
 }

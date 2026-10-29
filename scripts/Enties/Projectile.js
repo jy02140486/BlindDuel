@@ -55,6 +55,14 @@ export class Projectile {
             y: config.velocity?.y ?? v0       // initial up-velocity (physics-derived default)
         };
 
+        // === 新增：初始速度快照（Resolver 算弹飞上限要用，不随 gravity 变化）===
+        this.initialVelX = this.velocity.x;     // 恒定不变（gravity 只影响 y）
+        this.launchVy = this.velocity.y;        // 掷出时的初始向上速度
+
+        // === 新增：弹飞状态 ===
+        this.state = "flying";    // "flying" = 正常飞行 | "deflect" = 弹飞中
+        this.spinDegPerSec = 0;   // 弹飞时的视觉旋转角速度（度/秒）
+
         // --- Collider: fixed size, auto-computed from frameRect + optional override ---
         const halfPx = config.colliderHalfPx ?? {
             x: Math.round(frameW / 2),
@@ -164,7 +172,13 @@ export class Projectile {
         this.root.position.y = this.simPos.y;
         this.root.position.z = this.baseZ;
 
-        // Landed — projectile touches floor, destroy
+        // === 新增：弹飞视觉旋转 ===
+        if (this.spinDegPerSec !== 0 && this.spritePlane) {
+            const deltaRad = this.spinDegPerSec * dtSec * Math.PI / 180;
+            this.spritePlane.rotation.z += deltaRad;
+        }
+
+        // Landed — projectile touches floor, destroy（弹飞也走同一条路径）
         if (this.simPos.y <= this.groundY) {
             this.simPos.y = this.groundY;  // snap to floor for collision accuracy
             this.isDestroyed = true;
@@ -188,6 +202,7 @@ export class Projectile {
             ownerId: this.ownerId,
             teamId: this.teamId,
             cuttable: this.cuttable,
+            state: this.state,              // "flying" | "deflect" —— Resolver 用来跳过弹飞中的 projectile
             center: {
                 x: this.simPos.x,
                 y: this.simPos.y,
@@ -196,6 +211,25 @@ export class Projectile {
             half: this.colliderHalfWorld,
             angle: 0  // v1 collider does not rotate; visual mesh may spin later
         };
+    }
+
+    // ---------------------------------------------------------------
+    // Deflect（弹飞）— ProjectileContactResolver 触发
+    // ---------------------------------------------------------------
+    /**
+     * 进入弹飞状态。给同一物体一组新的 velocity，让它走同一条重力积分路径继续飞。
+     * @param {object} config
+     * @param {number} config.newVelX           - 新的水平速度（世界单位/秒）
+     * @param {number} config.newVelY           - 新的垂直速度（世界单位/秒，向上为正）
+     * @param {number} [config.spinDegPerSec=0] - 视觉旋转角速度（度/秒）
+     */
+    deflect({ newVelX, newVelY, spinDegPerSec = 0 }) {
+        this.state = "deflect";
+        this.velocity.x = newVelX;
+        this.velocity.y = newVelY;
+        this.spinDegPerSec = spinDegPerSec;
+        this._elapsedMs = 0;          // 重置 lifetime 计时（弹飞独立生命周期）
+        // lifetimeMs / groundY / gravity 全部不变——弹飞后仍然在同一个 y 位置落地销毁
     }
 
     // ---------------------------------------------------------------

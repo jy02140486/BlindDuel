@@ -50,6 +50,16 @@ export class ProjectileManager {
         this._destroyIds.add(projectileId);
     }
 
+    initiateDeflect(projectileId, deflectConfig) {
+        // Called by CombatSystem when projectile_deflect effect fires.
+        // 被弹飞的 projectile 不立即 destroy，让它切换到 deflect 状态后继续自然飞行/落地。
+        // Projectile 自身有 groundY + lifetimeMs 销毁守卫，不需要额外计时。
+        const proj = this._projectiles.find(p => p.id === projectileId);
+        if (proj && !proj.isDestroyed) {
+            proj.deflect(deflectConfig);
+        }
+    }
+
     flushDestroyed() {
         // Remove destroyed projectiles from entityPool and dispose Babylon resources.
         const pool = this.context.entityPool;

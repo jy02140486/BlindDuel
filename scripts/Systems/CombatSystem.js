@@ -48,6 +48,15 @@ export class CombatSystem {
                 continue;
             }
 
+            if (effect.type === "projectile_deflect") {
+                // Resolver 已经决定让 projectile 进入弹飞状态，
+                // 不立即销毁，让 ProjectileManager.initiateDeflect 切换状态后继续飞
+                if (projectileManager && effect.targetId && effect.context?.deflectConfig) {
+                    projectileManager.initiateDeflect(effect.targetId, effect.context.deflectConfig);
+                }
+                continue;  // projectile_deflect 不需要 character target lookup
+            }
+
             // --- Character-targeted effects (existing pipeline) ---
             const target = characters.find((character) => character?.id === effect.targetId);
 

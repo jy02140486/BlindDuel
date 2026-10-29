@@ -21,6 +21,14 @@ export const ProjectileDefs = {
         damage: 1,
         cuttable: true,          // 可被 slash 斩落
         lifetimeMs: 4000,
+        // === 碰撞响应（新增：ProjectileContactResolver 查这个决定产出 destroy 还是 deflect）===
+        // 允许值: "destroy" | "deflect"
+        contactResponses: {
+            characterHit: "destroy",     // 命中角色 → 销毁
+            weaponCut:    "deflect",     // 被剑斩 → 弹飞
+        },
+        // === 命中角色时的击退倍率（新增：替代 Resolver 硬编码 1.0）===
+        hitKnockbackMultiplier: 1.0,
         // === 渲染 ===
         spriteUrl: "./Art/Sprite/projectiles/proj_dagger.png",
         frame: { w: 32, h: 6 },
@@ -37,6 +45,10 @@ export const ProjectileDefs = {
         damage: 1,
         cuttable: false,          // 石头只能闪避
         lifetimeMs: 4000,
+        contactResponses: {
+            characterHit: "deflect",     // 命中角色后弹开
+        },
+        hitKnockbackMultiplier: 1.5,       // 石头更重，击退更大
         spriteUrl: "./Art/Sprite/projectiles/proj_rock.png",
         frame: { w: 12, h: 12 },
         sourceSize: { w: 12, h: 12 },
@@ -51,6 +63,11 @@ export const ProjectileDefs = {
         damage: 2,
         cuttable: true,
         lifetimeMs: 4000,
+        contactResponses: {
+            characterHit: "destroy",
+            weaponCut:    "deflect",
+        },
+        hitKnockbackMultiplier: 1.2,
         spriteUrl: "./Art/Sprite/projectiles/proj_spear.png",
         frame: { w: 48, h: 10 },
         sourceSize: { w: 48, h: 10 },
