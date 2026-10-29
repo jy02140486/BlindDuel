@@ -1081,7 +1081,7 @@ export class ExploreMode extends BaseMode {
             plane: null,
         };
 
-        this.context.game?.exploreCameraRig?.setClampEnabled?.(false, 400);
+        //this.context.game?.exploreCameraRig?.setClampEnabled?.(false, 400);
     }
 
     // approach 结束转 give 时创建 plane（延后创建，避免 approach 期间 plane 跟着 hero 跑）
