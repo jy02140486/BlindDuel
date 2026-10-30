@@ -1,6 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-26 — defensive chars 无限 hold 修复：idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控（修复上轮 clash seeker 被压制根因）。详见 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD`。
+> 更新：2026-10-30 — 投掷物斩落修复：distanceAlignment 带状判据（minReach 贴脸死区）+ preemptive gate 文档与代码同步（Step 2b 后为单条件门控）+ 新增 projDodge/projCut/nearMiss 诊断日志
+> 上一次：2026-10-26 — defensive chars 无限 hold 修复：idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控（修复上轮 clash seeker 被压制根因）。详见 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD`。
 > 上一次：2026-10-25 — Clash Seeker（主动寻求拼刀）落地
 > 
 > 三合一：设计说明 + 配置指南 + 快速索引。下次设计 aiProfile 或调参时直接查。
@@ -136,16 +137,19 @@ attackMult ∈ [0.6, 1.4]，defenseMult ∈ [0.7, 1.3]，advance/retreat ∈ [0.
 
 ### projectile defense 物理模型
 
-两条路径共享同一个评分函数，5 层 gate 决定 preemptive 要不要跳：
+两条路径共享同一个评分函数。preemptive 资格门控（2026-10-30 与代码同步，Step 2b events 迁移后原 5 层 gate 已简化）：
 
 ```
-preemptive gate 5 层门控：
+preemptive gate（#makeDecision 内，单条件）：
   ① opp.phase === "throw_windup"
-  ② predictedProjectileTTI != null
-  ③ predictedProjectileCuttable === true
-  ④ flightMs ≤ 820ms（距离 ≤ 4.92m，物理上能 preemptive cut）
-  ⑤ throwRemainingMs ≤ 570ms（opp 在 weaponbox 结束前 release，避免挥空）
+  ② predictedOpponentEvents 同时含 opp_throw_release + opp_projectile_arrival_estimate
+     （events 生成侧已隐含 cuttable —— 非 cuttable throw 不产 arrival 事件）
+  ③ arrivalEvent.startMs ≤ bestActiveEnd（最快 slash 的 startupMs+activeMs）
+     超过 = projectile 在 weaponbox 结束后才到 → SKIP，release 后 reactive 接管
 ```
+
+已知偏差（未修）：`#scoreCutForProjectile` 的距离预测以 commit 时刻为 t=0，未扣 releaseRemaining
+（windup 中段触发时把 projectile 位置算得偏近最多 speed×releaseRemaining，distErr 随 windup 早段增大）。
 
 ### timingAlignment 物理语义（二元判断）
 
@@ -154,7 +158,27 @@ tti < activeStart → timingAlignment = 0   // weaponbox 还没激活 projectile
 tti ≥ activeStart → timingAlignment = 1.0 // weaponbox 能先激活，distanceAlignment 管 reach 覆盖
 ```
 
-物理语义：projectile 是恒速直线飞行物体，不存在 "too late"——weaponbox 激活后 projectile 继续飞，只要在 reach 内就能斩到。cutScore = cutBase(0.65) × timingAlignment × distanceAlignment × attackMult。
+### distanceAlignment 物理语义（2026-10-30 修复：带状判据）
+
+weaponbox 是 active 帧序列的固定矩形，聚合覆盖带 = `[minReach(贴脸死区内缘), maxReach]`，
+**不是从身体到 maxReach 的实心圆**。projectile 恒速直线飞行，active 窗口内穿越带
+`[distAtEnd, distAtStart]` 单调递减。有覆盖 ⟺ 两带相交：
+
+```
+distAtStart = distance - speed × activeStart/1000   // 窗口开始时 projectile 距离（最远）
+distAtEnd   = distance - speed × activeEnd/1000     // 窗口结束时距离（最近）
+
+distAtStart < minReach → 0        // 全程在贴脸死区内（刀已过站，剑才上岗）→ 物理不可能
+distAtEnd   > maxReach → 线性衰减  // 全程在 reach 外 → 够不着（每超 1m 衰减到 0）
+否则                    → 1.0
+```
+
+修复动机（日志实证）：swing minReach=1.45，AI 在 3.28m 决策挥刀，dagger 穿过剑带发生在 startup
+期间（t≈115~305ms），weaponbox 激活（420ms）时刀已进死区（0.76m）——旧判据 `critDist ≤ maxReach`
+给了 distAlign=1.0，AI 白挥挨打。可斩窗口：commit 距离 ∈ [minReach + v·startup, maxReach + v·startup]
+（swing+dagger ≈ [4.0, 5.1]m）。
+
+cutScore = cutBase(0.65) × timingAlignment × distanceAlignment × attackMult × (1+cutBoostBonus)。
 
 ### #scoreAttack 完整链路
 
@@ -490,7 +514,10 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | `[Resolver-Diag] P1-attack-vs-shield` | 破盾/格挡路径详情 | 
 | `[Resolver-Diag] P2-hit` | Phase 2 命中详情（双方 state@frameIndex + hitbox 坐标）| 
 | `[AI-Diag] oppThrow=` | opp 抬手时的预测链输出 | 
-| `[AI-Diag] preemptive_gate:` | preemptive 门控结果 | 
+| `[AI-Diag] preemptive_gate:` | preemptive 门控结果（含 releaseRemaining/distErr 偏差定量）|
+| `[AI-Diag] projDodge:` | reactive dodge 评分明细（band/surplus = dodge 结束到 projectile 到达的余量）|
+| `[AI-Diag] projCut[reactive]:` | reactive cut 评分明细（projBand vs boxBand + distAlign）|
+| `[ProjectileResolver] nearMiss` | projectile 与 slash weaponbox 接近未相交的逐帧几何（需 CombatSystem debugTrace=true）|
 | `throws: throw(...)` | throw 候选评分行 | 
 | `[Phase0] oppIdleMs=` | Memory pressure + Posture target/current + label |
 | `ReferenceError` / `EXCEPTION` | JS 运行时错误 |

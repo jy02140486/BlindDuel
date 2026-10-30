@@ -377,11 +377,17 @@ export class AIController extends BaseController {
                 const flightMs = arrivalEvent.startMs - releaseEvent.startMs;
 
                 if (this.debugVisible) {
+                    const relRemaining = releaseEvent.startMs;
+                    const speedForErr = sit.opp?.throwProfile?.speed ?? 6;
+                    const distErr = (relRemaining / 1000) * speedForErr;
                     console.log(
                         `[AI-Diag] preemptive_gate: predictedTTI=${arrivalEvent.startMs.toFixed(0)}ms ` +
                         `bestActiveEnd=${bestActiveEnd}ms ` +
-                        `flightMs=${flightMs.toFixed(0)}ms → ` +
-                        `${_canPreemptive ? "VIABLE" : "SKIP (tts>activeEnd, projectile arrives after weaponbox ends)"}`
+                        `flightMs=${flightMs.toFixed(0)}ms ` +
+                        `releaseRemaining=${relRemaining.toFixed(0)}ms ` +
+                        `distErr≈${distErr.toFixed(2)}m ` +
+                        `(scoreCut 未扣 releaseRemaining 飞行距离 → alignment 虚高) → ` +
+                        `${_canPreemptive ? "VIABLE" : "SKIP (tti>activeEnd, projectile arrives after weaponbox ends)"}`
                     );
                 }
 
@@ -1695,6 +1701,22 @@ export class AIController extends BaseController {
         // 距离门控：已经飞过了
         if (threat.distanceToSelf < 0.2) score *= tun.nearSelfDecay;
 
+        // === DIAGNOSTIC: dodge 评分明细（验证远距离过早反应假设）===
+        if (this.debugVisible) {
+            const surplus = tti - totalMs;  // dodge 结束后 projectile 还要多久到
+            const band = tti < totalMs ? "TOO_LATE"
+                       : tti <= totalMs + tun.dodgeTimeWindowPeak ? "PERFECT"
+                       : surplus <= tun.dodgeTooEarlySpan ? "EARLY_DECAY"
+                       : "WAY_TOO_EARLY";
+            console.log(
+                `[AI-Diag] projDodge: dodge=${dodge.stateName} ` +
+                `tti=${tti.toFixed(0)}ms totalMs=${totalMs} peak+${tun.dodgeTimeWindowPeak} ` +
+                `winFactor=${timeWindowFactor.toFixed(2)} score=${score.toFixed(3)} ` +
+                `dist=${threat.distanceToSelf.toFixed(2)} actEnds@${totalMs} ` +
+                `arr@${tti.toFixed(0)}ms surplus=${surplus.toFixed(0)}ms band=${band}`
+            );
+        }
+
         return Math.max(0, Math.min(1, score));
     }
 
@@ -1756,28 +1778,28 @@ export class AIController extends BaseController {
         const projectileSpeed = Math.abs(
             threat.velocity?.x ?? threat.profile?.speed ?? threat.speed ?? 6);
         const slashReach = slash.range?.maxReach ?? 0;
-        // slash 激活时刻（commit + startupMs）projectile 飞了多远？
-        const distTraveledByActive = projectileSpeed * (activeStart / 1000);
-        // slash 激活时 projectile 到 AI 的距离
-        const predictedDistAtActive = Math.max(0,
-            threat.distanceToSelf - distTraveledByActive);
+        const slashMinReach = slash.range?.minReach ?? 0;  // 贴脸无效区内缘（近端死区）
+        // 窗口两端 projectile 的距离（直线飞行，单调递减）
+        // 窗口开始 = projectile 距离最远点，窗口结束 = 最近点
+        const distAtStart = Math.max(0,
+            threat.distanceToSelf - projectileSpeed * (activeStart / 1000));
+        const distAtEnd = Math.max(0,
+            threat.distanceToSelf - projectileSpeed * (activeEnd / 1000));
 
-        // 同时也要考虑 projectile 到 slash 结束时刻可能已经飞得太近（fast projectile）
-        // 用 active 窗口中间点来估算更保守
-        const activeMidpointMs = (activeStart + activeEnd) / 2;
-        const distTraveledByMid = projectileSpeed * (activeMidpointMs / 1000);
-        const predictedDistAtMid = Math.max(0,
-            threat.distanceToSelf - distTraveledByMid);
-
-        // 取两者的较小值（最紧约束）
-        const criticalDist = Math.min(predictedDistAtActive, predictedDistAtMid);
-
+        // === Bug 修复：distanceAlignment 改为带状判据 [minReach, maxReach] ===
+        // weaponbox 是 active 帧序列的固定矩形，聚合覆盖带 = [minReach(贴脸死区内缘), maxReach]
+        // 有覆盖 ⟺ 穿越带 [distAtEnd, distAtStart] 与覆盖带有交集：
+        //   distAtEnd ≤ maxReach（窗口结束前已进入 reach 内）
+        //   且 distAtStart ≥ minReach（窗口开始时尚未穿入贴脸死区）
         let distanceAlignment;
-        if (criticalDist <= slashReach) {
-            distanceAlignment = 1.0;
+        if (distAtStart < slashMinReach) {
+            // 全程在贴脸死区内 → 剑在外侧挥，物理不可能命中
+            distanceAlignment = 0;
+        } else if (distAtEnd > slashReach) {
+            // 全程在最大 reach 外 → 够不着，按超距线性衰减（每超 1m 衰减到 0）
+            distanceAlignment = Math.max(0, 1 - (distAtEnd - slashReach) / 1.0);
         } else {
-            // 每超 1m 线性衰减到 0
-            distanceAlignment = Math.max(0, 1 - (criticalDist - slashReach) / 1.0);
+            distanceAlignment = 1.0;
         }
 
         let score = tun.cutBase;
@@ -1785,6 +1807,19 @@ export class AIController extends BaseController {
         score *= distanceAlignment;
         score *= this.combatPosture.attackMultiplier;
         score *= (1 + tun.cutBoostBonus);
+
+        // === DIAGNOSTIC: cut 评分明细（reactive 路径，preemptive 已在调用点打日志）===
+        // 区分 reactive vs preemptive：threat 来自真实 projectile 时有 profile
+        const isReactive = !!threat.profile;
+        if (this.debugVisible && isReactive) {
+            console.log(
+                `[AI-Diag] projCut[reactive]: slash=${slash.stateName} ` +
+                `tti=${tti.toFixed(0)}ms active=[${activeStart},${activeEnd}]ms ` +
+                `projBand=[${distAtEnd.toFixed(2)},${distAtStart.toFixed(2)}] ` +
+                `boxBand=[${slashMinReach.toFixed(2)},${slashReach.toFixed(2)}] ` +
+                `distAlign=${distanceAlignment.toFixed(2)} score=${score.toFixed(3)}`
+            );
+        }
 
         return Math.max(0, Math.min(1, score));
     }

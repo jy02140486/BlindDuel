@@ -65,6 +65,20 @@ export class ProjectileContactResolver {
                 if (box.boxRole !== "attack") continue;
                 if (box.attackTrajectory !== "slash") continue;
 
+                // === DIAGNOSTIC: near-miss geometry（挥空归因：接近但未相交时的双方矩形）===
+                if (this.debugTrace) {
+                    const nmDx = Math.abs(projBox.center.x - box.center.x);
+                    const nmDy = Math.abs(projBox.center.y - box.center.y);
+                    const gapX = nmDx - (projBox.half.x + box.half.x);
+                    const gapY = nmDy - (projBox.half.y + box.half.y);
+                    if (gapX < 0.5 && gapY < 0.5) {
+                        this.#trace(`[ProjectileResolver] nearMiss proj=${proj.id}(${proj.projectileType}) ` +
+                            `proj[cx=${projBox.center.x.toFixed(2)} cy=${projBox.center.y.toFixed(2)} hx=${projBox.half.x.toFixed(2)} hy=${projBox.half.y.toFixed(2)}] ` +
+                            `vs ${snap.characterId}/${box.id}[cx=${box.center.x.toFixed(2)} cy=${box.center.y.toFixed(2)} hx=${box.half.x.toFixed(2)} hy=${box.half.y.toFixed(2)} ang=${(box.angle ?? 0).toFixed(0)}] ` +
+                            `gapX=${gapX.toFixed(2)} gapY=${gapY.toFixed(2)}`);
+                    }
+                }
+
                 if (this.#intersects(projBox, box)) {
                     this.#trace(`[ProjectileResolver] cut proj=${proj.id} by ${snap.characterId} box=${box.id}`);
 

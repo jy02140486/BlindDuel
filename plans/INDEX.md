@@ -1,6 +1,17 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：无。Clash Seeker（主动寻求拼刀）26.10.25 落地；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：无。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-10-30)
+- **投掷物斩落判定修复（远距离 AI 判断偏差排查）**：
+  - 现象：远距离投掷时 AI 假动作——挥 swing 斩不到弹道上的 dagger 反被砸中；dodge 在 tti 远超动作时长时仍提前 commit
+  - 根因（日志实证）：`#scoreCutForProjectile` 的 distanceAlignment 用 `critDist ≤ maxReach` 判覆盖，假设"从身体到 maxReach 实心圆全覆盖"，忽略 weaponbox 实际只存在于 `[minReach(贴脸死区内缘), maxReach]` 外侧带。实证：swing minReach=1.45，AI 在 3.28m 决策，dagger 穿过剑带发生在 startup 期间（t≈115~305ms），weaponbox 激活（420ms）时刀已进死区（0.76m）→ distAlign 虚标 1.0、score 0.691 白挥挨打
+  - 修复：distanceAlignment 改带状判据——窗口穿越带 `[distAtEnd, distAtStart]` 与覆盖带 `[minReach, maxReach]` 求交集（distAtStart < minReach → 0；distAtEnd > maxReach → 线性衰减；否则 1.0）。reactive 与 preemptive 共用此函数同时生效
+  - 可斩窗口公式：commit 距离 ∈ [minReach + v·startup, maxReach + v·startup]（swing+dagger ≈ [4.0, 5.1]m）
+  - 新增诊断日志：`[AI-Diag] projDodge:`（band/surplus）+ `[AI-Diag] projCut[reactive]:`（projBand vs boxBand）+ preemptive_gate 增强（releaseRemaining/distErr）+ `[ProjectileResolver] nearMiss`（逐帧挥空几何，debugTrace 门控）
+  - Game.js CombatSystem debugTrace 临时 true（验证用，可回 false）
+- **遗留待办（BACKLOG.md 同步）**：① reactive dodge 过早窗口（early-decay 段仍拿分，候选修法 dodgeTooEarlySpan 收窄或 hold 等待保底）② preemptive 距离预测未扣 releaseRemaining ③ #findBestSlashForProjectile 恒选列表第一个（tie-break 缺失）
+- **涉及文件**：AIController.js（#scoreCutForProjectile 带状判据 + 三处诊断日志）+ ProjectileContactResolver.js（nearMiss）+ Game.js（debugTrace）+ docs/AI系统说明.MD + plans/BACKLOG.md
 
 ## Update Log (2026-10-26)
 - **防御型角色无限 hold 修复全部落地**：按 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD` v3 执行
