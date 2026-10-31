@@ -56,14 +56,16 @@ export class ProjectileContactResolver {
         for (const proj of projectiles) {
             if (proj.isDestroyed) continue;
             if (proj.state !== "flying") continue;    // 弹飞中的 projectile 不参与判定
-            if (!proj.cuttable) continue;              // only cuttable projectiles can be cut
 
             const projBox = proj.getCombatBox();
 
             for (const { snap, box } of allWeaponBoxes) {
-                // Cut condition: slash-type attack only (boxRole==="attack" ensures it's an active attack frame)
-                if (box.boxRole !== "attack") continue;
-                if (box.attackTrajectory !== "slash") continue;
+                // 两条拦截路径：① 攻击态 slash 剑身斩落（需 cuttable）② 盾牌格挡（真盾，guardType==="shield"）
+                const isAttackCut = proj.cuttable
+                    && box.boxRole === "attack"
+                    && box.attackTrajectory === "slash";
+                const isShieldBlock = box.boxRole === "shield" && box.guardType === "shield";
+                if (!isAttackCut && !isShieldBlock) continue;
 
                 // === DIAGNOSTIC: near-miss geometry（挥空归因：接近但未相交时的双方矩形）===
                 if (this.debugTrace) {
@@ -80,7 +82,7 @@ export class ProjectileContactResolver {
                 }
 
                 if (this.#intersects(projBox, box)) {
-                    this.#trace(`[ProjectileResolver] cut proj=${proj.id} by ${snap.characterId} box=${box.id}`);
+                    this.#trace(`[ProjectileResolver] ${isShieldBlock ? "shieldBlock" : "cut"} proj=${proj.id} by ${snap.characterId} box=${box.id}`);
 
                     // 无论 destroy 还是 deflect，都先推 projectile_cut（informational + hitstop 4帧）
                     effects.push({
@@ -90,20 +92,22 @@ export class ProjectileContactResolver {
                             projectileId: proj.id,
                             cutterId: snap.characterId,
                             cutterAttackId: box.attackInstanceId,
-                            contactType: "weapon_vs_projectile"
+                            contactType: isShieldBlock ? "shield_vs_projectile" : "weapon_vs_projectile"
                         }
                     });
 
                     // === 查 ProjectileDefs 决定响应 ===
                     const def = getProjectileDef(proj.projectileType);
-                    const response = def?.contactResponses?.weaponCut ?? "destroy";  // fallback: 兼容没有配置的旧 projectile
+                    const response = isShieldBlock
+                        ? (def?.contactResponses?.shieldHit ?? "deflect")   // 盾牌格挡：默认弹飞（斩落态），暂无破盾配置
+                        : (def?.contactResponses?.weaponCut ?? "destroy");  // fallback: 兼容没有配置的旧 projectile
 
                     if (response === "deflect") {
                         const deflectConfig = this.#buildDeflectConfig(proj);
                         effects.push({
                             type: "projectile_deflect",
                             targetId: proj.id,
-                            context: { deflectConfig, contactType: "weaponCut" }
+                            context: { deflectConfig, contactType: isShieldBlock ? "shieldHit" : "weaponCut" }
                         });
                     } else {
                         // destroy — 现有逻辑
