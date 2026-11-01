@@ -54,6 +54,7 @@ py .\.serve.ps1
 - 投掷物静态定义：`Data/ProjectileDefs.js`（speed, cuttable, damage, getProjectileDef 工具函数）
 - 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
 - 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync；DEBUG_INFINITE_AMMO 正式环境必须 false）
+- 刀光组件：`scripts/Components/TrailRenderer.js`（CombatCharacter 每角色一个复用实例；marker 采样 → 世界空间 ribbon，peek-ahead 最后 marker 帧显示、取样帧结束即隐藏；颜色表 `Data/TrailColors.js` 按 attackTrajectory 取色；DEBUG_POINTS 采样点开关）
   - AI 弹药/装配：`BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配；projectileType 从 stateGraph 首个 throwActive state 派生）；玩家弹药走背包
 - AI 实例级配置注入：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `entityDef.aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat、attack.clashSeeker.baseBonus 等）→ 挂载 `entityDef.aiProfile`；`AIController.#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate/**clashSeekerWeight** 全部走实例 profile 优先 → StateGraph profile 兜底
 - 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
@@ -111,6 +112,7 @@ py .\.serve.ps1
 - NPC 占用盒数据：`Data/RootMotion/NPCs/*.occupancy.json`
 - 碰撞扫描输出：`Data/CollisionMask/**/*.collider.json`
 - 推盒扫描源：`Data/PushBox/<char>/*.png`（pushbox mask atlas，`extract_collision_boxes.ps1 -PushBoxPng` 参数传入生成）
+- 刀光 marker 扫描源：`Data/TrailMarker/<char>/*.png`（#00FFFF 点位 mask atlas，`extract_collision_boxes.ps1 -TrailMarkerPng` 生成 `frames[].trailMarkers`；点位独立 PNG，不复用 CollisionMask，D9）
 - 音频原始合包：`Audio/sfx/_raw/*.wav` + `sliceinfo.txt`（不入 AssetManifest）
 - 音频切片中间产物：`Audio/sfx/<合包名>/slice_NN.wav`（仍为源格式）
 - 音乐资源：`Audio/music/*.wav`（待定）
@@ -133,6 +135,7 @@ py .\.serve.ps1
    - `#E37800`：`weaponbox` + `subtype = weak_blade`（弱剑身/攻击侧，刀刃）
    - `#7082C1`：`root`
    - pushbox 扫描颜色：查 `extract_collision_boxes.ps1` 脚本内 `PushBoxColor` 变量
+   - `#00FFFF`：trailmarker（刀光点位，非盒——连通域只输出质心不拟合 OBB，`minPixels=2`，单帧最多 2 个，超过有 WARNING）
 2. 每帧可有多个矩形，导出为 OBB：`cx, cy, w, h, angle`。
 3. 跨帧 `id` 采用跟踪分配（位置连续性优先，尺寸变化允许）。
 4. 碰撞盒厚度约定：`40`（2D 数据无厚度，先固定）。
@@ -140,6 +143,7 @@ py .\.serve.ps1
 6. `.collider.json` 中约定：
    - `frames[].boxes[]`：碰撞盒
    - `frames[].anchors.root`：root 锚点
+   - `frames[].trailMarkers`：刀光 marker 质心 `[{cx, cy}, ...]`（cx 升序；1 点 = 采样点收尖，2 点 = 连线中点为采样点、连线长度为宽度、连线方向为刃向截面）
 7. 当前 `pushbox` 已实现：`scripts/tools/extract_collision_boxes.ps1` 支持 `-PushBoxPng` 参数扫描 pushbox 颜色（运行时为 `type="pushbox"`），`scripts/Systems/PushboxResolver.js` 从 snapshot.boxes 过滤 type==="pushbox" 做角色间分离，防止角色穿模。
 8. 当前 `weaponbox` 采用 `type = weaponbox` + `subtype = strong_blade / weak_blade`，不新增独立顶层 type。
 9. NPC 使用独立的轻量碰撞数据格式（`rootMotionOccupancyData`），由 `scripts/tools/extract_rootmotion_occupancy.ps1` 生成，仅含每帧 `anchors.root` + 固定尺寸 `occupancy.aabb`，不依赖 `.collider.json`。脚本必须扫 `Data/RootMotion/.../*.png`（root motion mask 专用 PNG，不是 `Art/Sprite` 复合 atlas——后者角色像素会覆盖 root 标记导致帧间扫描不一致）；`$OCCUPANCY_H` 固定为 `16`（不是 24），避免 AABB 中心在 root、高度过大下延导致碰撞范围虚大。
@@ -250,6 +254,8 @@ character_demo.js (主循环: clock.advance → while(stepFixed) fixedUpdate →
 > AudioManager 由 `Game` 持有，`Scene.updateRender(deltaTime)` 调用 `audioManager.update(deltaTime)`。当前处于 Step 5 完成：`play`/`stop`/`playMusic`/`stopMusic`/`switchMusic`/`update`/`setPaused`/`attachScene`/`detachScene`/`setBusVolume`/`switchAmbient`/`stopAllAmbient` 已实现；TimelineSequencer `playAudio` clip 已接入（Step 3，默认 `stopOnInterrupt: true`，`bus` 字段已生效）；SceneDef `music`/`ambient` 字段已读入（Step 4/5，支持 null/string/array/object 含条件写法）；AudioBus 真正生效（`_activeSounds` Map 跟踪在播 Sound，`setBusVolume` 实时回写 `finalVolume = baseVolume × busVolume × masterVolume`，localStorage 持久化 `blinduel_audio_bus_volumes`）；AudioContext 解锁修复（监听 pointerdown/keydown/onUnlock 补播 loop sound，用 `meta.loop` 判断因 `BABYLON.Sound` 无 `isLooping` 公开属性）。详见 `plans/archived/AudioSystemDesign.MD` §7/§9/§11。
 >
 > AnimationEvent 链路（Step 6a/6b 已落地）：`FrameAnimationComponent.fixedUpdate()` 帧推进命中事件帧 → `onAnimationEvent` 回调 → `AnimationEventBus.dispatch(payload)` → AudioManager.wireAnimationEventBus 订阅 → `audioManager.play(type)`。事件 payload 不携带消费者语义（`type` 直接当 audioId，简化策略 E1）。Step 6c（武器感知映射、VFX/Camera/Gameplay 消费者）后置 backlog。设计详见 `plans/archived/AnimationEventSystemDesign.MD`。
+>
+> 刀光采样链路（几何阶段已落地）：`CombatCharacter._updateTrailRenderer()`（动画帧推进 + root 位移之后调用；hitstop/impact 冻结路径提前 return → 采样自动停摆，D6）→ `TrailRenderer.update(ctx)`：读当前帧 `trailMarkers` 换算世界空间采样（采集时应用 facing，D4），peek-ahead 进最后 marker 帧建 ribbon 上色（`getTrailColor(attackTrajectory)`），帧推进越过取样窗口即隐藏（enterState hide 兜底）。设计详见 `plans/26.10.31 刀光计划.MD`。
 
 ### 9.3 进入战斗
 ```

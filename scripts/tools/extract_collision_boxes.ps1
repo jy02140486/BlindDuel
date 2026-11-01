@@ -3,6 +3,7 @@
   [string]$CollisionPng,
   [string]$RootPng,
   [string]$PushBoxPng,
+  [string]$TrailMarkerPng,
   [string]$OutJson
 )
 Set-StrictMode -Version Latest
@@ -96,8 +97,22 @@ function Extract-Root($bmp, $fr, $target) {
   foreach ($p in $best) { $sumX += [double]$p.X; $sumY += [double]$p.Y }
   return [pscustomobject]@{ cx = [Math]::Round($sumX / $best.Count, 3); cy = [Math]::Round($sumY / $best.Count, 3) }
 }
+function Extract-Markers($bmp, $fr, $target, [int]$minPixels) {
+  # Markers are points, not boxes: export only the centroid of each connected region, no OBB fitting.
+  $regions = @(Extract-Regions $bmp $fr $target | Where-Object { $_.Count -ge $minPixels })
+  $markers = @()
+  foreach ($points in $regions) {
+    $sumX = 0.0; $sumY = 0.0
+    foreach ($p in $points) { $sumX += [double]$p.X; $sumY += [double]$p.Y }
+    $markers += [pscustomobject]@{ cx = [Math]::Round($sumX / $points.Count, 3); cy = [Math]::Round($sumY / $points.Count, 3) }
+  }
+  # Sort by cx ascending so the first/second marker of a frame is stable.
+  return @($markers | Sort-Object cx)
+}
 $rootColor = '#7082C1'
 $handColor = '#FF00FF'
+# Trail marker points (weapon trail): cyan, no conflict with existing scan colors
+$trailMarkerColor = '#00FFFF'
 $collisionScanDefs = @(
   [pscustomobject]@{ key='hitbox'; type='hitbox'; subtype=$null; color='#FFFF00' },
   [pscustomobject]@{ key='weaponbox_strong_blade'; type='weaponbox'; subtype='strong_blade'; color='#FF0000' },
@@ -116,6 +131,13 @@ $hasPushBox = $false
 if ($PushBoxPng -and (Test-Path $PushBoxPng)) {
   $pushboxBmp = [System.Drawing.Bitmap]::new($PushBoxPng)
   $hasPushBox = $true
+}
+
+$trailMarkerBmp = $null
+$hasTrailMarker = $false
+if ($TrailMarkerPng -and (Test-Path $TrailMarkerPng)) {
+  $trailMarkerBmp = [System.Drawing.Bitmap]::new($TrailMarkerPng)
+  $hasTrailMarker = $true
 }
 
 try {
@@ -172,6 +194,13 @@ try {
         }
       }
     }
+    $trailMarkers = @()
+    if ($hasTrailMarker) {
+      $trailMarkers = @(Extract-Markers $trailMarkerBmp $fr (Parse-HexColor $trailMarkerColor) 2)
+      if ($trailMarkers.Count -gt 2) {
+        Write-Warning ('Frame {0} ({1}) has {2} trail markers, expected at most 2' -f $i, $frames[$i].name, $trailMarkers.Count)
+      }
+    }
     $rootAnchor = Extract-Root $rootBmp $fr (Parse-HexColor $rootColor)
     $handAnchor = Extract-Root $rootBmp $fr (Parse-HexColor $handColor)
     $outFrames += [pscustomobject]@{
@@ -179,6 +208,7 @@ try {
       frameName = $frames[$i].name
       frameRect = [pscustomobject]@{ x=$fr.x; y=$fr.y; w=$fr.w; h=$fr.h }
       boxes = $boxes
+      trailMarkers = $trailMarkers
       anchors = [pscustomobject]@{ root = $rootAnchor; hand = $handAnchor }
     }
   }
@@ -188,13 +218,16 @@ try {
       collisionPng = $CollisionPng
       rootPng = $RootPng
       pushboxPng = $(if ($hasPushBox) { $PushBoxPng } else { $null })
+      trailMarkerPng = $(if ($hasTrailMarker) { $TrailMarkerPng } else { $null })
       collisionTypeColors = @($collisionScanDefs | ForEach-Object { [pscustomobject]@{ key=$_.key; type=$_.type; subtype=$_.subtype; color=$_.color } })
       pushboxColor = '#00FF88'
+      trailMarkerColor = $trailMarkerColor
       rootColor = $rootColor
       handColor = $handColor
       colorTolerance = 0
       minPixels = 6
       minRootPixels = 1
+      minTrailMarkerPixels = 2
       generatedAtUtc = [DateTime]::UtcNow.ToString('o')
     }
     frames = $outFrames
@@ -204,5 +237,6 @@ try {
   $collisionBmp.Dispose()
   $rootBmp.Dispose()
   if ($pushboxBmp) { $pushboxBmp.Dispose() }
+  if ($trailMarkerBmp) { $trailMarkerBmp.Dispose() }
 }
 

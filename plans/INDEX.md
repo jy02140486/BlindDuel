@@ -1,6 +1,16 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：无。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：刀光沿轨迹渐隐（D8 ③，uv.u 已预留）待启动；quart trailmarker 资产待画。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-01)
+- **刀光系统几何阶段落地（Step 0~5，按 `plans/26.10.31 刀光计划.MD`）**：
+  - 渲染层：`scripts/Components/TrailRenderer.js`（新）——自建 VertexData ribbon（不用 TrailMesh，D1）+ Catmull-Rom 细分（SUBDIVISIONS_PER_SEGMENT=10）+ 双点连线刃向作截面方向 + TRAIL_COLORS 纯色；peek-ahead 进最后 marker 帧显示，取样帧结束即消失（v1 消失规则）
+  - 采集层：`scripts/Enties/CombatCharacter.js`——每角色一个复用实例（D5），`_updateTrailRenderer` 按 §5.2 世界空间换算（采集时应用 facing，D4），enterState hide 兜底；debug 开关 `TrailRenderer.DEBUG_POINTS`（青色采样点，默认开）
+  - 扫描管线：`scripts/tools/extract_collision_boxes.ps1` 加 `-TrailMarkerPng`（#00FFFF 连通域只出质心不做 OBB，minPixels=2，cx 升序，单帧 >2 警告）；collider.json 新增 `frames[].trailMarkers` 与 `source.trailMarkerPng`
+  - 数据：`Data/TrailColors.js`（新，slash #FFE9A8 / thrust #FF7A45）；`Data/TrailMarker/longswordman/longswordman_zornhut.png` + 重扫验证（width 与像素距逐位吻合，trajector=slash 轨迹正确）
+  - 语义修订（计划 §2.1/§5.2/§5.4/D8 已同步）：双点连线方向 = ribbon 截面方向（刃向，非轨迹法向）；消失规则由"离开 state 隐藏"改为"取样帧结束即消失"
+- **遗留**：quart trailmarker 资产待画（画完按 zornhut 同款命令重扫）；下一任务 ③ 沿轨迹渐隐（顶点 uv.u 已预留 t∈[0,1]）
+- **涉及文件**：`scripts/Components/TrailRenderer.js`（新）+ `scripts/Enties/CombatCharacter.js` + `scripts/tools/extract_collision_boxes.ps1` + `Data/TrailColors.js`（新）+ `Data/TrailMarker/longswordman/`（新）+ `character_demo.js`（TEMP 假数据清理）+ `plans/26.10.31 刀光计划.MD`
 
 ## Update Log (2026-10-30)
 - **投掷物斩落判定修复（远距离 AI 判断偏差排查）**：

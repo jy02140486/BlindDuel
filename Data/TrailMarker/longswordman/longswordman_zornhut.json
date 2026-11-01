@@ -1,0 +1,83 @@
+{ "frames": {
+   "longswordman_zornhut 0.ase": {
+    "frame": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 20
+   },
+   "longswordman_zornhut 1.ase": {
+    "frame": { "x": 282, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 200
+   },
+   "longswordman_zornhut 2.ase": {
+    "frame": { "x": 564, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 300
+   },
+   "longswordman_zornhut 3.ase": {
+    "frame": { "x": 846, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 250
+   },
+   "longswordman_zornhut 4.ase": {
+    "frame": { "x": 1128, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 100
+   },
+   "longswordman_zornhut 5.ase": {
+    "frame": { "x": 1410, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 300
+   },
+   "longswordman_zornhut 6.ase": {
+    "frame": { "x": 1692, "y": 0, "w": 282, "h": 160 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 282, "h": 160 },
+    "sourceSize": { "w": 282, "h": 160 },
+    "duration": 250
+   }
+ },
+ "meta": {
+  "app": "https://github.com/LibreSprite/LibreSprite/",
+  "version": "1.1-dev",
+  "image": "E:\\se\\BlindDuel\\Art\\RawAssets\\longswordman\\longswordman_zornhut.png",
+  "format": "RGBA8888",
+  "size": { "w": 1974, "h": 160 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "Layer 1", "opacity": 58, "blendMode": "normal" },
+   { "name": "lower body", "opacity": 255, "blendMode": "normal" },
+   { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
+   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
+   { "name": "pushBox", "opacity": 255, "blendMode": "normal" },
+   { "name": "TrailMarker", "opacity": 255, "blendMode": "normal" },
+   { "name": "body", "opacity": 255, "blendMode": "normal" },
+   { "name": "left arm", "opacity": 255, "blendMode": "normal" },
+   { "name": "weapon", "opacity": 255, "blendMode": "normal" },
+   { "name": "right arm", "opacity": 255, "blendMode": "normal" },
+   { "name": "left arm_f", "opacity": 255, "blendMode": "normal" },
+   { "name": "Layer 2", "opacity": 116, "blendMode": "normal" }
+  ]
+ }
+}

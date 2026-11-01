@@ -3,6 +3,7 @@ import { FrameAnimationComponent } from "../Components/FrameAnimationComponent.j
 import { CollisionComponent } from "../Components/CollisionComponent.js";
 import { TimeControlComponent } from "../Components/TimeControlComponent.js";
 import { TimeControlSystem } from "../Systems/TimeControlSystem.js";
+import { TrailRenderer } from "../Components/TrailRenderer.js";
 import { CombatTuning } from "../../Data/CombatTuning.js";
 
 export class CombatCharacter extends CharacterBase {
@@ -51,6 +52,9 @@ export class CombatCharacter extends CharacterBase {
 
         // ThrowComponent — BattleMode 负责装配/销毁，没投掷能力的角色保持 null
         this.throwComponent = null;
+
+        // TrailRenderer — 刀光组件，每角色一个可复用实例（D5）
+        this.trailRenderer = new TrailRenderer(scene, this);
 
         // Feedback Memory: 跟踪攻击命中结果，用于判定 miss
         this._lastAttackHadHit = false;
@@ -281,6 +285,34 @@ export class CombatCharacter extends CharacterBase {
         return true;
     }
 
+    /** 刀光采样（§6.1）：动画帧推进之后调用，读当前 clip 的 trailMarkers 做世界空间采样 */
+    _updateTrailRenderer() {
+        if (!this.trailRenderer) return;
+        const clipDef = this.config.clips?.[this.animation.currentClipName];
+        this.trailRenderer.update({
+            colliderClip: clipDef?.colliderData ?? null,
+            frameIndex: this.animation.currentFrameIndex,
+            rootPosition: this.root.position,
+            facing: this.facing,
+            trajectory: this.currentStateDef?.attackTrajectory ?? null,
+        });
+    }
+
+    /**
+     * 刀光生命周期兜底（§6.2）：离开攻击状态时强制隐藏。
+     * 常规消失时机是取样帧结束（TrailRenderer.update 内"无 marker 帧 + ribbon 在显示"→ hide），
+     * 此处兜住 clip 每帧都有 marker 等边界情况。
+     * 构造期间基类会先调 enterState(initialState)，此时 trailRenderer 尚未赋值，optional chaining 兜住。
+     */
+    enterState(stateName, tickCount = null, overrides = {}) {
+        const prevStateDef = this.currentStateDef;
+        const prevStateName = this.currentStateName;
+        super.enterState(stateName, tickCount, overrides);
+        if (prevStateDef?.attackActive === true && stateName !== prevStateName) {
+            this.trailRenderer?.hide();
+        }
+    }
+
     getCombatSnapshot() {
         const clipName = this.animation.currentClipName;
         const clipDef = this.config?.clips?.[clipName];
@@ -501,6 +533,7 @@ export class CombatCharacter extends CharacterBase {
             this.collision.syncToFrame(newFrameWhenFrozen, currentWhenFrozen.w, currentWhenFrozen.h, anchorWhenFrozen);
             this._updateDebugPanel();
             this._consumePushbackIfReady();
+            this._updateTrailRenderer();   // blockstun/hitstun 期间动画仍推进，采样继续；hitstop 冻结不进此路径（D6）
             return;
         }
 
@@ -558,6 +591,7 @@ export class CombatCharacter extends CharacterBase {
         this._consumePushbackIfReady(); // pushback 和 sprite 更新同帧
 
         this._applyMovement(effectiveDeltaMs);
+        this._updateTrailRenderer();   // 动画帧推进 + root 位移之后采样（D4 世界空间）
 
         const newState = this.currentStateName;
         const newStateDef = this.currentStateDef;
