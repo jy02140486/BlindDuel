@@ -1,6 +1,14 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：刀光沿轨迹渐隐（D8 ③，uv.u 已预留）待启动；quart trailmarker 资产待画。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-01)
+- **刀光结束效果落地（半透明 + 起点向终点渐隐消散，按 `plans/26.11.1 刀光结束效果计划.MD`，全部完成）**：
+  - 材质路线（E1/E2）：逐顶点 alpha（`VertexData.colors` A 通道，RGB 占位 1 色相走 emissive）——emissive + diffuseColor=Black 下 A 通道实测生效（`mesh.hasVertexAlpha = true`），未触发 fallback；alpha 统一出口 `_applyVertexAlphas()` = 基础渐变（BASE_ALPHA_ROOT=0.0 / TIP=0.64）× 整体系数 GLOBAL_ALPHA × 消散因子
+  - 消散状态机（E3/E4/E6）：`hide()` 改启动消散（幂等，D8 预留入口兑现）——透明分界线从起点向终点扫除（DISSOLVE_MS=120 / FEATHER=0.18，smoothstep 羽化），几何冻结原位；`CombatCharacter.fixedUpdate` 无条件 `trailRenderer.tick(dtMs)` 推进（isDead 早退之前，非消散直接 return）
+  - **E5 决议修订（实施发现）**：消散终止守卫从"clip 变化"移至"update() 采到新 marker"——攻击结束进 idle 后 clip 必然变化，原方案会在消散第一帧就清场
+  - 计划外新增：debug 采样点接入 X 键（`Scene._applyDebugVisible` → `setCollisionVisible` → `TrailRenderer.setDebugVisible`）；顺带修正 PROJECT_CONTEXT §6 既有偏差（debug 总开关实为 X 键，原文误写 C 键）
+- **涉及文件**：`scripts/Components/TrailRenderer.js` + `scripts/Enties/CombatCharacter.js`（一行挂点）+ `scripts/Enties/CharacterBase.js`（一行转发）+ `plans/26.11.1 刀光结束效果计划.MD`（含落地记录 §10）+ PROJECT_CONTEXT.md（§3 刀光条目 / §6 debug 开关 / §9.2 采样链路）
 
 ## Update Log (2026-11-01)
 - **刀光系统几何阶段落地（Step 0~5，按 `plans/26.10.31 刀光计划.MD`）**：

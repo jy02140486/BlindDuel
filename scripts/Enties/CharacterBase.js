@@ -751,6 +751,7 @@ export class CharacterBase {
         this.rootDebugVisible = value;
         this.rootDebugMesh.setEnabled(value);
         this.collision?.setVisible(value);
+        this.trailRenderer?.setDebugVisible?.(value);   // 刀光 debug 采样点随 C 键联动
     }
 
     queryHint(playerPos) {

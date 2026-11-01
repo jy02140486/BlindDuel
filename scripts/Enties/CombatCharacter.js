@@ -484,6 +484,8 @@ export class CombatCharacter extends CharacterBase {
 
         this.tickCount = tickCount;
 
+        this.trailRenderer?.tick(dtMs);   // 刀光消散进度推进（E3）；非消散状态内部直接 return
+
         if (this.combat.isDead) {
             this.animation.fixedUpdate(dtMs);
             const newFrame = this.animation.currentFrameIndex;

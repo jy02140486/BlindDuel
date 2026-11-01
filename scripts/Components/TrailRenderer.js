@@ -18,6 +18,15 @@ export class TrailRenderer {
     // 控制点间每段插入的子采样数——稀疏采样点下把折线近似为曲线（同 Unity Line/TrailRenderer 思路）
     static SUBDIVISIONS_PER_SEGMENT = 10;
 
+    // 逐顶点 alpha 调参（26.11.1 结束效果计划 §4.1，E6 三因子：基础渐变 × 整体系数 × 消散因子）
+    static BASE_ALPHA_ROOT = 0.0;     // 静止期基础渐变：刀根侧 alpha（t=0）
+    static BASE_ALPHA_TIP = 0.64;      // 静止期基础渐变：刀尖侧 alpha（t=1）
+    static GLOBAL_ALPHA = 1.0;        // 整体半透明系数
+
+    // 消散参数（26.11.1 结束效果计划 §4.1）：透明分界线从起点向终点扫除
+    static DISSOLVE_MS = 120;         // 消散总时长（fixed tick 累计，E3）
+    static DISSOLVE_FEATHER = 0.18;   // 分界线羽化带占轨迹比例（smoothstep 带宽）
+
     /**
      * @param {BABYLON.Scene} babylonScene
      * @param {object|null} character - CombatCharacter 引用；Step 0 假数据为 null
@@ -34,6 +43,11 @@ export class TrailRenderer {
         this.debugMaterial = null;
         this._lastSampledClip = null;   // 采样去重 / 重播检测用
         this._lastSampledFrameIndex = -1;
+        // 消散状态（E3/E5）：hide() 启动，tick(dtMs) 推进，_endDissolve 终态清场
+        this._dissolving = false;
+        this._dissolveElapsed = 0;
+        // debug 采样点实例级显隐（X 键联动，Scene._applyDebugVisible 下发；与静态 DEBUG_POINTS 总开关并联）
+        this._debugVisible = true;
     }
 
     /**
@@ -162,6 +176,7 @@ export class TrailRenderer {
             this.material.disableDepthWrite = true;   // 与 sprite 材质一致，靠渲染顺序压盖
             this.mesh.material = this.material;
             this.mesh.isPickable = false;
+            this.mesh.hasVertexAlpha = true;      // 启用顶点 alpha 进 finalAlpha（E2）
             this.mesh.renderingGroupId = this.character?.spritePlane?.renderingGroupId ?? 1;   // 与 sprite 同组，否则被后画的角色像素盖住
             this.mesh.renderingOrder = 100;           // 透明 pass 内最后绘制，压在 sprite 之上
         }
@@ -172,7 +187,48 @@ export class TrailRenderer {
         vertexData.uvs = uvs;
         vertexData.indices = indices;
         vertexData.applyToMesh(this.mesh);
+        this._applyVertexAlphas();   // applyToMesh 重建缓冲后写入顶点色（E6 alpha 因子统一出口）
         this.mesh.setEnabled(true);
+    }
+
+    /**
+     * 逐顶点 alpha 统一出口（E6）：alpha = 基础渐变曲线(t) × 整体系数 × 消散因子(t, progress)。
+     * RGB 占位 1（色相走 emissive，diffuseColor 为黑，顶点色 RGB 不参与着色），只借 A 通道（E2）。
+     * 需在 applyToMesh 之后调用（applyToMesh 会重建缓冲，颜色数据随后写入）。
+     */
+    _applyVertexAlphas() {
+        const n = this.samples.length;
+        if (n < 2 || !this.mesh) return;
+        const colors = new Float32Array(n * 2 * 4);
+        for (let i = 0; i < n; i += 1) {
+            const t = i / (n - 1);
+            const base = TrailRenderer.BASE_ALPHA_ROOT
+                + (TrailRenderer.BASE_ALPHA_TIP - TrailRenderer.BASE_ALPHA_ROOT) * t;
+            // 消散因子（E6）：分界线 edge 从 -FEATHER 扫到 1+FEATHER，t < edge 处被扫除，
+            // [edge, edge+FEATHER] 为羽化过渡带——progress=0 全可见 / 1 全消散
+            let dissolveFactor = 1;
+            if (this._dissolving) {
+                const progress = Math.min(1, this._dissolveElapsed / TrailRenderer.DISSOLVE_MS);
+                const f = TrailRenderer.DISSOLVE_FEATHER;
+                const edge = -f + progress * (1 + 2 * f);
+                dissolveFactor = TrailRenderer.#smoothstep(edge, edge + f, t);
+            }
+            const alpha = base * TrailRenderer.GLOBAL_ALPHA * dissolveFactor;
+            for (let k = 0; k < 2; k += 1) {   // 截面上下两顶点同 alpha
+                const c = (i * 2 + k) * 4;
+                colors[c + 0] = 1;
+                colors[c + 1] = 1;
+                colors[c + 2] = 1;
+                colors[c + 3] = alpha;
+            }
+        }
+        this.mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colors);
+    }
+
+    /** Hermite 平滑插值（消散羽化带用）：x < a → 0，x > b → 1 */
+    static #smoothstep(a, b, x) {
+        const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
     }
 
     /**
@@ -184,7 +240,9 @@ export class TrailRenderer {
         if (!ctx || !this.character) return;
         const frame = ctx.colliderClip?.frames?.[ctx.frameIndex];
 
-        // clip 变化或重播（帧号回退）→ 清空采样列并隐藏 debug 点（新攻击从头采样，防上次残留）
+        // clip 变化或重播（帧号回退）→ 清空采样列并隐藏 debug 点（新攻击从头采样，防上次残留）。
+        // 注意：消散中 clip 变为 idle/recovery 属预期（攻击结束的正常路径），不在此终止消散；
+        // 消散终止挂在下方"采到新 marker"分支（E5）。
         if (ctx.colliderClip !== this._lastSampledClip || ctx.frameIndex < this._lastSampledFrameIndex) {
             this.collectedSamples = [];
             this._lastSampledClip = ctx.colliderClip;
@@ -203,6 +261,8 @@ export class TrailRenderer {
         }
         if (ctx.frameIndex === this._lastSampledFrameIndex) return;   // 长帧持续多 tick，同帧只采一次
         this._lastSampledFrameIndex = ctx.frameIndex;
+
+        if (this._dissolving) this._endDissolve();   // E5：采到新 marker = 新攻击开始 → 终止消散清场，不得残留
 
         const rootAnchor = frame.anchors?.root;
         if (!rootAnchor) return;
@@ -250,9 +310,17 @@ export class TrailRenderer {
         }
     }
 
+    /** X 键 debug 显隐联动：关时立即隐藏现有采样点；开时不主动恢复（下次采样自然重画） */
+    setDebugVisible(value) {
+        this._debugVisible = !!value;
+        if (!this._debugVisible) {
+            for (const p of this.debugPoints) p.setEnabled(false);
+        }
+    }
+
     /** Step 3 debug：把已采样点画成青色小圆盘（挂场景根 = 世界空间，不随角色移动） */
     _renderDebugPoints(z) {
-        if (!TrailRenderer.DEBUG_POINTS) return;
+        if (!TrailRenderer.DEBUG_POINTS || !this._debugVisible) return;
         const count = this.collectedSamples.length;
         if (!this.debugMaterial) {
             this.debugMaterial = new BABYLON.StandardMaterial("trailDebugMat", this.babylonScene);
@@ -289,15 +357,51 @@ export class TrailRenderer {
         }
     }
 
-    /** v1：直接隐藏（下一任务渐隐时此方法内部改为启动消散，D8） */
+    /**
+     * 启动消散（D8 预留入口，签名不变）：分界线从起点向终点扫除（§2.2）。
+     * mesh 在显示 → 进入消散态，几何冻结原位，tick(dtMs) 推进；
+     * 本就隐藏 / 未建带 → 直接清场（幂等）；已在消散中 → no-op（update 无 marker 分支与
+     * enterState 兜底会重复调用，不得重启消散进度）。
+     */
     hide() {
+        if (this._dissolving) return;
+        for (const p of this.debugPoints) p.setEnabled(false);
+        if (this.mesh && this.mesh.isEnabled()) {
+            this.collectedSamples = [];   // 采样列清空；samples（ribbon 顶点）保留供消散渲染
+            this._dissolving = true;
+            this._dissolveElapsed = 0;
+            return;
+        }
+        this._endDissolve();
+    }
+
+    /**
+     * 消散进度推进（E3，fixedUpdate 驱动）：每 fixed tick 由 CombatCharacter 无条件调用，
+     * 非消散状态直接 return；hitstop 冻结 fixedUpdate 内动画推进路径时本 tick 照跑——
+     * 消散在离开攻击状态后才启动，天然不受 hitstop 影响。
+     */
+    tick(dtMs) {
+        if (!this._dissolving) return;
+        this._dissolveElapsed += dtMs;
+        if (this._dissolveElapsed >= TrailRenderer.DISSOLVE_MS) {
+            this._endDissolve();
+            return;
+        }
+        this._applyVertexAlphas();
+    }
+
+    /** 消散终态 / 强制清场：完全回到待复用状态（与旧 hide() 语义一致） */
+    _endDissolve() {
+        this._dissolving = false;
+        this._dissolveElapsed = 0;
         this.samples = [];
         this.collectedSamples = [];
-        for (const p of this.debugPoints) p.setEnabled(false);
         if (this.mesh) this.mesh.setEnabled(false);
     }
 
     dispose() {
+        this._dissolving = false;
+        this._dissolveElapsed = 0;
         if (this.mesh) {
             this.mesh.dispose();
             this.mesh = null;

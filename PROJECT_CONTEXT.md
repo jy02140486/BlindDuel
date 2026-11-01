@@ -54,7 +54,8 @@ py .\.serve.ps1
 - 投掷物静态定义：`Data/ProjectileDefs.js`（speed, cuttable, damage, getProjectileDef 工具函数）
 - 投掷物运行时：`scripts/Systems/ProjectileManager.js`（spawn/update/destroy projectile entities）
 - 投掷组件：`scripts/Components/ThrowComponent.js`（BattleMode 初始化，CombatCharacter 持有引用；原子 ammo/inventory sync；DEBUG_INFINITE_AMMO 正式环境必须 false）
-- 刀光组件：`scripts/Components/TrailRenderer.js`（CombatCharacter 每角色一个复用实例；marker 采样 → 世界空间 ribbon，peek-ahead 最后 marker 帧显示、取样帧结束即隐藏；颜色表 `Data/TrailColors.js` 按 attackTrajectory 取色；DEBUG_POINTS 采样点开关）
+- 刀光组件：`scripts/Components/TrailRenderer.js`（CombatCharacter 每角色一个复用实例；marker 采样 → 世界空间 ribbon，peek-ahead 最后 marker 帧显示、取样帧结束触发消散；颜色表 `Data/TrailColors.js` 按 attackTrajectory 取色；DEBUG_POINTS 采样点开关 + X 键联动）
+  - 结束效果（26.11.1 计划已落地）：逐顶点 alpha（`VertexData.colors` A 通道，只借 alpha 不动色相）= 基础渐变 BASE_ALPHA_ROOT/TIP × 整体系数 GLOBAL_ALPHA × 消散因子；`hide()` 内部改为启动消散——分界线从起点向终点扫除（DISSOLVE_MS=120 / DISSOLVE_FEATHER=0.18，smoothstep 羽化），`CombatCharacter.fixedUpdate` 无条件 `trailRenderer.tick(dtMs)` 推进（非消散直接 return）；新攻击采到 marker 即终止消散清场（E5）
   - AI 弹药/装配：`BattleDef.combatantConfig[id].throwAmmo`（战斗实例配置，缺省/0 不装配；projectileType 从 stateGraph 首个 throwActive state 派生）；玩家弹药走背包
 - AI 实例级配置注入：`Scene._buildInstanceAiTuning(entityDef)` 深拷贝全局 AITuning → 深合并 `entityDef.aiTuningOverrides`（叶子键含 defense.activationThreshold/activeBase/startupTooLateBase/reflexMaxMs/retreat.normalThreat、attack.clashSeeker.baseBonus 等）→ 挂载 `entityDef.aiProfile`；`AIController.#extractPostureOverrides` 从实例 tuning 提取 Posture 层 5 个姿态旋钮；attackPreferences/throwPreference/repetitionCostRate/**clashSeekerWeight** 全部走实例 profile 优先 → StateGraph profile 兜底
 - 投掷物结算：`scripts/Systems/ProjectileContactResolver.js`（独立管道，两阶段 Cut First → Hit Second，与 ContactResolver 并行由 CombatSystem 驱动）
@@ -152,7 +153,7 @@ py .\.serve.ps1
 1. LibreSprite 1.1-dev 不便直接写文本标签，当前主要走"颜色 + 几何扫描 + 外置 JSON"方案。
 2. 若同帧多个矩形相互接触/重叠，会在连通域阶段被合并，需要绘制时留间隔。
 3. 直接执行 `.ps1` 可能被本机 PowerShell `ExecutionPolicy` 拦截；必要时可通过 `powershell -ExecutionPolicy Bypass -File ...` 运行离线扫描脚本。
-4. `weaponbox` 的 debug 显示由 `CollisionComponent` 负责；`root` 点的 debug 显示由 `Character` 负责，二者统一跟随 `C` 键显隐。
+4. `weaponbox` 的 debug 显示由 `CollisionComponent` 负责；`root` 点的 debug 显示由 `Character` 负责，二者统一跟随 `X` 键显隐（`Scene._applyDebugVisible` 统一下发，刀光 debug 采样点同链路联动）。
 5. 当前项目尚未在 sprite 资源中增加额外"方向数据"字段；阶段性约定建议以运行时 `facing` 为主，默认资源原始朝向视为"面向右"，左向优先通过镜像获得。
 6. PowerShell 脚本需兼容 Windows 自带的 PowerShell 5.x：
    - 不支持 `?.` null 条件运算符（PS7+ 语法），需用 `if ($x) { ... $x.Prop }` 等价实现
@@ -255,7 +256,7 @@ character_demo.js (主循环: clock.advance → while(stepFixed) fixedUpdate →
 >
 > AnimationEvent 链路（Step 6a/6b 已落地）：`FrameAnimationComponent.fixedUpdate()` 帧推进命中事件帧 → `onAnimationEvent` 回调 → `AnimationEventBus.dispatch(payload)` → AudioManager.wireAnimationEventBus 订阅 → `audioManager.play(type)`。事件 payload 不携带消费者语义（`type` 直接当 audioId，简化策略 E1）。Step 6c（武器感知映射、VFX/Camera/Gameplay 消费者）后置 backlog。设计详见 `plans/archived/AnimationEventSystemDesign.MD`。
 >
-> 刀光采样链路（几何阶段已落地）：`CombatCharacter._updateTrailRenderer()`（动画帧推进 + root 位移之后调用；hitstop/impact 冻结路径提前 return → 采样自动停摆，D6）→ `TrailRenderer.update(ctx)`：读当前帧 `trailMarkers` 换算世界空间采样（采集时应用 facing，D4），peek-ahead 进最后 marker 帧建 ribbon 上色（`getTrailColor(attackTrajectory)`），帧推进越过取样窗口即隐藏（enterState hide 兜底）。设计详见 `plans/26.10.31 刀光计划.MD`。
+> 刀光采样链路（几何阶段已落地）：`CombatCharacter._updateTrailRenderer()`（动画帧推进 + root 位移之后调用；hitstop/impact 冻结路径提前 return → 采样自动停摆，D6）→ `TrailRenderer.update(ctx)`：读当前帧 `trailMarkers` 换算世界空间采样（采集时应用 facing，D4），peek-ahead 进最后 marker 帧建 ribbon 上色（`getTrailColor(attackTrajectory)`），帧推进越过取样窗口即启动消散（enterState hide 兜底；`CombatCharacter.fixedUpdate` 无条件 `trailRenderer.tick(dtMs)` 推进消散）。设计详见 `plans/26.10.31 刀光计划.MD` + `plans/26.11.1 刀光结束效果计划.MD`。
 
 ### 9.3 进入战斗
 ```
