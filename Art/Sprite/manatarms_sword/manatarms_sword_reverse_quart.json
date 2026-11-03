@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 180, "h": 160 },
     "sourceSize": { "w": 180, "h": 160 },
-    "duration": 300
+    "duration": 350
    },
    "manatarms_sword_reverse_quart 2.ase": {
     "frame": { "x": 360, "y": 0, "w": 180, "h": 160 },
@@ -50,7 +50,8 @@
    { "name": "weapon", "opacity": 255, "blendMode": "normal" },
    { "name": "pushbox", "opacity": 255, "blendMode": "normal" },
    { "name": "rootmotion", "opacity": 255, "blendMode": "normal" },
-   { "name": "collisionmask", "opacity": 255, "blendMode": "normal" }
+   { "name": "collisionmask", "opacity": 255, "blendMode": "normal" },
+   { "name": "trailmarker", "opacity": 255, "blendMode": "normal" }
   ]
  }
 }

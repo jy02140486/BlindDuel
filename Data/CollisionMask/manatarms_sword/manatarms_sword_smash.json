@@ -51,7 +51,8 @@
    { "name": "rightarm", "opacity": 255, "blendMode": "normal" },
    { "name": "pushbox", "opacity": 255, "blendMode": "normal" },
    { "name": "rootmotion", "opacity": 255, "blendMode": "normal" },
-   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" }
+   { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
+   { "name": "trailmarker", "opacity": 255, "blendMode": "normal" }
   ]
  }
 }
