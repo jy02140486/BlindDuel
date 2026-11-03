@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
     "sourceSize": { "w": 160, "h": 128 },
-    "duration": 300
+    "duration": 700
    },
    "longswordman_throw 2.ase": {
     "frame": { "x": 320, "y": 0, "w": 160, "h": 128 },
@@ -21,7 +21,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 160, "h": 128 },
     "sourceSize": { "w": 160, "h": 128 },
-    "duration": 200
+    "duration": 150
    },
    "longswordman_throw 3.ase": {
     "frame": { "x": 480, "y": 0, "w": 160, "h": 128 },
