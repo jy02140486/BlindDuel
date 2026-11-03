@@ -1,9 +1,10 @@
 ﻿{
     "source":  {
-                   "atlasJson":  ".\\Data\\CollisionMask\\longswordman\\longswordman_quart.json",
-                   "collisionPng":  ".\\Data\\CollisionMask\\longswordman\\longswordman_quart.png",
-                   "rootPng":  ".\\Data\\RootMotion\\longswordman\\longswordman_quart.png",
-                   "pushboxPng":  ".\\Data\\PushBox\\longswordman\\longswordman_quart.png",
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_quart.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_quart.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_quart.png",
+                   "pushboxPng":  "Data/PushBox/longswordman/longswordman_quart.png",
+                   "trailMarkerPng":  "Data/TrailMarker/longswordman/longswordman_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -25,12 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
                    "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-22T05:40:12.2743062Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-03T01:31:34.5590450Z"
                },
     "frames":  [
                    {
@@ -77,6 +80,9 @@
                                          "pixelCount":  1215
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  38.5,
@@ -129,6 +135,12 @@
                                          "pixelCount":  1215
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  21,
+                                                "cy":  147
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  38.5,
@@ -192,6 +204,16 @@
                                          "pixelCount":  1215
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  59.5,
+                                                "cy":  71.5
+                                            },
+                                            {
+                                                "cx":  64,
+                                                "cy":  31
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  42.5,
@@ -255,6 +277,16 @@
                                          "pixelCount":  1215
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  99,
+                                                "cy":  148
+                                            },
+                                            {
+                                                "cx":  168.5,
+                                                "cy":  142.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  40.5,

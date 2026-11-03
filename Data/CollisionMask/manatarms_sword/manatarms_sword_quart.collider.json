@@ -1,9 +1,10 @@
 ﻿{
     "source":  {
-                   "atlasJson":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_quart.json",
-                   "collisionPng":  ".\\Data\\CollisionMask\\manatarms_sword\\manatarms_sword_quart.png",
-                   "rootPng":  ".\\Data\\RootMotion\\manatarms\\manatarms_sword_quart.png",
-                   "pushboxPng":  ".\\Data\\PushBox\\manatarms_sword\\manatarms_sword_quart.png",
+                   "atlasJson":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.json",
+                   "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_quart.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_quart.png",
+                   "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_quart.png",
+                   "trailMarkerPng":  "Data/TrailMarker/manatarms_sword/manatarms_sword_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -25,12 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
                    "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-22T05:40:03.0708519Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-03T01:21:17.2481378Z"
                },
     "frames":  [
                    {
@@ -77,6 +80,9 @@
                                          "pixelCount":  1102
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  90,
@@ -140,6 +146,12 @@
                                          "pixelCount":  1020
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  127.5,
+                                                "cy":  43.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  90,
@@ -203,6 +215,16 @@
                                          "pixelCount":  720
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  86.5,
+                                                "cy":  10.5
+                                            },
+                                            {
+                                                "cx":  87.5,
+                                                "cy":  26.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  90,
@@ -236,6 +258,17 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
+                                         "cx":  43.453,
+                                         "cy":  53.235,
+                                         "w":  37.043,
+                                         "h":  24.558,
+                                         "angle":  -64.201,
+                                         "pixelCount":  847
+                                     },
+                                     {
+                                         "id":  "weaponbox_weak_blade_1",
+                                         "type":  "weaponbox",
+                                         "subtype":  "weak_blade",
                                          "cx":  25.5,
                                          "cy":  102.5,
                                          "w":  56,
@@ -255,6 +288,16 @@
                                          "pixelCount":  806
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  10,
+                                                "cy":  133
+                                            },
+                                            {
+                                                "cx":  43,
+                                                "cy":  115
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  88,

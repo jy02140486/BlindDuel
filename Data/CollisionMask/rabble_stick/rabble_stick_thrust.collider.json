@@ -4,6 +4,7 @@
                    "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_thrust.png",
                    "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_thrust.png",
                    "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_thrust.png",
+                   "trailMarkerPng":  "Data/TrailMarker/rabblestick/rabble_stick_thrust.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -25,12 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
                    "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-15T03:39:54.9204667Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-03T01:26:53.0386767Z"
                },
     "frames":  [
                    {
@@ -77,6 +80,9 @@
                                          "pixelCount":  1680
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  103,
@@ -129,6 +135,12 @@
                                          "pixelCount":  1680
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  123.5,
+                                                "cy":  82.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  105,
@@ -192,6 +204,16 @@
                                          "pixelCount":  1680
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  25.5,
+                                                "cy":  78.5
+                                            },
+                                            {
+                                                "cx":  25.5,
+                                                "cy":  67.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  101,
@@ -244,6 +266,9 @@
                                          "pixelCount":  1680
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  105,

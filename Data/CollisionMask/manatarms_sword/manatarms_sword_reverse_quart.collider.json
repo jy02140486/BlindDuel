@@ -4,6 +4,7 @@
                    "collisionPng":  "Data/CollisionMask/manatarms_sword/manatarms_sword_reverse_quart.png",
                    "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_reverse_quart.png",
                    "pushboxPng":  "Data/PushBox/manatarms_sword/manatarms_sword_reverse_quart.png",
+                   "trailMarkerPng":  "Data/TrailMarker/manatarms_sword/manatarms_sword_reverse_quart.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -25,12 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
                    "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-10-21T15:49:50.9518116Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-03T01:22:40.7885910Z"
                },
     "frames":  [
                    {
@@ -48,11 +51,11 @@
                                          "type":  "hitbox",
                                          "subtype":  null,
                                          "cx":  103,
-                                         "cy":  65,
+                                         "cy":  61.5,
                                          "w":  23,
-                                         "h":  21,
+                                         "h":  14,
                                          "angle":  0,
-                                         "pixelCount":  483
+                                         "pixelCount":  322
                                      },
                                      {
                                          "id":  "hitbox_1",
@@ -69,12 +72,12 @@
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  81,
+                                         "cx":  94.5,
                                          "cy":  92.5,
                                          "w":  48,
-                                         "h":  19,
+                                         "h":  42,
                                          "angle":  90,
-                                         "pixelCount":  912
+                                         "pixelCount":  2016
                                      },
                                      {
                                          "id":  "pushbox_0",
@@ -88,6 +91,9 @@
                                          "pixelCount":  1026
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  110.5,
@@ -151,6 +157,12 @@
                                          "pixelCount":  986
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  110.5,
+                                                "cy":  121.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  110.5,
@@ -225,6 +237,16 @@
                                          "pixelCount":  700
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  23,
+                                                "cy":  89
+                                            },
+                                            {
+                                                "cx":  60.5,
+                                                "cy":  81.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  110.5,
@@ -288,6 +310,9 @@
                                          "pixelCount":  780
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  110.5,

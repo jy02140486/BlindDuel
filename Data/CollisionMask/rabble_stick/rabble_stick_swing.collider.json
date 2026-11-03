@@ -1,11 +1,10 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.png",
-                   "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_swing.json",
-                   "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_swing.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.json",
+                   "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.png",
+                   "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_swing.png",
+                   "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_swing.png",
+                   "trailMarkerPng":  "Data/TrailMarker/rabblestick/rabble_stick_swing.png",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -27,11 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-04T02:46:26.2131307Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-03T01:25:51.3333560Z"
                },
     "frames":  [
                    {
@@ -54,13 +56,28 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "pushbox_0",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  104.5,
+                                         "cy":  121.5,
+                                         "w":  42,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  1596
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  103,
                                                     "cy":  136
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -83,13 +100,31 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "pushbox_1",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  107.5,
+                                         "cy":  121.5,
+                                         "w":  48,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  1824
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  100,
+                                                "cy":  24
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  107,
                                                     "cy":  136
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -123,13 +158,35 @@
                                          "h":  38,
                                          "angle":  90,
                                          "pixelCount":  1634
+                                     },
+                                     {
+                                         "id":  "pushbox_2",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  101.5,
+                                         "cy":  121.5,
+                                         "w":  58,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  2204
                                      }
                                  ],
+                       "trailMarkers":  [
+                                            {
+                                                "cx":  16,
+                                                "cy":  126
+                                            },
+                                            {
+                                                "cx":  51.5,
+                                                "cy":  112.5
+                                            }
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  96,
                                                     "cy":  136
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -152,13 +209,28 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
+                                     },
+                                     {
+                                         "id":  "pushbox_3",
+                                         "type":  "pushbox",
+                                         "subtype":  null,
+                                         "cx":  101.5,
+                                         "cy":  121.5,
+                                         "w":  58,
+                                         "h":  38,
+                                         "angle":  0,
+                                         "pixelCount":  2204
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  100,
                                                     "cy":  136
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]
