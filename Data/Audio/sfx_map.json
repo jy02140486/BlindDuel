@@ -1,0 +1,22 @@
+{
+    "footstep": {
+        "mode": "surface",
+        "fallback": "footstep",
+        "bySurface": {
+            "hard": { "audioId": "footstep_hard", "volume": 0.8 }
+        }
+    },
+    "swing_light":    { "audioId": "swing_light" },
+    "swing_heavy":    { "audioId": "swing_heavy" },
+    "on_cloaked":     { "audioId": "on_cloaked" },
+    "off_cloaked":    { "audioId": "off_cloaked" },
+    "on_draw_sheath": { "audioId": "on_draw_sheath" },
+
+    "combat_hit":                { "audioId": "combat_body_hit" },
+    "combat_clash":              { "audioId": "combat_weapon_clash" },
+    "combat_guard_block":        { "audioId": "combat_shield_block" },
+    "combat_shield_broken":      { "audioId": "combat_shield_break" },
+    "combat_projectile_cut":     { "audioId": "combat_weapon_clash" },
+    "combat_projectile_deflect": { "audioId": "combat_weapon_clash" },
+    "combat_projectile_hit":     { "audioId": "combat_body_hit" }
+}

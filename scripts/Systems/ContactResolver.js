@@ -152,7 +152,7 @@ export class ContactResolver {
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "parry", effects);
                         // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 后走 clash（与拼刀统一），knockback 照给
                         // 注意：此处 attackerId 指向防守方（parry 来源），与普通 clash_lose 一致，
                         // 但缺少 contactType 字段，CombatSystem 用此区分 parried vs clash
@@ -161,7 +161,7 @@ export class ContactResolver {
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "guard_block", effects);
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 让攻击中止，解冻后自动切 clash 状态（与 parry 一致的手动 push，不带 contactType）
                         effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, t.knockbackX), freezeImpactFrames: t.offenseFreezeImpactFrames } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: t.hitstopFrames });
@@ -281,6 +281,8 @@ export class ContactResolver {
                     targetId: contact.targetId,
                     attackLevel: null,
                     contactType: "weapon_vs_hitbox",
+                    attackTrajectory: contact.weapon.attackTrajectory ?? null,
+                    attackWeight: contact.weapon.attackWeight ?? null,
                     damage: 1,
                     hitState: "hit",
                     knockbackX: knockback,

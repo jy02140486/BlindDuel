@@ -3,6 +3,7 @@ import { AudioPool } from "./Audio/AudioPool.js";
 import { AudioPlayer } from "./Audio/AudioPlayer.js";
 import { MusicPlayer } from "./Audio/MusicPlayer.js";
 import { AmbientPlayer } from "./Audio/AmbientPlayer.js";
+import { SfxResolver } from "./Audio/SfxResolver.js";
 
 const DEFAULT_THROTTLE_MS = 50;
 const STORAGE_KEY = "blinduel_audio_bus_volumes";
@@ -12,9 +13,11 @@ export class AudioManager {
         const clips = audioAssets.clips ?? {};
         const buses = audioAssets.buses ?? {};
         const music = audioAssets.music ?? {};
+        const sfxMap = audioAssets.sfxMap ?? {};
         this._database = new AudioDatabase(clips, buses);
         this._pool = new AudioPool();
         this._player = new AudioPlayer(this._database, this._pool);
+        this._sfxResolver = new SfxResolver(sfxMap);
         this._musicDefs = music;
         this._music = new MusicPlayer();
         this._ambient = new AmbientPlayer();
@@ -160,8 +163,15 @@ export class AudioManager {
         if (!bus) return;
         this._unsubAnimEvent = bus.subscribeAll((payload) => {
             if (!payload || typeof payload.type !== "string") return;
-            this.play(payload.type, { source: payload.source });
+            // 语义翻译层：type 不直接当 audioId；map 未收录的语义事件静默忽略
+            const resolved = this._sfxResolver.resolve(payload.type, payload);
+            if (!resolved) return;
+            this.play(resolved.audioId, { source: payload.source, ...resolved.options });
         });
+    }
+
+    setSurfaceProvider(provider) {
+        this._sfxResolver.setSurfaceProvider(provider);
     }
 
     attachScene(babylonScene) {

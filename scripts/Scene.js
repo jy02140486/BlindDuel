@@ -9,6 +9,7 @@ import { AABBTrigger } from "./Enties/AABBTrigger.js";
 import { WalkArea } from "./Enties/WalkArea.js";
 import { StageBoundary } from "./Systems/StageBoundary.js";
 import { PushboxResolver } from "./Systems/PushboxResolver.js";
+import { SurfaceQuery } from "./Systems/SurfaceQuery.js";
 import { BattleMode } from "./Systems/Modes/BattleMode.js";
 import { ExploreMode } from "./Systems/Modes/ExploreMode.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
@@ -195,6 +196,9 @@ export class Scene {
             this._walkAreas.push({ if: {}, ...sceneDef.walkArea });
         }
         this._applyWalkArea();
+        // 地表材质查询：脚步声等按落脚点解析 SurfaceType（AudioManager 经 SfxResolver 查询）
+        this._surfaceQuery = new SurfaceQuery(sceneDef.defaultSurfaceType, sceneDef.surfaceRegions);
+        this._game.audioManager?.setSurfaceProvider(this._surfaceQuery);
         this.pushboxResolver = new PushboxResolver();
 
         // --- 相机 rigs（复用 game 的，duelRig 用场景配置更新）---
@@ -526,6 +530,7 @@ export class Scene {
             }
         }
         if (this.scene) {
+            this._game?.audioManager?.setSurfaceProvider(null);
             this._game?.audioManager?.detachScene();
             this.scene.debugLayer.hide();
             this.scene.dispose();

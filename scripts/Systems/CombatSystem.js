@@ -10,6 +10,9 @@ export class CombatSystem {
         this.projectileResolver = options.projectileResolver ?? new ProjectileContactResolver({ debugTrace: options.debugTrace });
         this.debugTrace = options.debugTrace ?? false;
         this.cameraManager = options.cameraManager ?? null;
+        // 战斗结果事件总线（Game 在 animationEventBus 创建后回填）：CombatSystem 只报告
+        // 实际战斗结果（combat_* 语义事件），由音频系统经 SfxResolver 翻译成音效
+        this.animationEventBus = options.animationEventBus ?? null;
     }
 
     fixedUpdate(characters = [], tickCount = null, worldContext = {}) {
@@ -45,12 +48,14 @@ export class CombatSystem {
 
             if (effect.type === "projectile_cut") {
                 // v1: informational only — Future: camera flash / audio cue
+                this._dispatchCombatAudio("combat_projectile_cut", null, effect.context);
                 continue;
             }
 
             if (effect.type === "projectile_deflect") {
                 // Resolver 已经决定让 projectile 进入弹飞状态，
                 // 不立即销毁，让 ProjectileManager.initiateDeflect 切换状态后继续飞
+                this._dispatchCombatAudio("combat_projectile_deflect", null, effect.context);
                 if (projectileManager && effect.targetId && effect.context?.deflectConfig) {
                     projectileManager.initiateDeflect(effect.targetId, effect.context.deflectConfig);
                 }
@@ -81,6 +86,11 @@ export class CombatSystem {
                     });
                 }
                 this._fxShake(0.18, 120);
+                // 有 contactType 的才是真实拼刀（weapon vs weapon）；parry/guard_block
+                // 复用 clash effect 中止攻方动画，不发声（防守方 blockstun 已发 combat_guard_block）
+                if (effect.context?.contactType) {
+                    this._dispatchCombatAudio("combat_clash", target, effect.context);
+                }
                 continue;
             }
 
@@ -111,6 +121,7 @@ export class CombatSystem {
                     }
                 }
                 this._fxShake(0.15, 120);
+                this._dispatchCombatAudio("combat_shield_broken", target, effect.context);
                 continue;
             }
 
@@ -128,6 +139,7 @@ export class CombatSystem {
                 const kb = effect.context?.knockbackX ?? 0;
                 if (kb !== 0) target.root.position.x += kb;
                 this._fxShake(0.12, 100);
+                this._dispatchCombatAudio("combat_guard_block", target, effect.context);
                 continue;
             }
 
@@ -154,6 +166,11 @@ export class CombatSystem {
             if (effect.type === "hit") {
                 const attackerId = effect.context?.attackerId;
                 let finalKnockbackX = effect.context?.knockbackX ?? 0;
+                // 武器命中 vs 投掷物命中走不同音效语义（ContactResolver / ProjectileContactResolver 各自的 contactType）
+                const hitAudioType = effect.context?.contactType === "projectile_vs_hitbox"
+                    ? "combat_projectile_hit"
+                    : "combat_hit";
+                this._dispatchCombatAudio(hitAudioType, target, effect.context);
 
                 // === hitstop — 从 effect.context 读 override ===
                 const hitstopFrames = effect.context?.attackHitstopFrames ?? this.tuning.hit.hitstopFrames ?? 0;
@@ -403,6 +420,16 @@ export class CombatSystem {
                 perspective: "defender"
             });
         }
+    }
+
+    // 战斗结果 → 语义事件（combat_* 前缀约定）：payload 不携带音频语义，
+    // AudioSystem 侧经 SfxResolver 查 sfx_map 决定播什么（plans/26.11.3 计划 §1）
+    _dispatchCombatAudio(type, source, context) {
+        this.animationEventBus?.dispatch({
+            type,
+            source: source ?? null,
+            context: context ?? {}
+        });
     }
 
     _fxShake(amplitude, durationMs) {

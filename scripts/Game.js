@@ -150,6 +150,8 @@ export class Game {
         this.animationEventBus = new AnimationEventBus();
         this.sharedContext.animationEventBus = this.animationEventBus;
         this.audioManager.wireAnimationEventBus(this.animationEventBus);
+        // CombatSystem 构造早于 bus 创建，此处回填引用（战斗结果 → combat_* 事件）
+        this.combatSystem.animationEventBus = this.animationEventBus;
 
         console.log("[Game.bootstrap] B1 done — shadow objects created (not wired into Scene)");
         console.log("[Game.bootstrap] cameraManager=", !!this.cameraManager,

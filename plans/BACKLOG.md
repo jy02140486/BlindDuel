@@ -26,12 +26,10 @@
 
 # mannual
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
-配音，格挡成功攻方播还是守方播，是不是跟动画播
 主人公clash也有加速奖励
 
 buff
 
-man at arms weapbox too low 
 tavern scene visual
 prediction accuracy declined on far dist
   ↳ 2026-10-30 排查拆解为三个独立问题：① cut 贴脸死区（已修：#scoreCutForProjectile distanceAlignment 带状判据 [minReach,maxReach]，weaponbox 只存在于外侧带而非 0~maxReach 实心圆）；② reactive dodge 过早窗口（tti 超出 dodge 时长很多时 early-decay 段仍拿分 → 提前 commit 动作结束弹才到；候选修法：dodgeTooEarlySpan 收窄或 hold 等待保底）；③ preemptive 距离预测未扣 releaseRemaining（windup 早段触发时 projectile 位置算得偏近最多 speed×releaseRemaining）

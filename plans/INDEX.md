@@ -3,6 +3,16 @@
 > 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
 
 ## Update Log (2026-11-03)
+- **声音系统事件驱动改造落地（Step 1-3 全部实施并验证通过，按 `plans/26.11.3 声音系统事件驱动改造计划.MD`）**：
+  - 核心原则：动画事件报告动作时机，游戏逻辑报告实际结果，音频系统负责声音表现——动画事件与音频资源彻底解耦
+  - Step 1 翻译层：`SfxResolver.js`（新，表驱动 type→audioId 映射，map 未收录 type 静默忽略）+ `Data/Audio/sfx_map.json`（新）+ `AssetManifest.js` 注册 sfxMap；顺手消除 throw_draw/throw_release 的 `unknown clip` warn 噪音
+  - Step 2 地表脚步：`SurfaceQuery.js`（新，矩形区域+defaultSurfaceType 查询）+ SceneDef `defaultSurfaceType` 字段 + Scene.init 注入/dispose 置空 + SfxResolver `mode: "surface"` 分支；脚步声按用户要求简化为软硬两档——`footstep`=软表面原声，`footstep_hard`=硬表面（酒馆 4 场景 hard / prologue soft），后续加档只动数据不动代码
+  - Step 3 战斗结果事件：ContactResolver 补 context 字段（hit 补 attackTrajectory/attackWeight；blockstun 补 attackerId/guardType）→ CombatSystem 消费 effect 时 dispatch `combat_*` 语义事件（hit/clash/guard_block/shield_broken/projectile_cut/projectile_deflect/projectile_hit，bus 引用由 Game 回填）→ 同一 SfxResolver 链路；**未命中无 combat 事件**（打空只有动画 swing 破空声）；parry/guard_block 复用 clash effect 但靠 contactType 区分不发声，防一声攻击响两下
+  - 音频资产暂用 `Audio/sfx/47125__gyzhor__lightsaber3.mp3` 光剑占位（footstep_hard + combat_* 4 条共 5 条），真素材到位后仅替换 audio_clips.json 的 clips 路径并登记 docs/AudioLicensesInfo.MD
+  - Step 4 backlog 未启动：轻重击变体、武器材质变体、intensity 分层、3D spatial、受击 VO
+- **涉及文件**：`scripts/Systems/Audio/SfxResolver.js`（新）+ `scripts/Systems/SurfaceQuery.js`（新）+ `Data/Audio/sfx_map.json`（新）+ `scripts/Systems/AudioManager.js`（wireAnimationEventBus 改经翻译层 + setSurfaceProvider）+ `scripts/AssetManifest.js` + `scripts/Scene.js`（SurfaceQuery 接线）+ `scripts/Systems/ContactResolver.js`（context 补字段）+ `scripts/Systems/CombatSystem.js`（combat_* dispatch）+ `scripts/Game.js`（bus 回填）+ `Data/Audio/audio_clips.json` + `Data/SceneDefs/*.json`（defaultSurfaceType）+ `plans/26.11.3 声音系统事件驱动改造计划.MD`（含状态）+ PROJECT_CONTEXT.md（§3 新条目 / §9.2 链路重写）
+
+## Update Log (2026-11-03)
 - **AI 问题修复计划 26.11.2 全部完成并关闭（2026-11-02 起实施，按 `plans/26.11.2 AI问题修复计划.MD`）**：
   - Step 0 口径核对：删除死配置 activationThreshold / startupTooLateBase，修正 docs/AI系统说明.MD 三处描述漂移
   - Step 1/1b/1c 防御可达性门（问题一"远距离挥空也防御"）：物理口径 `(maxReach+前冲位移+bodyReachAllowance)×1.05` 远端 + `minR−allowance` 近端死区；bodyReachAllowance 经 Step 1c 复测重校准 0.45→0.7（尖端擦身实证）；新增自身闭合法则（closure=currentSpd×timeUntilActiveEnd，≤0.3m）+ `[AI-Diag] COMBAT` 命中事件日志 + `defenseGate REJECT` 观测

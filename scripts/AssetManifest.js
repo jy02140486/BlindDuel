@@ -202,6 +202,7 @@ export const ASSET_MANIFEST = {
     audio: {
         clips: "./Data/Audio/audio_clips.json",
         buses: "./Data/Audio/audio_buses.json",
-        music: "./Data/Audio/music_clips.json"
+        music: "./Data/Audio/music_clips.json",
+        sfxMap: "./Data/Audio/sfx_map.json"
     }
 };

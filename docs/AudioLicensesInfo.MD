@@ -6,3 +6,5 @@ Rustling Duvet 1.wav by F.M.Audio -- https://freesound.org/s/556754/ -- License:
 Rustling Duvet 6.wav by F.M.Audio -- https://freesound.org/s/556756/ -- License: Attribution 4.0
 Swirling Velvet Cloak 3.wav by F.M.Audio -- https://freesound.org/s/556758/ -- License: Attribution 4.0
 Super Slow-Slide.wav by scriptique -- https://freesound.org/s/50822/ -- License: Attribution 4.0
+lightsaber3.mp3 by gyzhor -- https://freesound.org/s/47125/ -- License: Creative Commons 0
+Footsteps on hollow wood by florianreichelt -- https://freesound.org/s/459970/ -- License: Creative Commons 0
