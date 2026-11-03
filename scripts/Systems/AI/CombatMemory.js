@@ -53,6 +53,8 @@ export class CombatMemory {
 
         // consecutiveMisses：连续 attack miss 次数
         this.consecutiveMisses = 0;
+        // 26.11.2 Step 4c：最近一次 miss 的时间戳（失败驱动脱离的时间衰减依据）
+        this._lastMissAt = -Infinity;
 
         // pressure 衰减参数
         // 基准：0.995 per 500ms → half-life ≈ 135s（计划文档约定）
@@ -112,6 +114,7 @@ export class CombatMemory {
             case "attack:miss":
             case "attack:parried":
                 this.consecutiveMisses += 1;
+                this._lastMissAt = performance.now();
                 break;
 
             default:
@@ -156,6 +159,16 @@ export class CombatMemory {
         // outcomes 过期清理
         const now = performance.now();
         this.outcomes = this.outcomes.filter(o => (now - o.at) < this.outcomeDecayMs);
+
+        // 26.11.2 Step 4c：consecutiveMisses 时间衰减。
+        // 该计数原本只在 attack:hit / reset() 时清零——失败驱动脱离（positioning
+        // 消费方）依赖它作为触发依据，若无时间衰减，AI 拉开距离后旧失败计数
+        // 永久压住 approach，会卡在射程边缘无法重新打入。
+        // 3s 内没有新的 miss → 计数清零（重新计入期）。与 pressure 的慢衰减不同，
+        // 这里是"短期连续失败"语义，快速遗忘是设计意图。
+        if (this.consecutiveMisses > 0 && (now - this._lastMissAt) > 3000) {
+            this.consecutiveMisses = 0;
+        }
 
         // Phase 3: per-state outcomes 也清理过期
         for (const [state, list] of this.#perStateOutcomes) {

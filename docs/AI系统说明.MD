@@ -1,6 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-10-30 — 投掷物斩落修复：distanceAlignment 带状判据（minReach 贴脸死区）+ preemptive gate 文档与代码同步（Step 2b 后为单条件门控）+ 新增 projDodge/projCut/nearMiss 诊断日志
+> 更新：2026-11-02 — 近距带欲望制衡（26.11.2 Step 4A/4B：attack 近端锚定单招射程带衰减到 nearDecayFloor 0.5 + retreat 中间档 (0.4, 0.7]×ideal 线性爬升）+ 失败驱动脱离（Step 4c：连续 miss≥2 时 retreat 获必退级加成，退离目标线由 posture.attackMultiplier 插值——标准侵略性退到自己攻击距离外，高侵略退短至 0.85×射程，低侵略退长至 max(自己,对手) 射程；无新 tuning 参数）。此前同日：holdTimeout 周期性语义（Step 3）：maxHoldMs = max(Σ attack.totalMs × (1 - aggression), minHoldPeriodMs=400)，超时 tick holdScore 归零并重置计时器开启下一评价周期（修复 baseAggression=1.0 时 hold 被永久禁用的 bug）；AITuning 新增 hold.minHoldPeriodMs。更早同日：口径核对同步（Step 0）+ 防御可达性门修复（Step 1 / 1b / 1c）：Step 0 = defense 链路文档与代码对齐、删除死配置 activationThreshold / startupTooLateBase。Step 1 = 可达性门改物理口径，不再含 rangeBuffer / ×1.5。Step 1b = 门加受击体延伸 bodyReachAllowance——root-to-root 距离 vs weaponbox × hitbox 重叠的口径差导致尖端擦身命中；补 minR 贴脸死区近端门。Step 1c = 自身闭合法则（approach 中的 AI 命中时刻距离更近，closure = currentSpd × timeUntilActiveEnd，上限 0.3m）+ [AI-Diag] COMBAT 命中事件日志（onCombatResult 挂点）+ defenseGate REJECT 门拒观测日志。复测（REJECT 日志实证）：closure 输入全部正常，但 allowance 初版 0.45 低估 hitbox 实际延伸（门差 0.01-0.02m 拒掉后即被命中，实测命中带 4.90-5.10m）→ 重校准 0.7。Step 2 = committedScoreThreshold 仲裁接线：committed action（attack/dodge/guard/throw）score ≥ 0.15 才留候选池，positioning 不受约束，无达标候选 → 原地待机（杜绝 0 分 dodge 平局获胜），被过滤候选打印 [AI-Diag] commitArbitration:
+> 上一次：2026-10-30 — 投掷物斩落修复：distanceAlignment 带状判据（minReach 贴脸死区）+ preemptive gate 文档与代码同步（Step 2b 后为单条件门控）+ 新增 projDodge/projCut/nearMiss 诊断日志
 > 上一次：2026-10-26 — defensive chars 无限 hold 修复：idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控（修复上轮 clash seeker 被压制根因）。详见 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD`。
 > 上一次：2026-10-25 — Clash Seeker（主动寻求拼刀）落地
 > 
@@ -128,12 +129,12 @@ attackMult ∈ [0.6, 1.4]，defenseMult ∈ [0.7, 1.3]，advance/retreat ∈ [0.
 | 函数 | 候选数 | multiplier 乘入 | 核心输入 |
 |------|--------|-----------------|----------|
 | `#scoreAttack` | N attacks | `attackMultiplier` + `attackPreferences[stateName]` | distance, oppPhase, oppThreat, oppVuln, adaptation, startupFactor |
-| `#scoreDefense` | N guards/dodges | `defenseMultiplier` | oppThreat, oppPhase, defensiveReadiness(opp idle) |
+| `#scoreDefense` | N guards/dodges | `defenseMultiplier` | distance vs 当前招式可达距离（可达性门）, oppPhase, defensiveReadiness(opp idle, pressure 加权)（2026-11-02 核实：**oppThreat 不参与 defense 打分**）|
 | `#scorePositioning` | 3（approach, hold, retreat）| approach×`advanceMult`, retreat×`retreatMult` | distance vs **idealEffReach**（中位数，非 max），closestMinReach 保留为物理贴脸底线。holdScore = Math.min(0.15, 0.15×attackMultiplier) 封顶 attack 基础分，连续 hold 超 #getMaxHoldMs（Σ attack.totalMs × (1 - aggression)）后强制归零。**throw_windup hold 保底 0.05 / posPlan hold bonus +0.08 均加 holdScore > 0 门控**（静态 hold 无资格时不凭空加分）|
 | `#evaluateProjectileDefense` | up to 2（dodge + cut）| 各自 base × defense/attackMult | **reactive**: activeProjectileThreats[].estTTI/distance/cuttable. **preemptive**: predictedProjectileTTI + 5 层 gate |
 | `#scoreThrow` | N throws（`kbProfile.throws[]`）| `attackMultiplier` × `aiProfile.throwPreference` | distance/R_eff 三区间、风险 A（释放前被打断）、风险 B（被斩落）、throw.cooldownMs、ammo、repetition |
 
-所有分数进 pool → 排序 → **最高分 > 0 就执行**（无 threshold 硬门控）。
+所有分数进 pool → 排序 → **committedScoreThreshold 仲裁（2026-11-02 Step 2 已接线）** → 执行最高分。仲裁规则：committed action（attack/dodge/guard/throw）需 score ≥ `AITuning.committedScoreThreshold(0.15)` 才留在候选池；positioning（approach/hold/retreat）有自己的距离门控，不受阈值约束。无达标 committed 候选时不提交战斗动作（原地待机，不 fallback 到 hold 候选）——杜绝"评分全零塌缩 → 0 分 dodge 靠候选遍历顺序平局获胜"。被过滤候选打印 `[AI-Diag] commitArbitration:`。0.15 数值是回归验证项（可能过滤低分但有价值的反应）。
 
 ### projectile defense 物理模型
 
@@ -183,7 +184,10 @@ cutScore = cutBase(0.65) × timingAlignment × distanceAlignment × attackMult �
 ### #scoreAttack 完整链路
 
 base = 0.4 (AITuning.attack.baseWeight)
-  × rangeFactor (distance 在 [effectiveRange, effectiveRange*1.3] 窗口内衰减)
+  × rangeFactor (远端：distance 在 [effectiveRange, effectiveRange*1.3] 窗口内衰减；
+    近端（26.11.2 Step 4A）：distance 在 [minReach, effectiveRange] 内从 1.0 衰减到
+    attack.nearDecayFloor(0.5)——锚定单招自己的射程带，长招先于短招感受贴脸劣势，
+    短招舒适带不受罚；与 retreat 中间档成对生效)
   + oppPhase 分支 (startup preemptive, active threat penalty, recovery punish)
   + vulnReward × oppVulnerable
   + rangeEdgeBonus (边缘命中微加分)
@@ -217,17 +221,48 @@ Clash Seeker **不受 rangeFactor 衰减**（clash 合格候选在硬门控已�
 baseAttackScore ×= posture.attackMultiplier × attackPreferences[stateName]
 ```
 
-### #scoreDefense 完整链路
+### #scoreDefense 完整链路（2026-11-02 与代码核实同步）
 
 ```
-oppThreat < activationThreshold → return 0
-  oppPhase==="active"   → activeBase × oppThreat [× guardLeakBonus if oppVuln high]
-  oppPhase==="startup"  → startupCanActBase 或 startupTooLateBase (看 reflexMaxMs)
-  oppPhase==="none"     → 0.08 × smoothstep(oppIdleMs,800,2000) × defenseMult [defensiveReadiness, Phase 1]
-  oppPhase==="recovery" → 0
+oppPhase==="none"     → 0.08 × smoothstep(oppIdleMs,800,2000) × pressureNorm
+                        [defensiveReadiness，不乘 defenseMult，独立小分支直接返回]
+无 oppAtk（无攻击 profile）→ 0
+
+── 可达性门（2026-11-02 Step 1 + 1b + 1c）──
+  远端：distance > (maxReach + 前冲位移 + bodyReachAllowance) × 1.05 + selfClosure → 0
+  近端：distance < minReach − bodyReachAllowance → 0（贴脸死区：weaponbox 近端越过身体）
+  bodyReachAllowance=0.7（AITuning.defense）：受击方 hitbox 朝攻击者一侧的延伸——
+  AI 距离口径是 root-to-root，命中判定是 weaponbox × hitbox 重叠，"尖端擦身命中"
+  发生在这段延伸里（初版 0.45 被复测推翻：defenseGate REJECT 证实门差 0.01-0.02m
+  拒掉后即被命中，实测命中 4.90-5.10m，重校准 0.7 → (4.15+0.7)×1.05=5.10）
+  selfClosure（Step 1c）：AI 自己朝对手移动时计入 closure = currentSpd ×
+  timeUntilActiveEnd（startup+active 全程，上限 0.3m）——approach 中的 AI 命中时刻
+  距离必然更近。对手侧 speed×time 仍被否决（速度不可靠），自身侧方向=intent、
+  速度=引擎实测值，成立。active 阶段窗口 ≤ 0 → closure=0
+  不含 rangeBuffer（那是攻击评分的决策外缘，非物理可达）
+  旧实现 (maxReach + rangeBuffer) × 1.5 未算位移且裕度过大 → 远距挥空误触发 dodge/guard
+
+── startup timing 门 ──
+  timeUntilActive（events 层 opp_attack_active_window.startMs）> decisionBuffer
+  (decisionIntervalMs + reflexOffset) → 0
+  窗口内 → urgency = 1 - timeUntilActive/decisionBuffer（仅诊断日志用）
+
+── 基础分 ──
+  oppPhase==="active"   → activeBase
+  oppPhase==="startup"  → startupCanActBase
+  oppPhase==="recovery" → 0（上游分支）
+
+── 防御有效性（ContactResolver.evaluateInteraction）──
+  blocked/dodged 且 parryable → + parryReward
+  有 trajectory 但完全无效     → − badDefensePenalty
+
+── Distance Consequence ──
+  预测执行后距离偏差变化 → ±clamp(0.25) 调整
 
 score ×= posture.defenseMultiplier
 ```
+
+**历史口径澄清（2026-11-02）**：旧版文档描述 `oppThreat < activationThreshold → return 0` 与 `activeBase × oppThreat`，**与代码不符**——defense 重构后 oppThreat 已不参与 defense 打分（仅保留给 attack threatPenalty 与 positioning retreat）；`activationThreshold` 与 `startupTooLateBase` 为从未接线的死配置，已从 AITuning 删除。
 
 ### #scorePositioning
 
@@ -248,19 +283,30 @@ approach: distance > idealEffReach × 1.15 ? 0.35 × advanceMult × distanceHung
 hold:     distance ∈ (closestMinReach, idealEffReach × 1.15]
           ? Math.min(0.15, 0.15 × attackMultiplier)  // 封顶 attack 基础分
             [+ cooldown 0.08]
-            // holdTimeout: 连续 hold commit 超 #getMaxHoldMs() 后强制归零
+            // holdTimeout: 连续 hold commit 超 #getMaxHoldMs() 后本 tick 归零
+            //   并重置计时器（26.11.2 Step 3：周期性语义，下一评价周期恢复资格）
           : 0
 
-retreat:  distance ≤ idealEffReach × 0.4 ? 0.5 × retreatMult
-          : distance ≤ closestMinReach ? 0.5           // 物理贴脸绝对底线
-          : oppThreat > threshold ? 0.3 : 0
+retreat:  // 26.11.2 Step 4B 中间档（锚最短攻击招）：distance ∈ (0.55, 1.1]×closestMinReach 从 0 线性爬到 0.5
+          distance ≤ closestMinReach ? 0.5             // 物理贴脸绝对底线
+          : oppThreat > threshold ? 0.3 : 0            // （0.4×ideal 必退线保留在中间档下方）
 
 // posPlan hold bonus (+0.08) / throw_windup hold 保底 (+0.05) 均加 holdScore > 0 门控
 // → 静态 hold 无资格（holdScore=0）时不凭空加分
 // → 这行修复上轮 Step 2 收紧 hold 上界后 clash seeker 被压制的根因
 ```
 
-positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。holdScore 由固定 0.15 改为封顶 attackMultiplier × 0.15——防御型角色（attackMult=0.60）hold=0.09 ≈ attack 基础分，jitter 后偶尔 attack 赢；aggression 型封顶 0.15 不受影响。holdTimeout（Σ attack.totalMs × (1 - aggression)）防止 opp 长时间 idle 时无限 hold 僵局。
+positioning 基础分 **低于 attack.baseWeight(0.4)**，保证 attack 正常赢 positioning。holdScore 由固定 0.15 改为封顶 attackMultiplier × 0.15——防御型角色（attackMult=0.60）hold=0.09 ≈ attack 基础分，jitter 后偶尔 attack 赢；aggression 型封顶 0.15 不受影响。
+
+**holdTimeout 周期性语义（2026-11-02 Step 3）**：`maxHoldMs = max(Σ attack.totalMs × (1 - aggression), minHoldPeriodMs=400)`。超时 tick holdScore 归零（给 attack/approach 重新评价的机会）**并同时重置 holdCommitStart**——hold 进入下一轮评价周期而非永久禁用。修复原 bug：计时器只在非 hold commit 时重置，`baseAggression=1.0`（合法边界）时 maxHoldMs 计算值=0 → 每 tick 判超时且永不复位，hold 被永久禁用（日志表现：holdScore 每 tick 在 0.2x 与清零之间闪烁、holdDuration 累积到 70s）。cooldown 中 +0.08 附加分在超时判定之后生效——等冷却时 hold 保持合法等待选项，是有意保留。`AITuning.hold.minHoldPeriodMs=400` 为防抖下限（防抖起点值，随验收调整）。
+
+**近距带欲望制衡（2026-11-02 Step 4，成对生效缺一不可）**：① attack 近距侧衰减——rangeFactor 近端（[minReach, effectiveRange]）从 1.0 线性衰减到 `attack.nearDecayFloor(0.5)`，锚定单招自己的射程带（长招先于短招感受贴脸劣势）；② retreat 中间档——distance ∈ (0.55, 1.1]×**closestMinReach**（最短攻击招的 minReach）分数从 0 线性爬到 0.5（`retreat.midTierAnchor=1.1`），与贴脸必退线连续衔接。锚最短招而非 idealEffReach 是复测修正：锚 ideal 时中间档盖住 1.3~1.87m，AI 永远进不了 dash 舒适区（1.11~1.6m）。红线已验证——opp startup 时 preemptive(+0.2)/clashSeeker(+0.25) 加成仍压过本档，正常攻防交换不会机械后退。
+
+**失败驱动脱离（2026-11-02 Step 4c，无新 tuning 参数）**：触发为**预算制**——每个近战招的尝试预算（`#attackFailBudget`，attacker 视角失败 +1 / 该招命中清零）都达到 `attemptsPerAttack`（attMult ≥ 1.0 → 2 次，< 1.0 → 1 次）才触发，模仿"人类战斗者把武器库轮一遍再决定拉开"；触发时清零预算开始新一轮。触发后锁存 4s（机制常量），retreat 获必退基线级加成（0.5），**外缘线性衰减到 line+0.3 处为 0**——目标线两侧分数连续，AI 在边界漂移而非每 100ms 翻转移动方向（首版 retreat 0.5 vs approach 0.12 硬翻转导致肉眼抽搐）。退离目标线由现有 `posture.attackMultiplier` 插值：attMult=MAX(1.4) → 0.85×ownMaxEffReach；attMult=1.0（标准）→ 刚好自己攻击距离外；attMult=MIN(0.6) → max(ownMaxEffReach, `#getOpponentMaxEffReach()`)。加成追加在 retMult 乘区之后（不被防御人格削弱）；仅 opp idle/recovery 时生效（交换中由 defense 负责）。
+
+**dodge i-frame 资格门（2026-11-02 Step 5，#scoreDefense dodge 分支）**：dodge 的安全机制是 `dodgeActive` 全状态免疫（stateDef 级标志，无相位窗口），但免疫从 dodge 状态实际生效才开始——"躲不躲得掉"是资格问题不是评分问题。门规则：`timeUntilHit < escapeLatency → dodge 候选 0 分`（[AI-Diag] dodgeGate REJECT 观测）。escapeLatency：idle/移动 → 0（本拍可 commit）；自身攻击状态（不可取消）→ 当前攻击剩余时长（KB timing，同 oppRemainingMs 口径）；guard/dodge → 0（guard→dodge 切换成本无数据，不做口径外建模；dodge 中已免疫）。timeUntilHit：startup → events 层 active 窗口起始（与闭合法则复用同一 event）；active → 0。范围=近战 dodge；投掷物 dodge（#scoreDodge）同原理可加，视验收再动。Distance Consequence 权重调整（dodge 位移代价豁免）按计划留观，避免一次引入两个变量。
+
+**仲裁阈值按角色量纲归一化（2026-11-02 Step 4 复测修正）**：`committedScoreThreshold(0.15)` 是按系统默认 `attack.baseWeight(0.4)` 分数量纲定的绝对值——防御偏好型人格 manatarms（`ep1_tavern_hall_night.json`：baseWeight=0.10、baseAggression=0.25）攻击分天花板 ≈0.09，攻击候选池结构性为空 → 无限 hold（与 26.10.25 归档计划"防御偏好型人物无限 hold"同病灶，被 Step 2 绝对阈值重新引出）。运行时有效阈值 = 0.15 × (角色 baseWeight / 系统默认)，钳制 [0.25, 1.5]：manatarms → 0.0375（0.085 的 quart 通过），默认量纲角色不变；阈值恒 >0，0.000 平局/负分候选仍被稳定过滤（Step 2 原始目标不回退）。
 
 **consecutiveAttackUsage 跨 positioning 累积**（2026-10-21 修复）：positioning commit（hold/approach/retreat）**不重置** consecutiveAttackUsage counter——就让它 stale。只有在 attack commit 时 line 2095-2098 自然处理：同一 attack → count++，不同 stateName → count 重置为 1。这样 smash→hold→smash 的 count 链是 1→(不变)→2，repitition 终于能触发。对 Rabble 无副作用：thrust→hold→swing（不同 stateName）时 count 自然重置。
 
@@ -478,7 +524,7 @@ opp recovery → events 为空
 | opp idle 更快进入待命 | `readinessFromIdle` ↑ / `idleCaution` ↑ | DEFAULT_POSTURE_TUNING |
 | opp startup 更想防 | `startupDefenseBonus` ↑ | DEFAULT_POSTURE_TUNING |
 | guard 分数普遍更高 | `defense.activeBase` ↑ | AITuning.js |
-| opp phase 容易触发防御 | `defense.activationThreshold` ↑ | AITuning.js |
+| ~~opp phase 容易触发防御~~ | ~~`defense.activationThreshold`~~ | 已删除（2026-11-02 核实为死配置，从未接线）——防御触发由可达性门 + startup timing 门控制 |
 | 被打后防御意愿持续更久 | `defenseFromDamage` ↑ / `decayAlpha` ↓ | DEFAULT_POSTURE_TUNING |
 
 ### 想让 AI 变招更勤

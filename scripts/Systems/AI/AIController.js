@@ -20,6 +20,9 @@ export class AIController extends BaseController {
     #lastCommittedState;
     #consecutiveAttackUsage;  // { stateName, count } 连续使用同一 attack 的次数（非 attack 打断则 reset）
     #holdCommitStart;          // 首次连续 commit hold 时的 timestamp（ms），非 hold commit 时重置
+    #disengageUntilTs;         // 失败驱动脱离锁存到期时间（ms）；0 = 未激活
+    #disengageLine;            // 脱离锁存期间的退离目标线（触发时冻结）
+    #attackFailBudget;         // Map<stateName, 自上轮脱离预算清零以来的失败次数>（Step 4c 触发依据）
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
 
@@ -76,6 +79,11 @@ export class AIController extends BaseController {
 
         // Hold 超时计时：hold commit 起始时间戳（null = 当前不在 hold 中）
         this.#holdCommitStart = null;
+
+        // 失败驱动脱离（26.11.2 Step 4c）
+        this.#disengageUntilTs = 0;
+        this.#disengageLine = 0;
+        this.#attackFailBudget = new Map();
 
         // === Layer 0: CombatMemory（Phase 0 新增）===
         this.combatMemory = new CombatMemory();
@@ -150,6 +158,10 @@ export class AIController extends BaseController {
      * Phase 0 防御方视角：perspective="defender" 时是 opponent 打我 → self:hit 等
      */
     onCombatResult({ outcome, targetState, counteredBy, perspective } = {}) {
+        // [AI-Diag] 命中事件观测（26.11.2 Step 1c）：决策侧日志没有命中事件，
+        // 无法回答"AI 在什么距离被连续命中"。CombatSystem 在命中解析时刻回调，
+        // 此刻距离 ≈ 命中距离。defender 视角 = 我被打，attacker 视角 = 我打中。
+        this.#logCombatOutcomeDiag(outcome, targetState, perspective, counteredBy);
         const entry = {
             state: targetState,
             outcome,
@@ -173,6 +185,16 @@ export class AIController extends BaseController {
             if (mapped === "self:hit" || mapped === "guard:broken" || mapped === "dodge:fail") {
                 this._selfJustHitByOpp = true;
             }
+        }
+
+        // === 26.11.2 Step 4c: 失败驱动脱离的尝试预算 ===
+        // attacker 视角的失败（miss/parried/guard_blocked/interrupted）计 1 次，
+        // 单招命中（attack:hit）清零该招预算——"试过但成了"重新计数。
+        // 触发条件与预算消耗见 #scorePositioning 的 disengage 块。
+        if ((mapped === "attack:miss" || mapped === "attack:parried") && targetState) {
+            this.#attackFailBudget.set(targetState, (this.#attackFailBudget.get(targetState) ?? 0) + 1);
+        } else if (mapped === "attack:hit" && targetState) {
+            this.#attackFailBudget.delete(targetState);
         }
     }
 
@@ -201,6 +223,33 @@ export class AIController extends BaseController {
             case "clash":       return null;             // 拼刀不算 outcome
             default:            return null;
         }
+    }
+
+    /**
+     * [AI-Diag] 命中/防住事件日志（26.11.2 Step 1c 观测补强）
+     * 记录：视角、outcome、双方当前状态、命中距离、对手攻击相位。
+     * 用途：验证可达性门边界（"特定距离连续命中"问题的定位数据）。
+     */
+    #logCombatOutcomeDiag(outcome, targetState, perspective, counteredBy) {
+        if (!this.debugVisible) return;
+        const self = this.character;
+        const opp = this.opponent;
+        if (!self || !opp) return;
+        const distance = this.#getDistanceToOpponent();
+        const oppState = opp.currentStateName;
+        const oppDef = opp.currentStateDef;
+        let oppAtkTag = "none";
+        if (oppDef?.attackActive === true && this.opponentKB) {
+            const ap = this.opponentKB.attacks.find(a => a.stateName === oppState);
+            if (ap) {
+                oppAtkTag = `${ap.stateName}/${this.#getAttackPhase(ap, opp.animation?.normalizedTime ?? 0)}`;
+            }
+        }
+        console.log(
+            `[AI-Diag] COMBAT: view=${perspective ?? "attacker"} outcome=${outcome} state=${targetState ?? "?"}` +
+            `${counteredBy ? ` by=${counteredBy}` : ""} dist=${distance.toFixed(2)}` +
+            ` selfState=${self.currentStateName ?? "?"} oppState=${oppState ?? "?"} oppAtk=${oppAtkTag}`
+        );
     }
 
     setDebugVisible(value) {
@@ -415,7 +464,40 @@ export class AIController extends BaseController {
         // 排序（#scoreAttack/#scoreDefense 已有各自 jitter，positioning 内部也有 jitter）
         scored.sort((a, b) => b.score - a.score);
 
-        const best = scored[0];
+        // === 26.11.2 Step 2: committedScoreThreshold 仲裁（计划 §4）===
+        // committed action（attack/dodge/guard/throw）需 score ≥ 阈值才留在候选池；
+        // positioning（approach/hold/retreat）有自己的距离门控，不受阈值约束。
+        // 根治"评分全零塌缩 → 0 分 dodge 靠候选遍历顺序平局获胜"（失败 N 次出一次 dodge 的根因）：
+        // 无达标 committed 候选时不提交战斗动作，宁可原地待机——玩家看到的每个
+        // dodge/guard 都对应真实评分动机。
+        // 有效阈值按角色攻击量纲归一化（26.11.2 Step 4 复测修正）：
+        // committedScoreThreshold(0.15) 是按系统默认 baseWeight(0.4) 的分数量纲定的。
+        // 防御偏好型人格（manatarms：attack.baseWeight=0.10、baseAggression=0.25）
+        // 攻击分天花板 ≈0.09，绝对阈值使其攻击候选池结构性为空 → 无限 hold
+        // （与 26.10.25 归档计划"防御偏好型人物无限 hold"同病灶，被 Step 2 重新引出）。
+        // 有效阈值 = 全局阈值 × (角色 baseWeight / 系统默认)，钳制 [0.25, 1.5]：
+        // manatarms → 0.0375（0.085 的 quart 通过），rabble 等默认量纲角色不变；
+        // 阈值恒 >0，0.000 平局/负分候选仍被稳定过滤（Step 2 的原始目标不回退）。
+        const _baseWeightScale =
+            (this.tuning.attack?.baseWeight ?? AITuning.attack.baseWeight) / (AITuning.attack.baseWeight || 0.4);
+        const commitThreshold = (this.tuning.committedScoreThreshold ?? 0.15)
+            * Math.min(1.5, Math.max(0.25, _baseWeightScale));
+        const isPositioningKind = (k) => k === "approach" || k === "hold" || k === "retreat";
+        const arbitrated = scored.filter(
+            (s) => isPositioningKind(s.kind) || s.score >= commitThreshold
+        );
+        const best = arbitrated[0] ?? null;
+        if (this.debugVisible && arbitrated.length !== scored.length) {
+            const filteredLabel = scored
+                .filter((s) => !arbitrated.includes(s))
+                .map((s) => `${s.kind}:${s.action?.stateName ?? "?"}=${s.score.toFixed(3)}`)
+                .join(" | ");
+            console.log(
+                `[AI-Diag] commitArbitration: threshold=${commitThreshold} ` +
+                `filtered=[${filteredLabel}] → ` +
+                `best=${best ? `${best.kind}:${best.action?.stateName ?? "(pos)"}(${best.score.toFixed(3)})` : "none"}`
+            );
+        }
 
         // === DIAGNOSTIC LOG ===
         if (this.debugVisible) {
@@ -437,6 +519,16 @@ export class AIController extends BaseController {
                     rf = Math.max(0, 1 - (sit.distance - effR) / (maxR - effR));
                 }
                 if (sit.distance > maxR) rf = 0;
+                // 26.11.2 Step 4A：诊断副本同步近距侧衰减口径（否则 rf 显示与实际 sc 不符）
+                {
+                    const minR = r?.minReach ?? 0;
+                    const span = effR - minR;
+                    if (sit.distance < effR && span > 0.01) {
+                        const nearFloor = this.tuning.attack.nearDecayFloor ?? 0.5;
+                        const t = Math.max(0, Math.min(1, (sit.distance - minR) / span));
+                        rf *= nearFloor + (1 - nearFloor) * t;
+                    }
+                }
                 return `${a.stateName}(minR=${(r?.minReach ?? 0).toFixed(2)} maxR=${(r?.maxReach ?? 0).toFixed(2)} effR=${effR.toFixed(2)} rf=${rf.toFixed(2)} sc=${(s?.score ?? 0).toFixed(3)})`;
             }).join(", ");
 
@@ -463,11 +555,13 @@ export class AIController extends BaseController {
         }
         // ================================
 
-        // Phase 2: 直接执行最高分（不再有 threshold 硬门控，positioning 已进 pool）
+        // 执行最高分（26.11.2 Step 2：committed 候选已经过阈值仲裁，positioning 候选
+        // 有自己的距离门控；无达标候选 → 原地待机，不强制提交战斗动作）
         if (best && best.score > 0) {
             this.#executeCommitted(best);
         } else {
-            // 极端情况：所有分数都是 0 → hold（保底）
+            // 全零塌缩或 committed 全被仲裁过滤 → 原地待机（不 fallback 到 hold 候选：
+            // hold 自己可能已被清零，见计划 §4 对 v1 写法的否决）
             this.currentBehavior = "hold";
             this.setMoveIntent({ x: 0, y: 0 });
         }
@@ -961,6 +1055,19 @@ export class AIController extends BaseController {
         if (sit.distance > effectiveRange && sit.distance < maxRange) {
             rangeFactor = Math.max(0, 1 - (sit.distance - effectiveRange) / (maxRange - effectiveRange));
         }
+        // === 26.11.2 Step 4A: 近距侧衰减（锚定单招自己的射程带）===
+        // 远端已有 rangeFactor 衰减（effectiveRange ~ ×1.3），近端原本恒 1.0
+        // → 近距带攻击欲望无制衡、AI 基本不后退（计划 §2）。
+        // 以该招自己的 [minReach, effectiveRange] 为参照：distance 从 effectiveRange
+        // 收缩到 minReach 时衰减到 nearDecayFloor——长招先于短招感受贴脸劣势，
+        // 短招在自己的舒适带不受罚（v2 采纳 GPT 的招式个体锚点方案）。
+        // 与 retreat 中间档（Step 4B）成对生效。
+        const rangeSpan = effectiveRange - minReach;
+        if (sit.distance < effectiveRange && rangeSpan > 0.01) {
+            const nearFloor = this.tuning.attack.nearDecayFloor ?? 0.5;
+            const t = Math.max(0, Math.min(1, (sit.distance - minReach) / rangeSpan));
+            rangeFactor *= nearFloor + (1 - nearFloor) * t;
+        }
         let clashEligible = false;
         if (sit.distance > maxRange) {
             // === Clash Seeker 6 项资格检查 ===
@@ -1419,12 +1526,54 @@ export class AIController extends BaseController {
         }
 
         // --- 问题 1a: 这招能不能够到我？---
-        const oppReach = oppAtk.range?.maxReach ?? 0;
-        // 攻击位移也能缩短距离 — 算上 forward displacement
-        const oppEffReach = oppReach + this.rangeBuffer;
-        // startup 阶段对手可能还没前冲到位 — 保守判断
-        if (sit.distance > oppEffReach * 1.5) {
+        // 物理可达判定（26.11.2 Step 1 + 1b）：命中需要 weaponbox 与受击方 hitbox 重叠，
+        // 而 AI 距离口径是 root-to-root——受击方身体朝攻击者一侧有 ~bodyReachAllowance 的
+        // hitbox 延伸，"尖端擦身命中"就发生在这段延伸里（allowance 由实测命中反推校准，
+        // 见 AITuning 注释；初版 0.45 被复测命中 4.90-5.10m 推翻，现为 0.7）。
+        // 不含 rangeBuffer：那是攻击评分的决策外缘（提前量），不是物理可达。
+        const bodyAllow = this.tuning.defense.bodyReachAllowance ?? 0.7;
+        const oppEffectiveDisplacement = oppAtk.activeDisplacement ?? oppAtk.displacement ?? 0;
+        const oppFwdBoost = oppEffectiveDisplacement < 0 ? -oppEffectiveDisplacement : 0;
+        // 自身闭合法则（26.11.2 Step 1c）：AI 自己在向对手移动时，命中时刻的距离比当前
+        // 读数更近——尖端延伸与自身闭合同步发生（实证：AI 匀速 approach 时在门外 ~4.9m
+        // 被玩家 thrust 尖端反复命中）。closure 窗口算到 active 结束（AI 在 startup+active
+        // 全程都在走），只在"朝对手移动"时计入，上限 0.3m；active 阶段窗口 ≤ 0 → 0
+        // （武器已伸出，距离每 tick 刷新，×1.05 余量已覆盖）。
+        // 对手侧的 speed×time 仍被否决（速度不可靠），自身侧成立：方向是自己的 intent、
+        // 速度是引擎实测值（currentSpd）。
+        const _self = this.character;
+        const _oppDirX = Math.sign(this.opponent.root.position.x - _self.root.position.x);
+        const _intentX = _self.moveIntent?.x ?? 0;
+        const _movingToward = _oppDirX !== 0 && Math.sign(_intentX) === _oppDirX;
+        const _oppAtkWindowEarly = this.#findPredictedEvent(
+            sit.predictedOpponentEvents, "opp_attack_active_window"
+        );
+        const _timeUntilActiveEnd = _oppAtkWindowEarly
+            ? _oppAtkWindowEarly.startMs + oppAtk.timing.activeMs
+            : oppAtk.timing.startupMs + oppAtk.timing.activeMs - sit.opp.normTime * oppAtk.timing.totalMs;
+        const _selfClosureM = _movingToward
+            ? Math.min(0.3, (_self.currentSpd ?? 0) * Math.max(0, _timeUntilActiveEnd) / 1000)
+            : 0;
+        // 远端：×1.05 仅覆盖决策 tick 离散化
+        const oppDangerFar = (oppAtk.range?.maxReach + oppFwdBoost + bodyAllow) * 1.05 + _selfClosureM;
+        if (sit.distance > oppDangerFar) {
+            // [AI-Diag] 门拒观测（Step 1c 验证）：closure 三个输入哪个在运行时不符合预期，
+            // 一行看全（toward/spd/win 任一为 0 都说明闭合法则没生效）
+            if (this.debugVisible) {
+                console.log(
+                    `[AI-Diag] defenseGate REJECT ${kind}: dist=${sit.distance.toFixed(2)} ` +
+                    `dangerFar=${oppDangerFar.toFixed(2)} (maxR=${oppAtk.range?.maxReach?.toFixed(2)} ` +
+                    `fwd=${oppFwdBoost.toFixed(2)} body=${bodyAllow} closure=${_selfClosureM.toFixed(3)} ` +
+                    `toward=${_movingToward} spd=${(_self.currentSpd ?? 0).toFixed(2)} ` +
+                    `intent=${_intentX} win=${_timeUntilActiveEnd.toFixed(0)}ms)`
+                );
+            }
             return 0; // 明显够不着
+        }
+        // 近端（Step 1b）：AI 站进 minR 死区（贴脸）时该攻击物理上打不到，防御是浪费
+        const oppMinReach = oppAtk.range?.minReach ?? 0;
+        if (oppMinReach > 0 && sit.distance < oppMinReach - bodyAllow) {
+            return 0; // 贴脸死区：weaponbox 近端越过身体，够不到
         }
 
         // --- 问题 2b: 现在是不是正确时机？---
@@ -1472,6 +1621,43 @@ export class AIController extends BaseController {
             // ===============================================
         }
         // oppPhase === "active" → 已经在 hit 帧了，当然该防
+
+        // === 26.11.2 Step 5: dodge i-frame 资格门（计划 §5a）===
+        // dodge 的安全机制是 dodgeActive 全状态免疫（stateDef 级标志，无相位窗口），
+        // 但免疫从 dodge 状态实际生效才开始。若预测命中时刻早于 dodge 能生效的时刻，
+        // 这个 dodge 无论分数多高都躲不掉 → 0 分退出（资格问题，硬规则，不进软评分）。
+        // escapeLatency（从现在到 dodgeActive=true 的预计延迟）：
+        //   - idle/移动等可立即打断的状态 → 0（本决策拍即可 commit）
+        //   - 自身攻击状态（不可取消）→ 当前攻击剩余时长（KB timing，与 oppRemainingMs 同口径）
+        //   - guard/dodge 等其他状态 → 0（guard→dodge 切换成本无数据，不做口径外建模；
+        //     dodge 中 dodgeActive 已生效，无需再判）
+        // timeUntilHit：startup → active 窗口起始（events 层，同 closure 复用）；active → 0
+        if (kind === "dodge") {
+            const _selfStateName = sit.self?.stateName ?? this.character.currentStateName;
+            const _selfDefNow = sit.self?.def ?? this.character.currentStateDef;
+            let escapeLatency = 0;
+            if (_selfDefNow?.attackActive === true) {
+                const _selfAtk = this.kbProfile?.attacks?.find(a => a.stateName === _selfStateName);
+                const _selfTotalMs = _selfAtk?.timing?.totalMs ?? 0;
+                if (_selfTotalMs > 0) {
+                    escapeLatency = Math.max(0, (1 - (sit.self?.normTime ?? 0)) * _selfTotalMs);
+                }
+            }
+            const timeUntilHit = oppPhase === "active"
+                ? 0
+                : (_oppAtkWindowEarly?.startMs
+                    ?? Math.max(0, oppAtk.timing.startupMs - sit.opp.normTime * oppAtk.timing.totalMs));
+            if (timeUntilHit < escapeLatency) {
+                if (this.debugVisible) {
+                    console.log(
+                        `[AI-Diag] dodgeGate REJECT ${defenseAction.stateName}: ` +
+                        `hitIn=${timeUntilHit.toFixed(0)}ms < dodgeReadyIn=${escapeLatency.toFixed(0)}ms ` +
+                        `(selfState=${_selfStateName ?? "?"})`
+                    );
+                }
+                return 0;
+            }
+        }
 
         // --- 问题 1b: 我的防御对这招有效吗？---
         let defenseGuardType = null;
@@ -2049,17 +2235,22 @@ export class AIController extends BaseController {
             // hold 意愿和攻击意愿正相关：不想打时也不想 hold 太死
             holdScore = Math.min(0.15, 0.15 * this.combatPosture.attackMultiplier);
 
-            // 最长 hold 时间超时惩罚：连续 hold 超过 maxHoldMs → holdScore 归零
-            // 打破防御型角色 opp idle 时无限 hold 僵局
+            // 最长 hold 时间超时（26.11.2 Step 3：周期性语义，非一次性禁用）
+            // 超时 → 本 tick holdScore 归零（给 attack/approach 重新评价的机会），
+            // 同时重置 holdCommitStart 开启新一轮评价周期。
+            // holdTimeout 的语义是"这个位置意图该重新评价了"，不是"永远不许再 hold"。
+            // 修复原 bug：计时器只在非 hold commit 时重置，baseAggression=1.0 时
+            // maxHoldMs=0 → 每 tick 判超时且永不复位 = hold 被永久禁用。
             if (this.#holdCommitStart !== null) {
                 const holdDuration = performance.now() - this.#holdCommitStart;
                 const maxHoldMs = this.#getMaxHoldMs();
                 if (holdDuration > maxHoldMs) {
                     holdScore = 0;
+                    this.#holdCommitStart = performance.now();  // 开启新一轮评价周期
                     if (this.debugVisible) {
                         console.log(
                             `[AI-Diag] holdTimeout: holdDuration=${(holdDuration/1000).toFixed(1)}s ` +
-                            `> maxHoldMs=${(maxHoldMs/1000).toFixed(1)}s → holdScore=0`
+                            `> maxHoldMs=${(maxHoldMs/1000).toFixed(1)}s → holdScore=0（计时已重置，下一周期恢复资格）`
                         );
                     }
                 }
@@ -2085,6 +2276,24 @@ export class AIController extends BaseController {
         // 太近必须退（closestMinReach）
         // oppThreat 高也想拉开
         let retreatScore = 0;
+        // === 26.11.2 Step 4B: retreat 中间档 ===
+        // 填补贴脸死区上方的欲望真空，与 attack 近距侧衰减（Step 4A）成对生效。
+        // 锚定**最短攻击招的 minReach**（closestMinReach，26.11.2 复测调整）：
+        // 复测发现锚在 0.7×ideal 时中间档盖住 1.3~1.87m，AI 永远进不了 dash
+        // 舒适区（1.11~1.6m）——现在 1.2m 以上归还给 attack/dash 竞争，
+        // 后退意图只在"比最短招还近"的带内存在（用户口径：引起后退意图的
+        // 距离应和最短攻击距离的招数关联）。
+        // distance 从 0.55×closestMinReach 线性爬到 midTierAnchor(1.1)×closestMinReach
+        // 处的 0.5，与既有贴脸必退线连续衔接。
+        {
+            const closestMin = closestMinReach;
+            const distFar = closestMin * (this.tuning.retreat?.midTierAnchor ?? 1.1);
+            const distNear = closestMin * 0.55;
+            if (distance <= distFar && distance > distNear && distFar > distNear) {
+                const t = (distFar - distance) / (distFar - distNear);
+                retreatScore = Math.max(retreatScore, 0.5 * t);
+            }
+        }
         // v2: retreat 近距门槛改用 idealEffReach × 0.4，而非 closestMinReach + 0.3
         if (distance <= idealEffReach * 0.4) {
             retreatScore = 0.5; // 底线：距离理想值小于 40% 必须退
@@ -2109,6 +2318,88 @@ export class AIController extends BaseController {
             retreatScore = Math.max(retreatScore, 0.3);
         }
         retreatScore *= retMult;
+
+        // === 26.11.2 Step 4c: 失败驱动脱离（语义挂现有 posture 参数，无新 tuning 旋钮）===
+        // 场景：玩家持续 dodge / 连续挥空后，AI 需要退出攻击范围外重整，
+        // 而不是在射程内无限重新起手（日志实证）。
+        //
+        // 触发（预算制，26.11.2 复测调整）：**每个招都试过且失败够次数**才考虑退——
+        // 模仿"人类战斗者会把武器库轮一遍再决定拉开"：
+        //   每招要求 consecutiveFail ≥ attemptsPerAttack，
+        //   attemptsPerAttack 由现有 attMult 表达进攻欲望：≥1.0（标准/高）→ 2 次，
+        //   <1.0（低侵略/已被失败压低信心）→ 1 次。触发时清零预算开始新一轮。
+        //
+        // 退离目标线（想退多远）由 attMult 插值——同一参数既表达"想打多凶"，
+        // 也反向表达"失败后想退多远"：
+        //   attMult = MAX(1.4，高侵略) → 0.85 × 自己射程（贴着射程内侧就回头）
+        //   attMult = 1.0（标准侵略性） → 刚好退到自己攻击距离外
+        //   attMult = MIN(0.6，低侵略)  → max(自己射程, 对手射程)（退到双方射程外）
+        // 幅度复用本函数既有"必退"基线 0.5，不设新常量。
+        //
+        // 防抽搐（26.11.2 复测调整）：boost 用时间锁存（触发后 4s，机制常量）+
+        // 外缘线性衰减（line + 0.3 处降为 0）——目标线两侧分数连续，AI 在边界
+        // 漂移而不是每 100ms 翻转移动方向（原版 retreat 0.5 vs approach 0.12 硬翻转）。
+        // 门控：仅 opp idle/recovery（无威胁窗口）——交换中由 defense 候选负责，
+        // 保住"正常交换不机械后退"红线；追加在 retMult 乘区之后，不被防御人格削弱。
+        {
+            const oppPhase = sit.opp?.phase;
+            const now = performance.now();
+            const attMult = this.combatPosture.attackMultiplier;
+            const pt = this.combatPosture.tuning;
+            const attMax = pt?.MAX_ATTACK_MULT ?? 1.4;
+            const attMin = pt?.MIN_ATTACK_MULT ?? 0.6;
+            const stdLine = maxEffReach;                       // 标准：自己攻击距离外
+            const nearLine = maxEffReach * 0.85;               // 高侵略：射程内侧就回头
+            const farLine = Math.max(maxEffReach, this.#getOpponentMaxEffReach()); // 低侵略上限
+            let line;
+            if (attMult >= 1.0) {
+                const k = attMax > 1.0 ? Math.min(1, (attMult - 1.0) / (attMax - 1.0)) : 0;
+                line = stdLine + (nearLine - stdLine) * k;
+            } else {
+                const k = attMin < 1.0 ? Math.min(1, (1.0 - attMult) / (1.0 - attMin)) : 0;
+                line = stdLine + (farLine - stdLine) * k;
+            }
+
+            if (oppPhase === "none" || oppPhase === "recovery") {
+                if (this.#disengageUntilTs <= now) {
+                    // 未锁存：检查触发条件（预算制——每个招都试过且失败够次数）
+                    const attemptsPerAttack = attMult >= 1.0 ? 2 : 1;
+                    const meleeAttacks = this.kbProfile?.attacks ?? [];
+                    const allTried = meleeAttacks.length > 0 && meleeAttacks.every(a =>
+                        (this.#attackFailBudget.get(a.stateName) ?? 0) >= attemptsPerAttack
+                    );
+                    if (allTried && distance <= maxEffReach) {
+                        this.#disengageUntilTs = now + 4000;   // 锁存 4s：覆盖退离目标线所需时间
+                        this.#disengageLine = line;
+                        this.#attackFailBudget.clear();        // 预算消耗，重新打入后新一轮
+                        if (this.debugVisible) {
+                            console.log(
+                                `[AI-Diag] disengage TRIGGER: attMult=${attMult.toFixed(2)} ` +
+                                `attemptsPerAttack=${attemptsPerAttack} line=${line.toFixed(2)} dist=${distance.toFixed(2)}`
+                            );
+                        }
+                    }
+                }
+                if (this.#disengageUntilTs > now) {
+                    const edge = this.#disengageLine + 0.3;
+                    if (distance < edge) {
+                        // 外缘线性衰减：line 处满额 0.5，line+0.3 处为 0——边界分数连续
+                        const boost = 0.5 * Math.max(0, Math.min(1, (edge - distance) / 0.3));
+                        retreatScore = Math.max(retreatScore, boost);
+                        if (this.debugVisible) {
+                            console.log(
+                                `[AI-Diag] disengage: attMult=${attMult.toFixed(2)} ` +
+                                `line=${this.#disengageLine.toFixed(2)} dist=${distance.toFixed(2)} boost=+${boost.toFixed(2)} ` +
+                                `remain=${((this.#disengageUntilTs - now) / 1000).toFixed(1)}s`
+                            );
+                        }
+                    }
+                }
+            } else if (this.#disengageUntilTs > now && (oppPhase === "startup" || oppPhase === "active")) {
+                // 交换窗口到来：锁存保留（脱离意图不因对手出招而清零），
+                // 但 boost 本 tick 不生效——defense 候选接管
+            }
+        }
 
         // === B5 Step 2: positioningPlan 评分加成 ===
         // 在现有静态阈值全部算完之后微调，不覆盖原逻辑
@@ -2339,6 +2630,7 @@ export class AIController extends BaseController {
                 this.setMoveIntent({ x: 0, y: 0 });   // hold
             }
             // 最长 hold 时间追踪：连续 hold 计时，非 hold 重置
+            //（26.11.2 Step 3：超时本身也会在评分处重置计时，开启下一评价周期）
             if (kind === "hold") {
                 if (this.#holdCommitStart === null) {
                     this.#holdCommitStart = performance.now();
@@ -2348,15 +2640,6 @@ export class AIController extends BaseController {
             }
             // Phase 0: 记录 COMMIT（positioning 也算一次 commit）
             this.combatMemory.pushCommit(kind, kind);
-
-            // hold 超时计时：hold 开始时记录，approach/retreat 立即清零
-            if (kind === "hold") {
-                if (this.#holdCommitStart === null) {
-                    this.#holdCommitStart = performance.now();
-                }
-            } else {
-                this.#holdCommitStart = null;
-            }
 
             // positioning（hold/approach/retreat）完全不碰 consecutiveAttackUsage——
             // 就让它 stale。attack commit 时 line 2095-2098 自然处理：
@@ -2462,6 +2745,22 @@ export class AIController extends BaseController {
     }
 
     /**
+     * 对手的最远攻击有效距离（26.11.2 Step 4c：失败驱动脱离的 farLine 依据）。
+     * 与 #getMeleeMaxEffReach 同口径（maxReach + 自身前冲位移 + rangeBuffer），
+     * 数据源换成 opponentKB。对手无攻击数据时返回 0（farLine 退化为 ownLine）。
+     */
+    #getOpponentMaxEffReach() {
+        const perAttackEffReach = (this.opponentKB?.attacks || []).map(a => {
+            const reach = a.range?.maxReach ?? 0;
+            const disp = a.activeDisplacement ?? a.displacement ?? 0;
+            const fwdBoost = disp < 0 ? -disp : 0;
+            return reach + fwdBoost;
+        });
+        const maxPerAttack = perAttackEffReach.length > 0 ? Math.max(...perAttackEffReach) : 0;
+        return maxPerAttack + this.rangeBuffer;
+    }
+
+    /**
      * 理想交战距离：所有攻击有效射程的中位数。
      *
      * 与 #getMeleeMaxEffReach() 的区别：
@@ -2487,19 +2786,22 @@ export class AIController extends BaseController {
     }
 
     /**
-     * 最长 hold 时间（ms）
+     * 最长 hold 时间（ms）— 单个评价周期的时长
      *
      * 设计：
      *   基数 = Σ 所有攻击的 timing.totalMs（startup + active + recovery 总时长）
-     *   maxHoldMs = totalAttackMs × (1 - aggression)
+     *   maxHoldMs = max(totalAttackMs × (1 - aggression), minHoldPeriodMs)
      *
      *   aggression = aiProfile.baseAggression（配置级固定值）
      *
      *   aggression=0（完全防御型）→ maxHoldMs = totalAttackMs（等完所有攻击动画）
-     *   aggression=1（完全侵略型）→ maxHoldMs = 0（立即过期）
+     *   aggression=1（完全侵略型）→ 计算值 0，由 minHoldPeriodMs 下限兜底
      *
-     * 目的：打破防御型角色 opp idle 时无限 hold 僵局。
-     *   超时后 holdScore 归零，attack 或 approach 自然赢。
+     * 26.11.2 Step 3 语义修正：
+     *   超时不再是"永久禁用"，而是"该重新评价了"——超时 tick holdScore 归零
+     *   并重置计时器，hold 进入下一轮评价周期（周期性，见评分处注释）。
+     *   minHoldPeriodMs 下限保证 baseAggression=1.0 这个合法边界下，
+     *   hold 至少完整保有 400ms 再进入重新评价，而非每 tick 判超时。
      */
     #getMaxHoldMs() {
         const attacks = this.kbProfile?.attacks || [];
@@ -2507,7 +2809,8 @@ export class AIController extends BaseController {
         if (totalAttackMs === 0) return Infinity;  // 无攻击数据，不过期（安全兜底）
 
         const aggression = this.tuning.aiProfile?.baseAggression ?? 1.0;
-        return totalAttackMs * (1 - aggression);
+        const minHoldPeriodMs = this.tuning.hold?.minHoldPeriodMs ?? 400;
+        return Math.max(totalAttackMs * (1 - aggression), minHoldPeriodMs);
     }
 
     /**

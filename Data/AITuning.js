@@ -27,7 +27,13 @@ export const AITuning = {
     // 再拆分。不要为了「灵活」现在就拆三个相同值。
 
     // === 性格门控 ===
-    committedScoreThreshold: 0.15,     // 评分超过此阈值才执行 committed action
+    // 26.11.2 Step 2 已接线：committed action（attack/dodge/guard/throw）评分 ≥ 此值
+    // 才留在候选池（positioning 不受约束，有自己的距离门控）。注意 0.15 数值未经证明，
+    // 是回归验证项——可能过滤掉低分但有价值的反应（观察 commitArbitration 日志）。
+    // 26.11.2 Step 4 复测修正：运行时按角色 attack.baseWeight / 系统默认值归一化
+    // （钳制 [0.25, 1.5]）——防御偏好型人格（manatarms baseWeight=0.10）攻击分天花板
+    // ≈0.09，绝对阈值使其永远无法攻击 → 无限 hold。此字段只保留"系统默认量纲"下的值。
+    committedScoreThreshold: 0.15,
     reactionVariance: 0.05,            // 随机扰动幅度（降级为 tie-break，Step 5）
 
     // === oppThreat 感知 ===
@@ -72,6 +78,13 @@ export const AITuning = {
         activeStartupPenalty: 0.10,  // opp active + in-range 时长招的最大扣分（ratio→0 最慢招扣满，ratio=1.0 不扣）
         distanceStartupSmooth: 0.3,  // startup factor 开始衰减的距离窗口
 
+        // === 近距侧衰减（26.11.2 Step 4A）===
+        // 锚定单招自己的射程带 [minReach, effectiveRange]：distance 从 effectiveRange
+        // 收缩到 minReach 时 rangeFactor 衰减到 nearFloor——长招先于短招感受贴脸劣势，
+        // 短招在自己的舒适带不受罚。与 retreat 中间档（Step 4B）成对生效。
+        // 0.5 是验证起点，不是结论，随验收调整。
+        nearDecayFloor: 0.5,
+
         // === Clash Seeker：主动寻求武器碰撞（防御缺口补完）===
         // 不是新 kind，是同一 attack 候选的额外 bonus 分项
         // 当 opp 正在 startup、双方 weaponbox active 窗口有 overlap、reachSum 够覆盖间距时触发
@@ -97,13 +110,20 @@ export const AITuning = {
     },
 
     // === 防御偏好 ===
+    // 注：activationThreshold / startupTooLateBase 已删除（2026-11-02 口径核对）——
+    // 两者在 AIController 中从未被读取（死配置）。防御资格由可达性门 + startup timing 门控制。
     defense: {
-        activationThreshold: 0.3,  // oppThreat < 此值时防御评分归零
         parryReward: 0.2,          // parry 成功额外加分
         badDefensePenalty: 0.5,    // guard 防不住 thrust 这类情况扣分
         activeBase: 0.85,          // opponent active 时的防御基础分
         startupCanActBase: 0.65,   // startup 且自己来得及反应
-        startupTooLateBase: 0.3,   // startup 但自己来不及
+        // 可达性门的受击体延伸（26.11.2 Step 1b）：AI 距离是 root-to-root，命中判定是
+        // weaponbox × hitbox 重叠——受击方身体朝攻击者一侧有 hitbox 延伸，"尖端擦身"
+        // 就发生在这段延伸里。初版 0.45 由旧观察（命中于 4.6-4.7m）反推，26.11.2 Step 1c
+        // 复测被 COMBAT 命中日志推翻：AI approach 中被 thrust 尖端稳定命中于 4.90-5.10m
+        // （defenseGate REJECT 证实门差 0.01-0.02m 拒掉后即被命中），重校准为 0.7
+        // （(4.15+0.7)×1.05=5.10 覆盖全部实测命中；实测 5.33m 处未命中，仍被门拒）。
+        bodyReachAllowance: 0.7,
         // === Reaction Profile ===
         // 每个决策 tick 抽取 0 ~ reflexMaxMs 的随机偏移，加到 decisionBuffer 上。
         // 效果：reflexMaxMs=0 → 和现在一样（默认）；reflexMaxMs=200 → AI 的
@@ -131,8 +151,27 @@ export const AITuning = {
     },
 
     // === Positioning ===
+    hold: {
+        // 26.11.2 Step 3：hold 最低保有期下限（ms）。
+        // maxHoldMs 计算值（totalAttackMs × (1 - baseAggression)）低于此值时取此值——
+        // baseAggression=1.0 是合法边界，hold 至少完整保有该周期再进入重新评价，
+        // 而非每 tick 判超时。400ms 是防抖起点，不是已证明的设计值，随验收调整。
+        minHoldPeriodMs: 400,
+    },
     retreat: {
         normalThreat: 0.6,           // 普通状态下 retreat 的威胁阈值
         mobilityBoostThreat: 0.8,    // Mobility Boost 时 retreat 的威胁阈值
+        // 26.11.2 Step 4B：retreat 中间档锚点。
+        // distance ≤ closestMinReach（最短攻击招的 minReach）× 此值时进入中间档，
+        // 分数从 0（0.55×closestMinReach 处）线性爬升到 0.5（锚点处），
+        // 与贴脸必退线连续衔接。锚最短招而非 idealEffReach（复测调整）：
+        // 锚 ideal 时中间档盖住 1.3~1.87m，AI 永远进不了 dash 舒适区。
+        // 与 attack 近距侧衰减（Step 4A）成对生效，单加任一侧都赢不了。
+        midTierAnchor: 1.1,
+        // 失败驱动脱离（26.11.2 Step 4c）刻意无新参数：退离目标线由现有
+        // posture.attackMultiplier 插值（标准侵略性=退到自己攻击距离外，高侵略退短
+        // 至 0.85×射程，低侵略退长至 max(自己射程, 对手射程)），幅度复用必退基线 0.5。
+        // 触发为预算制（每个招都失败过 attemptsPerAttack 次，attMult≥1.0 → 2 次 /
+        // <1.0 → 1 次），锁存 4s + 外缘衰减，机制语义见 AIController #scorePositioning。
     },
 };

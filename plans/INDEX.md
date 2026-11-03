@@ -1,6 +1,17 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-03)
+- **AI 问题修复计划 26.11.2 全部完成并关闭（2026-11-02 起实施，按 `plans/26.11.2 AI问题修复计划.MD`）**：
+  - Step 0 口径核对：删除死配置 activationThreshold / startupTooLateBase，修正 docs/AI系统说明.MD 三处描述漂移
+  - Step 1/1b/1c 防御可达性门（问题一"远距离挥空也防御"）：物理口径 `(maxReach+前冲位移+bodyReachAllowance)×1.05` 远端 + `minR−allowance` 近端死区；bodyReachAllowance 经 Step 1c 复测重校准 0.45→0.7（尖端擦身实证）；新增自身闭合法则（closure=currentSpd×timeUntilActiveEnd，≤0.3m）+ `[AI-Diag] COMBAT` 命中事件日志 + `defenseGate REJECT` 观测
+  - Step 2 committedScoreThreshold 仲裁（问题四"0 分 dodge 平局塌缩"）：committed 候选（attack/dodge/guard/throw）score ≥ 阈值才留池，positioning 不受约束，无达标候选 → 原地待机；新增 `[AI-Diag] commitArbitration:`
+  - Step 3 holdTimeout 语义重构（问题三"永久超时"）：超时改为周期性（同时重置 holdCommitStart），`minHoldPeriodMs: 400` 下限兜底 baseAggression=1.0 合法边界
+  - Step 4/4c/4d 近距带治理（问题二"近距只攻不退"）：4A 近距 attack rangeFactor 线性衰减（锚定单招射程带，`nearDecayFloor: 0.5`）；4B retreat 中间档（挂 closestMinReach×1.1）；4c 失败驱动脱离——`#attackFailBudget` 预算制（每近战招失败计数，全部达 attemptsPerAttack 才触发，"武器库轮一遍再拉开"）+ 4s 锁存 + boost 外缘线性衰减防抽搐 + 退离线由 posture.attackMultiplier 插值（不新增参数）；4d 仲裁阈值按角色 attack.baseWeight 量纲归一化（钳 [0.25,1.5]）——修复 manatarms（baseWeight=0.10）攻击候选池结构性为空导致的无限 hold
+  - Step 5 dodge i-frame 资格门：`timeUntilHit < escapeLatency → dodge 0 分`（escapeLatency：idle→0 / 自身攻击→KB timing 剩余时长），`[AI-Diag] dodgeGate REJECT`
+  - Step 6（6a 截击可行性门 / 6b guard 早开豁免）：经分析定性为防御时机门 reflexOffset 每 tick 重抽导致的随机反应分布（约 23% 开门概率），非缺陷——用户决定不修，转计划 §8 观察项（判据：COMBAT HIT 中 opp startup 期被打断的受伤频率）
+- **涉及文件**：AIController.js（可达性门 + closure + 仲裁 + holdTimeout + 近距衰减 + 失败脱离 + dodge 资格门）+ CombatMemory.js（miss 计数 3s 衰减清零）+ AITuning.js（删 2 死配置 + bodyReachAllowance 0.7 + minHoldPeriodMs + nearDecayFloor + midTierAnchor）+ docs/AI系统说明.MD + plans/26.11.2 AI问题修复计划.MD（已关闭）
 
 ## Update Log (2026-11-01)
 - **刀光结束效果落地（半透明 + 起点向终点渐隐消散，按 `plans/26.11.1 刀光结束效果计划.MD`，全部完成）**：

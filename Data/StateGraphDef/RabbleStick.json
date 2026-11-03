@@ -181,7 +181,7 @@
       "attackActive": true,
       "attackActiveStartMs": 440,
       "attackActiveDurationMs": 100,
-      "attackWeight": "light",
+      "attackWeight": "heavy",
       "attackTrajectory": "slash",
       "loop": false,
       "transitions": [
