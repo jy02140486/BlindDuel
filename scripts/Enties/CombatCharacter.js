@@ -382,6 +382,10 @@ export class CombatCharacter extends CharacterBase {
                         : null,
                     attackWeight: boxRole === "attack" ? (this.currentStateDef?.attackWeight ?? null) : null,
                     attackTrajectory: boxRole === "attack" ? (this.currentStateDef?.attackTrajectory ?? null) : null,
+                    // 音频材质细分：攻击 box 带招式撞击材质；所有 box 带该角色当前呈现的接触面材质
+                    // （guard/shield 态 override → 状态图 bodySurface 兜底，供 ContactResolver 组装 combat_impact context）
+                    impactMaterial: boxRole === "attack" ? (this.currentStateDef?.impactMaterial ?? null) : null,
+                    contactSurface: this.currentStateDef?.contactSurface ?? this.stateGraph?.bodySurface ?? null,
                     guardType: boxRole === "shield" ? effectiveGuardType : null,
                     canParry: box.type === "weaponbox" && this.currentStateDef?.guardType === "guard",
                     center: {

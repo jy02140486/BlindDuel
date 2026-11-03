@@ -1,5 +1,6 @@
 {
     "id": "ep1_tavern_night",
+    "defaultSurfaceType": "hard",
     "exploreCamera": {
         "followDistance": 17,
         "followHeight": 3.5,

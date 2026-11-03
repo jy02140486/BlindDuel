@@ -92,6 +92,9 @@ export class ProjectileContactResolver {
                             projectileId: proj.id,
                             cutterId: snap.characterId,
                             cutterAttackId: box.attackInstanceId,
+                            // 音频材质细分：source=投掷物材质，target=斩击方武器材质（shield box 走 contactSurface）
+                            sourceMaterial: getProjectileDef(proj.projectileType)?.material ?? null,
+                            targetSurface: box.impactMaterial ?? box.contactSurface ?? null,
                             contactType: isShieldBlock ? "shield_vs_projectile" : "weapon_vs_projectile"
                         }
                     });
@@ -107,7 +110,7 @@ export class ProjectileContactResolver {
                         effects.push({
                             type: "projectile_deflect",
                             targetId: proj.id,
-                            context: { deflectConfig, contactType: isShieldBlock ? "shieldHit" : "weaponCut" }
+                            context: { deflectConfig, contactType: isShieldBlock ? "shieldHit" : "weaponCut", sourceMaterial: def?.material ?? null, targetSurface: box.impactMaterial ?? box.contactSurface ?? null }
                         });
                     } else {
                         // destroy — 现有逻辑
@@ -165,6 +168,8 @@ export class ProjectileContactResolver {
                             targetId: snap.characterId,
                             attackLevel: null,
                             contactType: "projectile_vs_hitbox",
+                            sourceMaterial: def?.material ?? null,
+                            targetSurface: box.contactSurface ?? null,
                             damage: proj.damage,
                             hitState: "hit",
                             knockbackX: knockback,
@@ -179,7 +184,7 @@ export class ProjectileContactResolver {
                         effects.push({
                             type: "projectile_deflect",
                             targetId: proj.id,
-                            context: { deflectConfig, contactType: "characterHit" }
+                            context: { deflectConfig, contactType: "characterHit", sourceMaterial: def?.material ?? null, targetSurface: box.contactSurface ?? null }
                         });
                     } else {
                         // destroy — 现有逻辑

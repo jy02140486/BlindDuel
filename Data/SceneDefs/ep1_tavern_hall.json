@@ -1,5 +1,6 @@
 {
     "id": "ep1_tavern_hall",
+    "defaultSurfaceType": "hard",
     "exploreCamera": {
         "followDistance": 17,
         "followHeight": 3.5,

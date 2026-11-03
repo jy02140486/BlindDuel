@@ -1,5 +1,6 @@
 {
   "machine": "rabble_stick",
+  "bodySurface": "flesh",
   "initialState": "idle",
   "characterTraits": {
     "postDefenseMobility": {
@@ -145,6 +146,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "thrust",
+      "impactMaterial": "wood",
       "loop": false,
       "transitions": [
         {
@@ -162,6 +164,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
+      "impactMaterial": "wood",
       "attackActiveFrames": [2,3],
       "loop": false,
       "timeScale": 1.0,
@@ -183,6 +186,7 @@
       "attackActiveDurationMs": 100,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
+      "impactMaterial": "wood",
       "loop": false,
       "transitions": [
         {
@@ -228,6 +232,7 @@
       "allowMoveInput": false,
       "guardActive": true,
       "guardType": "guard",
+      "contactSurface": "wood",
       "moveSpeedBonus": 1.3,
       "loop": false,
       "transitions": [

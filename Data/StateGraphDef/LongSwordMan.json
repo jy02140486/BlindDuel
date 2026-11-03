@@ -1,5 +1,6 @@
 {
   "machine": "longswordman",
+  "bodySurface": "flesh",
   "initialState": "standing",
   "characterTraits": {
     "postDefenseCounter": {
@@ -226,6 +227,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "thrust",
+      "impactMaterial": "steel",
       "attackActiveFrames": [2],
       "loop": false,
       "impact": {
@@ -248,6 +250,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "slash",
+      "impactMaterial": "steel",
       "attackActiveFrames": [3],
       "loop": false,
       "impact": {
@@ -270,6 +273,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
+      "impactMaterial": "steel",
       "attackActiveFrames": [4],
       "loop": false,
       "timeScale": 1.0,
@@ -294,6 +298,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
+      "impactMaterial": "steel",
       "attackActiveFrames": [2],
       "loop": false,
       "timeScale": 1.0,
@@ -317,6 +322,7 @@
       "allowMoveInput": false,
       "guardActive": true,
       "guardType": "guard",
+      "contactSurface": "steel",
       "loop": false,
       "transitions": [
         {
@@ -362,6 +368,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
+      "impactMaterial": "steel",
       "attackActiveFrames": [4],
       "loop": false,
       "impact": {

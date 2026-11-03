@@ -1,5 +1,6 @@
 {
   "machine": "manatarms_sword",
+  "bodySurface": "flesh",
   "initialState": "idle",
   "inputs": {
     "commands": ["quart", "reverse_quart", "smash"],
@@ -77,6 +78,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "slash",
+      "impactMaterial": "steel",
       "attackActiveFrames": [3],
       "allowMoveInput": false,
       "loop": false,
@@ -103,6 +105,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "slash",
+      "impactMaterial": "steel",
       "attackActiveFrames": [2],
       "allowMoveInput": false,
       "loop": false,
@@ -122,6 +125,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
+      "impactMaterial": "steel",
       "attackActiveFrames": [1, 2],
       "allowMoveInput": false,
       "loop": false,

@@ -7,6 +7,8 @@
 - mode:
   - "direct"（缺省）：type → audioId 直映射
   - "surface"：按 payload.source 落脚点查询 SurfaceType，再查 bySurface 表；查不到走 fallback
+  - "impact"：战斗碰撞事件（combat_impact）条件规则匹配——rules 顺序匹配（when 声明的
+    字段与 context 全等即命中），未命中按 interaction 查 fallbacks 表，再未命中静默
 - SurfaceProvider 由 Scene 生命周期注入（setSurfaceProvider），未注入时 surface 模式走 fallback
 */
 export class SfxResolver {
@@ -27,10 +29,41 @@ export class SfxResolver {
             return this.#resolveSurface(rule, payload);
         }
 
+        if (rule.mode === "impact") {
+            return this.#resolveImpact(rule, payload?.context ?? {});
+        }
+
         if (typeof rule.audioId !== "string") return null;
         const options = {};
         if (typeof rule.volume === "number") options.volume = rule.volume;
         return { audioId: rule.audioId, options };
+    }
+
+    /**
+     * impact 模式解析（combat_impact 规则集，plans/26.11.3 声音材质映射细分计划 §2）：
+     * 1. rules 顺序匹配——when 里声明的每个 key 与 context 对应值全等才算命中
+     *    （context 里有而 when 没声明的字段不参与匹配 → 部分匹配，不做维度全排列）
+     * 2. 无规则命中 → fallbacks[interaction]（各碰撞结果的基础音效）
+     * 3. interaction 也无 fallback → null 静默
+     */
+    #resolveImpact(rule, context) {
+        for (const entry of rule.rules ?? []) {
+            const when = entry?.when ?? {};
+            const keys = Object.keys(when);
+            if (keys.length === 0) continue;  // 空条件视为配置错误，跳过
+            if (keys.every((key) => context[key] === when[key])) {
+                return this.#entryToResult(entry);
+            }
+        }
+        const fallbackId = rule.fallbacks?.[context.interaction];
+        return fallbackId ? this.#entryToResult({ audioId: fallbackId }) : null;
+    }
+
+    #entryToResult(entry) {
+        if (!entry || typeof entry.audioId !== "string") return null;
+        const options = {};
+        if (typeof entry.volume === "number") options.volume = entry.volume;
+        return { audioId: entry.audioId, options };
     }
 
     #resolveSurface(rule, payload) {

@@ -48,14 +48,14 @@ export class CombatSystem {
 
             if (effect.type === "projectile_cut") {
                 // v1: informational only — Future: camera flash / audio cue
-                this._dispatchCombatAudio("combat_projectile_cut", null, effect.context);
+                this._dispatchCombatImpact("projectile_cut", "weapon", null, effect.context);
                 continue;
             }
 
             if (effect.type === "projectile_deflect") {
                 // Resolver 已经决定让 projectile 进入弹飞状态，
                 // 不立即销毁，让 ProjectileManager.initiateDeflect 切换状态后继续飞
-                this._dispatchCombatAudio("combat_projectile_deflect", null, effect.context);
+                this._dispatchCombatImpact("projectile_deflect", "weapon", null, effect.context);
                 if (projectileManager && effect.targetId && effect.context?.deflectConfig) {
                     projectileManager.initiateDeflect(effect.targetId, effect.context.deflectConfig);
                 }
@@ -87,9 +87,9 @@ export class CombatSystem {
                 }
                 this._fxShake(0.18, 120);
                 // 有 contactType 的才是真实拼刀（weapon vs weapon）；parry/guard_block
-                // 复用 clash effect 中止攻方动画，不发声（防守方 blockstun 已发 combat_guard_block）
+                // 复用 clash effect 中止攻方动画，不发声（防守方 blockstun 已发 shield_block impact）
                 if (effect.context?.contactType) {
-                    this._dispatchCombatAudio("combat_clash", target, effect.context);
+                    this._dispatchCombatImpact("weapon_clash", "weapon", target, effect.context);
                 }
                 continue;
             }
@@ -121,7 +121,7 @@ export class CombatSystem {
                     }
                 }
                 this._fxShake(0.15, 120);
-                this._dispatchCombatAudio("combat_shield_broken", target, effect.context);
+                this._dispatchCombatImpact("shield_broken", "weapon", target, effect.context);
                 continue;
             }
 
@@ -139,7 +139,7 @@ export class CombatSystem {
                 const kb = effect.context?.knockbackX ?? 0;
                 if (kb !== 0) target.root.position.x += kb;
                 this._fxShake(0.12, 100);
-                this._dispatchCombatAudio("combat_guard_block", target, effect.context);
+                this._dispatchCombatImpact("shield_block", "weapon", target, effect.context);
                 continue;
             }
 
@@ -166,11 +166,14 @@ export class CombatSystem {
             if (effect.type === "hit") {
                 const attackerId = effect.context?.attackerId;
                 let finalKnockbackX = effect.context?.knockbackX ?? 0;
-                // 武器命中 vs 投掷物命中走不同音效语义（ContactResolver / ProjectileContactResolver 各自的 contactType）
-                const hitAudioType = effect.context?.contactType === "projectile_vs_hitbox"
-                    ? "combat_projectile_hit"
-                    : "combat_hit";
-                this._dispatchCombatAudio(hitAudioType, target, effect.context);
+                // 武器命中 vs 投掷物命中走不同 interaction（ContactResolver / ProjectileContactResolver 各自的 contactType）
+                const isProjectileHit = effect.context?.contactType === "projectile_vs_hitbox";
+                this._dispatchCombatImpact(
+                    isProjectileHit ? "projectile_hit" : "body_hit",
+                    isProjectileHit ? "projectile" : "weapon",
+                    target,
+                    effect.context
+                );
 
                 // === hitstop — 从 effect.context 读 override ===
                 const hitstopFrames = effect.context?.attackHitstopFrames ?? this.tuning.hit.hitstopFrames ?? 0;
@@ -422,13 +425,21 @@ export class CombatSystem {
         }
     }
 
-    // 战斗结果 → 语义事件（combat_* 前缀约定）：payload 不携带音频语义，
-    // AudioSystem 侧经 SfxResolver 查 sfx_map 决定播什么（plans/26.11.3 计划 §1）
-    _dispatchCombatAudio(type, source, context) {
+    // 战斗结果 → 统一 Impact Event（combat_impact）：context 携带结构化碰撞描述
+    // （interaction/sourceKind/sourceMaterial/impactClass/targetSurface），音频侧
+    // SfxResolver 按条件规则集解析 audioId（plans/26.11.3 声音材质映射细分计划 §2）。
+    // 碰撞系统决定发生了什么，音频系统决定听起来是什么样。
+    _dispatchCombatImpact(interaction, sourceKind, source, effectContext) {
         this.animationEventBus?.dispatch({
-            type,
+            type: "combat_impact",
             source: source ?? null,
-            context: context ?? {}
+            context: {
+                interaction,
+                sourceKind,
+                sourceMaterial: effectContext?.sourceMaterial ?? null,
+                impactClass: effectContext?.attackWeight ?? null,
+                targetSurface: effectContext?.targetSurface ?? null
+            }
         });
     }
 

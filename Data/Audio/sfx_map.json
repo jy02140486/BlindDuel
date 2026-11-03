@@ -12,11 +12,21 @@
     "off_cloaked":    { "audioId": "off_cloaked" },
     "on_draw_sheath": { "audioId": "on_draw_sheath" },
 
-    "combat_hit":                { "audioId": "combat_body_hit" },
-    "combat_clash":              { "audioId": "combat_weapon_clash" },
-    "combat_guard_block":        { "audioId": "combat_shield_block" },
-    "combat_shield_broken":      { "audioId": "combat_shield_break" },
-    "combat_projectile_cut":     { "audioId": "combat_weapon_clash" },
-    "combat_projectile_deflect": { "audioId": "combat_weapon_clash" },
-    "combat_projectile_hit":     { "audioId": "combat_body_hit" }
+    "combat_impact": {
+        "mode": "impact",
+        "fallbacks": {
+            "body_hit":          "combat_body_hit",
+            "weapon_clash":      "combat_weapon_clash",
+            "shield_block":      "combat_shield_block",
+            "shield_broken":     "combat_shield_break",
+            "projectile_cut":    "combat_weapon_clash",
+            "projectile_deflect": "combat_weapon_clash",
+            "projectile_hit":    "combat_body_hit"
+        },
+        "rules": [
+            { "when": { "interaction": "body_hit", "sourceMaterial": "stone" }, "audioId": "combat_stone_hit" },
+            { "when": { "interaction": "weapon_clash", "sourceMaterial": "wood" }, "audioId": "combat_wood_clash" },
+            { "when": { "interaction": "weapon_clash", "targetSurface": "wood" }, "audioId": "combat_wood_clash" }
+        ]
+    }
 }

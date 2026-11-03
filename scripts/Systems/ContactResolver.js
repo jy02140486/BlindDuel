@@ -107,6 +107,9 @@ export class ContactResolver {
                             context: {
                                 attackerId: offenseCharId,
                                 attackInstanceId: offenseAttackId,
+                                sourceMaterial: offenseBox.impactMaterial ?? null,
+                                targetSurface: defenseBox.contactSurface ?? null,
+                                impactClass: offenseBox.attackWeight ?? null,
                                 knockbackX: this.#signedKnockback(offensePos, defensePos, broken.brokenDefenseKnockbackX),
                                 freezeImpactFrames: broken.brokenDefenseFreezeImpactFrames,
                                 // 攻方独立配置（破盾也有阻力但不进 clash）
@@ -152,7 +155,7 @@ export class ContactResolver {
                     if (canParry) {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "parry", effects);
                         // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, sourceMaterial: offenseBox.impactMaterial ?? null, targetSurface: defenseBox.contactSurface ?? null, impactClass: offenseBox.attackWeight ?? null, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 后走 clash（与拼刀统一），knockback 照给
                         // 注意：此处 attackerId 指向防守方（parry 来源），与普通 clash_lose 一致，
                         // 但缺少 contactType 字段，CombatSystem 用此区分 parried vs clash
@@ -161,7 +164,7 @@ export class ContactResolver {
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "guard_block", effects);
-                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
+                        effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, sourceMaterial: offenseBox.impactMaterial ?? null, targetSurface: defenseBox.contactSurface ?? null, impactClass: offenseBox.attackWeight ?? null, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 让攻击中止，解冻后自动切 clash 状态（与 parry 一致的手动 push，不带 contactType）
                         effects.push({ type: "clash", targetId: offenseCharId, context: { attackerId: defenseCharId, knockbackX: this.#signedKnockback(offensePos, defensePos, t.knockbackX), freezeImpactFrames: t.offenseFreezeImpactFrames } });
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: t.hitstopFrames });
@@ -205,8 +208,8 @@ export class ContactResolver {
                 invalidatedAttacks.add(attackA);
                 invalidatedAttacks.add(attackB);
                 effects.push(
-                    this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB),
-                    this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA)
+                    this.#buildClashEffect(contact.characterA, contact.characterB, "clash_tie", posA, posB, boxA, boxB),
+                    this.#buildClashEffect(contact.characterB, contact.characterA, "clash_tie", posB, posA, boxB, boxA)
                 );
                 effects.push({ type: "hitstop", targetId: contact.characterA, durationFrames: this.tuning.clash.tieHitstopFrames });
                 effects.push({ type: "hitstop", targetId: contact.characterB, durationFrames: this.tuning.clash.tieHitstopFrames });
@@ -226,7 +229,7 @@ export class ContactResolver {
                 `winner=${winnerId}(${snapA?.characterId===winnerId ? snapA?.stateName+'@'+snapA?.frameIndex : snapB?.stateName+'@'+snapB?.frameIndex}) weight=${heavyIsA ? weightA : weightB} | ` +
                 `loser=${loserId}(${snapA?.characterId===loserId ? snapA?.stateName+'@'+snapA?.frameIndex : snapB?.stateName+'@'+snapB?.frameIndex}) weight=${heavyIsA ? weightB : weightA}`
             );
-            effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos));
+            effects.push(this.#buildClashEffect(loserId, winnerId, "clash_lose", loserPos, winnerPos, heavyIsA ? boxB : boxA, heavyIsA ? boxA : boxB));
             effects.push({ type: "hitstop", targetId: loserId, durationFrames: this.tuning.clash.loseLoserHitstopFrames });
             effects.push({ type: "hitstop", targetId: winnerId, durationFrames: this.tuning.clash.loseWinnerHitstopFrames });
         }
@@ -283,6 +286,8 @@ export class ContactResolver {
                     contactType: "weapon_vs_hitbox",
                     attackTrajectory: contact.weapon.attackTrajectory ?? null,
                     attackWeight: contact.weapon.attackWeight ?? null,
+                    sourceMaterial: contact.weapon.impactMaterial ?? null,
+                    targetSurface: contact.hitbox.contactSurface ?? null,
                     damage: 1,
                     hitState: "hit",
                     knockbackX: knockback,
@@ -520,7 +525,7 @@ export class ContactResolver {
         return targetPos >= sourcePos ? Math.abs(amount) : -Math.abs(amount);
     }
 
-    #buildClashEffect(targetId, otherId, contactType, targetPos, otherPos) {
+    #buildClashEffect(targetId, otherId, contactType, targetPos, otherPos, targetBox = null, otherBox = null) {
         return {
             type: "clash",
             targetId,
@@ -530,6 +535,10 @@ export class ContactResolver {
                 targetId,
                 attackLevel: null,
                 contactType,
+                // 音频材质细分：clash 双方都是攻击态，各自呈现武器材质
+                sourceMaterial: otherBox?.impactMaterial ?? null,
+                targetSurface: targetBox?.impactMaterial ?? targetBox?.contactSurface ?? null,
+                impactClass: targetBox?.attackWeight ?? null,
                 damage: 0,
                 hitState: "clash",
                 knockbackX: this.#signedKnockback(targetPos, otherPos, this.tuning.block.knockbackX)

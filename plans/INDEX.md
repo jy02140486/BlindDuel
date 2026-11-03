@@ -3,6 +3,17 @@
 > 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
 
 ## Update Log (2026-11-03)
+- **声音材质映射细分落地（Step 1-3 全部实施并验证通过，按 `plans/26.11.3 声音材质映射细分计划.MD`）**：
+  - 架构升级：7 个 `combat_*` 语义事件收敛为**统一 `combat_impact` Impact Event**——碰撞系统决定发生了什么，音频系统按条件规则集决定听起来是什么样（架构来源 plans/HandOff.MD，经项目数据核对修订）
+  - 材质数据归属（用户决策：人物状态图即武器唯一确定）：招式撞击材质 `impactMaterial` 标注在状态图攻击态（LongSwordMan/Manatarms=steel，RabbleStick=wood）；防御接触面 `contactSurface` 标注在 guard 态 override（steel/wood）；角色整体 `bodySurface: "flesh"` 在状态图顶层（项目无独立 CharacterDef，状态图即角色静态定义）；投掷物 `material` 在 ProjectileDefs（dagger/spear=steel，rock=stone）
+  - 链路透传：CombatCharacter 构建 combat box 时解析（impactMaterial 仅 attack box，contactSurface 所有 box）→ ContactResolver 5 处 effect context（hit/shield_broken/blockstun×2/clash）+ ProjectileContactResolver 3 处（cut/deflect/hit）携带 sourceMaterial/impactClass/targetSurface
+  - 统一 Impact Event：CombatSystem `_dispatchCombatImpact(interaction, sourceKind, ...)`，context 五字段（interaction/sourceKind/sourceMaterial/impactClass/targetSurface）；targetSurface 统一取"守方呈现面"（guard override → clash 时对方武器材质 → bodySurface 兜底）；未命中无 combat 事件不变；parry/guard_block 仍靠 contactType 区分不发声
+  - SfxResolver 新增 `mode: "impact"`：rules 顺序条件部分匹配（when 声明字段与 context 全等）→ fallbacks[interaction] → 静默；sfx_map 7 条 combat_* 直映射替换为 1 条规则集（7 fallback + 3 示范规则：stone 打肉体 / 木棍拼刀 / 钢剑拼木棍）；**新增声音组合 = 加一条 JSON 规则，零代码**
+  - audio_clips 新增占位：combat_stone_hit / combat_wood_clash（光剑占位，累计 7 条）
+  - Step 4 backlog 未启动：targetSurface 盔甲细分、impactClass 轻重规则、投掷物 impactClass、真素材变体
+- **涉及文件**：`Data/StateGraphDef/{LongSwordMan,ManatarmsSword,RabbleStick}.json`（impactMaterial/contactSurface/bodySurface）+ `Data/ProjectileDefs.js`（material）+ `scripts/Enties/CombatCharacter.js`（box 解析）+ `scripts/Systems/ContactResolver.js`（context 透传 + impactClass）+ `scripts/Systems/ProjectileContactResolver.js`（context 透传）+ `scripts/Systems/CombatSystem.js`（统一 dispatch）+ `scripts/Systems/Audio/SfxResolver.js`（impact 模式）+ `Data/Audio/sfx_map.json`（规则集）+ `Data/Audio/audio_clips.json`（占位 ×2）+ 计划文档（含状态）+ PROJECT_CONTEXT.md（§3/§9.2）
+
+## Update Log (2026-11-03)
 - **声音系统事件驱动改造落地（Step 1-3 全部实施并验证通过，按 `plans/26.11.3 声音系统事件驱动改造计划.MD`）**：
   - 核心原则：动画事件报告动作时机，游戏逻辑报告实际结果，音频系统负责声音表现——动画事件与音频资源彻底解耦
   - Step 1 翻译层：`SfxResolver.js`（新，表驱动 type→audioId 映射，map 未收录 type 静默忽略）+ `Data/Audio/sfx_map.json`（新）+ `AssetManifest.js` 注册 sfxMap；顺手消除 throw_draw/throw_release 的 `unknown clip` warn 噪音

@@ -23,6 +23,41 @@
         "pitch": [0.92, 1.08],
         "bus": "sfx"
     },
+    "footstep_hard": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.8,
+        "bus": "sfx"
+    },
+    "combat_body_hit": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.9,
+        "bus": "sfx"
+    },
+    "combat_stone_hit": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.85,
+        "bus": "sfx"
+    },
+    "combat_wood_clash": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.8,
+        "bus": "sfx"
+    },
+    "combat_weapon_clash": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.9,
+        "bus": "sfx"
+    },
+    "combat_shield_block": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.85,
+        "bus": "sfx"
+    },
+    "combat_shield_break": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 1.0,
+        "bus": "sfx"
+    },
     "on_land": {
         "clips": ["./Audio/sfx/weapon/847838__posdesigndesom__fghtimpt_punch-sounds-strong_guilherme-gabriel-leonardo_dsba/slice_02.wav"],
         "volume": 0.8,
