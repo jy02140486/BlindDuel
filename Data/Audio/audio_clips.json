@@ -14,7 +14,7 @@
     "swing_heavy": {
         "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
         "volume": 0.9,
-        "pitch": [0.93, 1.07],
+        "pitch": [0.32, 0.4],
         "bus": "sfx"
     },
     "swing_thrust": {
@@ -34,13 +34,18 @@
         "volume": 0.8,
         "bus": "sfx"
     },
-    "combat_body_hit": {
+    "combat_body_hit_default": {
         "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
         "volume": 0.9,
         "bus": "sfx"
     },
-    "combat_stone_hit": {
+    "combat_body_hit_sharp": {
         "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.85,
+        "bus": "sfx"
+    },
+    "combat_body_hit_blunt": {
+        "clips": ["./Audio/sfx/weapon/847838__posdesigndesom__fghtimpt_punch-sounds-strong_guilherme-gabriel-leonardo_dsba/slice_04.wav"],
         "volume": 0.85,
         "bus": "sfx"
     },
@@ -49,17 +54,17 @@
         "volume": 0.8,
         "bus": "sfx"
     },
-    "combat_weapon_clash": {
+    "combat_weapon_clash_default": {
         "clips": ["./Audio/sfx/WEAPSwrd_Sword Slide Cuts, Metallic, Impact CM4 2_344 Audio_Medieval Weapons Vol 2/_converted/slice_01.wav"],
         "volume": 0.9,
         "bus": "sfx"
     },
-    "combat_shield_block": {
+    "combat_shield_block_default": {
         "clips": ["./Audio/sfx/weapon/232933__bmusic92__wooden-drawer-openingclosing_2.wav"],
         "volume": 0.85,
         "bus": "sfx"
     },
-    "combat_shield_break": {
+    "combat_shield_break_default": {
         "clips": ["./Audio/sfx/weapon/323525__kreastricon62__bloody-blade.wav"],
         "volume": 1.0,
         "bus": "sfx"

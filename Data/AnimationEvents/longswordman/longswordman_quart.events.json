@@ -2,7 +2,7 @@
     "clips": {
         "quart": {
             "events": [
-                { "frame": 2, "type": "swing_heavy" }
+                { "frame": 2, "type": "swing_light" }
             ]
         }
     }

@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "nachschlag": {
+            "events": [
+                { "frame": 1, "type": "swing_heavy" }
+            ]
+        }
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "fullthrust": {
+            "events": [
+                { "frame": 3, "type": "swing_thrust" }
+            ]
+        }
+    }
+}

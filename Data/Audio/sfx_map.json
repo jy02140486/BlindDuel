@@ -16,18 +16,18 @@
     "combat_impact": {
         "mode": "impact",
         "fallbacks": {
-            "body_hit":          "combat_body_hit",
-            "weapon_clash":      "combat_weapon_clash",
-            "shield_block":      "combat_shield_block",
-            "shield_broken":     "combat_shield_break",
-            "projectile_cut":    "combat_weapon_clash",
-            "projectile_deflect": "combat_weapon_clash",
-            "projectile_hit":    "combat_body_hit"
+            "body_hit":           "combat_body_hit_default",
+            "weapon_clash":       "combat_weapon_clash_default",
+            "shield_block":       "combat_shield_block_default",
+            "shield_broken":      "combat_shield_break_default",
+            "projectile_cut":     "combat_weapon_clash_default",
+            "projectile_deflect": "combat_weapon_clash_default",
+            "projectile_hit":     "combat_body_hit_default"
         },
         "rules": [
-            { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "heavy" }, "audioId": "combat_stone_hit" },
+            { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "heavy" }, "audioId": "combat_body_hit_blunt" },
             { "when": { "interaction": "body_hit", "sourceMaterial": "sharp", "impactClass": "heavy" }, "audioId": "combat_sharp_hit_heavy" },
-             { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "light" }, "audioId": "combat_stone_hit" },
+             { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "light" }, "audioId": "combat_body_hit_blunt" },
             { "when": { "interaction": "body_hit", "sourceMaterial": "sharp", "impactClass": "light" }, "audioId": "combat_sharp_hit_light" },
             { "when": { "interaction": "weapon_clash", "sourceMaterial": "blunt" }, "audioId": "combat_wood_clash" },
             { "when": { "interaction": "weapon_clash", "targetSurface": "blunt" }, "audioId": "combat_wood_clash" }

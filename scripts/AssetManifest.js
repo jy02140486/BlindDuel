@@ -136,6 +136,9 @@ export const ASSET_MANIFEST = {
             walk: "./Data/AnimationEvents/longswordman/longswordman_walk.events.json",
             thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json",
             quart: "./Data/AnimationEvents/longswordman/longswordman_quart.events.json",
+            zornhut: "./Data/AnimationEvents/longswordman/longswordman_zornhut.events.json",
+            nachschlag: "./Data/AnimationEvents/longswordman/longswordman_nachschlag.events.json",
+            fullthrust: "./Data/AnimationEvents/longswordman/longswordman_fullthrust.events.json",
             sheath: "./Data/AnimationEvents/longswordman/longswordman_sheath.events.json",
             draw: "./Data/AnimationEvents/longswordman/longswordman_draw.events.json",
             throw: "./Data/AnimationEvents/longswordman/longswordman_throw.events.json"

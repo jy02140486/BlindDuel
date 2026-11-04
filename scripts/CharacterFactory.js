@@ -79,12 +79,14 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_zornhut.png",
                 atlasData: assets.atlas.hero.zornhut,
                 colliderData: assets.colliders.hero.zornhut,
+                eventsData: assets.animationEvents?.hero?.zornhut,
                 loop: false
             },
             nachschlag: {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_nachschlag.png",
                 atlasData: assets.atlas.hero.nachschlag,
                 colliderData: assets.colliders.hero.nachschlag,
+                eventsData: assets.animationEvents?.hero?.nachschlag,
                 loop: false
             },
             guard: {
@@ -103,6 +105,7 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_fullthrust.png",
                 atlasData: assets.atlas.hero.fullthrust,
                 colliderData: assets.colliders.hero.fullthrust,
+                eventsData: assets.animationEvents?.hero?.fullthrust,
                 loop: false
             },
             clash: {

@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "zornhut": {
+            "events": [
+                { "frame": 2, "type": "swing_heavy" }
+            ]
+        }
+    }
+}
