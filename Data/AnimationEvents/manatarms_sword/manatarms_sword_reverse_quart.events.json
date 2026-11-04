@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "reverse_quart": {
+            "events": [
+                { "frame": 1, "type": "swing_sword_light" }
+            ]
+        }
+    }
+}

@@ -7,6 +7,7 @@
         }
     },
     "swing_light":    { "audioId": "swing_light" },
+    "swing_sword_light": { "audioId": "swing_sword_light" },
     "swing_heavy":    { "audioId": "swing_heavy" },
     "swing_thrust":   { "audioId": "swing_thrust" },
     "on_cloaked":     { "audioId": "on_cloaked" },

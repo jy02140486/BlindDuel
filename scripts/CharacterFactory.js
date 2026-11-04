@@ -288,18 +288,21 @@ export function createManatarmsCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_quart.png",
                 atlasData: assets.atlas.manatarms.quart,
                 colliderData: assets.colliders.manatarms.quart,
+                eventsData: assets.animationEvents?.manatarms?.quart,
                 loop: false
             },
             reverse_quart: {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_reverse_quart.png",
                 atlasData: assets.atlas.manatarms.reverse_quart,
                 colliderData: assets.colliders.manatarms.reverse_quart,
+                eventsData: assets.animationEvents?.manatarms?.reverse_quart,
                 loop: false
             },
             smash: {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_smash.png",
                 atlasData: assets.atlas.manatarms.smash,
                 colliderData: assets.colliders.manatarms.smash,
+                eventsData: assets.animationEvents?.manatarms?.smash,
                 loop: false
             },
             hit: {

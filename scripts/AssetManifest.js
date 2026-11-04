@@ -147,6 +147,11 @@ export const ASSET_MANIFEST = {
             swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",
             thrust: "./Data/AnimationEvents/rabble_stick/rabble_stick_thrust.events.json",
             throw: "./Data/AnimationEvents/rabble_stick/rabble_stick_throw.events.json"
+        },
+        manatarms: {
+            quart: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_quart.events.json",
+            reverse_quart: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_reverse_quart.events.json",
+            smash: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_smash.events.json"
         }
     },
     rootMotion: {

@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "quart": {
+            "events": [
+                { "frame": 2, "type": "swing_sword_light" }
+            ]
+        }
+    }
+}

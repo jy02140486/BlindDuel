@@ -11,10 +11,16 @@
         "pitch": [0.96, 1.04],
         "bus": "sfx"
     },
+    "swing_sword_light": {
+        "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_03.wav"],
+        "volume": 0.8,
+        "pitch": [0.96, 1.04],
+        "bus": "sfx"
+    },
     "swing_heavy": {
         "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
         "volume": 0.9,
-        "pitch": [0.32, 0.4],
+        "pitch": [0.32, 0.47],
         "bus": "sfx"
     },
     "swing_thrust": {
