@@ -227,7 +227,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "thrust",
-      "impactMaterial": "steel",
+      "impactMaterial": "sharp",
       "attackActiveFrames": [2],
       "loop": false,
       "impact": {
@@ -250,7 +250,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "slash",
-      "impactMaterial": "steel",
+      "impactMaterial": "sharp",
       "attackActiveFrames": [3],
       "loop": false,
       "impact": {
@@ -273,7 +273,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
-      "impactMaterial": "steel",
+      "impactMaterial": "sharp",
       "attackActiveFrames": [4],
       "loop": false,
       "timeScale": 1.0,
@@ -298,7 +298,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
-      "impactMaterial": "steel",
+      "impactMaterial": "sharp",
       "attackActiveFrames": [2],
       "loop": false,
       "timeScale": 1.0,
@@ -322,7 +322,7 @@
       "allowMoveInput": false,
       "guardActive": true,
       "guardType": "guard",
-      "contactSurface": "steel",
+      "contactSurface": "sharp",
       "loop": false,
       "transitions": [
         {
@@ -368,7 +368,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
-      "impactMaterial": "steel",
+      "impactMaterial": "sharp",
       "attackActiveFrames": [4],
       "loop": false,
       "impact": {

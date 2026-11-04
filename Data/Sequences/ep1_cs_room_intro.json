@@ -35,7 +35,8 @@
         { "type": "setVisibility", "atMs": 0, "visible": false },
         { "type": "setVisibility", "atMs": 7500, "visible": true },
         { "type": "command",       "atMs": 10600, "command": "hold" },
-        { "type": "callback", "atMs": 11000, "fn": "disposeProp", "actorId": "prop_rabble_kidnap" }
+        { "type": "callback", "atMs": 11000, "fn": "disposeProp", "actorId": "prop_rabble_kidnap" },
+        { "type": "playAudio", "atMs": 11000, "id": "creak_wooden_floor" }
       ]
     },
     {

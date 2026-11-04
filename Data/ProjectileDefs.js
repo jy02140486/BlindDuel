@@ -12,7 +12,7 @@
 export const ProjectileDefs = {
     dagger: {
         typeId: "dagger",
-        material: "steel",       // 音频材质细分（combat_impact 规则集用）
+        material: "sharp",       // 音频材质（combat_impact 规则集用：sharp=利器，blunt=钝器）
         // === 动力学参数（从 ThrowComponent.release 硬编码值原封不动搬过来）===
         speed: 6,                // 水平初始速度 magnitude；方向由 ThrowComponent 的 dirX 控制
         launchVy: 1,             // 初始垂直速度（向上为正，配合 gravity 形成抛物线）
@@ -39,7 +39,7 @@ export const ProjectileDefs = {
     // --- 未来投掷物预留（本次不动，AI 后续也不引用）---
     rock: {
         typeId: "rock",
-        material: "stone",       // 音频材质细分（combat_impact 规则集用）
+        material: "blunt",       // 音频材质（combat_impact 规则集用：sharp=利器，blunt=钝器）
         speed: 16,
         launchVy: 0.1,
         gravity: 32,
@@ -58,7 +58,7 @@ export const ProjectileDefs = {
 
     spear: {
         typeId: "spear",
-        material: "steel",       // 音频材质细分（combat_impact 规则集用）
+        material: "sharp",       // 音频材质（combat_impact 规则集用：sharp=利器，blunt=钝器）
         speed: 8,
         launchVy: 0.8,
         gravity: 4,

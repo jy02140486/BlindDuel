@@ -2,7 +2,7 @@
     "clips": {
         "thrust": {
             "events": [
-                { "frame": 1, "type": "swing_light" }
+                { "frame": 1, "type": "swing_thrust" }
             ]
         }
     }

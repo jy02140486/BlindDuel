@@ -146,7 +146,7 @@
       "attackActive": true,
       "attackWeight": "light",
       "attackTrajectory": "thrust",
-      "impactMaterial": "wood",
+      "impactMaterial": "blunt",
       "loop": false,
       "transitions": [
         {
@@ -164,7 +164,7 @@
       "attackActive": true,
       "attackWeight": "heavy",
       "attackTrajectory": "thrust",
-      "impactMaterial": "wood",
+      "impactMaterial": "blunt",
       "attackActiveFrames": [2,3],
       "loop": false,
       "timeScale": 1.0,
@@ -186,7 +186,7 @@
       "attackActiveDurationMs": 100,
       "attackWeight": "heavy",
       "attackTrajectory": "slash",
-      "impactMaterial": "wood",
+      "impactMaterial": "blunt",
       "loop": false,
       "transitions": [
         {
@@ -232,7 +232,7 @@
       "allowMoveInput": false,
       "guardActive": true,
       "guardType": "guard",
-      "contactSurface": "wood",
+      "contactSurface": "blunt",
       "moveSpeedBonus": 1.3,
       "loop": false,
       "transitions": [

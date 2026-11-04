@@ -17,6 +17,12 @@
         "pitch": [0.93, 1.07],
         "bus": "sfx"
     },
+    "swing_thrust": {
+        "clips": ["./Audio/sfx/weapon/450871__kyles__spear-ice-x3_1.wav"],
+        "volume": 0.85,
+        "pitch": [0.95, 1.05],
+        "bus": "sfx"
+    },
     "footstep": {
         "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_06.wav"],
         "volume": 0.7,
@@ -39,23 +45,40 @@
         "bus": "sfx"
     },
     "combat_wood_clash": {
-        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "clips": ["./Audio/sfx/weapon/232933__bmusic92__wooden-drawer-openingclosing_2.wav"],
         "volume": 0.8,
         "bus": "sfx"
     },
     "combat_weapon_clash": {
-        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "clips": ["./Audio/sfx/WEAPSwrd_Sword Slide Cuts, Metallic, Impact CM4 2_344 Audio_Medieval Weapons Vol 2/_converted/slice_01.wav"],
         "volume": 0.9,
         "bus": "sfx"
     },
     "combat_shield_block": {
-        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "clips": ["./Audio/sfx/weapon/232933__bmusic92__wooden-drawer-openingclosing_2.wav"],
         "volume": 0.85,
         "bus": "sfx"
     },
     "combat_shield_break": {
-        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "clips": ["./Audio/sfx/weapon/323525__kreastricon62__bloody-blade.wav"],
         "volume": 1.0,
+        "bus": "sfx"
+    },
+    "combat_sharp_hit_light": {
+        "clips": ["./Audio/sfx/weapon/816366__artninja__mcu_corvus_glaive_inspired_sword_stab_sound_final_07162025/slice_01.wav"],
+        "volume": 0.85,
+        "pitch": [0.94, 1.06],
+        "bus": "sfx"
+    },
+    "combat_sharp_hit_heavy": {
+        "clips": ["./Audio/sfx/weapon/35213__abyssmal__slashkut.wav"],
+        "volume": 0.95,
+        "pitch": [0.92, 1.04],
+        "bus": "sfx"
+    },
+    "creak_wooden_floor": {
+        "clips": ["./Audio/sfx/646696__sounddesignforyou__creaking-wooden-floor-8.wav"],
+        "volume": 0.8,
         "bus": "sfx"
     },
     "on_land": {

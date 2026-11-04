@@ -55,7 +55,8 @@
         { "type": "command", "atMs": 3650, "command": "walk" },
         { "type": "moveActorTo", "startMs": 3600, "durationMs": 500, "x": -19.3, "y": 0.4, "speed": 1.4},
         { "type": "command", "atMs": 4150, "command": "idle" },
-        { "type": "disposeActor", "actorId": "companion", "atMs": 4200 }
+        { "type": "disposeActor", "actorId": "companion", "atMs": 4200 },
+        { "type": "playAudio", "atMs": 4200, "id": "creak_wooden_floor" }
       ]
     },
     {

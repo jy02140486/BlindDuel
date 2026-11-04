@@ -8,6 +8,7 @@
     },
     "swing_light":    { "audioId": "swing_light" },
     "swing_heavy":    { "audioId": "swing_heavy" },
+    "swing_thrust":   { "audioId": "swing_thrust" },
     "on_cloaked":     { "audioId": "on_cloaked" },
     "off_cloaked":    { "audioId": "off_cloaked" },
     "on_draw_sheath": { "audioId": "on_draw_sheath" },
@@ -24,9 +25,12 @@
             "projectile_hit":    "combat_body_hit"
         },
         "rules": [
-            { "when": { "interaction": "body_hit", "sourceMaterial": "stone" }, "audioId": "combat_stone_hit" },
-            { "when": { "interaction": "weapon_clash", "sourceMaterial": "wood" }, "audioId": "combat_wood_clash" },
-            { "when": { "interaction": "weapon_clash", "targetSurface": "wood" }, "audioId": "combat_wood_clash" }
+            { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "heavy" }, "audioId": "combat_stone_hit" },
+            { "when": { "interaction": "body_hit", "sourceMaterial": "sharp", "impactClass": "heavy" }, "audioId": "combat_sharp_hit_heavy" },
+             { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "light" }, "audioId": "combat_stone_hit" },
+            { "when": { "interaction": "body_hit", "sourceMaterial": "sharp", "impactClass": "light" }, "audioId": "combat_sharp_hit_light" },
+            { "when": { "interaction": "weapon_clash", "sourceMaterial": "blunt" }, "audioId": "combat_wood_clash" },
+            { "when": { "interaction": "weapon_clash", "targetSurface": "blunt" }, "audioId": "combat_wood_clash" }
         ]
     }
 }
