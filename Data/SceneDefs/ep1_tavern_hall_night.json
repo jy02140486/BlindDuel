@@ -48,6 +48,22 @@
                     "badDefensePenalty": 0.0
                 }
             }
+        },  {
+            "archetype": "pickable",
+            "id": "ham_01",
+            "name": "ham",
+            "kind": "pickable",
+            "pos": [2.2, -0.32],
+            "controller": "none",
+            "visualYOffset": 1.5,
+            "arrow": { "enabled": true },
+            "itemDef": {
+                "id": "ham",
+                "name": "火腿",
+                "consumeType": "eat",
+                "atlasKey": "ham",
+                "textureUrl": "./Art/Sprite/items/Ham.png"
+            }
         }
     ],
     "cameraBoundaries": [

@@ -21,6 +21,22 @@
             "kind": "player",
             "pos": [5.39, -2.25],
             "controller": "player"
+        }, {
+            "archetype": "pickable",
+            "id": "ham_01",
+            "name": "ham",
+            "kind": "pickable",
+            "pos": [-1.2, -3.6],
+            "controller": "none",
+            "visualYOffset": 1.5,
+            "arrow": { "enabled": true },
+            "itemDef": {
+                "id": "ham",
+                "name": "火腿",
+                "consumeType": "eat",
+                "atlasKey": "ham",
+                "textureUrl": "./Art/Sprite/items/Ham.png"
+            }
         },
         {
             "archetype": "pickable",
