@@ -3,8 +3,8 @@
                    "atlasJson":  "Data/CollisionMask/longswordman/longswordman_quart.json",
                    "collisionPng":  "Data/CollisionMask/longswordman/longswordman_quart.png",
                    "rootPng":  "Data/RootMotion/longswordman/longswordman_quart.png",
-                   "pushboxPng":  "Data/PushBox/longswordman/longswordman_quart.png",
-                   "trailMarkerPng":  "Data/TrailMarker/longswordman/longswordman_quart.png",
+                   "pushboxPng":  null,
+                   "trailMarkerPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -33,7 +33,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-03T01:31:34.5590450Z"
+                   "generatedAtUtc":  "2026-11-05T18:28:11.8557817Z"
                },
     "frames":  [
                    {
@@ -67,17 +67,6 @@
                                          "h":  19.396,
                                          "angle":  84.044,
                                          "pixelCount":  548
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  31,
-                                         "cy":  174,
-                                         "w":  45,
-                                         "h":  27,
-                                         "angle":  0,
-                                         "pixelCount":  1215
                                      }
                                  ],
                        "trailMarkers":  [
@@ -122,24 +111,10 @@
                                          "h":  19.396,
                                          "angle":  84.044,
                                          "pixelCount":  548
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  44,
-                                         "cy":  174,
-                                         "w":  45,
-                                         "h":  27,
-                                         "angle":  0,
-                                         "pixelCount":  1215
                                      }
                                  ],
                        "trailMarkers":  [
-                                            {
-                                                "cx":  21,
-                                                "cy":  147
-                                            }
+
                                         ],
                        "anchors":  {
                                        "root":  {
@@ -191,28 +166,10 @@
                                          "h":  21,
                                          "angle":  90,
                                          "pixelCount":  735
-                                     },
-                                     {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  52,
-                                         "cy":  174,
-                                         "w":  45,
-                                         "h":  27,
-                                         "angle":  0,
-                                         "pixelCount":  1215
                                      }
                                  ],
                        "trailMarkers":  [
-                                            {
-                                                "cx":  59.5,
-                                                "cy":  71.5
-                                            },
-                                            {
-                                                "cx":  64,
-                                                "cy":  31
-                                            }
+
                                         ],
                        "anchors":  {
                                        "root":  {
@@ -258,34 +215,16 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  134.993,
-                                         "cy":  125.277,
+                                         "cx":  122.993,
+                                         "cy":  127.277,
                                          "w":  60.269,
                                          "h":  54.974,
                                          "angle":  1.418,
                                          "pixelCount":  3159
-                                     },
-                                     {
-                                         "id":  "pushbox_3",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  62,
-                                         "cy":  174,
-                                         "w":  45,
-                                         "h":  27,
-                                         "angle":  0,
-                                         "pixelCount":  1215
                                      }
                                  ],
                        "trailMarkers":  [
-                                            {
-                                                "cx":  99,
-                                                "cy":  148
-                                            },
-                                            {
-                                                "cx":  168.5,
-                                                "cy":  142.5
-                                            }
+
                                         ],
                        "anchors":  {
                                        "root":  {

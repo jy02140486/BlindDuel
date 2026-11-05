@@ -1,11 +1,10 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/longswordman/longswordman_Guard.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/longswordman/longswordman_Guard.png",
-                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_Guard.json",
-                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_Guard.png",
-                   "pushboxAtlasJson":  null,
-                   "pushboxAtlasPng":  null,
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_Guard.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_Guard.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_Guard.png",
+                   "pushboxPng":  null,
+                   "trailMarkerPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -27,11 +26,14 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-09-10T15:12:24.5746200Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-05T18:24:14.9637515Z"
                },
     "frames":  [
                    {
@@ -48,30 +50,34 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  70.5,
-                                         "cy":  75.5,
-                                         "w":  80,
-                                         "h":  48,
-                                         "angle":  90,
-                                         "pixelCount":  3840
+                                         "cx":  70.498,
+                                         "cy":  95.998,
+                                         "w":  48.129,
+                                         "h":  39.16,
+                                         "angle":  0.2,
+                                         "pixelCount":  1869
                                      },
                                      {
                                          "id":  "weaponbox_strong_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "strong_blade",
-                                         "cx":  120.886,
-                                         "cy":  61.244,
-                                         "w":  47.274,
-                                         "h":  18.216,
-                                         "angle":  25.008,
-                                         "pixelCount":  785
+                                         "cx":  98.399,
+                                         "cy":  61.211,
+                                         "w":  77.328,
+                                         "h":  25.816,
+                                         "angle":  25.681,
+                                         "pixelCount":  1883
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  71,
                                                     "cy":  119
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -96,11 +102,15 @@
                                          "pixelCount":  3840
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  71,
                                                     "cy":  119
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
@@ -136,11 +146,15 @@
                                          "pixelCount":  864
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  71,
                                                     "cy":  119
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]

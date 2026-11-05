@@ -1,11 +1,10 @@
 ﻿{
     "source":  {
-                   "collisionAtlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_idle.json",
-                   "collisionAtlasPng":  "Data/CollisionMask/rabble_stick/rabble_stick_idle.png",
-                   "rootAtlasJson":  "Data/RootMotion/rabble_stick/rabble_stick_idle.json",
-                   "rootAtlasPng":  "Data/RootMotion/rabble_stick/rabble_stick_idle.png",
-                   "pushboxAtlasJson":  "Data/PushBox/rabble_stick/rabble_stick_idle.json",
-                   "pushboxAtlasPng":  "Data/PushBox/rabble_stick/rabble_stick_idle.png",
+                   "atlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_idle.json",
+                   "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_idle.png",
+                   "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_idle.png",
+                   "pushboxPng":  null,
+                   "trailMarkerPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -27,16 +26,19 @@
                                                }
                                            ],
                    "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
                    "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
                    "colorTolerance":  0,
                    "minPixels":  6,
                    "minRootPixels":  1,
-                   "generatedAtUtc":  "2026-06-26T04:32:20.2186298Z"
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-05T18:30:27.1614336Z"
                },
     "frames":  [
                    {
                        "frameIndex":  0,
-                       "frameName":  "rabble_stick_idle (Collisoin) 0.ase",
+                       "frameName":  "rabble_stick_idle 0.ase",
                        "frameRect":  {
                                          "x":  0,
                                          "y":  0,
@@ -48,35 +50,28 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  77.5,
+                                         "cx":  86.5,
                                          "cy":  77.5,
                                          "w":  94,
                                          "h":  44,
                                          "angle":  90,
                                          "pixelCount":  4136
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  88.5,
-                                         "cy":  106,
-                                         "w":  42,
-                                         "h":  35,
-                                         "angle":  0,
-                                         "pixelCount":  1470
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  89.5,
                                                     "cy":  119.5
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    },
                    {
                        "frameIndex":  1,
-                       "frameName":  "rabble_stick_idle (Collisoin) 1.ase",
+                       "frameName":  "rabble_stick_idle 1.ase",
                        "frameRect":  {
                                          "x":  128,
                                          "y":  0,
@@ -88,30 +83,23 @@
                                          "id":  "hitbox_1",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  77.5,
+                                         "cx":  86.5,
                                          "cy":  77.5,
                                          "w":  94,
                                          "h":  44,
                                          "angle":  90,
                                          "pixelCount":  4136
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  88.5,
-                                         "cy":  106,
-                                         "w":  42,
-                                         "h":  35,
-                                         "angle":  0,
-                                         "pixelCount":  1470
                                      }
                                  ],
+                       "trailMarkers":  [
+
+                                        ],
                        "anchors":  {
                                        "root":  {
                                                     "cx":  89.5,
                                                     "cy":  119.5
-                                                }
+                                                },
+                                       "hand":  null
                                    }
                    }
                ]

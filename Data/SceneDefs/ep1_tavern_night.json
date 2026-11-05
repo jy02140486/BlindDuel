@@ -1,6 +1,6 @@
 {
     "id": "ep1_tavern_night",
-    "defaultSurfaceType": "hard",
+    "defaultSurfaceType": "soft",
     "ambient": ["crickets_ambient"],
     "exploreCamera": {
         "followDistance": 17,

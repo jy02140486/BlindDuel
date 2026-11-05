@@ -3,8 +3,8 @@
                    "atlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.json",
                    "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_swing.png",
                    "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_swing.png",
-                   "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_swing.png",
-                   "trailMarkerPng":  "Data/TrailMarker/rabblestick/rabble_stick_swing.png",
+                   "pushboxPng":  null,
+                   "trailMarkerPng":  null,
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -33,7 +33,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-03T01:25:51.3333560Z"
+                   "generatedAtUtc":  "2026-11-05T18:31:33.6325817Z"
                },
     "frames":  [
                    {
@@ -50,23 +50,12 @@
                                          "id":  "hitbox_0",
                                          "type":  "hitbox",
                                          "subtype":  null,
-                                         "cx":  97.5,
+                                         "cx":  102.5,
                                          "cy":  92.5,
                                          "w":  98,
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
-                                     },
-                                     {
-                                         "id":  "pushbox_0",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  104.5,
-                                         "cy":  121.5,
-                                         "w":  42,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  1596
                                      }
                                  ],
                        "trailMarkers":  [
@@ -100,24 +89,10 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
-                                     },
-                                     {
-                                         "id":  "pushbox_1",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  107.5,
-                                         "cy":  121.5,
-                                         "w":  48,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  1824
                                      }
                                  ],
                        "trailMarkers":  [
-                                            {
-                                                "cx":  100,
-                                                "cy":  24
-                                            }
+
                                         ],
                        "anchors":  {
                                        "root":  {
@@ -152,34 +127,27 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  28.5,
-                                         "cy":  85,
-                                         "w":  43,
-                                         "h":  38,
-                                         "angle":  90,
-                                         "pixelCount":  1634
+                                         "cx":  50.592,
+                                         "cy":  40.307,
+                                         "w":  40.815,
+                                         "h":  26.31,
+                                         "angle":  -64.663,
+                                         "pixelCount":  973
                                      },
                                      {
-                                         "id":  "pushbox_2",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  101.5,
-                                         "cy":  121.5,
-                                         "w":  58,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  2204
+                                         "id":  "weaponbox_weak_blade_1",
+                                         "type":  "weaponbox",
+                                         "subtype":  "weak_blade",
+                                         "cx":  33,
+                                         "cy":  99.5,
+                                         "w":  70,
+                                         "h":  29,
+                                         "angle":  90,
+                                         "pixelCount":  2030
                                      }
                                  ],
                        "trailMarkers":  [
-                                            {
-                                                "cx":  16,
-                                                "cy":  126
-                                            },
-                                            {
-                                                "cx":  51.5,
-                                                "cy":  112.5
-                                            }
+
                                         ],
                        "anchors":  {
                                        "root":  {
@@ -209,17 +177,6 @@
                                          "h":  40,
                                          "angle":  90,
                                          "pixelCount":  3920
-                                     },
-                                     {
-                                         "id":  "pushbox_3",
-                                         "type":  "pushbox",
-                                         "subtype":  null,
-                                         "cx":  101.5,
-                                         "cy":  121.5,
-                                         "w":  58,
-                                         "h":  38,
-                                         "angle":  0,
-                                         "pixelCount":  2204
                                      }
                                  ],
                        "trailMarkers":  [

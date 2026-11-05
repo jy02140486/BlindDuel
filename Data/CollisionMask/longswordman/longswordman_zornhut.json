@@ -71,6 +71,7 @@
    { "name": "RootMotion", "opacity": 255, "blendMode": "normal" },
    { "name": "CollisionMask", "opacity": 255, "blendMode": "normal" },
    { "name": "pushBox", "opacity": 255, "blendMode": "normal" },
+   { "name": "TrailMarker", "opacity": 255, "blendMode": "normal" },
    { "name": "body", "opacity": 255, "blendMode": "normal" },
    { "name": "left arm", "opacity": 255, "blendMode": "normal" },
    { "name": "weapon", "opacity": 255, "blendMode": "normal" },
