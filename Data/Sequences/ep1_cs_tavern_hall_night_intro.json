@@ -37,6 +37,7 @@
       "clips": [
         { "type": "command",       "atMs": 0, "command": "CS_provoke", "pause": true },
         { "type": "resumeAnimation","atMs": 2000 },
+        { "type": "playAudio", "atMs": 2200, "id": "cloak_swirl" },
         { "type": "command",       "atMs": 5000, "command": "idle" }
       ]
     }
