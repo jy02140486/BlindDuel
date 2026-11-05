@@ -134,6 +134,7 @@ export const ASSET_MANIFEST = {
     animationEvents: {
         hero: {
             walk: "./Data/AnimationEvents/longswordman/longswordman_walk.events.json",
+            move: "./Data/AnimationEvents/longswordman/longswordman_move.events.json",
             thrust: "./Data/AnimationEvents/longswordman/longswordman_thrust.events.json",
             quart: "./Data/AnimationEvents/longswordman/longswordman_quart.events.json",
             zornhut: "./Data/AnimationEvents/longswordman/longswordman_zornhut.events.json",
@@ -144,11 +145,15 @@ export const ASSET_MANIFEST = {
             throw: "./Data/AnimationEvents/longswordman/longswordman_throw.events.json"
         },
         rabble: {
+            die: "./Data/AnimationEvents/rabble_stick/rabble_stick_die.events.json",
+            move: "./Data/AnimationEvents/rabble_stick/rabble_stick_move.events.json",
             swing: "./Data/AnimationEvents/rabble_stick/rabble_stick_swing.events.json",
             thrust: "./Data/AnimationEvents/rabble_stick/rabble_stick_thrust.events.json",
             throw: "./Data/AnimationEvents/rabble_stick/rabble_stick_throw.events.json"
         },
         manatarms: {
+            move: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_move.events.json",
+            knockdown: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_knockdown.events.json",
             quart: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_quart.events.json",
             reverse_quart: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_reverse_quart.events.json",
             smash: "./Data/AnimationEvents/manatarms_sword/manatarms_sword_smash.events.json"

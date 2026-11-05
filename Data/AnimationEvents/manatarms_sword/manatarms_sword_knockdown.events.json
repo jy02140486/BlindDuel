@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "knockdown": {
+            "events": [
+                { "frame": 0, "type": "body_collapse" }
+            ]
+        }
+    }
+}

@@ -7,6 +7,11 @@
         }
     },
     "swing_light":    { "audioId": "swing_light" },
+    "footstep_wood":  { "audioId": "footstep_wood" },
+    "footstep_rabble": { "audioId": "footstep_rabble" },
+    "duvet_rustle":   { "audioId": "duvet_rustle" },
+    "body_collapse":  { "audioId": "body_collapse" },
+    "die_collapse":   { "audioId": "die_collapse" },
     "swing_sword_light": { "audioId": "swing_sword_light" },
     "swing_heavy":    { "audioId": "swing_heavy" },
     "swing_thrust":   { "audioId": "swing_thrust" },

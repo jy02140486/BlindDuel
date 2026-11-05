@@ -36,8 +36,29 @@
         "bus": "sfx"
     },
     "footstep_hard": {
-        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
-        "volume": 0.8,
+        "clips": ["./Audio/sfx/footstep/810885__vrymaa__run-fall-wooden-surface_1.wav"],
+        "volume": 1.4,
+        "bus": "sfx"
+    },
+    "footstep_wood": {
+        "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_02.wav"],
+        "volume": 0.7,
+        "pitch": [0.72, 0.84],
+        "bus": "sfx"
+    },
+    "footstep_rabble": {
+        "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_05.wav"],
+        "volume": 0.4,
+        "bus": "sfx"
+    },
+    "body_collapse": {
+        "clips": ["./Audio/sfx/footstep/810885__vrymaa__run-fall-wooden-surface_collapse.wav"],
+        "volume": 0.9,
+        "bus": "sfx"
+    },
+    "die_collapse": {
+        "clips": ["./Audio/sfx/810885__vrymaa__run-fall-wooden-surface.wav"],
+        "volume": 0.4,
         "bus": "sfx"
     },
     "combat_body_hit_default": {
@@ -90,6 +111,16 @@
     "creak_wooden_floor": {
         "clips": ["./Audio/sfx/646696__sounddesignforyou__creaking-wooden-floor-8.wav"],
         "volume": 0.8,
+        "bus": "sfx"
+    },
+    "duvet_rustle": {
+        "clips": ["./Audio/sfx/cloth/556754__fmaudio__rustling-duvet-1.wav"],
+        "volume": 0.8,
+        "bus": "sfx"
+    },
+    "cloak_swirl": {
+        "clips": ["./Audio/sfx/cloth/556760__fmaudio__swirling-velvet-cloak-1.wav"],
+        "volume": 0.85,
         "bus": "sfx"
     },
     "on_land": {

@@ -1,0 +1,9 @@
+{
+    "clips": {
+        "move": {
+            "events": [
+                { "frame": 0, "type": "footstep_wood" }
+            ]
+        }
+    }
+}

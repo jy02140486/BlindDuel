@@ -1,0 +1,10 @@
+{
+    "clips": {
+        "die": {
+            "events": [
+                { "frame": 1, "type": "duvet_rustle" },
+                { "frame": 2, "type": "die_collapse" }
+            ]
+        }
+    }
+}

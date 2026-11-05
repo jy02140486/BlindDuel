@@ -59,6 +59,7 @@ export function createHeroCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/longswordman/longswordman_move.png",
                 atlasData: assets.atlas.hero.move,
                 colliderData: assets.colliders.hero.move,
+                eventsData: assets.animationEvents?.hero?.move,
                 loop: true
             },
             thrust: {
@@ -185,6 +186,7 @@ export function createRabbleStickCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_move.png",
                 atlasData: assets.atlas.rabble.move,
                 colliderData: assets.colliders.rabble.move,
+                eventsData: assets.animationEvents?.rabble?.move,
                 loop: true
             },
             thrust: {
@@ -236,6 +238,7 @@ export function createRabbleStickCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/rabble_stick/rabble_stick_die.png",
                 atlasData: assets.atlas.rabble.die,
                 colliderData: assets.colliders.rabble.die,
+                eventsData: assets.animationEvents?.rabble?.die,
                 loop: false
             },
             CS_turnaround: {
@@ -282,6 +285,7 @@ export function createManatarmsCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_move.png",
                 atlasData: assets.atlas.manatarms.move,
                 colliderData: assets.colliders.manatarms.move,
+                eventsData: assets.animationEvents?.manatarms?.move,
                 loop: true
             },
             quart: {
@@ -315,6 +319,7 @@ export function createManatarmsCharacter(scene, assets) {
                 spriteSheetUrl: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.png",
                 atlasData: assets.atlas.manatarms.knockdown,
                 colliderData: assets.colliders.manatarms.knockdown,
+                eventsData: assets.animationEvents?.manatarms?.knockdown,
                 loop: false
             },
             clash: {
