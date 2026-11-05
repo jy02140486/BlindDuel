@@ -37,7 +37,10 @@
              { "when": { "interaction": "body_hit", "sourceMaterial": "blunt", "impactClass": "light" }, "audioId": "combat_body_hit_blunt" },
             { "when": { "interaction": "body_hit", "sourceMaterial": "sharp", "impactClass": "light" }, "audioId": "combat_sharp_hit_light" },
             { "when": { "interaction": "weapon_clash", "sourceMaterial": "blunt" }, "audioId": "combat_wood_clash" },
-            { "when": { "interaction": "weapon_clash", "targetSurface": "blunt" }, "audioId": "combat_wood_clash" }
+            { "when": { "interaction": "weapon_clash", "targetSurface": "blunt" }, "audioId": "combat_wood_clash" },
+            { "when": { "interaction": "shield_block", "targetSurface": "sharp" }, "audioId": "combat_guard_metal" },
+            { "when": { "interaction": "projectile_hit", "sourceMaterial": "blunt" }, "audioId": "combat_body_hit_blunt" },
+            { "when": { "interaction": "projectile_hit", "sourceMaterial": "sharp" }, "audioId": "combat_sharp_hit_light" }
         ]
     }
 }

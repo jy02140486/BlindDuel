@@ -91,6 +91,12 @@
         "volume": 0.9,
         "bus": "sfx"
     },
+    "combat_guard_metal": {
+        "clips": ["./Audio/sfx/WEAPSwrd_Sword Slide Cuts, Metallic, Impact CM4 2_344 Audio_Medieval Weapons Vol 2/_converted/slice_02.wav"],
+        "volume": 0.95,
+        "pitch": [0.94, 1.06],
+        "bus": "sfx"
+    },
     "combat_shield_block_default": {
         "clips": ["./Audio/sfx/weapon/232933__bmusic92__wooden-drawer-openingclosing_2.wav"],
         "volume": 0.85,
