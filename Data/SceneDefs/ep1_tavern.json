@@ -10,7 +10,7 @@
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
     "introSequenceUrl": "Data/Sequences/ep1_intro.json",
     "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
-    "ambient": ["forest_ambient"],
+    "ambient": ["field_ambient"],
     "onEnterDirectives": [
         { "type": "advanceScenario", "value": 200 }
     ],

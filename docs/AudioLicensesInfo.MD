@@ -16,3 +16,6 @@ Wooden Drawer Opening/Closing.mp3 by bmusic92 -- https://freesound.org/s/232933/
 MCU_corvus_glaive_inspired_sword_stab_sound_FINAL_07162025 by Artninja -- https://freesound.org/s/816366/ -- License: Attribution 4.0
 Run & Fall - Wooden surface by Vrymaa -- https://freesound.org/s/810885/ -- License: Creative Commons 0
 school bus truck int roof hatch close fall bounce.flac by kyles -- https://freesound.org/s/451710/ -- License: Creative Commons 0
+Pirate Tavern by brunoboselli -- https://freesound.org/s/695295/ -- License: Creative Commons 0
+field.mp3 by saha213131 -- https://freesound.org/s/687274/ -- License: Creative Commons 0
+crickets field closeup high frequency.flac by kyles -- https://freesound.org/s/637429/ -- License: Creative Commons 0

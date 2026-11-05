@@ -2,7 +2,8 @@
     "clips": {
         "zornhut": {
             "events": [
-                { "frame": 2, "type": "swing_heavy" }
+                { "frame": 2, "type": "swing_heavy" },
+                { "frame": 1, "type": "swing_metal_slide" }
             ]
         }
     }

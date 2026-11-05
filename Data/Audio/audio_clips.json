@@ -29,6 +29,11 @@
         "pitch": [0.95, 1.05],
         "bus": "sfx"
     },
+    "swing_metal_slide": {
+        "clips": ["./Audio/sfx/WEAPSwrd_Sword Slide Cuts, Metallic, Impact CM4 2_344 Audio_Medieval Weapons Vol 2/_converted/slice_05.wav"],
+        "volume": 0.75,
+        "bus": "sfx"
+    },
     "footstep": {
         "clips": ["./Audio/sfx/footstep/744710__letterborne__forest_footsteps_6x/slice_06.wav"],
         "volume": 0.7,
@@ -133,6 +138,21 @@
         "clips": ["./Audio/sfx/ambient/762061__newlocknew__ambforst_a-small-forest-near-the-townbirdsong.ogg"],
         "volume": 0.7,
         "pitch": [0.96, 1.04],
+        "bus": "ambient"
+    },
+    "tavern_ambient": {
+        "clips": ["./Audio/sfx/ambient/695295__brunoboselli__pirate-tavern.ogg"],
+        "volume": 1.2,
+        "bus": "ambient"
+    },
+    "field_ambient": {
+        "clips": ["./Audio/sfx/ambient/687274__saha213131__field.ogg"],
+        "volume": 0.7,
+        "bus": "ambient"
+    },
+    "crickets_ambient": {
+        "clips": ["./Audio/sfx/ambient/637429__kyles__crickets-field-closeup-high-frequency.ogg"],
+        "volume": 0.6,
         "bus": "ambient"
     },
     "on_cloaked": {
