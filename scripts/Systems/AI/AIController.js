@@ -1841,45 +1841,53 @@ export class AIController extends BaseController {
     }
 
     /**
-     * 从 kbProfile.dodges 里选 timeWindowFactor 最优的 dodge。
-     * 不选最快的，选在 tti 时刻的窗口里命中率最高的那个。
+     * dodge i-frame 窗口因子（Bug A 修复：i-frame 口径）
+     * dodge 的保命机制是 dodgeActive 全程免疫 [0, totalMs]，无位置闪避语义。
+     * 存活条件：投掷物在免疫窗结束前到达 → tti ≤ totalMs − 后撤位移延迟。
+     * 后撤位移（frameSpeeds，远离弹道）会把实际命中时刻推后 retreatMs，故上限相应下调。
+     * 返回 { factor, effectiveTotalMs } 供评分与诊断共用。
+     */
+    #dodgeWindowFactor(dodge, tti, threat) {
+        const tun = this.tuning.projectileDefense;
+        const totalMs = dodge.timing.totalMs;
+
+        // 后撤位移延迟：位移 / 弹速（KB 扫描已提供 displacement，此前从未被使用）
+        const projSpeed = Math.abs(threat.velocity?.x ?? threat.profile?.speed ?? threat.speed ?? 6);
+        const retreatMs = Math.abs(dodge.displacement ?? 0) / projSpeed * 1000;
+        const effectiveTotalMs = Math.max(0, totalMs - retreatMs);
+
+        let factor;
+        if (tti > effectiveTotalMs) {
+            factor = 0;                              // 闪完了才到 → 必死
+        } else if (tti >= tun.dodgeLateMarginMs) {
+            factor = 1.0;                            // 到达落在免疫窗内 → 存活
+        } else {
+            factor = tti / tun.dodgeLateMarginMs;    // 极近：commit 执行延迟保险
+        }
+        return { factor, effectiveTotalMs };
+    }
+
+    /**
+     * 从 kbProfile.dodges 里选窗口因子最优的 dodge。
      */
     #findBestDodgeForProjectile(tti, threat) {
         const dodges = this.kbProfile?.dodges ?? [];
         if (dodges.length === 0) return null;
 
-        const tun = this.tuning.projectileDefense;
         let bestDodge = null;
         let bestF = -Infinity;
 
         for (const dodge of dodges) {
-            const totalMs = dodge.timing.totalMs;
-            let f;
-            if (tti >= totalMs && tti <= totalMs + tun.dodgeTimeWindowPeak) {
-                f = 1.0;  // 完美窗口
-            } else if (tti < totalMs) {
-                // 太晚：我还没闪完它就到了
-                f = Math.max(0, tti / totalMs * tun.dodgeTooLateRatio);
-            } else {
-                // 太早：还早不用急，衰减
-                f = Math.max(0, 1 - (tti - totalMs - tun.dodgeTimeWindowPeak) / tun.dodgeTooEarlySpan);
-            }
-            if (f > bestF) { bestF = f; bestDodge = dodge; }
+            const { factor } = this.#dodgeWindowFactor(dodge, tti, threat);
+            if (factor > bestF) { bestF = factor; bestDodge = dodge; }
         }
         return bestDodge;
     }
 
     #scoreDodgeForProjectile(dodge, tti, threat) {
         const tun = this.tuning.projectileDefense;
-        const totalMs = dodge.timing.totalMs;
-        let timeWindowFactor;
-        if (tti >= totalMs && tti <= totalMs + tun.dodgeTimeWindowPeak) {
-            timeWindowFactor = 1.0;
-        } else if (tti < totalMs) {
-            timeWindowFactor = Math.max(0, tti / totalMs * tun.dodgeTooLateRatio);
-        } else {
-            timeWindowFactor = Math.max(0, 1 - (tti - totalMs - tun.dodgeTimeWindowPeak) / tun.dodgeTooEarlySpan);
-        }
+        const { factor: timeWindowFactor, effectiveTotalMs } =
+            this.#dodgeWindowFactor(dodge, tti, threat);
 
         let score = tun.dodgeBase * timeWindowFactor;
         score *= this.combatPosture.defenseMultiplier;
@@ -1887,19 +1895,17 @@ export class AIController extends BaseController {
         // 距离门控：已经飞过了
         if (threat.distanceToSelf < 0.2) score *= tun.nearSelfDecay;
 
-        // === DIAGNOSTIC: dodge 评分明细（验证远距离过早反应假设）===
+        // === DIAGNOSTIC: dodge 评分明细（Bug A 修复：i-frame 口径）===
         if (this.debugVisible) {
-            const surplus = tti - totalMs;  // dodge 结束后 projectile 还要多久到
-            const band = tti < totalMs ? "TOO_LATE"
-                       : tti <= totalMs + tun.dodgeTimeWindowPeak ? "PERFECT"
-                       : surplus <= tun.dodgeTooEarlySpan ? "EARLY_DECAY"
-                       : "WAY_TOO_EARLY";
+            const band = tti > effectiveTotalMs ? "DEAD_IFRAME_EXPIRED"
+                       : tti >= tun.dodgeLateMarginMs ? "SAFE"
+                       : "MARGIN";
             console.log(
                 `[AI-Diag] projDodge: dodge=${dodge.stateName} ` +
-                `tti=${tti.toFixed(0)}ms totalMs=${totalMs} peak+${tun.dodgeTimeWindowPeak} ` +
+                `tti=${tti.toFixed(0)}ms iframesEnd@${effectiveTotalMs.toFixed(0)} ` +
+                `(totalMs=${dodge.timing.totalMs} retreatMs=${(dodge.timing.totalMs - effectiveTotalMs).toFixed(0)}) ` +
                 `winFactor=${timeWindowFactor.toFixed(2)} score=${score.toFixed(3)} ` +
-                `dist=${threat.distanceToSelf.toFixed(2)} actEnds@${totalMs} ` +
-                `arr@${tti.toFixed(0)}ms surplus=${surplus.toFixed(0)}ms band=${band}`
+                `dist=${threat.distanceToSelf.toFixed(2)} band=${band}`
             );
         }
 
@@ -1982,8 +1988,9 @@ export class AIController extends BaseController {
             // 全程在贴脸死区内 → 剑在外侧挥，物理不可能命中
             distanceAlignment = 0;
         } else if (distAtEnd > slashReach) {
-            // 全程在最大 reach 外 → 够不着，按超距线性衰减（每超 1m 衰减到 0）
-            distanceAlignment = Math.max(0, 1 - (distAtEnd - slashReach) / 1.0);
+            // 全程在最大 reach 外 → 够不着，物理不可能命中（Bug B 修复：原线性衰减
+            // 会给超距 0.26~0.74 的虚高分，导致 AI 在 6.5m 处挥空挨打）
+            distanceAlignment = 0;
         } else {
             distanceAlignment = 1.0;
         }

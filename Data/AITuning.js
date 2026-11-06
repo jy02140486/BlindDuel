@@ -142,9 +142,10 @@ export const AITuning = {
     projectileDefense: {
         dodgeBase: 0.45,   // dodge 基础分
         cutBase: 0.65,    // cut 基础分（略高于 dodge 体现奖励）
-        dodgeTimeWindowPeak: 300,  // tti 在 [dodgeTotalMs, dodgeTotalMs + 300] 内满窗口
-        dodgeTooLateRatio: 0.5,    // tti < dodgeTotalMs 时的衰减系数
-        dodgeTooEarlySpan: 700,    // tti > dodgeTotalMs+300 时衰减跨度
+        // Bug A 修复（i-frame 口径）：dodge 的保命机制是 dodgeActive 免疫窗 [0, totalMs]，
+        // 存活条件 = 投掷物在窗口内到达（tti ≤ totalMs − 后撤位移延迟）。
+        // 旧 dodgeTimeWindowPeak/dodgeTooLateRatio/dodgeTooEarlySpan 是位置闪避语义，已删除。
+        dodgeLateMarginMs: 150,    // tti < 此值 → 来不及反应（执行延迟保险），线性衰减到 0
         cutTooSlowSpan: 500,       // tti > slashActiveEnd 时的衰减跨度
         nearSelfDecay: 0.2,        // distanceToSelf < 0.2 时 dodge 打这个折扣
         cutBoostBonus: 0.1,        // cut 比 dodge 多一份奖励感
