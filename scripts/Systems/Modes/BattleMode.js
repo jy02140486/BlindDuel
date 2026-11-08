@@ -4,6 +4,8 @@ import { STEP_TYPE } from "../SceneSequencer.js";
 import { ProjectileManager } from "../ProjectileManager.js";
 import { ThrowComponent } from "../../Components/ThrowComponent.js";
 import { getProjectileDef } from "../../../Data/ProjectileDefs.js";
+import { StaminaBar } from "../../UI/StaminaBar.js";
+import { CombatTuning } from "../../../Data/CombatTuning.js";
 
 
 export class BattleMode extends BaseMode {
@@ -95,6 +97,9 @@ export class BattleMode extends BaseMode {
                 c.combat.hp = overrideMaxHp;  // 满血入场
             }
 
+            // 耐力满值入场（每场重置当前值；maxStamina 已在构造时按 combatProfile 确定）
+            c.combat.stamina = c.combat.maxStamina;
+
             if (c.kind === "player" && inventoryManager) {
                 const ammo = inventoryManager.getThrowables().filter(it => it.id === "dagger").length;
                 c.throwComponent = new ThrowComponent({ ammo });
@@ -177,6 +182,11 @@ export class BattleMode extends BaseMode {
             this._throwReleaseHandler = null;
         }
         this.#disposeAllCarriedSprites();
+
+        if (this._staminaBar) {
+            this._staminaBar.dispose();
+            this._staminaBar = null;
+        }
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -515,6 +525,20 @@ export class BattleMode extends BaseMode {
         const player = combatants[0];
         if (hpBar && player?.hp !== undefined) {
             hpBar.update(player.hp, player.maxHp);
+        }
+
+        // 玩家头顶耐力条（Step 1.7）：懒创建、每帧跟随投影；enabled=false 不渲染
+        if (!this._staminaBar && player?.combat && !player.isDead
+            && CombatTuning.stamina.enabled !== false) {
+            this._staminaBar = new StaminaBar(player);
+        }
+        if (this._staminaBar) {
+            if (player?.isDead || !player?.combat) {
+                this._staminaBar.dispose();
+                this._staminaBar = null;
+            } else {
+                this._staminaBar.update();
+            }
         }
 
         const heroPos = combatants[0].root.position;

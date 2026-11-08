@@ -35,6 +35,10 @@ export class CombatCharacter extends CharacterBase {
             mesh.parent = this.root;
         }
 
+        // D10 combatProfile：个体体能（StateGraphDef 顶层，与 aiProfile 并列，属战斗属性非 AI 性格）
+        const profileStamina = this.stateGraph?.combatProfile?.stamina ?? {};
+        const maxStamina = profileStamina.maxStamina ?? config.maxStamina ?? CombatTuning.stamina.maxStamina;
+
         this.combat = {
             globalCooldownMs: config.globalCooldownMs ?? CombatTuning.action.globalCooldownMs,
             lastActionTime: -Infinity,
@@ -42,6 +46,10 @@ export class CombatCharacter extends CharacterBase {
             timeControlSystem: new TimeControlSystem(),
             hp: config.maxHp ?? 3,
             maxHp: config.maxHp ?? 3,
+            stamina: maxStamina,
+            maxStamina: maxStamina,
+            recoveryMultiplier: profileStamina.recoveryMultiplier ?? 1.0,
+            costMultiplier: profileStamina.costMultiplier ?? 1.0,
             isDead: false,
             deathState: config.deathState ?? "defeated"
         };
@@ -150,9 +158,22 @@ export class CombatCharacter extends CharacterBase {
     _getStateTimeScale(stateDef) {
         const hasBonus = this.hasTag("chainBonus")
                       || this.hasTag("postDefenseCounterActive");
-        return hasBonus
+        const base = hasBonus
             ? (stateDef.bonusTimeScale ?? stateDef.timeScale ?? 1.0)
             : (stateDef.timeScale ?? 1.0);
+
+        // D1/D4/D5：疲劳减速只作用于 attack 类 + throw + clash（super.enterState 内调用时
+        // currentStateName/currentStateDef 已指向新状态）；guard/dodge 豁免（D1/D9）
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return base;
+        const name = this.currentStateName;
+        const fatigable = stateDef?.attackActive === true
+            || name === "throw"
+            || name === "clash";
+        if (!fatigable) return base;
+
+        const slowdown = 1 + st.slowdownMax * (1 - this.staminaRatio);
+        return base / slowdown;
     }
 
     _matchesTransitionCondition(condition) {
@@ -203,7 +224,12 @@ export class CombatCharacter extends CharacterBase {
         const moveSpeed = this.currentSpd;
         const cdRemaining = this.getCooldownRemaining().toFixed(0);
 
-        this.debugPanel.textContent = `y:${this.root.position.y.toFixed(2)} z:${this.root.position.z.toFixed(2)} alpha:${this.spritePlane.alphaIndex.toFixed(1)} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms | HP: ${this.combat.hp}/${this.combat.maxHp}`;
+        const staminaEnabled = CombatTuning.stamina.enabled !== false;
+        const staminaText = staminaEnabled
+            ? ` | ST: ${this.combat.stamina.toFixed(1)}/${this.combat.maxStamina} (${(this.staminaRatio * 100).toFixed(0)}%)`
+            : "";
+
+        this.debugPanel.textContent = `y:${this.root.position.y.toFixed(2)} z:${this.root.position.z.toFixed(2)} alpha:${this.spritePlane.alphaIndex.toFixed(1)} | Speed: ${moveSpeed.toFixed(2)} | CD: ${cdRemaining}ms | HP: ${this.combat.hp}/${this.combat.maxHp}${staminaText}`;
     }
 
     get globalCooldownMs() { return this.combat.globalCooldownMs; }
@@ -216,6 +242,15 @@ export class CombatCharacter extends CharacterBase {
     set timeControlSystem(v) { this.combat.timeControlSystem = v; }
     get hp() { return this.combat.hp; }
     get maxHp() { return this.combat.maxHp; }
+    get stamina() { return this.combat.stamina; }
+    get maxStamina() { return this.combat.maxStamina; }
+    get recoveryMultiplier() { return this.combat.recoveryMultiplier; }
+    get costMultiplier() { return this.combat.costMultiplier; }
+    get staminaRatio() {
+        return this.combat.maxStamina > 0
+            ? this.combat.stamina / this.combat.maxStamina
+            : 0;
+    }
     get isDead() { return this.combat.isDead; }
 
     getEffectiveCooldownMs() {
@@ -311,6 +346,103 @@ export class CombatCharacter extends CharacterBase {
         if (prevStateDef?.attackActive === true && stateName !== prevStateName) {
             this.trailRenderer?.hide();
         }
+        // 构造期间基类会先调 enterState(initialState)，此时 combat 尚未赋值，跳过
+        if (this.combat) {
+            this._commitStaminaCost();
+            // D9 dodge 位移缩放：commit 时刻锁存本次 dodge 的位移系数，动画帧率不变仅位移变短
+            if (this.currentStateDef?.dodgeActive === true) {
+                const floor = CombatTuning.stamina.dodgeScaleFloor;
+                this._dodgeFrameSpeedScale = floor + (1 - floor) * this.staminaRatio;
+            } else {
+                this._dodgeFrameSpeedScale = 1.0;
+            }
+        }
+    }
+
+    /**
+     * Step 1.2 基础消耗：commit 时刻扣费 —— 被打断也自动已扣；玩家与 AI 走同一入口，规则对称
+     * 分类依据 D1~D6：attack 按 attackWeight 扣 / guard / dodge 扣；throw 不扣；hit 等其他状态不扣
+     */
+    _commitStaminaCost() {
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return;
+
+        const stateDef = this.currentStateDef;
+        const costs = st.costs;
+        let cost = 0;
+        let insufficientGuard = false;
+
+        if (stateDef?.attackActive === true) {
+            cost = stateDef.attackWeight === "heavy" ? costs.attackHeavy : costs.attackLight;
+        } else if (stateDef?.guardActive === true) {
+            cost = costs.guard;
+            // D3/P1：判定线 = commit 时刻扣费前的耐力，本次 guard 全程共用这个结果
+            insufficientGuard = this.combat.stamina < cost * this.combat.costMultiplier;
+        } else if (stateDef?.dodgeActive === true) {
+            cost = costs.dodge;
+        }
+
+        this.combat.staminaInsufficientGuard = insufficientGuard;
+
+        if (cost <= 0) return;
+        const paid = cost * this.combat.costMultiplier;
+        this.combat.stamina = Math.max(0, this.combat.stamina - paid);
+    }
+
+    /**
+     * Step 1.3 结果追加消耗：按 outcome 查表扣费（miss 挥空重罚 / parried / guard_blocked / clash 轻罚 / hit 0）
+     * 回传路径有两条：miss 由本类退出攻击状态时直接触发，其余经 CombatSystem dispatch —— 两处都调本方法
+     */
+    applyOutcomeStaminaCost(outcome) {
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return;
+        const cost = st.outcomeCosts?.[outcome] ?? 0;
+        if (cost <= 0) return;
+        const paid = cost * this.combat.costMultiplier;
+        this.combat.stamina = Math.max(0, this.combat.stamina - paid);
+    }
+
+    /**
+     * 防御成功耐力回补（guard:success 含 parry / dodge:success）—— 成功打折、失败全额的净成本分层。
+     * 回补乘 recoveryMultiplier（体能好的角色防守更经济），cap 到满值。
+     */
+    applyDefenseSuccessRefund(outcome) {
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return;
+        const refund = st.successRefunds?.[outcome] ?? 0;
+        if (refund <= 0) return;
+        const gain = refund * this.combat.recoveryMultiplier;
+        this.combat.stamina = Math.min(
+            this.combat.maxStamina,
+            this.combat.stamina + gain
+        );
+    }
+
+    /**
+     * Step 1.4 恢复：非战斗状态按速率回充，高强度状态（P3：含 guard）暂停恢复。
+     * dt 用 effectiveDeltaMs —— hitstop 冻结时 delta=0，天然暂停；不建恢复阶段状态机。
+     */
+    _regenStamina(dtMs) {
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return;
+        if (dtMs <= 0) return;
+        if (this.combat.stamina >= this.combat.maxStamina) return;
+
+        const name = this.currentStateName;
+        const stateDef = this.currentStateDef;
+        const busy = stateDef?.attackActive === true
+            || stateDef?.guardActive === true
+            || stateDef?.dodgeActive === true
+            || name === "throw"
+            || name === "clash"
+            || name === "hit"
+            || name === "stunned";
+        if (busy) return;
+
+        this.combat.stamina = Math.min(
+            this.combat.maxStamina,
+            this.combat.stamina + st.regenPerSecond * (dtMs / 1000) * this.combat.recoveryMultiplier
+        );
     }
 
     getCombatSnapshot() {
@@ -416,6 +548,7 @@ export class CombatCharacter extends CharacterBase {
             attackInstanceId,
             stateEnterTick: this.stateEnterTick,
             dodgeActive: this.currentStateDef?.dodgeActive === true,
+            staminaInsufficientGuard: this.combat?.staminaInsufficientGuard === true,
             boxes: worldBoxes,
             impact
         };
@@ -505,6 +638,7 @@ export class CombatCharacter extends CharacterBase {
 
         const timeControlFrame = this.timeControlSystem.tick(this, dtMs, tickCount);
         const effectiveDeltaMs = timeControlFrame.effectiveDeltaMs;
+        this._regenStamina(effectiveDeltaMs);
         if (this.debugTrace) {
             const impact = this.timeControl.impactContext;
             const impactNextState = impact?.nextState ?? null;
@@ -618,8 +752,11 @@ export class CombatCharacter extends CharacterBase {
         if (oldAttackActive && !newAttackActive && oldState !== newState) {
             const attackInstanceId = this._currentAttackInstanceId;
             const alreadyResolved = attackInstanceId ? this._resolvedAttackIds.has(attackInstanceId) : false;
-            if (!this._lastAttackHadHit && !alreadyResolved && this.controller?.onCombatResult) {
-                this.controller.onCombatResult({ outcome: "miss", targetState: oldState });
+            if (!this._lastAttackHadHit && !alreadyResolved) {
+                this.applyOutcomeStaminaCost("miss");
+                if (this.controller?.onCombatResult) {
+                    this.controller.onCombatResult({ outcome: "miss", targetState: oldState });
+                }
             }
             // 重置 currentInstanceId
             this._currentAttackInstanceId = null;

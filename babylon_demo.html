@@ -31,6 +31,28 @@
             letter-spacing: 2px;
             user-select: none;
         }
+        .stamina-bar-track {
+            position: absolute;
+            width: 168px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            z-index: 20;
+            pointer-events: none;
+            overflow: hidden;
+            transform: translateX(-50%);
+            user-select: none;
+        }
+        .stamina-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #981818, #d2a932, #1f72e7);
+            background-size: 168px 100%;
+            background-repeat: no-repeat;
+            border-radius: 4px;
+            transition: width 0.08s linear;
+        }
         #hud-left {
             position: absolute;
             left: 12px;

@@ -45,7 +45,8 @@ py .\.serve.ps1
 - Rabble Stick 状态图：`Data/StateGraphDef/RabbleStick.json`
 - Merchant 状态图：`Data/StateGraphDef/Merchant.json`
 - 战斗接触解析：`scripts/Systems/ContactResolver.js`（三阶段判定：hitbox→weaponbox 武器侧判定→shield 判定与破盾路径；guardType="shield" 时 heavy slash → shieldBroken 触发 stunned 硬直，其他攻击被挡；Phase 1 attack-vs-attack clash 判定（拼刀）由 AI Clash Seeker 决策层主动触发——AI 选 heavy 攻击 intercept opp.startup，规则层按 weight 比较出 clash_tie / clash_lose。debug 日志统一走 `this.#trace()` 受 `debugTrace` 开关（默认 false）控制，不裸奔）
-- 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道）
+- 战斗系统编排：`scripts/Systems/CombatSystem.js`（合并驱动 ContactResolver + ProjectileContactResolver 两条管道；耐力系统消费点：#dispatchOutcomes 处 attacker outcome 追加扣费 + defender 防御成功回补，均经 CombatCharacter 统一入口）
+- 战斗调参配置：`Data/CombatTuning.js`（全局战斗数值，含 `stamina` 配置块：enabled 总开关 / maxStamina / 基础与 outcome 消耗表 / 恢复速率 / 减速上限 / dodgeScaleFloor / successRefunds 回补表；耐力系统规则详见 `docs/战斗规则说明.MD` §十，计划见 `plans/26.11.6 疲劳度计划.MD`）
 - AI 系统（四层分离架构 + Phase 5 统一预测层 `predictedOpponentEvents[]`，events 驱动 attack/defense/positioning 评分，含投掷物防御 reactive + preemptive 双路径与进攻性 throw 候选 #scoreThrow；positioning 锚点 `#getIdealEffReach` 中位数替代 maxEffReach 缩窄 hold 区间，holdScore 封顶 attackMultiplier，holdTimeout 强制打破 opp idle 防御型角色无限 hold 僵局；26.11.2 修复计划落地：防御可达性门（物理射程口径 `(maxReach+前冲位移+bodyReachAllowance)×1.05` 远端 + minR 近端死区 + 自身 closure 闭合法则）、committedScoreThreshold 仲裁（committed 候选过阈值才留池，运行时按角色 attack.baseWeight 量纲归一化）、holdTimeout 周期化（超时同时重置计时 + minHoldPeriodMs 下限）、近距 attack 衰减 + retreat 中间档 + 失败驱动脱离（#attackFailBudget 预算制 + 锁存 + posture.attackMultiplier 插值退离线）、dodge i-frame 资格门（escapeLatency vs timeUntilHit），详见 `docs/AI系统说明.MD` 与 `plans/26.11.2 AI问题修复计划.MD`）：
   - 主决策器：`scripts/Systems/AI/AIController.js`（#scoreAttack/#scoreDefense/#scorePositioning + #evaluateProjectileDefense/#findBestSlashForProjectile/#scoreCutForProjectile/#scoreDodgeForProjectile/#computeTimingAlignment + #getIdealEffReach/#getMaxHoldMs hold 超时机制 + #attackFailBudget 失败驱动脱离 + dodge i-frame 资格门）
   - 武器 knowledge 扫描：`scripts/Systems/AI/AIKnowledgeRegistry.js`（#getProfile/#getMaxReach/#getClosestMinReach；throw state 扫描含 flight 弹道射程——含手部释放高度的落地方程 ×rangeConservatism；校验 projectileType vs ProjectileDefs；#boxHalfProjX 修复 weaponbox angle 忽略 bug — v6 schema）
@@ -89,7 +90,7 @@ py .\.serve.ps1
 - 背包管理器：`scripts/Systems/InventoryManager.js`
 - 玩家控制器：`scripts/Systems/PlayerController.js`（输入 → 移动 + 指令队列 + buff 管理）
 - 可拾取实体：`scripts/Enties/PickableEntity.js`（轻量实体，不继承 CharacterBase）
-- UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`
+- UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`、`scripts/UI/StaminaBar.js`（玩家头顶耐力条，世界坐标投影锚定，BattleMode 懒创建、enabled=false 不渲染）
 - 音频系统入口：`scripts/Systems/AudioManager.js`（Game 持有，Scene 通过 `this._game.audioManager` 访问）
 - 音频数据库：`scripts/Systems/Audio/AudioDatabase.js`（AudioId → Clip Definition）
 - 音频池：`scripts/Systems/Audio/AudioPool.js`（基于 `BABYLON.Sound` 的缓存与复用）

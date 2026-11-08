@@ -2,7 +2,6 @@
     "clips": {
         "move": {
             "events": [
-                { "frame": 0, "type": "footstep_rabble" },
                 { "frame": 1, "type": "footstep_rabble" }
             ]
         }

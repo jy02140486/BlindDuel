@@ -344,6 +344,11 @@ export class CombatSystem {
                 attackerChar.markAttackResolved(attackInstanceId);
             }
 
+            // Step 1.3：结果追加耐力消耗（miss 不在此路径，由 CombatCharacter 自行扣）
+            if (typeof attackerChar.applyOutcomeStaminaCost === "function") {
+                attackerChar.applyOutcomeStaminaCost(outcome);
+            }
+
             const defenderChar = counteredBy ? characters.find(c => c?.id === counteredBy) : null;
             attackerChar.controller.onCombatResult({
                 outcome,
@@ -413,6 +418,13 @@ export class CombatSystem {
     #dispatchDefenderOutcomes(defenderOutcomeMap, characters) {
         for (const [defenderId, { outcome, attackerId }] of defenderOutcomeMap) {
             const defenderChar = characters.find(c => c?.id === defenderId);
+            if (!defenderChar) continue;
+
+            // 防御成功耐力回补：规则性扣补，不依赖 controller 装配（guard:success 含 parry）
+            if (typeof defenderChar.applyDefenseSuccessRefund === "function") {
+                defenderChar.applyDefenseSuccessRefund(outcome);
+            }
+
             if (!defenderChar?.controller?.onCombatResult) continue;
 
             const attackerChar = attackerId ? characters.find(c => c?.id === attackerId) : null;

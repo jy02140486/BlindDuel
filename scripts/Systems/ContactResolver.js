@@ -124,7 +124,6 @@ export class ContactResolver {
                 }
 
                 if (blocked) {
-                    invalidatedAttacks.add(offenseAttackId);
                     // guard / shield 各自独立配置：t 为本场景对应的 tuning 对象
                     const t = guardType === "shield" ? this.tuning.shield : this.tuning.block;
                     const offenseSnapshot = snapshotById.get(offenseCharId);
@@ -142,17 +141,35 @@ export class ContactResolver {
                     const isPreemptiveGuard = Math.abs(tickDiff) <= this.tuning.parry.preemptiveTickDiffMax;
                     const canParry = defenseBox.canParry && isPreemptiveGuard;
 
+                    // D3/P1：耐力不足的 guard → 挡到即进 clash（weight 比较，guard 记 light；仅 guard 型，shield 走独立破盾体系）
+                    const insufficientGuard = guardType === "guard"
+                        && guardSnapshot?.staminaInsufficientGuard === true;
+
                     this.#trace(
-                        `[Resolver-Diag] P1-block-result tick=${tickCount} | blocked=${blocked} canParry=${canParry} ` +
+                        `[Resolver-Diag] P1-block-result tick=${tickCount} | blocked=${blocked} canParry=${canParry} insufficientGuard=${insufficientGuard} ` +
                         `trajectory=${trajectory} weight=${weight} guardType=${guardType}`
                     );
 
                     this.#trace(
                         `[ResolverPhase1] block offense=${offenseCharId} defense=${defenseCharId}` +
-                        ` trajectory=${trajectory} guardType=${guardType} canParry=${canParry}`
+                        ` trajectory=${trajectory} guardType=${guardType} canParry=${canParry} insufficientGuard=${insufficientGuard}`
                     );
 
-                    if (canParry) {
+                    if (insufficientGuard && weight === "heavy") {
+                        // heavy 击穿弱 guard：防守方 clash_lose；攻方攻击不被 invalidate（Phase 2 可继续命中 → 完整惩罚）
+                        this.#trace(`[ResolverPhase1] insufficient-guard clash-lose loser=${defenseCharId} winner=${offenseCharId}`);
+                        effects.push(this.#buildClashEffect(defenseCharId, offenseCharId, "clash_lose", defensePos, offensePos, defenseBox, offenseBox));
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.clash.loseLoserHitstopFrames });
+                        effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.clash.loseWinnerHitstopFrames });
+                    } else if (insufficientGuard) {
+                        // light vs 弱 guard：只惩罚防守方——clash_lose 进 clash 状态，攻方攻击失效但无事发生
+                        // （D3：进 clash 的是 guard 侧；light 与弱 guard 不构成武器互锁，攻方不应被拖进 clash）
+                        invalidatedAttacks.add(offenseAttackId);
+                        this.#trace(`[ResolverPhase1] insufficient-guard clash-lose(light) loser=${defenseCharId} attacker=${offenseCharId}`);
+                        effects.push(this.#buildClashEffect(defenseCharId, offenseCharId, "clash_lose", defensePos, offensePos, defenseBox, offenseBox));
+                        effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.clash.loseLoserHitstopFrames });
+                    } else if (canParry) {
+                        invalidatedAttacks.add(offenseAttackId);
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "parry", effects);
                         // 防守方：不进 clash，guard 动画继续播；加 blockstun 防止 guard→idle 过早（与 guard_block 对齐）
                         effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, sourceMaterial: offenseBox.impactMaterial ?? null, targetSurface: defenseBox.contactSurface ?? null, impactClass: offenseBox.attackWeight ?? null, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
@@ -163,6 +180,7 @@ export class ContactResolver {
                         effects.push({ type: "hitstop", targetId: offenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                         effects.push({ type: "hitstop", targetId: defenseCharId, durationFrames: this.tuning.parry.hitstopFrames });
                     } else {
+                        invalidatedAttacks.add(offenseAttackId);
                         this.#pushDefenseSuccess(defenseCharId, offenseCharId, offenseAttackId, "guard_block", effects);
                         effects.push({ type: "blockstun", targetId: defenseCharId, durationFrames: t.defenseLockFrames, context: { attackerId: offenseCharId, guardType, sourceMaterial: offenseBox.impactMaterial ?? null, targetSurface: defenseBox.contactSurface ?? null, impactClass: offenseBox.attackWeight ?? null, knockbackX: this.#signedKnockback(defensePos, offensePos, t.knockbackX) } });
                         // 攻击方：freezeImpact 让攻击中止，解冻后自动切 clash 状态（与 parry 一致的手动 push，不带 contactType）

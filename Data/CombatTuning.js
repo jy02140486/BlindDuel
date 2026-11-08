@@ -69,4 +69,37 @@ export const CombatTuning = {
         /** committed state 退出回 idle 后的公共动作冷却（ms）— 硬拦截层 */
         globalCooldownMs: 400,
     },
+    stamina: {
+        /** 总开关：false 时扣费/恢复/减速全部短路，用于对照 playtest */
+        enabled: true,
+        /** 最大耐力 */
+        maxStamina: 100,
+        /** 每秒恢复量（低强度状态下） */
+        regenPerSecond: 10,
+        /** 动作基础消耗（commit 时扣） */
+        costs: {
+            attackLight: 15,
+            attackHeavy: 25,
+            guard: 10,
+            dodge: 20,
+            throw: 0,
+        },
+        /** 结果追加消耗（CombatSystem outcome 时扣） */
+        outcomeCosts: {
+            miss: 10,
+            parried: 5,
+            guardBlocked: 5,
+            clash: 5,
+            hit: 0,
+        },
+        /** 防御成功回补（键 = defender outcome 枚举：成功打折、失败全额 → 防守交换更经济） */
+        successRefunds: {
+            "guard:success": 25,
+            "dodge:success": 25,
+        },
+        /** 空耐力时攻击类状态减速上限（0.4 = 最多慢 40%） */
+        slowdownMax: 0.4,
+        /** 空耐力 dodge 位移缩放下限（0.5 = 位移减半） */
+        dodgeScaleFloor: 0.5,
+    },
 };

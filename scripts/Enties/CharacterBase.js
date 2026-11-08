@@ -375,9 +375,10 @@ export class CharacterBase {
 
             if (frameSpeed !== undefined) {
                 const dtSec = dtMs / 1000;
+                const scaledSpeed = frameSpeed * (this._dodgeFrameSpeedScale ?? 1.0);
 
-                this.root.position.x += frameSpeed * dtSec;
-                this.currentSpd = Math.abs(frameSpeed);
+                this.root.position.x += scaledSpeed * dtSec;
+                this.currentSpd = Math.abs(scaledSpeed);
                 return;
             }
         }

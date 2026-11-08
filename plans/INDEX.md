@@ -1,6 +1,19 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：**疲劳度计划大块一已落地、大块二（AI 识别疲劳）待启动**（`plans/26.11.6 疲劳度计划.MD`）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-07)
+- **疲劳度（Stamina）系统大块一全部落地（Step 1.1~1.7，按 `plans/26.11.6 疲劳度计划.MD`，决策 D1~D11）**：
+  - 资源与配置：`Data/CombatTuning.js` 新增 `stamina` 配置块（enabled 总开关 / maxStamina 100 / 基础消耗表 / outcomeCosts / 恢复 10/s / 减速上限 0.4 / dodgeScaleFloor 0.5 / successRefunds 回补表）；四层配置分层（D10）：StateGraphDef.combatProfile 个体体能三键（maxStamina / recoveryMultiplier / costMultiplier），第一版全项目缺省 1.0 未启用个体值
+  - 扣费：enterState commit 时刻基础费（light 15 / heavy 25 / guard 10 / dodge 20 / throw 0）+ outcome 追加费（miss 10 / parried 5 / guard_blocked 5 / clash 5 / hit 0），× costMultiplier、floor 0；defender 侧不扣；扣费/回补规则与 controller 反馈解耦（无 controller 角色同样生效）
+  - 恢复：fixedUpdate 挂 `_regenStamina`（用 effectiveDeltaMs，hitstop 冻结自动暂停），黑名单 = attack/guard/dodge 状态 + throw/clash/hit/stunned 状态名，× recoveryMultiplier
+  - 减速：`_getStateTimeScale` 复合 `1 + 0.4×(1-ratio)` 除法（attack 类 + throw + clash，guard/dodge 豁免），hitstop 解冻自动恢复疲劳倍率（验收项零额外代码满足）；dodge 位移缩放 `_dodgeFrameSpeedScale`（CharacterBase frameSpeeds 钩子，动画速度不变仅位移缩短，commit 时锁存）
+  - guard→clash 路由：commit 时采集 `staminaInsufficientGuard` → ContactResolver Phase 1 blocked 分支路由：light → 防守方 clash_lose + 攻方攻击失效；heavy → clash_lose + 攻方攻击**不失效**（Phase 2 继续扣血，轻重梯度用户确认保留）；parry 对弱 guard 关闭；shield 不参与
+  - 回补（实施新增 D11）：guard/dodge 成功 +refund（successRefunds 表 ×recoveryMultiplier）——消耗乘 costMultiplier、回补乘 recoveryMultiplier，体能差复利放大；弱 guard clash 路径不回补。实施中曾修复 successRefunds 键名双端不一致 bug（表键与 outcome 枚举字符串对齐）
+  - UI：`scripts/UI/StaminaBar.js`（新）玩家头顶光谱渐变条（世界坐标投影锚定，168×24px，红→黄→绿左锚定收缩暴露状态色，HEAD_OFFSET_Y=3）+ debug overlay `ST:` 字段；BattleMode 懒创建/死亡 dispose/exit 清理
+  - `[Stamina]` 验证 log 三入口已清除（数值经用户 playtest 确认）
+- **遗留**：大块二 AI 识别疲劳未开始（Step 2.1 时序接线 → 2.2 fatigueAwareness knob → 2.3 概率锁存资格门）；P3（guard 中恢复与否）、P4（dodgeScaleFloor）待 playtest 定；StateGraphDef 尚无角色启用 combatProfile 个体值
+- **涉及文件**：`Data/CombatTuning.js` + `scripts/Enties/CombatCharacter.js`（资源/扣费/恢复/减速/缩放/回补/overlay）+ `scripts/Enties/CharacterBase.js`（frameSpeeds 缩放钩子）+ `scripts/Systems/CombatSystem.js`（outcome 扣费 + 回补 dispatch）+ `scripts/Systems/ContactResolver.js`（insufficient-guard 路由）+ `scripts/Systems/Modes/BattleMode.js`（重置 + StaminaBar 接线）+ `babylon_demo.html`（条 CSS）+ `scripts/UI/StaminaBar.js`（新）+ `docs/战斗规则说明.MD`（§十耐力系统）+ `plans/26.11.6 疲劳度计划.MD`（全步骤 ✅）
 
 ## Update Log (2026-11-03)
 - **声音材质映射细分落地（Step 1-3 全部实施并验证通过，按 `plans/26.11.3 声音材质映射细分计划.MD`）**：
