@@ -1,6 +1,18 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：**疲劳度计划大块一已落地、大块二（AI 识别疲劳）待启动**（`plans/26.11.6 疲劳度计划.MD`）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-09)
+- **疲劳度计划大块二核心落地（Step 2.1~2.3，按 `plans/26.11.6 疲劳度计划.MD`）**：
+  - Step 2.1 有效时序接线：`AIController.#getEffectiveTiming(timing, char)`（base × `staminaSlowdown`，单一倍率来源）——15 处绝对 ms 消费点统一接线：自招评分 / preemptive / clash seeker / predictedOpponentEvents（startup+active+total 同乘，比值类消费天然尺度不变故意不动）/ dodge i-frame 门 escapeLatency / projDodge 位移预测（读新公开口 `CombatCharacter.dodgeDisplacementScale`，D9 缩放）。实战验证：玩家疲劳 startup 770→1078ms 数学抽查全过；比值类（#computeStartupFactor、startupMs/totalMs 归一化）与 dodge timing（D9 不减速）明确不接，防过度换算
+  - Step 2.2 fatigueAwareness knob：`aiProfile.fatigueAwareness` 缺省 1.0，经 `Scene._buildInstanceAiTuning` 场景 entityDef 通道注入（实测纠正：非 StateGraphDef，docs 已修正）；档位 rabble/教学=0.0 / 普通=0.5 / 精英/Boss=1.0；第一只配置：ep1_tavern_room enemy_1 实测保留 0.5
+  - Step 2.3 guard 资格门 + 概率锁存：判定线与规则层同源（stamina < guard 耗费×costMultiplier）；掷骰放 `#makeDecision` tick 级（每拍一次，防多 guard 候选各掷虚高）；通过 → 锁存压制 guard 分支 2.5s，dodge 候选自然接管；aware≥1.0 确定性短路，aware≤0 短路放行
+  - 三档实战验证（酒馆 rabble_stick）：0.0=风险区照举弱 guard 吃 clash_lose；0.5=SUPPRESS 触发（stamina=1<line=10）且本局弱 guard 0 次；1.0=风险区零 guard、dodge 接管。统计口径：一条 SUPPRESS ≈ 2.5s 锁存 ≈ 12 决策拍，犯蠢率 = 弱 guard : (弱 guard + SUPPRESS)
+  - Playtest 证据入档（Step 2.4）：AI 疲劳期进攻零收敛（空耐力 ratio 0.00 连续进攻至死 7 次 self:hit）——GPT Phase 2（Utility 层 stamina 成本评分）提上议程的直接证据，验证后再议
+  - 文档同步：`docs/AI系统说明.MD` 修正 aiProfile 配置通道（StateGraphDef → 场景 entityDef，原描述过时）+ knob 表 7→8 补 fatigueAwareness；疲劳计划 Step 2.1~2.3 标 ✅ + playtest 记录
+  - 日志清理：`fatigueTiming` 诊断日志删除（验证使命完成）；`fatigueGuardGate` SUPPRESS 日志保留（低频正向观测点）
+- **遗留**：Step 2.5 三档对照 playtest 待新场景（需普通兵 0.5 档载体）；Step 2.4 全部留观不变；`AIController - 副本.js` 备份待手动删除
+- **涉及文件**：`scripts/Systems/AI/AIController.js`（getEffectiveTiming + 15 处接线 + 门控）+ `scripts/Enties/CombatCharacter.js`（staminaSlowdown getter + dodgeDisplacementScale 读取口）+ `Data/SceneDefs/ep1_tavern_room.json`（enemy_1 aiProfile）+ `docs/AI系统说明.MD` + `plans/26.11.6 疲劳度计划.MD`（状态标记）
 
 ## Update Log (2026-11-07)
 - **疲劳度（Stamina）系统大块一全部落地（Step 1.1~1.7，按 `plans/26.11.6 疲劳度计划.MD`，决策 D1~D11）**：

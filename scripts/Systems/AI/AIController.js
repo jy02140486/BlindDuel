@@ -2,6 +2,7 @@ import { BaseController } from "../BaseController.js";
 import { AIKnowledgeRegistry } from "./AIKnowledgeRegistry.js";
 import { ContactResolver } from "../ContactResolver.js";
 import { AITuning } from "../../../Data/AITuning.js";
+import { CombatTuning } from "../../../Data/CombatTuning.js";
 import { CombatMemory } from "./CombatMemory.js";
 import { CombatPosture } from "./CombatPosture.js";
 import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
@@ -60,6 +61,11 @@ export class AIController extends BaseController {
         this.reflexMaxMs = this.tuning.defense?.reflexMaxMs ?? 0;
         // 每个决策 tick 更新（供 #scoreDefense 消费）
         this._reflexOffset = 0;
+
+        // D8/Step 2.2: fatigueAwareness 疲劳感知 knob（场景 entityDef.aiProfile；缺省 1.0 = 全感知档）
+        this.fatigueAwareness = this.tuning.aiProfile?.fatigueAwareness ?? 1.0;
+        this._fatigueGateActive = false;      // 本决策 tick 的 guard 门结果
+        this._fatigueGuardLatchUntil = 0;     // 感知锁存到期时间（ms），0 = 未激活
 
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
@@ -364,6 +370,9 @@ export class AIController extends BaseController {
             ? Math.random() * this.reflexMaxMs
             : 0;
 
+        // D8/Step 2.3: 每决策 tick 恰好掷骰一次（防多 guard 候选重复掷骰偏置概率）
+        this._fatigueGateActive = this.#evaluateFatigueGuardGate();
+
         const sit = this.#buildSituation();
 
         const scored = [];
@@ -421,7 +430,10 @@ export class AIController extends BaseController {
 
             if (slashAttacks.length > 0) {
                 const bestActiveEnd = Math.min(...slashAttacks.map(
-                    s => s.timing.startupMs + s.timing.activeMs));
+                    s => {
+                        const _eff = this.#getEffectiveTiming(s.timing, this.character);
+                        return _eff.startupMs + _eff.activeMs;
+                    }));
                 const _canPreemptive = arrivalEvent.startMs <= bestActiveEnd;
                 const flightMs = arrivalEvent.startMs - releaseEvent.startMs;
 
@@ -820,6 +832,26 @@ export class AIController extends BaseController {
     }
 
     /**
+     * 疲劳计划 Step 2.1: base timing × 目标角色当前疲劳倍率
+     * 所有绝对 ms 消费点（预测事件 / dodge 资格门 / 自招窗口）统一经此换算，
+     * 保证"动画实际变慢"与"AI 预测窗口"同一口径。攻击状态内耐力不变，
+     * 实时 staminaRatio 即 commit 时刻倍率；startup/total 同乘 slowdown 保持减法公式自洽
+     */
+    #getEffectiveTiming(timing, char) {
+        if (!timing) return timing;
+        const slow = char?.staminaSlowdown ?? 1.0;
+        if (slow === 1.0) return timing;
+        const scale = (v) => (typeof v === "number" ? v * slow : v);
+        return {
+            ...timing,
+            startupMs: scale(timing.startupMs),
+            activeMs: scale(timing.activeMs),
+            recoveryMs: scale(timing.recoveryMs),
+            totalMs: scale(timing.totalMs),
+        };
+    }
+
+    /**
      * Phase 5 Step 2a: 根据 opp 当前 committed state + KB profile 生成未来事件时间线
      * 纯数据层 — 不做战术判断，只产出时间线事件，不消费任何评分函数
      *
@@ -840,7 +872,7 @@ export class AIController extends BaseController {
         // 只有 opp 还在 startup 阶段（weaponbox 尚未激活）才产事件
         // active / recovery 阶段不产 — 已经在进行中了，没有"未来"可预测
         if (oppAttackProfile && oppPhase === "startup") {
-            const timing = oppAttackProfile.timing;
+            const timing = this.#getEffectiveTiming(oppAttackProfile.timing, this.opponent);
             const reach = oppAttackProfile.range?.maxReach ?? 0;
             const startupMs = timing.startupMs ?? 0;
             const activeMs = timing.activeMs ?? 0;
@@ -867,7 +899,7 @@ export class AIController extends BaseController {
         // throw 状态产两个瞬时事件：release → arrival estimate
         // 时间计算逻辑与 #buildSituation 里的 throw_windup 预测完全一致（保持同一物理模型）
         if (oppThrowProfile) {
-            const timing = oppThrowProfile.timing;
+            const timing = this.#getEffectiveTiming(oppThrowProfile.timing, this.opponent);
             const startupMs = timing.startupMs ?? 0;
             const elapsedMs = oppNormTime * timing.totalMs;
             const throwReleaseRemainingMs = Math.max(0, startupMs - elapsedMs);
@@ -1027,7 +1059,7 @@ export class AIController extends BaseController {
 
     #scoreAttack(attack, sit) {
         const range = attack.range?.maxReach ?? 0;
-        const timing = attack.timing;
+        const timing = this.#getEffectiveTiming(attack.timing, this.character);
 
         // frameSpeeds 位移加成：activeDisplacement 是 weaponbox 实际覆盖期间的位移（负=向对手前冲）
         // 用 activeDisplacement 而不是全动画 displacement，避免 dash 这类 weaponbox 只在短窗口存在的动作
@@ -1402,10 +1434,10 @@ export class AIController extends BaseController {
         const clashSeekerWeight = this.tuning.aiProfile?.clashSeekerWeight ?? 0;
         if (clashSeekerWeight <= 0) return false;
 
-        const timing = attack.timing;
+        const timing = this.#getEffectiveTiming(attack.timing, this.character);
         if (!timing) return false;
 
-        // ③ overlap 时序（区间重叠，非单端检查）
+        // ③ overlap 时序（区间重叠，非单端检查；双方均为真实 ms 口径）
         const myStartupMs = timing.startupMs ?? 0;
         const myActiveMs = timing.activeMs ?? 0;
         const myActiveStart = myStartupMs;
@@ -1450,7 +1482,7 @@ export class AIController extends BaseController {
         // 资格检查（冗余但安全，确保单独调用时不会越界）
         if (!this.#checkClashSeekerEligible(attack, sit, oppAtkWindow)) return 0;
 
-        const timing = attack.timing;
+        const timing = this.#getEffectiveTiming(attack.timing, this.character);
         const oppTimeUntilActive = oppAtkWindow.startMs;
 
         // baseBonus
@@ -1548,9 +1580,10 @@ export class AIController extends BaseController {
         const _oppAtkWindowEarly = this.#findPredictedEvent(
             sit.predictedOpponentEvents, "opp_attack_active_window"
         );
+        const _oppEff = this.#getEffectiveTiming(oppAtk.timing, this.opponent);
         const _timeUntilActiveEnd = _oppAtkWindowEarly
-            ? _oppAtkWindowEarly.startMs + oppAtk.timing.activeMs
-            : oppAtk.timing.startupMs + oppAtk.timing.activeMs - sit.opp.normTime * oppAtk.timing.totalMs;
+            ? _oppAtkWindowEarly.startMs + _oppEff.activeMs
+            : Math.max(0, _oppEff.startupMs + _oppEff.activeMs - sit.opp.normTime * _oppEff.totalMs);
         const _selfClosureM = _movingToward
             ? Math.min(0.3, (_self.currentSpd ?? 0) * Math.max(0, _timeUntilActiveEnd) / 1000)
             : 0;
@@ -1588,11 +1621,9 @@ export class AIController extends BaseController {
             if (oppAtkWindow) {
                 timeUntilActive = oppAtkWindow.startMs;
             } else {
-                // Fallback: events 缺失时手动计算（理论上 opp startup 总会产 events）
-                const totalMs = oppAtk.timing.totalMs;
-                const startupMs = oppAtk.timing.startupMs;
-                const elapsedMs = sit.opp.normTime * totalMs;
-                timeUntilActive = startupMs - elapsedMs;
+                // Fallback: events 缺失时手动计算（有效时序口径，与 events 主路径一致）
+                const elapsedMs = sit.opp.normTime * _oppEff.totalMs;
+                timeUntilActive = Math.max(0, _oppEff.startupMs - elapsedMs);
             }
 
             // AI 每隔 decisionIntervalMs 才能做一次决策 + 防御瞬时生效
@@ -1638,7 +1669,7 @@ export class AIController extends BaseController {
             let escapeLatency = 0;
             if (_selfDefNow?.attackActive === true) {
                 const _selfAtk = this.kbProfile?.attacks?.find(a => a.stateName === _selfStateName);
-                const _selfTotalMs = _selfAtk?.timing?.totalMs ?? 0;
+                const _selfTotalMs = this.#getEffectiveTiming(_selfAtk?.timing, this.character)?.totalMs ?? 0;
                 if (_selfTotalMs > 0) {
                     escapeLatency = Math.max(0, (1 - (sit.self?.normTime ?? 0)) * _selfTotalMs);
                 }
@@ -1646,7 +1677,7 @@ export class AIController extends BaseController {
             const timeUntilHit = oppPhase === "active"
                 ? 0
                 : (_oppAtkWindowEarly?.startMs
-                    ?? Math.max(0, oppAtk.timing.startupMs - sit.opp.normTime * oppAtk.timing.totalMs));
+                    ?? Math.max(0, _oppEff.startupMs - sit.opp.normTime * _oppEff.totalMs));
             if (timeUntilHit < escapeLatency) {
                 if (this.debugVisible) {
                     console.log(
@@ -1665,6 +1696,11 @@ export class AIController extends BaseController {
             defenseGuardType = defenseAction.guardType ?? null;
         }
         const defenseCanParry = kind === "guard" && (defenseAction.canParry === true);
+
+        // D8/Step 2.3: fatigueAwareness guard 资格门（tick 级掷骰结果，dodge 自然接管）
+        if (kind === "guard" && this._fatigueGateActive) {
+            return 0;
+        }
 
         let score = this.tuning.defense.activeBase; // 基础分（active 阶段）或 startupCanActBase（startup 窗口）
         if (oppPhase === "startup") {
@@ -1717,6 +1753,44 @@ export class AIController extends BaseController {
         score *= this.combatPosture.defenseMultiplier;
 
         return Math.max(0, Math.min(1, score));
+    }
+
+    /**
+     * D8/Step 2.3: fatigueAwareness guard 资格门（每决策 tick 调一次）
+     * 风险判定线与规则层 D3/P1 同源（CombatCharacter _commitStaminaCost）：
+     * 扣费前 stamina < guard cost × costMultiplier → 弱 guard → 必吃 clash
+     * 掷骰通过 → 锁存 2.5s 或直到耐力恢复出风险区（防 200ms tick 抖动）
+     */
+    #evaluateFatigueGuardGate() {
+        if (CombatTuning.stamina?.enabled === false) return false;
+        const aware = this.fatigueAwareness;
+        const self = this.character;
+        const riskLine = (CombatTuning.stamina.costs?.guard ?? 10) * (self?.costMultiplier ?? 1.0);
+        if ((self?.stamina ?? Infinity) >= riskLine) {
+            if (this._fatigueGuardLatchUntil > 0 && this.debugVisible) {
+                console.log(
+                    `[AI-Diag] fatigueGuardGate: stamina=${(self?.stamina ?? 0).toFixed(0)} ` +
+                    `>= line=${riskLine.toFixed(0)} → 解除压制，guard 恢复资格`
+                );
+            }
+            this._fatigueGuardLatchUntil = 0;
+            return false;
+        }
+        if (aware >= 1.0) return true;
+        if (aware <= 0.0) return false;
+        const now = performance.now();
+        if (now < this._fatigueGuardLatchUntil) return true;
+        if (Math.random() < aware) {
+            this._fatigueGuardLatchUntil = now + 2500;
+            if (this.debugVisible) {
+                console.log(
+                    `[AI-Diag] fatigueGuardGate: aware=${aware} stamina=${(self?.stamina ?? 0).toFixed(0)} ` +
+                    `< line=${riskLine.toFixed(0)} → SUPPRESS guard 2.5s (dodge 接管)`
+                );
+            }
+            return true;
+        }
+        return false;
     }
 
     // =========================================================================
@@ -1796,8 +1870,9 @@ export class AIController extends BaseController {
 
                 // === DIAGNOSTIC: preemptive cut 评分详情 ===
                 if (isPreemptive && this.debugVisible) {
-                    const activeStart = bestSlash.timing.startupMs;
-                    const activeEnd = bestSlash.timing.startupMs + bestSlash.timing.activeMs;
+                    const _eff = this.#getEffectiveTiming(bestSlash.timing, this.character);
+                    const activeStart = _eff.startupMs;
+                    const activeEnd = _eff.startupMs + _eff.activeMs;
                     const timingAlignment = this.#computeTimingAlignment(tti, activeStart, activeEnd);
                     console.log(
                         `[AI-Diag] preemptive_cut: predictedTTI=${tti.toFixed(0)}ms ` +
@@ -1852,8 +1927,10 @@ export class AIController extends BaseController {
         const totalMs = dodge.timing.totalMs;
 
         // 后撤位移延迟：位移 / 弹速（KB 扫描已提供 displacement，此前从未被使用）
+        // D9：dodge 动画不减速但位移按耐力缩放，预测必须读缩放后位移，否则疲劳 AI 高估闪避成功率
         const projSpeed = Math.abs(threat.velocity?.x ?? threat.profile?.speed ?? threat.speed ?? 6);
-        const retreatMs = Math.abs(dodge.displacement ?? 0) / projSpeed * 1000;
+        const retreatMs = Math.abs(dodge.displacement ?? 0)
+            * (this.character?.dodgeDisplacementScale ?? 1.0) / projSpeed * 1000;
         const effectiveTotalMs = Math.max(0, totalMs - retreatMs);
 
         let factor;
@@ -1926,7 +2003,7 @@ export class AIController extends BaseController {
         let bestTimingScore = -Infinity;
 
         for (const slash of slashAttacks) {
-            const activeStart = slash.timing.startupMs;
+            const activeStart = this.#getEffectiveTiming(slash.timing, this.character).startupMs;
             // timingAlignment 只判断一个条件：weaponbox 能否在 projectile 到达前激活
             // 物理语义：projectile 是恒速直线飞行直到命中的物理物体
             // weaponbox 激活后 projectile 继续飞，只要在 reach 内（distanceAlignment 管）就能斩到
@@ -1950,8 +2027,9 @@ export class AIController extends BaseController {
 
     #scoreCutForProjectile(slash, tti, threat) {
         const tun = this.tuning.projectileDefense;
-        const activeStart = slash.timing.startupMs;
-        const activeEnd = slash.timing.startupMs + slash.timing.activeMs;
+        const _eff = this.#getEffectiveTiming(slash.timing, this.character);
+        const activeStart = _eff.startupMs;
+        const activeEnd = _eff.startupMs + _eff.activeMs;
 
         // timingAlignment：只判断 weaponbox 能否先激活（物理语义修复）
         // projectile 是恒速飞行的物理物体，不存在 "too late" 窗口
@@ -2515,7 +2593,7 @@ export class AIController extends BaseController {
         diag.rf = rangeFactor;
 
         let score = (tun.baseWeight ?? 0.35) * rangeFactor;
-        const startupMs = t.timing?.startupMs ?? 0;
+        const startupMs = this.#getEffectiveTiming(t.timing, this.character)?.startupMs ?? 0;
 
         // 对手近战最远有效距离（与 self 同构：maxReach + maxFwdBoost + rangeBuffer）
         const _oppReaches = (this.opponentKB?.attacks ?? []).map(a => {
@@ -2562,7 +2640,7 @@ export class AIController extends BaseController {
                 } else {
                     // opp 反应线 = 最快 slash startup + 反应延迟；飞行时间占比即被斩可行性
                     const flightMs = sit.distance / Math.max(1e-6, t.speed ?? 6) * 1000;
-                    const fastestSlashStartup = Math.min(...slashAttacks.map(s => s.timing?.startupMs ?? 0));
+                    const fastestSlashStartup = Math.min(...slashAttacks.map(s => this.#getEffectiveTiming(s.timing, this.opponent)?.startupMs ?? 0));
                     const cutReadyMs = fastestSlashStartup + (this.tuning.defense?.reflexMaxMs ?? 0);
                     factor = cutReadyMs > 0 ? Math.min(1, flightMs / cutReadyMs) : 0;
                 }

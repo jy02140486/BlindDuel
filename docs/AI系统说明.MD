@@ -346,9 +346,11 @@ base = throw.baseWeight(0.35)
 
 ### 放置位置
 
-角色 `StateGraphDef/*.json` 的 `characterTraits` 同级加 `aiProfile` 字段。
+场景 `SceneDefs/*.json` 的实体条目（entityDef）加 `aiProfile` 字段，经 `Scene._buildInstanceAiTuning` 注入实例 `tuning.aiProfile`（与 `aiTuningOverrides` 同通道）。无 aiProfile 的实体直接共享全局 AITuning，行为零差异。
 
-### 7 个 knob
+⚠ 注意：不是 StateGraphDef——`fatigueAwareness` 已实测经此通道生效（26.11.9，酒馆 rabble aware=0.5 SUPPRESS 触发）。
+
+### 8 个 knob
 
 | 字段 | 默认 | 含义 | 覆盖场景 |
 |------|------|------|----------|
@@ -360,6 +362,7 @@ base = throw.baseWeight(0.35)
 | `repetitionCostRate` | 0.06 | 连续用同一 attack 成本 | 教学=0.02, 精英=0.10, Boss=0.08 |
 | `attackPreferences` | `{}` | per-attack 分数乘数（默认 1.0）| 教学={swing:1.6,thrust:0.4} |
 | **`clashSeekerWeight`** | **0.0（关闭）** | **clash seeker 加分乘数（reactive 抢拼刀权重）** | **Manatarms=1.0, 盾牌类角色≥1.0；无盾角色默认 0** |
+| **`fatigueAwareness`** | **1.0（全感知）** | **弱 guard 风险区（stamina < guard 耗费×costMultiplier）的防御感知：0=全盲照举吃 clash，0.5=掷骰通过则压制 guard 2.5s（dodge 接管），1.0=风险区永不 guard** | **rabble/教学=0.0, 普通=0.5, 精英/Boss=1.0** |
 
 `clashSeekerWeight` 与 `AITuning.attack.clashSeeker.baseBonus(0.25)` 配合使用。
 0=完全不 seek（默认），1.0=满额 reactive 加分。只有 opp 真在 startup 时才触发，

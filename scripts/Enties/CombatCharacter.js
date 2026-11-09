@@ -172,8 +172,19 @@ export class CombatCharacter extends CharacterBase {
             || name === "clash";
         if (!fatigable) return base;
 
-        const slowdown = 1 + st.slowdownMax * (1 - this.staminaRatio);
+        const slowdown = this.staminaSlowdown;
         return base / slowdown;
+    }
+
+    /** 当前疲劳减速因子（≥1.0，disabled=1.0）；动画减速与 AI 时序预测共用单一来源（疲劳计划 Step 2.1） */
+    get staminaSlowdown() {
+        const st = CombatTuning.stamina;
+        if (st.enabled === false) return 1.0;
+        return 1 + st.slowdownMax * (1 - this.staminaRatio);
+    }
+
+    get dodgeDisplacementScale() {
+        return this._dodgeFrameSpeedScale ?? 1.0;
     }
 
     _matchesTransitionCondition(condition) {
