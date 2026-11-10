@@ -371,6 +371,26 @@ export class CombatCharacter extends CharacterBase {
     }
 
     /**
+     * 26.11.9 攻击耐力计划 Step 1：攻击基础消耗表唯一读取口（防止 AI 预测与实际扣费两处漂移）
+     * @param {string} attackWeight "heavy" | "light"
+     * @returns {number} 基础成本（未乘 costMultiplier）
+     */
+    #attackBaseCost(attackWeight) {
+        const costs = CombatTuning.stamina.costs;
+        return attackWeight === "heavy" ? costs.attackHeavy : costs.attackLight;
+    }
+
+    /**
+     * 26.11.9 攻击耐力计划 Step 1：攻击 commit 成本查询口（供 AI Gate 预测用，与实际扣费同源）
+     * @param {string} attackWeight "heavy" | "light"（缺省按 light 口径）
+     * @returns {number} 本次攻击 commit 实付成本（已乘 costMultiplier）；系统关闭时返回 0
+     */
+    getAttackCommitCost(attackWeight) {
+        if (CombatTuning.stamina.enabled === false) return 0;
+        return this.#attackBaseCost(attackWeight) * this.combat.costMultiplier;
+    }
+
+    /**
      * Step 1.2 基础消耗：commit 时刻扣费 —— 被打断也自动已扣；玩家与 AI 走同一入口，规则对称
      * 分类依据 D1~D6：attack 按 attackWeight 扣 / guard / dodge 扣；throw 不扣；hit 等其他状态不扣
      */
@@ -379,12 +399,11 @@ export class CombatCharacter extends CharacterBase {
         if (st.enabled === false) return;
 
         const stateDef = this.currentStateDef;
-        const costs = st.costs;
         let cost = 0;
         let insufficientGuard = false;
 
         if (stateDef?.attackActive === true) {
-            cost = stateDef.attackWeight === "heavy" ? costs.attackHeavy : costs.attackLight;
+            cost = this.#attackBaseCost(stateDef.attackWeight);
         } else if (stateDef?.guardActive === true) {
             cost = costs.guard;
             // D3/P1：判定线 = commit 时刻扣费前的耐力，本次 guard 全程共用这个结果

@@ -1,6 +1,16 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；攻击耐力计划 26.11.9 已落地开闸（`plans/26.11.9 AI进攻决策引入耐力计划.MD`，已知问题见其 §6）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-10)
+- **攻击耐力计划 26.11.9 落地开闸（按 `plans/26.11.9 AI进攻决策引入耐力计划.MD`，Step 1~5 全部完成）**：
+  - `AIController.#applyFatigueAttackGate`：逐 attack 候选耐力储备资格检查（评分后、仲裁前过滤，D1 位置约定）；`#updateFatigueCycle` 统一疲劳意识周期——attack gate 与 guard 压制共享同一锁存（R1），guard 物理风险线独立不受周期压制
+  - R3 成本同源：`CombatCharacter.getAttackCommitCost` 公开查询口，AI 预测与实际扣费同源
+  - 开闸：`CombatTuning.stamina.attackGate.enabled = true`（影子模式 → 正式过滤）；三档 awareness 验证通过
+  - 诊断日志：`fatigueGate` / `fatigueCycle` / `[AI-Diag] COMBAT` 标签
+  - 新增计划 §6 已知问题（26.11.10 会话诊断）：受击硬直连锁死亡死因链（时机窄窗 + attack commit 锁 + 状态图封闭三层叠加）；D8"dodge 接管"假设与状态封闭互相对消；两版 P1 修复已试已回退（dodge 晚交最优被 Zornhut 诱饵反例否决）；StateGraphDef hit/guard 态无 dodge 出口属层 3，待立项
+  - 文档同步：`docs/AI系统说明.MD`（fatigueAwareness 语义修正为统一周期 + 攻击门机制节）+ `PROJECT_CONTEXT.md`（§3 两处）
+- **涉及文件**：`scripts/Systems/AI/AIController.js`（gate + 周期 + 日志）+ `scripts/Enties/CombatCharacter.js`（getAttackCommitCost）+ `Data/CombatTuning.js`（attackGate 开闸）+ `plans/26.11.9 AI进攻决策引入耐力计划.MD`（含 §6）+ `docs/AI系统说明.MD` + `PROJECT_CONTEXT.md`
 
 ## Update Log (2026-11-09)
 - **疲劳度计划大块二核心落地（Step 2.1~2.3，按 `plans/26.11.6 疲劳度计划.MD`）**：

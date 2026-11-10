@@ -64,8 +64,10 @@ export class AIController extends BaseController {
 
         // D8/Step 2.2: fatigueAwareness 疲劳感知 knob（场景 entityDef.aiProfile；缺省 1.0 = 全感知档）
         this.fatigueAwareness = this.tuning.aiProfile?.fatigueAwareness ?? 1.0;
-        this._fatigueGateActive = false;      // 本决策 tick 的 guard 门结果
-        this._fatigueGuardLatchUntil = 0;     // 感知锁存到期时间（ms），0 = 未激活
+        this._fatigueGateActive = false;      // 本决策 tick 的统一疲劳周期结果（感知层：在管与否）
+        this._fatigueGuardSuppressed = false; // guard 物理风险线压制（周期在管 且 耐力 < guard 消耗）
+        this._fatigueCycleLatchUntil = 0;     // 疲劳意识周期锁存到期时间（ms），0 = 未激活
+        this._fatigueAttackGateLogUntil = 0;  // 26.11.9 Step 2：攻击耐力门影子日志节流（ms）
 
         // 当前行为状态（debug 用）
         this.currentBehavior = "idle";
@@ -254,7 +256,8 @@ export class AIController extends BaseController {
         console.log(
             `[AI-Diag] COMBAT: view=${perspective ?? "attacker"} outcome=${outcome} state=${targetState ?? "?"}` +
             `${counteredBy ? ` by=${counteredBy}` : ""} dist=${distance.toFixed(2)}` +
-            ` selfState=${self.currentStateName ?? "?"} oppState=${oppState ?? "?"} oppAtk=${oppAtkTag}`
+            ` selfState=${self.currentStateName ?? "?"} oppState=${oppState ?? "?"} oppAtk=${oppAtkTag}` +
+            ` stamina=${(self.stamina ?? 0).toFixed(0)}/${self.combat?.maxStamina ?? 100} fatigueCycle=${this._fatigueGateActive ? "on" : "off"}`
         );
     }
 
@@ -370,8 +373,8 @@ export class AIController extends BaseController {
             ? Math.random() * this.reflexMaxMs
             : 0;
 
-        // D8/Step 2.3: 每决策 tick 恰好掷骰一次（防多 guard 候选重复掷骰偏置概率）
-        this._fatigueGateActive = this.#evaluateFatigueGuardGate();
+        // D8/Step 5: 统一疲劳意识周期（R1）——每决策 tick 更新一次，guard 压制与攻击过滤共享同一周期
+        this.#updateFatigueCycle();
 
         const sit = this.#buildSituation();
 
@@ -379,7 +382,9 @@ export class AIController extends BaseController {
 
         // Attack / Defense 候选
         for (const atk of this.kbProfile?.attacks || []) {
-            scored.push({ kind: "attack", action: atk, score: this.#scoreAttack(atk, sit) });
+            const _atkScore = this.#scoreAttack(atk, sit);
+            // 26.11.9 Step 4：#scoreAttack 侧信道带出最终化机会分量（D4/R4：机会分量 > 0 ⇔ 资格通过）
+            scored.push({ kind: "attack", action: atk, score: _atkScore, fatigueOpportunity: this._lastAttackOpportunity });
         }
         for (const d of this.kbProfile?.dodges || []) {
             scored.push({ kind: "dodge", action: d, score: this.#scoreDefense(d, sit, "dodge") });
@@ -472,6 +477,10 @@ export class AIController extends BaseController {
         scored.push({ kind: "approach", action: null, score: pos.score });
         scored.push({ kind: "hold", action: null, score: pos.holdScore });
         scored.push({ kind: "retreat", action: null, score: pos.retreatScore });
+
+        // === 26.11.9 攻击耐力计划 Step 2：Fatigue Attack Eligibility Gate（影子模式，不过滤）===
+        // D1：位于全部候选生成与评分之后、排序 / committedScoreThreshold 仲裁之前
+        this.#applyFatigueAttackGate(scored);
 
         // 排序（#scoreAttack/#scoreDefense 已有各自 jitter，positioning 内部也有 jitter）
         scored.sort((a, b) => b.score - a.score);
@@ -1058,6 +1067,8 @@ export class AIController extends BaseController {
     }
 
     #scoreAttack(attack, sit) {
+        // 26.11.9 Step 4：机会分量侧信道（每调用重置，防早退路径残留上一候选的值）
+        this._lastAttackOpportunity = null;
         const range = attack.range?.maxReach ?? 0;
         const timing = this.#getEffectiveTiming(attack.timing, this.character);
 
@@ -1372,6 +1383,13 @@ export class AIController extends BaseController {
         _breakdown.preemptive *= preemptiveW;
         _breakdown.punish     *= punishW;
         score = _breakdown.common + _breakdown.preemptive + _breakdown.punish + _breakdown.clashSeeker;
+
+        // 26.11.9 Step 4：意图权重后、乘性阶段前的机会分量快照（Gate 放行判据）
+        this._lastAttackOpportunity = {
+            preemptive: _breakdown.preemptive,
+            punish: _breakdown.punish,
+            clashSeeker: _breakdown.clashSeeker,
+        };
 
         // ---- Phase 3: Startup Utility ----
         const startupFactor = this.#computeStartupFactor(attack, sit);
@@ -1697,8 +1715,8 @@ export class AIController extends BaseController {
         }
         const defenseCanParry = kind === "guard" && (defenseAction.canParry === true);
 
-        // D8/Step 2.3: fatigueAwareness guard 资格门（tick 级掷骰结果，dodge 自然接管）
-        if (kind === "guard" && this._fatigueGateActive) {
+        // D8/Step 5: fatigueAwareness guard 资格门（统一疲劳周期 + guard 物理风险线，dodge 自然接管）
+        if (kind === "guard" && this._fatigueGuardSuppressed) {
             return 0;
         }
 
@@ -1756,41 +1774,151 @@ export class AIController extends BaseController {
     }
 
     /**
+     * 26.11.9 攻击耐力计划 Step 2：攻击族疲劳资格 Gate（影子模式）
+     * D1 逐候选标注（不改分数、不删候选——实际过滤由 attackGate.enabled 控制，Step 3 起）
+     * D2 阈值 = 0.7 - 0.5 × clamp(baseAggression,0,1)；D3 projected = (stamina - commitCost)/max，
+     *    不预扣 miss/outcome 追加费；成本经 CombatCharacter.getAttackCommitCost（与实际扣费同源）
+     * D8 双重短路：stamina.enabled=false 或 fatigueAwareness<=0 → 完全不参与，行为回归原系统
+     */
+    #applyFatigueAttackGate(scored) {
+        const st = CombatTuning.stamina;
+        if (st?.enabled === false) return;
+        if (this.fatigueAwareness <= 0) return;
+        const self = this.character;
+        if (!self?.combat) return;
+        // D5/R1：攻击过滤仅在统一疲劳周期在管时生效——掷骰失败拍 AI「没意识到疲劳」，候选正常竞争
+        if (!this._fatigueGateActive) return;
+
+        const agg = Math.max(0, Math.min(1, this.tuning.aiProfile?.baseAggression ?? 1.0));
+        const reserveThreshold = 0.7 - 0.5 * agg;
+        const filtering = st.attackGate?.enabled === true;
+
+        const wouldBlock = [];
+        const released = [];
+        for (const entry of scored) {
+            if (entry.kind !== "attack") continue;
+            const cost = self.getAttackCommitCost(entry.action?.weight);
+            const projected = Math.max(0, self.stamina - cost) / self.combat.maxStamina;
+            const blocked = projected < reserveThreshold;
+            // D4/R4：机会资格 = 机会分量 > 0；punish 无逐候选时序验证（R2），暂不放行
+            const opp = entry.fatigueOpportunity ?? null;
+            let opportunity = null;
+            if (opp?.preemptive > 0) opportunity = "preemptive";
+            else if (opp?.clashSeeker > 0) opportunity = "clashSeeker";
+            else if (opp?.punish > 0) opportunity = "punish(unqualified)";
+            entry.fatigueGate = { cost, projected, reserveThreshold, opportunity, blocked, filtering, filtered: false };
+            if (blocked) {
+                const releaseable = opportunity === "preemptive" || opportunity === "clashSeeker";
+                const label = `${entry.action?.stateName ?? "?"}(cost=${cost.toFixed(0)} proj=${(projected * 100).toFixed(0)}%` +
+                    (opportunity ? ` opp=${opportunity}${releaseable ? "→RELEASE" : "→BLOCK"}` : "→BLOCK") + ")";
+                if (filtering && releaseable) {
+                    released.push(label);
+                } else {
+                    wouldBlock.push(label);
+                    if (filtering && !releaseable) entry.fatigueGate.filtered = true;
+                }
+            }
+        }
+
+        // 实际过滤（attackGate.enabled）：倒序 splice 原地移除，排序 / committedScoreThreshold 仲裁只见候选缺席
+        if (filtering) {
+            for (let i = scored.length - 1; i >= 0; i--) {
+                if (scored[i].fatigueGate?.filtered) scored.splice(i, 1);
+            }
+        }
+
+        if (this.debugVisible && wouldBlock.length > 0) {
+            const now = performance.now();
+            if (now >= this._fatigueAttackGateLogUntil) {
+                this._fatigueAttackGateLogUntil = now + 2500;
+                console.log(
+                    `[AI-Diag] fatigueAttackGate: aware=${this.fatigueAwareness} ` +
+                    `stamina=${self.stamina.toFixed(0)}/${self.combat.maxStamina} ` +
+                    `reserve=${(reserveThreshold * 100).toFixed(0)}% ` +
+                    `wouldBlock=[${wouldBlock.join(", ")}]` +
+                    (released.length > 0 ? ` released=[${released.join(", ")}]` : "") +
+                    (filtering ? "" : " (shadow——实际过滤未启用)")
+                );
+            }
+        }
+    }
+
+    /**
      * D8/Step 2.3: fatigueAwareness guard 资格门（每决策 tick 调一次）
      * 风险判定线与规则层 D3/P1 同源（CombatCharacter _commitStaminaCost）：
      * 扣费前 stamina < guard cost × costMultiplier → 弱 guard → 必吃 clash
      * 掷骰通过 → 锁存 2.5s 或直到耐力恢复出风险区（防 200ms tick 抖动）
      */
-    #evaluateFatigueGuardGate() {
-        if (CombatTuning.stamina?.enabled === false) return false;
+    /**
+     * 26.11.9 攻击耐力计划 Step 5：统一疲劳意识周期（D5/D6/R1）
+     * 进入 = 耐力落入攻击管理区（任一候选 commit 后 reserve 不足）或 guard 风险线以下，
+     *   且无锁存时掷骰 random < awareness（aware=1 恒常在管，aware=0 永不在管）；
+     * 周期内 guard 压制与攻击过滤同时生效（消灭双掷骰）。
+     * 退出 = ratio ≥ 攻击区上沿 + 0.1 滞回（D6 固定偏移）；攻击区上沿取 maxAttackCost 口径，
+     *   保证退出点在所有候选拦截上沿之上，Step 4 已验证的影子行为不回归。
+     */
+    #updateFatigueCycle() {
+        if (CombatTuning.stamina?.enabled === false) {
+            this._fatigueGateActive = false;
+            this._fatigueGuardSuppressed = false;
+            return;
+        }
         const aware = this.fatigueAwareness;
+        if (aware <= 0.0) {
+            this._fatigueGateActive = false;
+            this._fatigueGuardSuppressed = false;
+            return;
+        }
         const self = this.character;
-        const riskLine = (CombatTuning.stamina.costs?.guard ?? 10) * (self?.costMultiplier ?? 1.0);
-        if ((self?.stamina ?? Infinity) >= riskLine) {
-            if (this._fatigueGuardLatchUntil > 0 && this.debugVisible) {
+        const st = CombatTuning.stamina;
+        const ratio = (self?.stamina ?? Infinity) / (self?.combat?.maxStamina ?? 100);
+        const agg = Math.max(0, Math.min(1, this.tuning.aiProfile?.baseAggression ?? 1.0));
+        const reserveThreshold = 0.7 - 0.5 * agg;
+        const maxCost = this.kbProfile?.attacks?.length > 0
+            ? Math.max(...this.kbProfile.attacks.map(a => self.getAttackCommitCost(a.weight)))
+            : 0;
+        const exitLine = reserveThreshold + maxCost / (self?.combat?.maxStamina ?? 100) + 0.1;
+        if (ratio >= exitLine) {
+            if (this._fatigueGateActive && this.debugVisible) {
                 console.log(
-                    `[AI-Diag] fatigueGuardGate: stamina=${(self?.stamina ?? 0).toFixed(0)} ` +
-                    `>= line=${riskLine.toFixed(0)} → 解除压制，guard 恢复资格`
+                    `[AI-Diag] fatigueCycle: ratio=${(ratio * 100).toFixed(0)}% >= exit=${(exitLine * 100).toFixed(0)}% ` +
+                    `→ 解除疲劳管理（guard/攻击门恢复资格）`
                 );
             }
-            this._fatigueGuardLatchUntil = 0;
-            return false;
+            this._fatigueCycleLatchUntil = 0;
+            this._fatigueGateActive = false;
+            this._fatigueGuardSuppressed = false;
+            return;
         }
-        if (aware >= 1.0) return true;
-        if (aware <= 0.0) return false;
-        const now = performance.now();
-        if (now < this._fatigueGuardLatchUntil) return true;
-        if (Math.random() < aware) {
-            this._fatigueGuardLatchUntil = now + 2500;
-            if (this.debugVisible) {
+        const wasActive = this._fatigueGateActive;
+        if (aware >= 1.0) {
+            this._fatigueGateActive = true;
+            if (!wasActive && this.debugVisible) {
                 console.log(
-                    `[AI-Diag] fatigueGuardGate: aware=${aware} stamina=${(self?.stamina ?? 0).toFixed(0)} ` +
-                    `< line=${riskLine.toFixed(0)} → SUPPRESS guard 2.5s (dodge 接管)`
+                    `[AI-Diag] fatigueCycle: aware=1 ratio=${(ratio * 100).toFixed(0)}% ` +
+                    `< exit=${(exitLine * 100).toFixed(0)}% → 进入疲劳管理（恒常）`
                 );
             }
-            return true;
+        } else {
+            const now = performance.now();
+            if (now < this._fatigueCycleLatchUntil) {
+                this._fatigueGateActive = true;
+            } else if (Math.random() < aware) {
+                this._fatigueCycleLatchUntil = now + 2500;
+                this._fatigueGateActive = true;
+                if (this.debugVisible) {
+                    console.log(
+                        `[AI-Diag] fatigueCycle: aware=${aware} ratio=${(ratio * 100).toFixed(0)}% ` +
+                        `< line=${(exitLine * 100).toFixed(0)}% → 进入疲劳管理 2.5s（guard 压制 + 攻击过滤）`
+                    );
+                }
+            } else {
+                this._fatigueGateActive = false;
+            }
         }
-        return false;
+        // guard 压制 = 周期在管 且 耐力低于 guard 物理风险线（Step 2.3 语义：guard 后可能归零，dodge 接管）
+        const guardLine = (st.costs?.guard ?? 10) * (self?.costMultiplier ?? 1.0);
+        this._fatigueGuardSuppressed = this._fatigueGateActive && (self?.stamina ?? Infinity) < guardLine;
     }
 
     // =========================================================================

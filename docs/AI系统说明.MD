@@ -362,11 +362,19 @@ base = throw.baseWeight(0.35)
 | `repetitionCostRate` | 0.06 | 连续用同一 attack 成本 | 教学=0.02, 精英=0.10, Boss=0.08 |
 | `attackPreferences` | `{}` | per-attack 分数乘数（默认 1.0）| 教学={swing:1.6,thrust:0.4} |
 | **`clashSeekerWeight`** | **0.0（关闭）** | **clash seeker 加分乘数（reactive 抢拼刀权重）** | **Manatarms=1.0, 盾牌类角色≥1.0；无盾角色默认 0** |
-| **`fatigueAwareness`** | **1.0（全感知）** | **弱 guard 风险区（stamina < guard 耗费×costMultiplier）的防御感知：0=全盲照举吃 clash，0.5=掷骰通过则压制 guard 2.5s（dodge 接管），1.0=风险区永不 guard** | **rabble/教学=0.0, 普通=0.5, 精英/Boss=1.0** |
+| **`fatigueAwareness`** | **1.0（全感知）** | **疲劳感知：统一疲劳意识周期（`#updateFatigueCycle`）的感知档位，同时控制攻击资格门与 guard 压制两路（R1 锁存统一）：0=全盲（低耐力仍无意义连击重招 + 照举弱 guard 吃 clash），0.5=掷骰周期，1.0=攻击门与 guard 风险线全量生效** | **rabble/教学=0.0, 普通=0.5, 精英/Boss=1.0** |
 
 `clashSeekerWeight` 与 `AITuning.attack.clashSeeker.baseBonus(0.25)` 配合使用。
 0=完全不 seek（默认），1.0=满额 reactive 加分。只有 opp 真在 startup 时才触发，
 不算主动出击意愿调整（reactive 行为）。
+
+### 疲劳感知机制（26.11.9）
+
+- **`#updateFatigueCycle`**：每 `cycleMs` 掷骰一次疲劳意识周期，`fatigueAwareness` 为通过概率；周期在管时 attack gate 过滤与 guard 压制共享同一锁存（R1，原两路独立掷骰已废弃）。guard 物理风险线（stamina < guard 耗费×costMultiplier）独立判定，不受周期压制
+- **`#applyFatigueAttackGate`**：位于全部候选评分后、仲裁前（D1），按 `reserveThreshold` 过滤耐力不足的 attack 候选（heavy 先于 light 被限制）；preemptive/clashSeeker 等机会攻击（`fatigueOpportunity > 0`）放行。不改任何 attack utility 分数与族内排序。总开关 `CombatTuning.stamina.attackGate.enabled`
+- **成本同源（R3）**：`CombatCharacter.getAttackCommitCost()` 公开查询口，AI 资格预测与实际扣费用同一规则
+- **日志标签**：`fatigueGate`（候选过滤）/ `fatigueCycle`（周期状态）/ `[AI-Diag] COMBAT`（命中事件，含 stamina/fatigueCycle 字段）
+- ⚠ 已知问题：D8 设计假设"压制 guard 后 dodge 接管"与 StateGraphDef 状态封闭（hit/guard 态无 dodge 出口）互相对消——低耐力被压制场景防御全空，详见 `plans/26.11.9 AI进攻决策引入耐力计划.MD` §6
 
 ### 三种敌人配置示例
 
