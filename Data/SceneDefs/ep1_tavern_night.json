@@ -9,7 +9,7 @@
         "orthoWidth": 26
     },
     "transition": { "fade": true, "fadeOutMs": 400, "fadeInMs": 600 },
-    "outroSequenceUrl": "Data/Sequences/ep1_outro.json",
+    "introSequenceUrl": "Data/Sequences/ep1_cs_tavern_night_intro.json",
     "entities": [
         {
             "archetype": "hero_longsword",
@@ -24,16 +24,45 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [4.2, -0.4],
+            "pos": [-6, -0.4],
             "controller": "ai",
-            "spawnIf": { "flagNot": "battle_field_1" }
+            "spawnIf": { "flagNot": "battle_tavern_night_rabble" }
+        },
+        {
+            "archetype": "manatarms_sword",
+            "id": "enemy_2",
+            "name": "manatarms",
+            "kind": "enemy",
+            "pos": [0, -1.22],
+            "controller": "ai",
+            "initialState": "CS_to_arms",
+            "spawnIf": { "flagNot": "battle_tavern_night_manatarms" },
+            "aiProfile": {
+                "clashSeekerWeight": 1.0,
+                "baseAggression": 1.0,
+                "baseDefense": 0.75,
+                "retreatDesire": 0.55
+            },
+            "aiTuningOverrides": {
+                "attack": {
+                    "baseWeight": 0.10,
+                    "repetitionCostRate": 0.32,
+                    "repetitionCostMax": 0.64,
+                    "preemptiveBonus": 0.20
+                },
+                "defense": {
+                    "activeBase": 0.95,
+                    "startupCanActBase": 0.80,
+                    "badDefensePenalty": 0.0
+                }
+            }
         }
     ],
     "walkAreas": [
         { "if": {}, "minX": -21, "maxX": 16, "minY": -1.8, "maxY": 0.4 ,
         "obstacles": [
-        { "minX": -40.5, "maxX": -20.5, "minY": 0.4, "maxY": 0.6, "label": "grass_left" },
-        { "minX": -17.2, "maxX": 20, "minY": 0.07, "maxY": 0.6, "label": "grass_right" }
+        { "minX": -40.5, "maxX": -20.5, "minY": 0.2, "maxY": 0.6, "label": "grass_left" },
+        { "minX": -17.2, "maxX": 20, "minY": -0.4, "maxY": 0.6, "label": "grass_right" }
     ]}
     ],
     "cameraBoundaries": [
@@ -45,10 +74,20 @@
         {
             "type": "battle",
             "id": "bt_field_1",
-            "pos": [2, 0, 0],
-            "size": [4, 8, 4],
-            "battleId": "battle_field_1",
-            "condition": { "flagNot": "battle_field_1" },
+            "pos": [-10, 0, 0],
+            "size": [3, 8, 4],
+            "battleId": "battle_tavern_night_rabble",
+            "condition": { "flagNot": "battle_tavern_night_rabble" },
+            "debugColor": [0, 1, 0],
+            "debugVisible": false
+        },
+        {
+            "type": "battle",
+            "id": "bt_tavern_night_manatarms",
+            "pos": [-4.5, 0, 0],
+            "size": [3, 8, 4],
+            "battleId": "battle_tavern_night_manatarms",
+            "condition": { "flagNot": "battle_tavern_night_manatarms" },
             "debugColor": [0, 1, 0],
             "debugVisible": false
         }

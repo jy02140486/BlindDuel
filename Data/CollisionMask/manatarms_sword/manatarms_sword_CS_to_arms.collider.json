@@ -1,0 +1,155 @@
+﻿{
+    "source":  {
+                   "atlasJson":  "Data/RootMotion/manatarms/manatarms_sword_CS_to_arms.json",
+                   "collisionPng":  "Data/RootMotion/manatarms/manatarms_sword_CS_to_arms.png",
+                   "rootPng":  "Data/RootMotion/manatarms/manatarms_sword_CS_to_arms.png",
+                   "pushboxPng":  null,
+                   "trailMarkerPng":  null,
+                   "collisionTypeColors":  [
+                                               {
+                                                   "key":  "hitbox",
+                                                   "type":  "hitbox",
+                                                   "subtype":  null,
+                                                   "color":  "#FFFF00"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_strong_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "strong_blade",
+                                                   "color":  "#FF0000"
+                                               },
+                                               {
+                                                   "key":  "weaponbox_weak_blade",
+                                                   "type":  "weaponbox",
+                                                   "subtype":  "weak_blade",
+                                                   "color":  "#E37800"
+                                               }
+                                           ],
+                   "pushboxColor":  "#00FF88",
+                   "trailMarkerColor":  "#00FFFF",
+                   "rootColor":  "#7082C1",
+                   "handColor":  "#FF00FF",
+                   "colorTolerance":  0,
+                   "minPixels":  6,
+                   "minRootPixels":  1,
+                   "minTrailMarkerPixels":  2,
+                   "generatedAtUtc":  "2026-11-11T06:27:04.7734717Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "manatarms_sword_CS_to_arms 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "trailMarkers":  [
+
+                                        ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "manatarms_sword_CS_to_arms 1.ase",
+                       "frameRect":  {
+                                         "x":  192,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "trailMarkers":  [
+
+                                        ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "manatarms_sword_CS_to_arms 2.ase",
+                       "frameRect":  {
+                                         "x":  384,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "trailMarkers":  [
+
+                                        ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "manatarms_sword_CS_to_arms 3.ase",
+                       "frameRect":  {
+                                         "x":  576,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "trailMarkers":  [
+
+                                        ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "manatarms_sword_CS_to_arms 4.ase",
+                       "frameRect":  {
+                                         "x":  768,
+                                         "y":  0,
+                                         "w":  192,
+                                         "h":  128
+                                     },
+                       "boxes":  [
+
+                                 ],
+                       "trailMarkers":  [
+
+                                        ],
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  124,
+                                                    "cy":  111
+                                                },
+                                       "hand":  null
+                                   }
+                   }
+               ]
+}

@@ -80,17 +80,17 @@ export function createEntityFromDef(scene, assets, entityDef) {
 // BattleDef：战斗定义
 // ---------------------------------------------------------------------------
 
-export const BATTLE_FIELD_1 = {
-    id: "battle_field_1",
+export const BATTLE_TAVERN_NIGHT_RABBLE = {
+    id: "battle_tavern_night_rabble",
     combatants: ["hero", "enemy_1"],
     // 每战斗人员配置：AI throwAmmo 缺省/0 = 无投掷能力（不装配 ThrowComponent）；player 弹药走背包
     combatantConfig: {
         enemy_1: { throwAmmo: 5, maxHp: 7 },
     },
-    stageBounds: { minX: -8, maxX: 8, minY: -0.05, maxY: 0.05 },
-    battleYBaseline: 0,
+    stageBounds: { minX: -19, maxX: -7   , minY: -0.85, maxY: -0.65 },
+    battleYBaseline: -0.76,
     onVictory: {
-        flags: ["battle_field_1"],
+        flags: ["battle_tavern_night_rabble"],
         // 胜利后推进进度 checkpoint（ep1_tavern 首个安全 spawn）；未声明则保留入场前 retry checkpoint
         checkpoint: { spawnId: "house_door" },
     },
@@ -173,6 +173,96 @@ export const BATTLE_FIELD_1 = {
                 kind: "mode",
                 clips: [
                     { type: "switchMode", atMs: 6000, modeId: "explore" }
+                ]
+            }
+        ]
+    },
+};
+
+// ---------------------------------------------------------------------------
+// tavern night 第二场战斗（manatarms，配置抄 ep1_tavern_hall_night）
+// ---------------------------------------------------------------------------
+export const BATTLE_TAVERN_NIGHT_MANATARMS = {
+    id: "battle_tavern_night_manatarms",
+    combatants: ["hero", "enemy_2"],     // enemy_2 对应 ep1_tavern_night.json 里的实体 id
+    combatantConfig: {
+        enemy_2: { throwAmmo: 0, maxHp: 6 },
+    },
+    stageBounds: { minX: -9, maxX: 7, minY: -0.85, maxY: -0.65 },
+    battleYBaseline: -0.76,
+    onVictory: {
+        flags: ["battle_tavern_night_manatarms"],
+        checkpoint: { spawnId: "house_door" },
+    },
+    duelCamera: BATTLE_TAVERN_NIGHT_RABBLE.duelCamera,
+    enterSequence: (battleDef) => ({
+        id: "enter_battle",
+        durationMs: 2000,
+        tracks: [
+            {
+                id: "hero.command",
+                kind: "actor",
+                binding: { actorId: "hero" },
+                channel: "command",
+                clips: [
+                    { type: "command", atMs: 0, command: "draw" }
+                ]
+            },
+            {
+                id: "camera",
+                kind: "camera",
+                binding: { cameraId: "duel" },
+                channel: "blend",
+                clips: [
+                    { type: "cameraBlend", startMs: 0, durationMs: 1800, to: "duel" }
+                ]
+            },
+            {
+                id: "mode",
+                kind: "mode",
+                clips: [
+                    { type: "switchMode", atMs: 1800, modeId: "battle", payload: { battleDef } }
+                ]
+            },
+            {
+                id: "enemy_2",
+                kind: "actor",
+                binding: { actorId: "enemy_2" },    
+                clips: [
+                    { type: "resumeAnimation","atMs": 50 },
+                    { type: "playAudio", "atMs": 50, id: "cloak_swirl" },
+                    { type: "command",       "atMs": 1500, command: "idle" }
+                ]
+            }
+        ]
+    }),
+    exitSequence: {
+        id: "exit_battle",
+        durationMs: 8000,
+        tracks: [
+            {
+                id: "hero.command",
+                kind: "actor",
+                binding: { actorId: "hero" },
+                channel: "command",
+                clips: [
+                    { type: "command", atMs: 2500, command: "sheath" }
+                ]
+            },
+            {
+                id: "camera",
+                kind: "camera",
+                binding: { cameraId: "explore" },
+                channel: "blend",
+                clips: [
+                    { type: "cameraBlend", startMs: 1000, durationMs: 5500, to: "explore" }
+                ]
+            },
+            {
+                id: "mode",
+                kind: "mode",
+                clips: [
+                    { type: "switchMode", atMs: 6500, modeId: "explore" }
                 ]
             }
         ]
@@ -293,7 +383,7 @@ export const PROLOGUE_BATTLE = {
         // 胜利后推进进度 checkpoint（prologue 首个安全 spawn；战败仍回 trigger 的 battle_checkpoint）
         checkpoint: { spawnId: "house_door" },
     },
-    duelCamera: BATTLE_FIELD_1.duelCamera,
+    duelCamera: BATTLE_TAVERN_NIGHT_RABBLE.duelCamera,
     // enter/exit sequence 不 override——走 SceneDef 默认 enterBattleSequence
     // （含 companion.retreat 轨道，prologue 主线需要 Charlotte 向左撤退）
 };
@@ -315,7 +405,7 @@ export const PROLOGUE_BATTLE_TUTOR = {
         flags: ["prologue_battle_tutor"],
         // 不推进 checkpoint；两场必选，最终由 react 胜利 checkpoint 推进
     },
-    duelCamera: BATTLE_FIELD_1.duelCamera,
+    duelCamera: BATTLE_TAVERN_NIGHT_RABBLE.duelCamera,
     // 序章只有 enterBattleSequence 内联于 prologue.json（含 Charlotte 撤退轨道），
     // 它绑定 hero+companion——tutor 左侧入场无需 companion 表演，直接走 BattleDef fallback
     // （ExploreMode.resolveEnterSequence 已在 SceneDef 内联优先级之后找 BattleDef.enterSequence，
@@ -422,7 +512,8 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
 // ---------------------------------------------------------------------------
 
 export const BATTLE_DEFS = {
-    [BATTLE_FIELD_1.id]: BATTLE_FIELD_1,
+    [BATTLE_TAVERN_NIGHT_RABBLE.id]: BATTLE_TAVERN_NIGHT_RABBLE,
+    [BATTLE_TAVERN_NIGHT_MANATARMS.id]: BATTLE_TAVERN_NIGHT_MANATARMS,
     [BATTLE_FIELD_2.id]: BATTLE_FIELD_2,
     [PROLOGUE_BATTLE.id]: PROLOGUE_BATTLE,
     [PROLOGUE_BATTLE_TUTOR.id]: PROLOGUE_BATTLE_TUTOR,

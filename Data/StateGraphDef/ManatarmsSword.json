@@ -193,6 +193,14 @@
       "allowMoveInput": false,
       "loop": false,
       "transitions": []
+    },
+    "CS_to_arms": {
+      "clip": "CS_to_arms",
+      "allowMoveInput": true,
+      "loop": false,
+      "transitions": [
+        
+      ]
     }
   }
 }

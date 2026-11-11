@@ -59,7 +59,8 @@ export const ASSET_MANIFEST = {
             knockdown: "./Art/Sprite/manatarms_sword/manatarms_sword_knockdown.json",
             clash: "./Art/Sprite/manatarms_sword/manatarms_sword_clash.json",
             stunned: "./Art/Sprite/manatarms_sword/manatarms_sword_stunned.json",
-            CS_provoke: "./Art/Sprite/manatarms_sword/manatarms_sword_CS_provoke.json"
+            CS_provoke: "./Art/Sprite/manatarms_sword/manatarms_sword_CS_provoke.json",
+            CS_to_arms: "./Art/Sprite/manatarms_sword/manatarms_sword_CS_to_arms.json"
         },
         npc: {
             traveller: "./Art/Sprite/NPCs/traveller.json",
@@ -128,7 +129,8 @@ export const ASSET_MANIFEST = {
             knockdown: "./Data/CollisionMask/manatarms_sword/manatarms_sword_knockdown.collider.json",
             clash: "./Data/CollisionMask/manatarms_sword/manatarms_sword_clash.collider.json",
             stunned: "./Data/CollisionMask/manatarms_sword/manatarms_sword_stunned.collider.json",
-            CS_provoke: "./Data/CollisionMask/manatarms_sword/manatarms_sword_CS_provoke.collider.json"
+            CS_provoke: "./Data/CollisionMask/manatarms_sword/manatarms_sword_CS_provoke.collider.json",
+            CS_to_arms: "./Data/CollisionMask/manatarms_sword/manatarms_sword_CS_to_arms.collider.json"
         }
     },
     animationEvents: {

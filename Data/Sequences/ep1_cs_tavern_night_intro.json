@@ -1,0 +1,22 @@
+{
+  "id": "ep1_cs_tavern_night_intro",
+  "durationMs": 2000,
+  "tracks": [
+      {
+      "id": "fx.fadein",
+      "kind": "camera",
+      "channel": "fx",
+      "clips": [
+        { "type": "cameraEffect", "atMs": 500, "effect": "fade", "durationMs": 1200, "color": "black", "from": 1, "to": 0 }
+      ]
+    },
+    {
+      "id": "enemy_2",
+      "kind": "actor",
+      "binding": { "actorId": "enemy_2" },
+      "clips": [
+        { "type": "command",       "atMs": 0, "command": "CS_to_arms", "pause": true }
+      ]
+    }
+    ]
+}
