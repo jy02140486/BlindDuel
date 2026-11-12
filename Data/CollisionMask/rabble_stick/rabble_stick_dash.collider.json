@@ -1,10 +1,12 @@
 ﻿{
     "source":  {
-                   "atlasJson":  "Data/CollisionMask/rabble_stick/rabble_stick_dash.json",
-                   "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_dash.png",
-                   "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_dash.png",
+                   "atlasJson":  ".\\Data\\CollisionMask\\rabble_stick\\rabble_stick_dash.json",
+                   "collisionPng":  ".\\Data\\CollisionMask\\rabble_stick\\rabble_stick_dash.png",
+                   "rootPng":  ".\\Data\\RootMotion\\rabble_stick\\rabble_stick_dash.png",
                    "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_dash.png",
-                   "trailMarkerPng":  "Data/TrailMarker/rabblestick/rabble_stick_dash.png",
+                   "pushboxSource":  "scan",
+                   "trailMarkerPng":  ".\\Data\\TrailMarker\\rabblestick\\rabble_stick_dash.png",
+                   "trailMarkerSource":  "scan",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -33,7 +35,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-03T01:24:41.2287060Z"
+                   "generatedAtUtc":  "2026-11-12T16:49:50.3732055Z"
                },
     "frames":  [
                    {

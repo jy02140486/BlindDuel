@@ -1,6 +1,14 @@
 # 计划索引（Plan Index）
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
-> 当前进行中：**主菜单与通关逻辑 26.11.11 已落地（步骤 1~5，剩步骤 6 全链路回归 + 战败路径回归，见 `plans/26.11.11 主菜单和通关逻辑.MD` §十落地记录）；**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；攻击耐力计划 26.11.9 已落地开闸（`plans/26.11.9 AI进攻决策引入耐力计划.MD`，已知问题见其 §6）；quart trailmarker 资产待画；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+> 当前进行中：**主菜单与通关逻辑 26.11.11 已落地（步骤 1~5，剩步骤 6 全链路回归 + 战败路径回归，见 `plans/26.11.11 主菜单和通关逻辑.MD` §十落地记录）；**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；攻击耐力计划 26.11.9 已落地开闸（`plans/26.11.9 AI进攻决策引入耐力计划.MD`，已知问题见其 §6）；quart trailmarker 已重扫修复；clash trailmarker 资产待画（主人公/rabble 各一，画完跑同款扫描命令）；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
+
+## Update Log (2026-11-12)
+- **刀光 trailmarker 数据修复 + 扫描缓存机制（源起 `plans/HandOff.MD` 交接）**：
+  - 根因：zornhut/quart/nachschlag/swing（+dash 验证）的 `.collider.json` 为过期产物（不带 `-TrailMarkerPng` 扫的），trailMarkers 全空；已全部重扫修复，游戏内刀光恢复
+  - 工具升级：`extract_collision_boxes.ps1` 新增 `.scancache` 机制——可选 mask（pushbox/trailmarker）传参则重扫并写缓存（PNG 同目录同名 `.scancache`）；漏传则按上次产物 provenance 或目录约定反查读缓存（约定探测兼容 rabblestick 无下划线目录）；PNG 新于缓存自动重扫；无缓存自动扫描建缓存；均不静默丢数据；逐帧 `Write-Progress` 进度（纯 PS 扫描大 atlas 较慢，防误判卡死）
+  - 产物新增 `source.pushboxSource` / `trailMarkerSource`（scan/cache/none）溯源字段；`.gitignore` +`*.scancache`（缓存为纯加速产物，可由 PNG+目录约定重建，不入库）
+  - `COLLIDER_UPDATE_SKILL.md` 同步：命令模板补 `-PushBoxPng`/`-TrailMarkerPng`、缓存说明、颜色表修正（strong/weak_blade 原写反）、目录命名不一致注意事项
+- **涉及文件**：`scripts/tools/extract_collision_boxes.ps1` + `COLLIDER_UPDATE_SKILL.md` + `.gitignore` + `Data/CollisionMask/` 5 个 collider.json 重扫（longswordman zornhut/quart/nachschlag + rabble_stick swing/dash）
 
 ## Update Log (2026-11-12)
 - **主菜单与通关逻辑落地（按 `plans/26.11.11 主菜单和通关逻辑.MD`，步骤 1~5 完成，剩步骤 6 全链路回归）**：

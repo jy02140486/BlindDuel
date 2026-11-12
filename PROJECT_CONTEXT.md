@@ -124,7 +124,7 @@ py .\.serve.ps1
 - 运行时 sfx 资源：`Audio/sfx/combat/*.wav`、`Audio/sfx/<分类>/`（入 AssetManifest `audio.sfx` 分组）
 
 离线工具：
-- 碰撞扫描脚本：`scripts/tools/extract_collision_boxes.ps1`
+- 碰撞扫描脚本：`scripts/tools/extract_collision_boxes.ps1`（支持 `-TrailMarkerPng` / `-PushBoxPng` 可选输入；可选 mask 采用 `.scancache` 就地缓存机制——传参则重扫并写缓存，漏传则按上次产物 provenance 或目录约定反查读缓存，PNG 新于缓存自动重扫，无缓存自动扫描建缓存，均不静默丢数据；产物 `source.pushboxSource`/`trailMarkerSource` 记录 scan/cache/none；详见 `COLLIDER_UPDATE_SKILL.md`）
 - NPC 占用盒提取脚本：`scripts/tools/extract_rootmotion_occupancy.ps1`
 - 音频切片脚本：`scripts/tools/slice_audio_pack.ps1`（Mode: Scan / Slice / EvenSplit / EvenSplitBatch）
 - 音频格式转换脚本：`scripts/tools/convert_audio_format.ps1`（采样率/位深/声道转换）
@@ -149,6 +149,8 @@ py .\.serve.ps1
    - `frames[].boxes[]`：碰撞盒
    - `frames[].anchors.root`：root 锚点
    - `frames[].trailMarkers`：刀光 marker 质心 `[{cx, cy}, ...]`（cx 升序；1 点 = 采样点收尖，2 点 = 连线中点为采样点、连线长度为宽度、连线方向为刃向截面）
+   - `source.pushboxSource` / `source.trailMarkerSource`：可选 mask 数据来源溯源（scan=本次实扫 / cache=读 `.scancache` / none=无数据）
+   - 可选 mask 缓存文件 `*.scancache`（与 mask PNG 同目录同名）：记录上次扫描结果 + 源 PNG 时间戳 + 帧名单，不入版本库（`.gitignore` 已忽略）
 7. 当前 `pushbox` 已实现：`scripts/tools/extract_collision_boxes.ps1` 支持 `-PushBoxPng` 参数扫描 pushbox 颜色（运行时为 `type="pushbox"`），`scripts/Systems/PushboxResolver.js` 从 snapshot.boxes 过滤 type==="pushbox" 做角色间分离，防止角色穿模。
 8. 当前 `weaponbox` 采用 `type = weaponbox` + `subtype = strong_blade / weak_blade`，不新增独立顶层 type。
 9. NPC 使用独立的轻量碰撞数据格式（`rootMotionOccupancyData`），由 `scripts/tools/extract_rootmotion_occupancy.ps1` 生成，仅含每帧 `anchors.root` + 固定尺寸 `occupancy.aabb`，不依赖 `.collider.json`。脚本必须扫 `Data/RootMotion/.../*.png`（root motion mask 专用 PNG，不是 `Art/Sprite` 复合 atlas——后者角色像素会覆盖 root 标记导致帧间扫描不一致）；`$OCCUPANCY_H` 固定为 `16`（不是 24），避免 AABB 中心在 root、高度过大下延导致碰撞范围虚大。

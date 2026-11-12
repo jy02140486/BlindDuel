@@ -109,6 +109,92 @@ function Extract-Markers($bmp, $fr, $target, [int]$minPixels) {
   # Sort by cx ascending so the first/second marker of a frame is stable.
   return @($markers | Sort-Object cx)
 }
+function Get-ProvenancePng([string]$outJsonPath, [string]$key) {
+  if (-not ($outJsonPath -and (Test-Path $outJsonPath))) { return $null }
+  try {
+    $prev = Get-Content -Raw $outJsonPath | ConvertFrom-Json
+    $prop = $prev.source.PSObject.Properties[$key]
+    if ($prop -and $prop.Value) { return [string]$prop.Value }
+  } catch { }
+  return $null
+}
+function Get-CacheProp($obj, [string]$name) {
+  if ($null -eq $obj) { return $null }
+  $p = $obj.PSObject.Properties[$name]
+  if ($p) { return $p.Value }
+  return $null
+}
+function Test-CacheFrameLayout($cacheData, $frameNames) {
+  if ($null -eq $cacheData) { return $false }
+  $cached = @(Get-CacheProp $cacheData 'frameNames')
+  if ($cached.Count -ne @($frameNames).Count) { return $false }
+  for ($i=0; $i -lt $cached.Count; $i++) {
+    if ($cached[$i] -ne @($frameNames)[$i]) { return $false }
+  }
+  return $true
+}
+function Get-ConventionalMaskPng([string]$atlasJsonPath, [string]$kind) {
+  if (-not ($atlasJsonPath -and (Test-Path $atlasJsonPath))) { return $null }
+  $maskDir = Split-Path -Parent $atlasJsonPath
+  $dataRoot = Split-Path -Parent (Split-Path -Parent $maskDir)
+  $character = Split-Path -Leaf $maskDir
+  $baseName = [System.IO.Path]::GetFileNameWithoutExtension($atlasJsonPath)
+  foreach ($dirName in @($character, ($character -replace '_', ''))) {
+    $p = Join-Path (Join-Path (Join-Path $dataRoot $kind) $dirName) ($baseName + '.png')
+    if (Test-Path $p) { return $p }
+  }
+  return $null
+}
+function Resolve-OptionalMask {
+  param([string]$Kind, [string]$ParamPng, [string]$ProvenanceKey, [string]$AtlasJsonPath, [string]$OutJsonPath, $FrameNames)
+  $probe = $ParamPng
+  if (-not $probe) { $probe = Get-ProvenancePng $OutJsonPath $ProvenanceKey }
+  if (-not $probe) { $probe = Get-ConventionalMaskPng $AtlasJsonPath $Kind }
+  $pngExists = [bool]($probe -and (Test-Path $probe))
+  $cachePath = $null
+  $cacheData = $null
+  $cacheValid = $false
+  if ($probe) {
+    $cachePath = [System.IO.Path]::ChangeExtension($probe, '.scancache')
+    if (Test-Path $cachePath) {
+      try { $cacheData = Get-Content -Raw $cachePath | ConvertFrom-Json } catch { }
+      if ($cacheData -and (Test-CacheFrameLayout $cacheData $FrameNames)) {
+        $cacheValid = $true
+        if ($pngExists) {
+          $pngUtc = [string](Get-CacheProp $cacheData 'sourcePngLastWriteUtc')
+          if ($pngUtc -and ((Get-Item $probe).LastWriteTimeUtc.ToString('o') -gt $pngUtc)) {
+            Write-Warning ('{0} png is newer than its cache, rescanning: {1}' -f $Kind, $probe)
+            $cacheValid = $false
+          }
+        }
+      } else {
+        Write-Warning ('{0} cache frame layout mismatch with atlas, rescanning: {1}' -f $Kind, $cachePath)
+      }
+    }
+  }
+  if ($cacheValid) { return [pscustomobject]@{ mode='cache'; png=$probe; cache=$cacheData } }
+  if ($pngExists) {
+    if (-not (Test-Path ([System.IO.Path]::ChangeExtension($probe, '.scancache'))) -or $cacheData) {
+      Write-Warning ('{0}: no valid cache, scanning to create/refresh it: {1}' -f $Kind, $probe)
+    }
+    return [pscustomobject]@{ mode='scan'; png=$probe }
+  }
+  Write-Warning ('{0}: no param, no cache, no mask png found; output frames will contain no {0} data' -f $Kind)
+  return [pscustomobject]@{ mode='none' }
+}
+function Write-ScanCache([string]$pngPath, [string]$cacheType, $frameNames, $framesData) {
+  $cachePath = [System.IO.Path]::ChangeExtension($pngPath, '.scancache')
+  $cache = [pscustomobject]@{
+    cacheType = $cacheType
+    sourcePng = $pngPath
+    sourcePngLastWriteUtc = (Get-Item $pngPath).LastWriteTimeUtc.ToString('o')
+    scannedAtUtc = [DateTime]::UtcNow.ToString('o')
+    frameNames = @($frameNames)
+    frames = $framesData
+  }
+  $cache | ConvertTo-Json -Depth 8 | Set-Content -Path $cachePath -Encoding UTF8
+  Write-Host ('{0} scan cache updated: {1}' -f $cacheType, $cachePath)
+}
 $rootColor = '#7082C1'
 $handColor = '#FF00FF'
 # Trail marker points (weapon trail): cyan, no conflict with existing scan colors
@@ -140,10 +226,44 @@ if ($TrailMarkerPng -and (Test-Path $TrailMarkerPng)) {
   $hasTrailMarker = $true
 }
 
+# Optional masks (pushbox / trailmarker): param given -> scan & refresh cache;
+# param missing -> reuse last scan result from <mask>.scancache (provenance / convention probe);
+# no cache but mask png found -> scan to create the cache.
+$frameNames = @($frames | ForEach-Object { $_.name })
+$pushboxScanFrames = @()
+$trailMarkerScanFrames = @()
+$pushboxCacheData = $null
+$pushboxProbePng = $null
+$trailMarkerCacheData = $null
+$trailMarkerProbePng = $null
+if (-not $hasPushBox) {
+  $res = Resolve-OptionalMask -Kind 'PushBox' -ParamPng $PushBoxPng -ProvenanceKey 'pushboxPng' -AtlasJsonPath $AtlasJson -OutJsonPath $OutJson -FrameNames $frameNames
+  if ($res.mode -eq 'scan') {
+    $pushboxBmp = [System.Drawing.Bitmap]::new($res.png)
+    $PushBoxPng = $res.png
+    $hasPushBox = $true
+  } elseif ($res.mode -eq 'cache') {
+    $pushboxCacheData = $res.cache
+    $pushboxProbePng = $res.png
+  }
+}
+if (-not $hasTrailMarker) {
+  $res = Resolve-OptionalMask -Kind 'TrailMarker' -ParamPng $TrailMarkerPng -ProvenanceKey 'trailMarkerPng' -AtlasJsonPath $AtlasJson -OutJsonPath $OutJson -FrameNames $frameNames
+  if ($res.mode -eq 'scan') {
+    $trailMarkerBmp = [System.Drawing.Bitmap]::new($res.png)
+    $TrailMarkerPng = $res.png
+    $hasTrailMarker = $true
+  } elseif ($res.mode -eq 'cache') {
+    $trailMarkerCacheData = $res.cache
+    $trailMarkerProbePng = $res.png
+  }
+}
+
 try {
   $tracks = @{}
   $outFrames = @()
   for ($i=0; $i -lt $frames.Count; $i++) {
+    Write-Progress -Activity ('Scanning collider: {0}' -f $AtlasJson) -Status ('frame {0}/{1}' -f ($i + 1), $frames.Count) -PercentComplete ([int](100 * ($i + 1) / $frames.Count))
     $fr = $frames[$i].data.frame
     $boxes = @()
     foreach ($scanDef in $collisionScanDefs) {
@@ -171,6 +291,7 @@ try {
       }
     }
     if ($hasPushBox) {
+      $pushboxFrameBoxes = @()
       foreach ($scanDef in $pushboxScanDefs) {
         $target = Parse-HexColor $scanDef.color
         $regions = @(Extract-Regions $pushboxBmp $fr $target | Where-Object { $_.Count -ge 6 })
@@ -180,7 +301,7 @@ try {
           if (-not $tracks.ContainsKey($trackKey)) { $tracks[$trackKey] = 0 }
           $id = '{0}_{1}' -f $trackKey, $tracks[$trackKey]
           $tracks[$trackKey] = [int]$tracks[$trackKey] + 1
-          $boxes += [pscustomobject]@{
+          $pushboxFrameBoxes += [pscustomobject]@{
             id = $id
             type = $scanDef.type
             subtype = $scanDef.subtype
@@ -192,6 +313,13 @@ try {
             pixelCount = $points.Count
           }
         }
+      }
+      $boxes += $pushboxFrameBoxes
+      $pushboxScanFrames += [pscustomobject]@{ frameIndex = $i; frameName = $frames[$i].name; boxes = $pushboxFrameBoxes }
+    } elseif ($pushboxCacheData) {
+      $cachedFrames = @($pushboxCacheData.frames)
+      if ($i -lt $cachedFrames.Count) {
+        $boxes += @($cachedFrames[$i].boxes | Where-Object { $_ })
       }
     }
     $trailMarkers = @()
@@ -212,13 +340,22 @@ try {
       anchors = [pscustomobject]@{ root = $rootAnchor; hand = $handAnchor }
     }
   }
+  Write-Progress -Activity ('Scanning collider: {0}' -f $AtlasJson) -Completed
+  if ($hasPushBox) {
+    Write-ScanCache $PushBoxPng 'pushbox' $frameNames $pushboxScanFrames
+  }
+  if ($hasTrailMarker) {
+    Write-ScanCache $TrailMarkerPng 'trailmarker' $frameNames $trailMarkerScanFrames
+  }
   $result = [pscustomobject]@{
     source = [pscustomobject]@{
       atlasJson = $AtlasJson
       collisionPng = $CollisionPng
       rootPng = $RootPng
-      pushboxPng = $(if ($hasPushBox) { $PushBoxPng } else { $null })
-      trailMarkerPng = $(if ($hasTrailMarker) { $TrailMarkerPng } else { $null })
+      pushboxPng = $(if ($hasPushBox) { $PushBoxPng } elseif ($pushboxProbePng) { $pushboxProbePng } else { $null })
+      pushboxSource = $(if ($hasPushBox) { 'scan' } elseif ($pushboxCacheData) { 'cache' } else { 'none' })
+      trailMarkerPng = $(if ($hasTrailMarker) { $TrailMarkerPng } elseif ($trailMarkerProbePng) { $trailMarkerProbePng } else { $null })
+      trailMarkerSource = $(if ($hasTrailMarker) { 'scan' } elseif ($trailMarkerCacheData) { 'cache' } else { 'none' })
       collisionTypeColors = @($collisionScanDefs | ForEach-Object { [pscustomobject]@{ key=$_.key; type=$_.type; subtype=$_.subtype; color=$_.color } })
       pushboxColor = '#00FF88'
       trailMarkerColor = $trailMarkerColor

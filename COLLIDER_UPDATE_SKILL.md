@@ -24,6 +24,8 @@
 ```
 Data/CollisionMask/{character}/       ← 碰撞遮罩（输入）
 Data/RootMotion/{character}/          ← 根运动数据（输入）
+Data/PushBox/{character}/             ← pushbox 遮罩（输入，可选）
+Data/TrailMarker/{character}/         ← 刀光 marker 遮罩（输入，可选；rabble 用 `rabblestick` 无下划线目录名）
 Data/CollisionMask/{character}/       ← .collider.json 输出到这里
 ```
 
@@ -42,8 +44,12 @@ powershell -ExecutionPolicy Bypass -File scripts/tools/extract_collision_boxes.p
   -AtlasJson "Data/CollisionMask/{character}/{character}_{action}.json" `
   -CollisionPng "Data/CollisionMask/{character}/{character}_{action}.png" `
   -RootPng "Data/RootMotion/{character}/{character}_{action}.png" `
+  -PushBoxPng "Data/PushBox/{character}/{character}_{action}.png" `
+  -TrailMarkerPng "Data/TrailMarker/{character}/{character}_{action}.png" `
   -OutJson "Data/CollisionMask/{character}/{character}_{action}.collider.json"
 ```
+
+> **扫描缓存（.scancache）**：传了 `-PushBoxPng` / `-TrailMarkerPng` 时正常重扫，并把结果就地写入 mask PNG 同目录同名 `.scancache` 文件（如 `longswordman_clash.scancache`）。没传时自动回退：按上次产物 `source.pushboxPng` / `source.trailMarkerPng` 反查，或按目录约定探测（`Data/{PushBox|TrailMarker}/{character}` 及去下划线目录，文件名同 atlas basename）。有有效缓存读缓存；PNG 比缓存新 → 自动重扫刷新缓存；无缓存 → 自动扫描建缓存；只有连 mask PNG 都找不到才 WARNING（该 clip 真无此类数据）。扫描过程逐帧显示进度条。`.scancache` 与 PNG 一起入库；只重扫某类 mask 时其余参数可以不传。
 
 ### 批量处理所有 action
 
@@ -68,10 +74,15 @@ Get-ChildItem "$collisionDir/*.json" -Exclude "*.collider.json" | ForEach-Object
     return
   }
 
+  $pushPng = "Data/PushBox/$character/$($_.BaseName).png"
+  $trailPng = "Data/TrailMarker/$character/$($_.BaseName).png"
+
   powershell -ExecutionPolicy Bypass -File scripts/tools/extract_collision_boxes.ps1 `
     -AtlasJson $atlasJson `
     -CollisionPng $collisionPng `
     -RootPng $rootPng `
+    -PushBoxPng $(if (Test-Path $pushPng) { $pushPng }) `
+    -TrailMarkerPng $(if (Test-Path $trailPng) { $trailPng }) `
     -OutJson $outJson
 
   Write-Host "OK: $action -> $outJson"
@@ -114,9 +125,11 @@ powershell -ExecutionPolicy Bypass -File scripts/tools/extract_rootmotion_occupa
 | 颜色 | 含义 |
 |---|---|
 | `#FFFF00` | hitbox（受击框） |
-| `#E37800` | weaponbox + subtype = strong_blade |
-| `#FF0000` | weaponbox + subtype = weak_blade |
+| `#FF0000` | weaponbox + subtype = strong_blade（防御侧/刀背） |
+| `#E37800` | weaponbox + subtype = weak_blade（攻击侧/刀刃） |
 | `#7082C1` | root（根锚点，两个脚本都扫描此颜色） |
+| `#00FF88` | pushbox（`-PushBoxPng` 输入，以脚本内 `PushBoxColor` 为准） |
+| `#00FFFF` | trailmarker（`-TrailMarkerPng` 输入，点位非盒，每帧最多 2 个） |
 
 ---
 
@@ -127,3 +140,5 @@ powershell -ExecutionPolicy Bypass -File scripts/tools/extract_rootmotion_occupa
 3. **最小像素**：碰撞扫描要求连通域 ≥ 6 像素才计入（root 无此限制）。
 4. **Root 缺失回退**：occupancy 脚本中，若某帧无 root 像素，会复用上一帧的 root 位置。
 5. **旧脚本路径**：`scripts/extract_collision_boxes.ps1` 是旧文件（文件锁残留），请使用 `scripts/tools/` 下的版本。
+6. **可选输入参数遗漏与缓存回退**：漏传参数时脚本会回退读 `.scancache` 缓存，无缓存则按目录约定探测 PNG 自动扫描建缓存（产物 `source.pushboxSource` / `trailMarkerSource` 记录 scan/cache/none 来源）；只有连 mask PNG 都找不到才 WARNING。旧版 `.collider.json` 若是特性上线前扫的，可能连字段都没有（如 `trailMarkers`），判数据过期时按此排查。
+7. **目录命名不一致**：TrailMarker/PushBox 下 rabble 的目录是 `rabblestick`（无下划线），而 CollisionMask/RootMotion 是 `rabble_stick`，命令里三处路径要分别核对。

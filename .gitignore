@@ -1,3 +1,5 @@
 test_serve.txt
 logs/
 Audio/sfx/_raw
+*.scancache
+*.*~
