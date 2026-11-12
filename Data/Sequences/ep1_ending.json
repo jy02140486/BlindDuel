@@ -1,0 +1,25 @@
+{
+    "id": "ep1_ending",
+    "durationMs": 3000,
+    "tracks": [
+        {
+            "channel": "camera",
+            "clips": [
+                {
+                    "type": "cameraEffect",
+                    "effect": "fade",
+                    "startMs": 0,
+                    "durationMs": 1500,
+                    "color": "black",
+                    "from": 0,
+                    "to": 1
+                },
+                {
+                    "type": "callback",
+                    "atMs": 2500,
+                    "fn": "battle_on_ending_black"
+                }
+            ]
+        }
+    ]
+}

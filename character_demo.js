@@ -14,8 +14,9 @@ async function start() {
     window.resetWorldState = () => game.resetWorldState();
     window.SCENARIO = SCENARIO;
 
-    // 暂停键监听（P 或 Esc）
+    // 暂停键监听（P 或 Esc）；主菜单/流程过渡期屏蔽，避免菜单期间暂停或切相机
     window.addEventListener("keydown", (e) => {
+        if (!game.gameFlowManager?.isPlaying()) return;
         if (e.key.toLowerCase() === "p" || e.key === "Escape") {
             game.togglePause();
         }
@@ -44,7 +45,8 @@ async function start() {
      }
     });
 
-    await game.init();
+    // 真延迟 init（计划 §4.2）：首屏交给主菜单，init 由 New Game / Continue 触发
+    game.gameFlowManager.showMainMenu();
 
     window.addEventListener("resize", () => {
         game.onResize();

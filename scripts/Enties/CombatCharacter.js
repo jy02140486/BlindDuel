@@ -405,11 +405,11 @@ export class CombatCharacter extends CharacterBase {
         if (stateDef?.attackActive === true) {
             cost = this.#attackBaseCost(stateDef.attackWeight);
         } else if (stateDef?.guardActive === true) {
-            cost = costs.guard;
+            cost = st.costs.guard;
             // D3/P1：判定线 = commit 时刻扣费前的耐力，本次 guard 全程共用这个结果
             insufficientGuard = this.combat.stamina < cost * this.combat.costMultiplier;
         } else if (stateDef?.dodgeActive === true) {
-            cost = costs.dodge;
+            cost = st.costs.dodge;
         }
 
         this.combat.staminaInsufficientGuard = insufficientGuard;

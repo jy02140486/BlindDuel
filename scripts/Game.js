@@ -1,4 +1,4 @@
-import { WorldState } from "./WorldState.js";
+import { WorldState, INITIAL_SCENE_ID } from "./WorldState.js";
 import { QuestManager } from "./Systems/QuestManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
 import { Scene } from "./Scene.js";
@@ -27,6 +27,7 @@ import { AudioManager } from "./Systems/AudioManager.js";
 import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
 import { AnimationEventBus } from "./Systems/AnimationEventBus.js";
 import { AIKnowledgeRegistry } from "./Systems/AI/AIKnowledgeRegistry.js";
+import { GameFlowManager } from "./Systems/GameFlowManager.js";
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -61,6 +62,8 @@ export class Game {
             game: this,
         });
         this._checkpoint = null;
+        this._flowReady = false;
+        this.gameFlowManager = null;
 
         // 影子稳定对象（B1）：创建但不接入 Scene，Scene 仍用私有实例
         this.cameraManager = null;
@@ -91,7 +94,7 @@ export class Game {
         console.log("[Game.bootstrap] B2 done — assets loaded, keys=", Object.keys(this.assets).length);
 
         this.inputSystem = new InputSystem({ debugEnabled: true });
-        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: false });
+        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: true });
         this.playerController = new PlayerController(this.inputSystem, null);
 
         this.cameraRig = new DuelCameraRig(DEFAULT_DUEL_CAMERA);
@@ -164,12 +167,25 @@ export class Game {
             "audioManager=", !!this.audioManager,
             "assets=", !!this.assets);
 
+        this.gameFlowManager = new GameFlowManager(this);
+
         this._setupDebugConsole();
     }
 
     async init() {
         const sceneId = this.worldState.currentSceneId;
         const sceneDef = await resolveSceneDef(sceneId);
+        // 二次进入（ending 回主菜单后再 New Game）：旧 Scene 已承载实体/订阅，走完整替换避免泄漏；
+        // 冷启动（首次）scene 为空壳，直接复用
+        if (this._flowReady) {
+            this.scene.dispose();
+            this.scene = new Scene(this.engine, this.canvas, {
+                worldState: this.worldState,
+                questManager: this.questManager,
+                inventoryManager: this.inventoryManager,
+                game: this,
+            });
+        }
         this.scene._loading = true;
         this.cameraManager.setFadeImmediate("black", 1);
         this._executeOnEnterDirectives(sceneDef);
@@ -191,6 +207,7 @@ export class Game {
         // 先发起 intro（即使 fetch 是异步的，_loading 继续阻止 fixedUpdate）
         this._playIntro(sceneDef);
         this.scene._loading = false;
+        this._flowReady = true;
     }
 
     _playIntro(sceneDef) {
@@ -225,19 +242,23 @@ export class Game {
 
     fixedUpdate(clock) {
         this.clock = clock;
+        if (!this._flowReady) return;
         this.scene.fixedUpdate(clock);
     }
 
     updateRender(clock) {
         this.clock = clock;
+        if (!this._flowReady) return;
         this.scene.updateRender(clock);
     }
 
     render() {
+        if (!this._flowReady) return;
         this.scene.render();
     }
 
     onResize() {
+        if (!this._flowReady) return;
         this.scene.onResize();
     }
 
@@ -252,6 +273,7 @@ export class Game {
         this.buffBar?.hide?.();
         this.hpBar?.hide?.();
         this.dialogueBubble?.dispose?.();
+        this.gameFlowManager?.dispose?.();
         this.gameModeManager = null;
         this.sceneSequencer = null;
         this.combatSystem = null;
@@ -269,9 +291,18 @@ export class Game {
         this.worldState.flags = {};
         this.worldState.quests = {};
         this.worldState.sceneStates = {};
-        this.worldState.currentSceneId = "prologue";
+        // 对齐 WorldState 构造器的真实初始值（原 prologue 为历史遗留不一致，
+        // 会导致 New Game 进错场景；ep1_tavern_night 有 house_door spawn，restoreCheckpoint 无档 fallback 兼容）
+        this.worldState.currentSceneId = INITIAL_SCENE_ID;
         this.worldState.currentSpawnId = null;
         console.log('[Game] WorldState reset to scenario', this.worldState.scenario);
+    }
+
+    // New Game：清 _checkpoint + Inventory（计划 §5.4 方案 A）
+    prepareNewRun() {
+        this.resetWorldState();
+        this._checkpoint = null;
+        this.inventoryManager.items = [];
     }
 
     saveCheckpoint(sceneId, spawnId, opts = {}) {
@@ -298,23 +329,51 @@ export class Game {
         console.log('[Checkpoint] saved', { sceneId, spawnId, scenario: this._checkpoint.scenario, hp: this._checkpoint.hp, heroPos, items: this._checkpoint.inventory.length, buffs: this._checkpoint.buffs.length });
     }
 
-    async restoreCheckpoint(opts = {}) {
+    // 战斗/剧情运行时统一清理入口（计划 §三）：
+    //   - AudioManager 内部状态由 detachScene 自清（见 plans/commits_detailed/26.7.28 战败重置后 ambient 不响修复）
+    //   - GameMode context 残留由此显式调 currentMode.exit() 清：
+    //     start() 语义为首次启动、不调 prevMode.exit()（与 switchMode 不同），若不补调，
+    //     上一场 BattleMode.exit 被跳过 → context.basePosition/target/fighterDistance 残留 →
+    //     下一轮 enterBattleSequence blend 期间 DuelCameraRig.compute 读残值 → 镜头突跳。
+    //   - 跳过 explore 的无意义 exit。
+    // 幂等：BattleMode.exit 各段均有守卫，重复调用安全。
+    // 供 restoreCheckpoint / GameFlowManager（回主菜单、New Game）共用。
+    teardownGameplay() {
         const currentMode = this.gameModeManager?.currentMode;
-        const fadeInDurationMs = opts.fadeInDurationMs ?? 2000;
-        // 检查点重置的统一清理入口（职责划分）：
-        //   - AudioManager 内部状态（_audioResumeDone/_activeSounds）由 detachScene 自清
-        //     （见 plans/commits_detailed/26.7.28 战败重置后 ambient 不响修复）
-        //   - GameMode 的 context 残留由此处显式调 currentMode.exit() 清
-        //     原因：战败路径 defeatSequence → restoreCheckpoint → 新 Scene.init → start("explore")，
-        //     start() 语义为首次启动、不调 prevMode.exit()（与 switchMode 不同），
-        //     若不在此处补调，上一场 BattleMode.exit 会被跳过，
-        //     context.basePosition/target/fighterDistance 残留上一场战斗的值，
-        //     下一轮 enterBattleSequence blend 期间 DuelCameraRig.compute 读残值，
-        //     安全网失效 → zoomT 被残值拉偏 → switchMode 后新值突跳 → "blend 后朝主人公缩放"。
-        // 跳过 explore→explore 的无意义 exit/enter。
         if (currentMode && typeof currentMode.exit === "function" && currentMode.id !== "explore") {
             currentMode.exit();
         }
+    }
+
+    // 通关后卸载场景，退回冷启动等效态：之后 New Game（init 复用空壳）/
+    // Continue（_loadSceneInternal 每次新建 Scene）都走既有路径，无需特殊分支
+    unloadScene() {
+        if (!this._flowReady) return;
+        this.teardownGameplay();
+        this.scene?.dispose();
+        this.scene = new Scene(this.engine, this.canvas, {
+            worldState: this.worldState,
+            questManager: this.questManager,
+            inventoryManager: this.inventoryManager,
+            game: this,
+        });
+        // sharedContext 是长命对象，清掉场景级引用避免滞留已卸载场景的 JS 对象。
+        // 注意 cameraBasePosition/cameraTarget 是 bootstrap 创建的复用 Vector3
+        //（Scene.init 只读回不新建，见 Scene.js "复用 Vector3" 注释），不在清理之列
+        for (const key of [
+            "scene", "babylonScene", "entityPool", "actorRegistry", "entityRegistry",
+            "controllerRegistry", "character", "rabbleController", "rabbleStick",
+            "pushboxResolver", "stageBoundary", "walkArea", "sceneVisualSystem",
+            "sceneDef", "battleDefs", "stageMaskData", "camera", "pendingBattleSession",
+        ]) {
+            this.sharedContext[key] = null;
+        }
+        this._flowReady = false;
+    }
+
+    async restoreCheckpoint(opts = {}) {
+        const fadeInDurationMs = opts.fadeInDurationMs ?? 2000;
+        this.teardownGameplay();
         const cp = this._checkpoint;
         if (!cp) {
             console.log('[Checkpoint] none saved, resetting to initial state');

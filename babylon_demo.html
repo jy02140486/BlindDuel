@@ -102,6 +102,87 @@
             min-height: 24px;
             z-index: 500;
         }
+        #main-menu, #menu-subview {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.6);
+            user-select: none;
+        }
+        #main-menu.hidden, #menu-subview.hidden { display: none; }
+        .menu-title {
+            font-size: 64px;
+            letter-spacing: 12px;
+            color: #e8e2d0;
+            text-shadow: 0 0 18px rgba(0, 0, 0, 0.8);
+        }
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 220px;
+        }
+        .menu-buttons button, #menu-subview-back {
+            padding: 10px 24px;
+            font-size: 20px;
+            color: #e8e2d0;
+            background: rgba(20, 22, 30, 0.85);
+            border: 1px solid rgba(232, 226, 208, 0.35);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .menu-buttons button:hover:not(:disabled), #menu-subview-back:hover {
+            background: rgba(60, 64, 80, 0.9);
+            border-color: rgba(232, 226, 208, 0.8);
+        }
+        .menu-buttons button:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+        #menu-subview-title {
+            font-size: 36px;
+            color: #e8e2d0;
+            letter-spacing: 6px;
+        }
+        #menu-subview-content {
+            max-width: 720px;
+            max-height: 55vh;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #c9c4b4;
+            text-align: center;
+        }
+        .menu-subview-line { white-space: pre-wrap; }
+        #menu-subview-back { margin-top: 8px; }
+        #ending-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            z-index: 1000;
+            background: #000;
+            user-select: none;
+        }
+        #ending-overlay.hidden { display: none; }
+        #ending-overlay .ending-text {
+            font-size: 44px;
+            letter-spacing: 8px;
+            color: #e8e2d0;
+        }
+        #ending-overlay .ending-hint {
+            font-size: 16px;
+            letter-spacing: 4px;
+            color: #8a8676;
+        }
     </style>
 </head>
 <body>
@@ -112,6 +193,20 @@
         <div id="buff-bar"></div>
     </div>
     <div id="dialogue-bubble-container"></div>
+    <div id="main-menu" class="hidden">
+        <div class="menu-title">BLIND DUEL</div>
+        <div class="menu-buttons">
+            <button id="menu-btn-new-game">New Game</button>
+            <button id="menu-btn-continue">Continue</button>
+            <button id="menu-btn-how-to-play">How to Play</button>
+            <button id="menu-btn-credits">Credits</button>
+        </div>
+    </div>
+    <div id="menu-subview" class="hidden">
+        <div id="menu-subview-title"></div>
+        <div id="menu-subview-content"></div>
+        <button id="menu-subview-back">Back</button>
+    </div>
     <script type="module" src="./character_demo.js?v=20260604"></script>
 </body>
 </html>

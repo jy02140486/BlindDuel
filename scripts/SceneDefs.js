@@ -55,6 +55,11 @@ export function createEntityFromDef(scene, assets, entityDef) {
     }
     const entity = factory(scene, assets, entityDef);
 
+    // 实例级初始状态：构造后 enterState 覆盖，不改共享 stateGraph
+    if (entityDef.initialState && typeof entity.enterState === "function") {
+        entity.enterState(entityDef.initialState);
+    }
+
     // 覆盖 id / name（工厂函数内部设了 name，这里按 def 覆盖）
     entity.id = entityDef.id ?? entityDef.name ?? entity.id;
     if (entityDef.name) {
@@ -193,6 +198,12 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
     onVictory: {
         flags: ["battle_tavern_night_manatarms"],
         checkpoint: { spawnId: "house_door" },
+        // 通关 ending（计划 §5.1）：播黑屏淡出 sequence → 黑屏 callback 推进 scenario → 通关画面 → 主菜单
+        ending: {
+            text: "EPISODE 1 COMPLETE",
+            scenario: SCENARIO.EP1_COMPLETED,
+            sequenceUrl: "./Data/Sequences/ep1_ending.json",
+        },
     },
     duelCamera: BATTLE_TAVERN_NIGHT_RABBLE.duelCamera,
     enterSequence: (battleDef) => ({

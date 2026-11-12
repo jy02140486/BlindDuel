@@ -101,5 +101,10 @@ export const CombatTuning = {
         slowdownMax: 0.4,
         /** 空耐力 dodge 位移缩放下限（0.5 = 位移减半） */
         dodgeScaleFloor: 0.5,
+        /** 26.11.9 攻击耐力计划：攻击族疲劳资格 Gate 总开关（D8）
+         *  false/缺省 = 影子模式（仅诊断日志，不过滤候选）；true = 实际过滤（Step 3 起） */
+        attackGate: {
+            enabled: true,
+        },
     },
 };

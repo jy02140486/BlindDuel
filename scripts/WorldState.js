@@ -1,10 +1,12 @@
+export const INITIAL_SCENE_ID = "ep1_tavern_night";
+
 export class WorldState {
     constructor() {
         this.scenario = 0;
         this.flags = {};
         this.quests = {};
         this.sceneStates = {};
-        this.currentSceneId = "prologue";
+        this.currentSceneId = INITIAL_SCENE_ID;
         this.currentSpawnId = null;
         this._listeners = [];
     }

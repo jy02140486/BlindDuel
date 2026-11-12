@@ -173,10 +173,16 @@
         "pitch": [0.64, 0.72],
         "bus": "sfx"
     },
-        "on_draw_sheath": {
+    "on_draw_sheath": {
         "clips": ["./Audio/sfx/weapon/50822__scriptique__super-slow-slide.wav"],
         "volume": 0.9,
         "pitch": [0.84, 0.96],
         "bus": "sfx"
+    },
+    "ui_button_click": {
+        "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
+        "volume": 0.5,
+        "pitch": [1.3, 1.5],
+        "bus": "ui"
     }
 }
