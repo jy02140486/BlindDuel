@@ -1,14 +1,27 @@
 {
     "id": "ep1_ending",
-    "durationMs": 3000,
+    "durationMs": 5000,
     "tracks": [
         {
+            "id": "prop_wagon.lifecycle",
+            "kind": "actor",
+            "binding": { "actorId": "prop_wagon" },
+            "channel": "command",
+            "clips": [
+                { "type": "command", "atMs": 0, "command": "wait" },
+                { "type": "command", "atMs": 100, "command": "whip" },
+                 { "type": "moveActorByDirection", "startMs": 1300, "durationMs": 2700,"dir": [1, 0],"speed":10},
+                { "type": "command", "atMs": 3900, "command": "drive" }
+            ]
+        },{
             "channel": "camera",
             "clips": [
+                { "type": "setCameraFrame", "atMs": 20, "center": [3.8, 2, 0], "height": 2, "orthoWidth": 26 },
+                { "type": "cameraBlend", "startMs": 20, "durationMs": 3500, "to": "scripted" },
                 {
                     "type": "cameraEffect",
                     "effect": "fade",
-                    "startMs": 0,
+                    "startMs": 3000,
                     "durationMs": 1500,
                     "color": "black",
                     "from": 0,
@@ -16,7 +29,7 @@
                 },
                 {
                     "type": "callback",
-                    "atMs": 2500,
+                    "atMs": 4500,
                     "fn": "battle_on_ending_black"
                 }
             ]

@@ -90,7 +90,7 @@ export const BATTLE_TAVERN_NIGHT_RABBLE = {
     combatants: ["hero", "enemy_1"],
     // 每战斗人员配置：AI throwAmmo 缺省/0 = 无投掷能力（不装配 ThrowComponent）；player 弹药走背包
     combatantConfig: {
-        enemy_1: { throwAmmo: 5, maxHp: 7 },
+        enemy_1: { throwAmmo: 5, maxHp: 1 },
     },
     stageBounds: { minX: -19, maxX: -7   , minY: -0.85, maxY: -0.65 },
     battleYBaseline: -0.76,
@@ -103,7 +103,7 @@ export const BATTLE_TAVERN_NIGHT_RABBLE = {
         zoomMinDistance: 3.2,
         zoomMaxDistance: 6.4,
         orthoMinWidth: 16,
-        orthoMaxWidth: 32,
+        orthoMaxWidth: 28,
         perspMinDistance: 15,
         perspMaxDistance: 35,
         minCameraHeight: 3.2,
@@ -191,7 +191,7 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
     id: "battle_tavern_night_manatarms",
     combatants: ["hero", "enemy_2"],     // enemy_2 对应 ep1_tavern_night.json 里的实体 id
     combatantConfig: {
-        enemy_2: { throwAmmo: 0, maxHp: 6 },
+        enemy_2: { throwAmmo: 0, maxHp: 1 },
     },
     stageBounds: { minX: -9, maxX: 7, minY: -0.85, maxY: -0.65 },
     battleYBaseline: -0.76,
@@ -216,7 +216,9 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
                 binding: { actorId: "hero" },
                 channel: "command",
                 clips: [
-                    { type: "command", atMs: 0, command: "draw" }
+                    { type: "inputLock", atMs: 0, locked: true },
+                    { type: "command", atMs: 0, command: "draw" },
+                    { type: "inputLock", atMs: 2000, locked: false }
                 ]
             },
             {
@@ -257,7 +259,9 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
                 binding: { actorId: "hero" },
                 channel: "command",
                 clips: [
-                    { type: "command", atMs: 2500, command: "sheath" }
+                    { type: "inputLock", atMs: 0, locked: true },
+                    { type: "command", atMs: 2500, command: "sheath" },
+                    { type: "inputLock", atMs: 7500, locked: false }
                 ]
             },
             {
@@ -266,14 +270,17 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
                 binding: { cameraId: "explore" },
                 channel: "blend",
                 clips: [
-                    { type: "cameraBlend", startMs: 1000, durationMs: 5500, to: "explore" }
+                    { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 2, orthoWidth: 20 },
+                   { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
+                   
+                   { type: "cameraBlend", startMs: 500, durationMs: 5500, to: "explore" }
                 ]
             },
             {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 6500, modeId: "explore" }
+                    { type: "switchMode", atMs: 7500, modeId: "explore" }//earlier switch for playing ending correctly in last battle
                 ]
             }
         ]
@@ -492,8 +499,7 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
                 channel: "command",
                 clips: [
                     { type: "inputLock", atMs: 0, locked: true },
-                    { type: "command", atMs: 2500, command: "sheath" },
-                    { type: "inputLock", atMs: 6000, locked: false }
+                    { type: "command", atMs: 2500, command: "sheath" }
                 ]
             },
             {

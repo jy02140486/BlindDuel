@@ -78,7 +78,8 @@ export const ASSET_MANIFEST = {
             prologue_rabble_flee2: "./Art/Sprite/CS_Chars/prologue_rabble_flee2.json",
             prologue_rabble_flee3: "./Art/Sprite/CS_Chars/prologue_rabble_flee3.json",
             ep1_charlotte_sleep: "./Art/Sprite/CS_Chars/ep1_charlotte_sleep.json",
-            ep1_rabble_kidnap_charlotte: "./Art/Sprite/CS_Chars/ep1_rabble_kidnap_charlotte.json"
+            ep1_rabble_kidnap_charlotte: "./Art/Sprite/CS_Chars/ep1_rabble_kidnap_charlotte.json",
+            ep1_wagon: "./Art/Sprite/CS_Chars/ep1_wagon.json"
         },
         environment: {
             altar: "./Art/Environment/altar.json"
@@ -184,7 +185,8 @@ export const ASSET_MANIFEST = {
             prologue_rabble_flee2: "./Data/RootMotion/CS_Chars/prologue_rabble_flee2.json",
             prologue_rabble_flee3: "./Data/RootMotion/CS_Chars/prologue_rabble_flee3.json",
             ep1_charlotte_sleep: "./Data/RootMotion/CS_Chars/ep1_charlotte_sleep.json",
-            ep1_rabble_kidnap_charlotte: "./Data/RootMotion/CS_Chars/ep1_rabble_kidnap_charlotte.json"
+            ep1_rabble_kidnap_charlotte: "./Data/RootMotion/CS_Chars/ep1_rabble_kidnap_charlotte.json",
+            ep1_wagon: "./Data/RootMotion/CS_Chars/ep1_wagon.json"
         }
     },
     occupancy: {

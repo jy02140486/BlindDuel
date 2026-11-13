@@ -1,0 +1,202 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/CS_Chars/ep1_wagon.json",
+                   "rootAtlasPng":  "Data/RootMotion/CS_Chars/ep1_wagon.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  16,
+                   "generatedAtUtc":  "2026-11-13T04:45:52.8901403Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "ep1_wagon 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "ep1_wagon 1.ase",
+                       "frameRect":  {
+                                         "x":  256,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "ep1_wagon 2.ase",
+                       "frameRect":  {
+                                         "x":  512,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "ep1_wagon 3.ase",
+                       "frameRect":  {
+                                         "x":  768,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  4,
+                       "frameName":  "ep1_wagon 4.ase",
+                       "frameRect":  {
+                                         "x":  1024,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  5,
+                       "frameName":  "ep1_wagon 5.ase",
+                       "frameRect":  {
+                                         "x":  1280,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  6,
+                       "frameName":  "ep1_wagon 6.ase",
+                       "frameRect":  {
+                                         "x":  1536,
+                                         "y":  0,
+                                         "w":  256,
+                                         "h":  160
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  131.5,
+                                                    "cy":  148.5
+                                                },
+                                       "action":  {
+                                                      "cx":  128,
+                                                      "cy":  128
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  131.5,
+                                         "cy":  148.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   }
+               ]
+}

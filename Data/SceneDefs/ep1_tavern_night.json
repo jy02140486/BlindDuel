@@ -24,7 +24,7 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [-6, -0.4],
+            "pos": [-6.4, -0.4],
             "controller": "ai",
             "spawnIf": { "flagNot": "battle_tavern_night_rabble" }
         },
@@ -56,6 +56,25 @@
                     "badDefensePenalty": 0.0
                 }
             }
+        },
+        {
+            "archetype": "prop",
+            "id": "prop_wagon",
+            "name": "prop_wagon",
+            "kind": "prop",
+            "pos": [7.84, -2, 0],
+            "controller": "none",
+            "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_wagon.png",
+            "atlasKey": "csChars.ep1_wagon",
+            "frameWidth": 7.68,
+            "frameHeight": 4.8,
+            "clips": {
+                "wait":  { "mode": "hold", "tag": "wait" },
+                "whip":  { "mode": "hold", "tag": "whip" },
+                "drive": { "mode": "loop", "tag": "drive" }
+            },
+            "initialClip": "wait",
+            "autoPlay": false
         }
     ],
     "walkAreas": [
