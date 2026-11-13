@@ -263,6 +263,7 @@ export class Game {
     }
 
     dispose() {
+        this._flowReady = false;
         this.scene?.dispose();
         this.cameraManager?.dispose();
         this.inputSystem?.dispose();

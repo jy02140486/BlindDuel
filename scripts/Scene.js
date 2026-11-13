@@ -453,6 +453,7 @@ export class Scene {
             return;
         }
 
+        if (!sceneSequencer) return;
         sceneSequencer.fixedUpdate(clock);
         this._restoreEntityPositions();
         this._game.gameModeManager.fixedUpdate(dtMs, tickCount);
@@ -499,6 +500,7 @@ export class Scene {
             if (sceneSequencer) sceneSequencer.updateRender(dtMs);
             return;
         }
+        if (!sceneSequencer) return;
         sceneSequencer.sample(clock.renderTime);
         this._interpolateEntities(clock.renderAlpha);
         this._game.gameModeManager.updateRender(dtMs);

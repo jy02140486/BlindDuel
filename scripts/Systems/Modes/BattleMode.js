@@ -337,6 +337,14 @@ export class BattleMode extends BaseMode {
                 this.#disposeCarriedSprite(id);
                 continue;
             }
+            // 打断守卫：thrower 已离开 throwActive 状态（投掷前摇被命中/动画播完等），
+            // throw_release 不会再触发 → carried sprite 会定在屏幕上，主动清理。
+            // 幂等检查覆盖所有打断路径，比订阅状态切换事件更稳。
+            const stateDef = thrower.stateGraph?.states?.[thrower.currentStateName];
+            if (stateDef?.throwActive !== true) {
+                this.#disposeCarriedSprite(id);
+                continue;
+            }
             const hand = thrower.getHandAnchorWorld();
             if (hand) {
                 // Keep carried sprite slightly in front of thrower to avoid prop occlusion
