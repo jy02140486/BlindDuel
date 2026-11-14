@@ -24,7 +24,7 @@
             "id": "enemy_1",
             "name": "rabble_stick",
             "kind": "enemy",
-            "pos": [-6.4, -0.4],
+            "pos": [-7.4, -0.4],
             "controller": "ai",
             "spawnIf": { "flagNot": "battle_tavern_night_rabble" }
         },
@@ -93,7 +93,7 @@
         {
             "type": "battle",
             "id": "bt_field_1",
-            "pos": [-10, 0, 0],
+            "pos": [-12, 0, 0],
             "size": [3, 8, 4],
             "battleId": "battle_tavern_night_rabble",
             "condition": { "flagNot": "battle_tavern_night_rabble" },
@@ -109,6 +109,16 @@
             "condition": { "flagNot": "battle_tavern_night_manatarms" },
             "debugColor": [0, 1, 0],
             "debugVisible": false
+        }
+    ],
+    "cutsceneInvokers": [
+        {
+            "id": "ep1_ending",
+            "sequenceUrl": "Data/Sequences/ep1_ending.json",
+            "armDelayMs": 500,
+            "flagOnPlay": "ep1_ending_played",
+            "condition": { "scenarioMin": 203, "flagNot": "ep1_ending_played" },
+            "ending": { "text": "EPISODE 1 COMPLETE", "scenario": 210 }
         }
     ],
     "environment": {

@@ -17,9 +17,8 @@ export class BattleMode extends BaseMode {
 
     enter(payload) {
         const { cameraManager, actorRegistry } = this.context;
-        // 战斗结束只处理一次（#checkBattleEnd 每帧调用；ending 路径还需冻结战斗模拟）
+        // 战斗结束只处理一次（#checkBattleEnd 每帧调用）
         this._battleEndHandled = false;
-        this._ending = false;
 
         // active session：优先 switchMode clip 注入的 payload.session（ExploreMode 第 3 步），
         // 兜底 sharedContext.pendingBattleSession。本场 player/opponent 只从 session 身份获取，
@@ -146,7 +145,6 @@ export class BattleMode extends BaseMode {
     }
 
     exit() {
-        this.context.sequenceHandlers?.delete("battle_on_ending_black");
         for (const combatant of this._combatants ?? []) {
             if (combatant) {
                 combatant._battleYMin = null;
@@ -202,10 +200,6 @@ export class BattleMode extends BaseMode {
             combatSystem,
             sceneSequencer
         } = this.context;
-
-        // ending sequence 期间冻结战斗模拟（计划 §5.2）：AI/结算/投掷物停跳；
-        // SceneSequencer 由 Scene.fixedUpdate 独立驱动，不受此影响
-        if (this._ending) return;
 
         const combatants = this._combatants ?? [];
         const character = combatants[0];
@@ -440,8 +434,6 @@ export class BattleMode extends BaseMode {
             return;
         }
 
-        const ending = this._battleDef?.onVictory?.ending;
-
         // 退场序列：session 在 trigger 命中时已按「SceneDef 内联 → BattleDef」解析并深拷贝；
         // 无 session 的兼容路径再现场解析，最后统一代码 fallback。
         const inlineExitSeq = this.context.sceneDef?.exitBattleSequence;
@@ -470,23 +462,6 @@ export class BattleMode extends BaseMode {
                     }
                 ]
             };
-
-        // 通关 ending（新流程）：先放完常规退场序列（sheath/相机 blend/switchMode explore），
-        // 序列结束前 100ms 挂 callback 钩子接力 ending sequence（避开事件触发与序列完成判定的同帧竞态）；
-        // scenario 推进/checkpoint 仍推迟到黑屏回调（§5.3 时序修正）
-        if (ending) {
-            this._battleEndHandled = true;
-            const seq = JSON.parse(JSON.stringify(exitBattleSequence));
-            const hookAtMs = Math.max(0, (seq.durationMs ?? 0) - 100);
-            seq.tracks.push({
-                id: "ending_hook",
-                clips: [
-                    { type: "callback", atMs: hookAtMs, fn: () => this.#beginEndingSequence(sceneSequencer, ending) }
-                ],
-            });
-            sceneSequencer.play(seq);
-            return;
-        }
 
         const { questManager } = this.context;
         if (questManager && this._battleDef?.onVictory) {
@@ -518,43 +493,6 @@ export class BattleMode extends BaseMode {
         }
 
         sceneSequencer.play(exitBattleSequence);
-    }
-
-    #beginEndingSequence(sceneSequencer, endingDef) {
-        this._ending = true;
-        const controller = this.context.playerController;
-        if (controller) controller.enabled = false;
-
-        // JSON sequence 的 callback 只能用字符串 handler 名（TimelineSequencer 走 ctx.sequenceHandlers）。
-        // 黑屏回调（§5.3 时序修正）：scenario 推进/checkpoint 挪到黑屏后，避免 blend 穿帮
-        this.context.sequenceHandlers.set("battle_on_ending_black", () => {
-            // 一次性消费：防止 handler 残留在跨场景共享的 sequenceHandlers 里变成死引用
-            this.context.sequenceHandlers.delete("battle_on_ending_black");
-            const { questManager, game, sceneDef } = this.context;
-            const v = this._battleDef?.onVictory;
-            if (questManager && v) {
-                if (v.scenario) questManager.advanceTo(v.scenario);
-                for (const flag of v.flags ?? []) questManager.setFlag(flag, true);
-                for (const q of v.questStages ?? []) questManager.setQuestStage(q.id, q.stage);
-            }
-            const cpPolicy = v?.checkpoint;
-            if (cpPolicy?.spawnId && game) {
-                game.saveCheckpoint(sceneDef.id, cpPolicy.spawnId, { useHeroPos: cpPolicy.useHeroPos === true });
-            }
-            game?.gameFlowManager?.showEnding(endingDef.text ?? "EPISODE COMPLETE");
-        });
-
-        fetch(endingDef.sequenceUrl, { cache: "no-cache" })
-            .then(r => r.json())
-            .then(seq => {
-                console.log("[BattleMode] ending sequence loaded", seq.id);
-                sceneSequencer.play(seq, {});
-            })
-            .catch(err => {
-                console.error("[BattleMode] ending sequence load failed", endingDef.sequenceUrl, err);
-                // 兜底：不播 sequence，直接走黑屏回调（无淡出但流程不中断）
-                this.context.sequenceHandlers.get("battle_on_ending_black")?.(this.context, {});
-            });
     }
 
     #handleDefeat(sceneSequencer) {

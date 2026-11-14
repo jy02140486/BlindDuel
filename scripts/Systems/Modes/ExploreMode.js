@@ -511,6 +511,11 @@ export class ExploreMode extends BaseMode {
     enter(_payload) {
         // 复位 per-trigger 运行时锁：每次进入 ExploreMode 重新允许触发
         this._firedBattleTriggerIds.clear();
+        // ExploreMode 实例跨场景复用（Scene.js 守卫不重建），过场去重集也需随 run 重置，
+        // 否则第二次通关时 ep1_ending 已在集内，ending 不再触发
+        this._playedCutsceneIds.clear();
+        for (const timer of this._cutsceneTimers.values()) clearTimeout(timer);
+        this._cutsceneTimers.clear();
 
         const { cameraManager, character } = this.context;
         if (cameraManager?.activeRigId === "explore" && cameraManager.activeRig?.enter) {
@@ -559,6 +564,7 @@ export class ExploreMode extends BaseMode {
         if (!handlers) return;
         handlers.delete("disposeProp");
         handlers.delete("disposeActor");
+        handlers.delete("ending_on_black");
         handlers.delete("enterCompanionFollowing");
         handlers.delete("enterCompanionIdle");
     }
@@ -590,6 +596,19 @@ export class ExploreMode extends BaseMode {
             this._cutsceneTimers.delete(invoker.id);
             this._playedCutsceneIds.add(invoker.id);
             if (flagKey) worldState.flags[flagKey] = true;
+            // ending 语义：sequence 黑屏 callback（fn="ending_on_black"）触发时
+            // 推进 scenario + 通关画面（一次性消费，防跨场景残留死引用）
+            if (invoker.ending) {
+                const handlers = this.context.sequenceHandlers;
+                handlers?.set("ending_on_black", () => {
+                    handlers?.delete("ending_on_black");
+                    const { questManager, game } = this.context;
+                    if (questManager && invoker.ending.scenario) {
+                        questManager.advanceTo(invoker.ending.scenario);
+                    }
+                    game?.gameFlowManager?.showEnding(invoker.ending.text ?? "EPISODE COMPLETE");
+                });
+            }
             console.log(`[ExploreMode] cutscene "${invoker.id}" firing, fetching ${invoker.sequenceUrl}`);
             fetch(invoker.sequenceUrl, { cache: "no-cache" })
                 .then(r => r.json())

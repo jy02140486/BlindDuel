@@ -196,14 +196,9 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
     stageBounds: { minX: -9, maxX: 7, minY: -0.85, maxY: -0.65 },
     battleYBaseline: -0.76,
     onVictory: {
+        scenario: SCENARIO.EP1_TAVERN_NIGHT_VICTORY,
         flags: ["battle_tavern_night_manatarms"],
         checkpoint: { spawnId: "house_door" },
-        // 通关 ending（计划 §5.1）：播黑屏淡出 sequence → 黑屏 callback 推进 scenario → 通关画面 → 主菜单
-        ending: {
-            text: "EPISODE 1 COMPLETE",
-            scenario: SCENARIO.EP1_COMPLETED,
-            sequenceUrl: "./Data/Sequences/ep1_ending.json",
-        },
     },
     duelCamera: BATTLE_TAVERN_NIGHT_RABBLE.duelCamera,
     enterSequence: (battleDef) => ({
@@ -261,7 +256,7 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
                 clips: [
                     { type: "inputLock", atMs: 0, locked: true },
                     { type: "command", atMs: 2500, command: "sheath" },
-                    { type: "inputLock", atMs: 7500, locked: false }
+                    { type: "inputLock", atMs: 8000, locked: false }
                 ]
             },
             {
@@ -271,16 +266,16 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
                 channel: "blend",
                 clips: [
                     { type: "setCameraFollow", atMs: 0, actorId: "hero", offsetX: 0, offsetY: 0, offset : 0, lerp: 0.12, height: 2, orthoWidth: 20 },
-                   { type: "cameraBlend", startMs: 0, durationMs: 500, to: "scripted" },
+                   { type: "cameraBlend", startMs: 0, durationMs: 2500, to: "scripted" },
                    
-                   { type: "cameraBlend", startMs: 500, durationMs: 5500, to: "explore" }
+                   { type: "cameraBlend", startMs: 2500, durationMs: 5500, to: "explore" }
                 ]
             },
             {
                 id: "mode",
                 kind: "mode",
                 clips: [
-                    { type: "switchMode", atMs: 7500, modeId: "explore" }//earlier switch for playing ending correctly in last battle
+                    { type: "switchMode", atMs: 8000, modeId: "explore" }
                 ]
             }
         ]

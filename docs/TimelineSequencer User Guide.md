@@ -653,6 +653,10 @@ sceneSequencer.stop();    // 强制停
 
 **推荐**：让 `cameraBlend.endMs === switchMode.atMs`，blend 刚完成立即切模式，无冻结窗口。
 
+**进阶（26.11.14 通关流程解耦时确立的设计规则）**：退场类 sequence 的**最后一段 `cameraBlend.endMs`、`switchMode.atMs`、`durationMs` 三者对齐**。若 blend 先结束而 switchMode 后到（如 blend 6000 / switchMode 8000），中间存在一段「相机已归还 explore rig 但模式仍在 BattleMode」的冻结窗口，归还瞬间的状态差会以镜头跳变形式释放（见规范 4 的实测数据）。三者对齐后归还、切模式、sequence 结束同帧完成，无窗口。
+
+历史教训：26.11.14 曾把 switchMode 从 7500 挪到 8000（=durationMs）但 blend end 留在 6000，跳变依旧；对齐 blend end 后问题消失。
+
 ### 规范 3：`switchMode(modeId=battle)` 依赖 `character` + `rabbleStick`
 
 handler 会自动算 fighterDistance 注入 payload，但前提是 ctx 里有 `character` 和 `rabbleStick`。
@@ -667,6 +671,10 @@ handler 会自动算 fighterDistance 注入 payload，但前提是 ctx 里有 `c
 - blend 期间角色位置变化，`toState` 不会追踪
 - blend 时长越长，`toState` 越过时，switchRig 后首帧 compute 与 `toState` 差距越大
 - 如果 blend 期间角色会显著移动，考虑缩短 blend 时长，或拆成多段 blend
+
+**实测证据（26.11.14）**：退场 5.5s explore blend 期间 hero 位移 2.1 单位，归还瞬间 `CAM_JITTER_TARGET dist=2.1150` 一帧跳变（`CAM_JITTER_POS` 仅 0.26——pos 有 0.15 smoothing 慢慢追，肉眼可见的跳主要来自 target 1:1 无平滑瞬移）。诊断特征：`CAM_JITTER_DETECTED` 出现在 `cameraBlend END` 之后一帧、`blending=false`、target delta 远大于 pos delta。
+
+**修复尝试记录**：曾在 `CameraManager.update()` blend 分支逐帧用目标 rig 实时 compute 刷新 `toState`（跟踪型 blend），退场方向有效，但 explore→duel 入场方向出现镜头跳变——duel rig 的 framing 参数与 follow 逻辑和 explore 不同，blend 中途终点漂移引入新问题，已回退。正确做法是接受快照语义 + 按规范 2 对齐时序消除窗口；若未来要彻底修复，需区分「跟踪型 blend」（终点实时刷新）与「取景型 blend」（快照）两种语义分别处理。
 
 ### 规范 5：多 track 时序独立
 

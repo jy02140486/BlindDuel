@@ -27,7 +27,6 @@
 # mannual
 prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 主人公clash也有加速奖励
-error on refreshing
 
 buff
 抽象一个hud类统一管理所有hud元素，目前是耐力条和血条，道具，buff栏

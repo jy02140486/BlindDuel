@@ -3,6 +3,15 @@
     "durationMs": 5000,
     "tracks": [
         {
+            "id": "hero.command",
+            "kind": "actor",
+            "binding": { "actorId": "hero" },
+            "channel": "command",
+            "clips": [
+                { "type": "inputLock", "atMs": 0, "locked": true }
+            ]
+        },
+        {
             "id": "prop_wagon.lifecycle",
             "kind": "actor",
             "binding": { "actorId": "prop_wagon" },
