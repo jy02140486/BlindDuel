@@ -179,6 +179,16 @@
         "pitch": [0.84, 0.96],
         "bus": "sfx"
     },
+    "whip_crack": {
+        "clips": ["./Audio/sfx/93100__cgeffex__whip-crack-01.wav"],
+        "volume": 0.9,
+        "bus": "sfx"
+    },
+    "wagon_drive": {
+        "clips": ["./Audio/sfx/486410__martineerok__wagon-cart-on-gravel.ogg"],
+        "volume": 0.8,
+        "bus": "sfx"
+    },
     "ui_button_click": {
         "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
         "volume": 0.5,

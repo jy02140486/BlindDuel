@@ -22,6 +22,7 @@ export class AudioManager {
         this._music = new MusicPlayer();
         this._ambient = new AmbientPlayer();
         this._lastPlayAt = new Map();
+        this._interruptibleBySource = new Map();
         this._paused = false;
         this._unsubGameplay = null;
         this._activeSounds = new Map();
@@ -163,11 +164,26 @@ export class AudioManager {
         if (!bus) return;
         this._unsubAnimEvent = bus.subscribeAll((payload) => {
             if (!payload || typeof payload.type !== "string") return;
+            if (payload.type === "stop_sfx") {
+                this._stopInterruptibleFor(payload.source);
+                return;
+            }
             // 语义翻译层：type 不直接当 audioId；map 未收录的语义事件静默忽略
             const resolved = this._sfxResolver.resolve(payload.type, payload);
             if (!resolved) return;
+            if (resolved.interruptible && payload.source) {
+                this._interruptibleBySource.set(payload.source, resolved.audioId);
+            }
             this.play(resolved.audioId, { source: payload.source, ...resolved.options });
         });
+    }
+
+    _stopInterruptibleFor(source) {
+        if (!source) return;
+        const id = this._interruptibleBySource.get(source);
+        if (!id) return;
+        this._interruptibleBySource.delete(source);
+        this.stop(id);
     }
 
     setSurfaceProvider(provider) {
@@ -184,6 +200,7 @@ export class AudioManager {
         this._pool.detachScene();
         this._music.detachScene();
         this._ambient.detachScene();
+        this._interruptibleBySource.clear();
         this._audioResumeDone = false;
     }
 

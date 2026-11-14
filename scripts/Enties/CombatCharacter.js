@@ -356,6 +356,7 @@ export class CombatCharacter extends CharacterBase {
         super.enterState(stateName, tickCount, overrides);
         if (prevStateDef?.attackActive === true && stateName !== prevStateName) {
             this.trailRenderer?.hide();
+            this.animationEventBus?.dispatch({ type: "stop_sfx", source: this });
         }
         // 构造期间基类会先调 enterState(initialState)，此时 combat 尚未赋值，跳过
         if (this.combat) {

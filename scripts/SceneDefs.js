@@ -494,7 +494,8 @@ export const BATTLE_FIELD_EP1_TAVERN_ROOM = {
                 channel: "command",
                 clips: [
                     { type: "inputLock", atMs: 0, locked: true },
-                    { type: "command", atMs: 2500, command: "sheath" }
+                    { type: "command", atMs: 2500, command: "sheath" },
+                    { type: "inputLock", atMs: 3000, locked: false }
                 ]
             },
             {

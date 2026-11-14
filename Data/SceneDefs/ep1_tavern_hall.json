@@ -2,6 +2,7 @@
     "id": "ep1_tavern_hall",
     "defaultSurfaceType": "hard",
     "ambient": ["tavern_ambient"],
+    "music": "tavern_hall_music",
     "exploreCamera": {
         "followDistance": 17,
         "followHeight": 3.5,

@@ -22,11 +22,18 @@
                  { "type": "moveActorByDirection", "startMs": 1300, "durationMs": 2700,"dir": [1, 0],"speed":10},
                 { "type": "command", "atMs": 3900, "command": "drive" }
             ]
+        },
+        {
+            "channel": "audio",
+            "clips": [
+                { "type": "playAudio", "atMs": 400, "id": "whip_crack" },
+                { "type": "playAudio", "startMs": 1300, "durationMs": 2700, "id": "wagon_drive" }
+            ]
         },{
             "channel": "camera",
             "clips": [
-                { "type": "setCameraFrame", "atMs": 20, "center": [3.8, 2, 0], "height": 2, "orthoWidth": 26 },
-                { "type": "cameraBlend", "startMs": 20, "durationMs": 3500, "to": "scripted" },
+                { "type": "setCameraFrame", "atMs": 20, "center": [3.2, 2, 0], "height": 2, "orthoWidth": 26 },
+                { "type": "cameraBlend", "startMs": 20, "durationMs": 3200, "to": "scripted" },
                 {
                     "type": "cameraEffect",
                     "effect": "fade",
@@ -39,7 +46,7 @@
                 {
                     "type": "callback",
                     "atMs": 4500,
-                    "fn": "battle_on_ending_black"
+                    "fn": "ending_on_black"
                 }
             ]
         }

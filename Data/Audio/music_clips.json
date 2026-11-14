@@ -1,1 +1,6 @@
-{}
+{
+    "tavern_hall_music": {
+        "url": "./Audio/music/756411__christmaskrumble666__indie-banjo-loop-75bpm.ogg",
+        "volume": 0.2
+    }
+}

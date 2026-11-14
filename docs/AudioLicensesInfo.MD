@@ -19,3 +19,6 @@ school bus truck int roof hatch close fall bounce.flac by kyles -- https://frees
 Pirate Tavern by brunoboselli -- https://freesound.org/s/695295/ -- License: Creative Commons 0
 field.mp3 by saha213131 -- https://freesound.org/s/687274/ -- License: Creative Commons 0
 crickets field closeup high frequency.flac by kyles -- https://freesound.org/s/637429/ -- License: Creative Commons 0
+wagon cart on gravel by Martineerok -- https://freesound.org/s/486410/ -- License: Attribution 4.0
+Whip Crack 01.wav by CGEffex -- https://freesound.org/s/93100/ -- License: Attribution 4.0
+Indie Banjo Loop (75bpm) by ChristmasKrumble666 -- https://freesound.org/s/756411/ -- License: Creative Commons 0

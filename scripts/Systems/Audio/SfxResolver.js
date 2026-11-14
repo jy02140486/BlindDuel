@@ -36,7 +36,7 @@ export class SfxResolver {
         if (typeof rule.audioId !== "string") return null;
         const options = {};
         if (typeof rule.volume === "number") options.volume = rule.volume;
-        return { audioId: rule.audioId, options };
+        return { audioId: rule.audioId, options, interruptible: rule.interruptible === true };
     }
 
     /**
@@ -63,7 +63,7 @@ export class SfxResolver {
         if (!entry || typeof entry.audioId !== "string") return null;
         const options = {};
         if (typeof entry.volume === "number") options.volume = entry.volume;
-        return { audioId: entry.audioId, options };
+        return { audioId: entry.audioId, options, interruptible: entry.interruptible === true };
     }
 
     #resolveSurface(rule, payload) {
@@ -81,6 +81,6 @@ export class SfxResolver {
         if (!resolved || typeof resolved.audioId !== "string") return null;
         const options = {};
         if (typeof resolved.volume === "number") options.volume = resolved.volume;
-        return { audioId: resolved.audioId, options };
+        return { audioId: resolved.audioId, options, interruptible: resolved.interruptible === true };
     }
 }
