@@ -67,7 +67,7 @@
             "spriteSheetUrl": "./Art/Sprite/CS_Chars/ep1_wagon.png",
             "atlasKey": "csChars.ep1_wagon",
             "frameWidth": 7.68,
-            "frameHeight": 4.8,
+            "frameHeight": 7.68,
             "clips": {
                 "wait":  { "mode": "hold", "tag": "wait" },
                 "whip":  { "mode": "hold", "tag": "whip" },
