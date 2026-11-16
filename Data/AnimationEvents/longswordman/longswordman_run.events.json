@@ -1,0 +1,11 @@
+{
+    "clips": {
+        "run": {
+            "events": [
+                { "frame": 0, "type": "footstep" },
+                { "frame": 1, "type": "cloth_rustle" },
+                { "frame": 2, "type": "footstep" }
+            ]
+        }
+    }
+}

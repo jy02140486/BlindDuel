@@ -18,6 +18,7 @@
     "swing_metal_slide": { "audioId": "swing_metal_slide", "interruptible": true },
     "on_cloaked":     { "audioId": "on_cloaked" },
     "off_cloaked":    { "audioId": "off_cloaked" },
+    "cloth_rustle":   { "audioId": "cloth_rustle" },
     "on_draw_sheath": { "audioId": "on_draw_sheath" },
 
     "combat_impact": {

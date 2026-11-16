@@ -11,7 +11,7 @@
     }
   },
   "inputs": {
-    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep", "throw"],
+    "commands": ["draw", "sheath", "thrust", "quart", "zornhut", "fullthrust", "guard", "dodge", "sleep", "throw", "run"],
     "parameters": {
       "moveMagnitude": {
         "type": "number"
@@ -489,6 +489,19 @@
       "allowMoveInput": false,
       "loop": false,
       "transitions": []
+    },
+    "run": {
+      "clip": "run",
+      "allowMoveInput": true,
+      "loop": true,
+      "transitions": [
+        {
+          "to": "standing",
+          "when": [
+            { "command": "sheath" }
+          ]
+        }
+      ]
     }
   }
 }

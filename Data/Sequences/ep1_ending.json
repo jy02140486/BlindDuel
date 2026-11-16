@@ -8,7 +8,9 @@
             "binding": { "actorId": "hero" },
             "channel": "command",
             "clips": [
-                { "type": "inputLock", "atMs": 0, "locked": true }
+                { "type": "inputLock", "atMs": 0, "locked": true },
+                { "type": "command", "atMs": 2000, "command": "run" },
+                 { "type": "moveActorByDirection", "startMs": 2000, "durationMs": 2700,"dir": [1, 0],"speed":8}
             ]
         },
         {
@@ -20,7 +22,7 @@
                 { "type": "command", "atMs": 0, "command": "wait" },
                 { "type": "command", "atMs": 100, "command": "whip" },
                  { "type": "moveActorByDirection", "startMs": 1300, "durationMs": 2700,"dir": [1, 0],"speed":10},
-                { "type": "command", "atMs": 3900, "command": "drive" }
+                { "type": "command", "atMs": 3700, "command": "drive" }
             ]
         },
         {

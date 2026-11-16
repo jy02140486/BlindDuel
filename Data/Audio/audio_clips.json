@@ -173,6 +173,12 @@
         "pitch": [0.64, 0.72],
         "bus": "sfx"
     },
+    "cloth_rustle": {
+        "clips": ["./Audio/sfx/cloth/556756__fmaudio__rustling-duvet-6.wav"],
+        "volume": 0.5,
+        "pitch": [0.9, 1.1],
+        "bus": "sfx"
+    },
     "on_draw_sheath": {
         "clips": ["./Audio/sfx/weapon/50822__scriptique__super-slow-slide.wav"],
         "volume": 0.9,

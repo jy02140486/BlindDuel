@@ -17,6 +17,7 @@ export const ASSET_MANIFEST = {
             walk: "./Art/Sprite/longswordman/longswordman_walk.json",
             idle: "./Art/Sprite/longswordman/longswordman_idle.json",
             move: "./Art/Sprite/longswordman/longswordman_move.json",
+            run: "./Art/Sprite/longswordman/longswordman_run.json",
             thrust: "./Art/Sprite/longswordman/longswordman_thrust.json",
             quart: "./Art/Sprite/longswordman/longswordman_quart.json",
             zornhut: "./Art/Sprite/longswordman/longswordman_zornhut.json",
@@ -145,7 +146,8 @@ export const ASSET_MANIFEST = {
             fullthrust: "./Data/AnimationEvents/longswordman/longswordman_fullthrust.events.json",
             sheath: "./Data/AnimationEvents/longswordman/longswordman_sheath.events.json",
             draw: "./Data/AnimationEvents/longswordman/longswordman_draw.events.json",
-            throw: "./Data/AnimationEvents/longswordman/longswordman_throw.events.json"
+            throw: "./Data/AnimationEvents/longswordman/longswordman_throw.events.json",
+            run: "./Data/AnimationEvents/longswordman/longswordman_run.events.json"
         },
         rabble: {
             die: "./Data/AnimationEvents/rabble_stick/rabble_stick_die.events.json",
@@ -167,7 +169,8 @@ export const ASSET_MANIFEST = {
             eat: "./Data/RootMotion/longswordman/longswordman_eat.occupancy.json",
             pickup: "./Data/RootMotion/longswordman/longswordman_pickup.occupancy.json",
             drink: "./Data/RootMotion/longswordman/longswordman_drink.occupancy.json",
-            topack: "./Data/RootMotion/longswordman/longswordman_topack.occupancy.json"
+            topack: "./Data/RootMotion/longswordman/longswordman_topack.occupancy.json",
+            run: "./Data/RootMotion/longswordman/longswordman_run.occupancy.json"
         },
         npc: {
             traveller: "./Data/RootMotion/NPCs/traveller.json",
