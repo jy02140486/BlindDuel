@@ -607,6 +607,7 @@ export class ExploreMode extends BaseMode {
                         questManager.advanceTo(invoker.ending.scenario);
                     }
                     game?.gameFlowManager?.showEnding(invoker.ending.text ?? "EPISODE COMPLETE");
+                    game?.audioManager?.suppressSfx(true);
                 });
             }
             console.log(`[ExploreMode] cutscene "${invoker.id}" firing, fetching ${invoker.sequenceUrl}`);

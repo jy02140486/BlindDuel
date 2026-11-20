@@ -196,6 +196,7 @@
         "bus": "sfx"
     },
     "ui_button_click": {
+        "_comment": "UI bus 占位备忘：audio_buses.json 已注册 ui 总线，本条目已可播放。但 AudioManager.play() 的 _sfxSuppressed 检查目前不分 bus 一刀切——通关画面 suppressSfx(true) 期间 ui 音也会被拦。将来要支持通关画面 UI 音效时，把该检查改为仅拦 getClipBus(id)==='sfx' 的条目，ui bus 绕过（AudioDatabase.getClipBus 对未标 bus 的缺省口径是 sfx，两处口径需一致）",
         "clips": ["./Audio/sfx/47125__gyzhor__lightsaber3.mp3"],
         "volume": 0.5,
         "pitch": [1.3, 1.5],

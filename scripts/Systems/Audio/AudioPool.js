@@ -117,6 +117,21 @@ scene 切换时 cache 整体清空（旧 Sound 已随旧 scene.dispose 被销毁
             console.warn("[AudioPool] stop failed", url, err);
         }
     }
+
+    stopAll() {
+        for (const entry of this._cache.values()) {
+            if (entry._pendingPlays && entry._pendingPlays.length > 0) {
+                entry._pendingPlays.length = 0;
+            }
+            if (entry.state !== LOAD_STATE.LOADED || !entry.sound) continue;
+            try {
+                if (this.onSoundStop) this.onSoundStop(entry.sound);
+                entry.sound.stop();
+            } catch (err) {
+                console.warn("[AudioPool] stopAll failed", err);
+            }
+        }
+    }
 }
 
 export { LOAD_STATE };

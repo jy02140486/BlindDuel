@@ -201,11 +201,13 @@ export class AudioManager {
         this._music.detachScene();
         this._ambient.detachScene();
         this._interruptibleBySource.clear();
+        this._sfxSuppressed = false;
         this._audioResumeDone = false;
     }
 
     play(id, options = {}) {
         if (this._paused) return false;
+        if (this._sfxSuppressed) return false;
         const now = performance.now();
         const throttleMs = options.throttleMs ?? DEFAULT_THROTTLE_MS;
         const last = this._lastPlayAt.get(id) ?? 0;
@@ -221,6 +223,15 @@ export class AudioManager {
         for (const url of def.clips) {
             this._pool.stop(url);
         }
+    }
+
+    stopAllSfx() {
+        this._pool.stopAll();
+    }
+
+    suppressSfx(suppressed) {
+        this._sfxSuppressed = !!suppressed;
+        if (suppressed) this.stopAllSfx();
     }
 
     playMusic(id, options = {}) {
