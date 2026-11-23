@@ -3,3 +3,4 @@ logs/
 Audio/sfx/_raw
 *.scancache
 *.*~
+*.log

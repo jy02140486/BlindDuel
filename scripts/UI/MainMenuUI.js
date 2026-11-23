@@ -3,7 +3,7 @@ const HOW_TO_PLAY_COLUMNS = [
         title: "Keyboard",
         lines: [
             "WASD : Move",
-            "K/L : Thrust(Light/Heavy)",
+            "K/L : Thrust(Heavy/Light)",
             "I/O : Cut (Light/Heavy)",
             "J : Guard, Action",
             "Q : Dodge",
@@ -15,7 +15,7 @@ const HOW_TO_PLAY_COLUMNS = [
         title: "Gamepad",
         lines: [
             "Left Stick : Move",
-            "A/B : Thrust(Light/Heavy)",
+            "A/B : Thrust(Heavy/Light)",
             "Y/RB : Cut (Light/Heavy)",
             "X : Guard, Action",
             "LB : Dodge",

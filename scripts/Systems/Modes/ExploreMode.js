@@ -96,12 +96,14 @@ export class ExploreMode extends BaseMode {
     #checkInteraction(character, tickCount) {
         const { inputSystem } = this.context;
 
-        if (!inputSystem.consumeAction("interact", tickCount)) return;
-
         // give 流程进行中（含 approach）禁止重复触发，避免 approach 期间按 J 重入
         if (this._giveSequence) return;
 
-        // 检查 give-item NPC
+        // 先探测范围内是否有可交互目标，有目标才消费 interact 指令。
+        // 无条件消费会把指令空手吃掉，导致 sceneSwitch trigger（下一帧开头才跑）
+        // 收不到指令——手柄轮询发生在本方法之前，踩中此时序；键盘事件在帧间
+        // 触发、tick 记账早一帧，侥幸绕过。
+        let targetNpc = null;
         for (const npc of this.interactables) {
             const controller = npc.npcController;
             if (!controller?._needsInteract) continue;
@@ -111,12 +113,12 @@ export class ExploreMode extends BaseMode {
             const distSq = dx * dx + dy * dy;
             const interactRadius = controller.greetingRadius ?? 1.6;
             if (distSq <= interactRadius * interactRadius) {
-                this._startGiveSequence(character, controller, npc);
-                return;
+                targetNpc = { controller, npc };
+                break;
             }
         }
 
-        // 检查拾取物交互
+        let targetPickable = null;
         const PICKUP_RADIUS = 1.6;
         for (const pickable of this.pickables) {
             if (pickable.isDisposed) continue;
@@ -125,15 +127,26 @@ export class ExploreMode extends BaseMode {
             const dy = character.root.position.y - pickable.root.position.y;
             const distSq = dx * dx + dy * dy;
             if (distSq <= PICKUP_RADIUS * PICKUP_RADIUS) {
-                const itemName = pickable.itemDef?.name ?? pickable.id;
-                const consumeType = pickable.itemDef?.consumeType ?? "pocket";
-                console.log(`[Pickup] 捡起 ${itemName} (${consumeType})`);
-
-                // 开始拾取序列
-                this._startPickupSequence(character, pickable, consumeType);
-                return;
+                targetPickable = pickable;
+                break;
             }
         }
+
+        if (!targetNpc && !targetPickable) return;
+        if (!inputSystem.consumeAction("interact", tickCount)) return;
+
+        if (targetNpc) {
+            this._startGiveSequence(character, targetNpc.controller, targetNpc.npc);
+            return;
+        }
+
+        const pickable = targetPickable;
+        const itemName = pickable.itemDef?.name ?? pickable.id;
+        const consumeType = pickable.itemDef?.consumeType ?? "pocket";
+        console.log(`[Pickup] 捡起 ${itemName} (${consumeType})`);
+
+        // 开始拾取序列
+        this._startPickupSequence(character, pickable, consumeType);
     }
 
     #updateSceneSwitchTrigger(character, tickCount) {
