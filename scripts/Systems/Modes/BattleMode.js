@@ -195,7 +195,13 @@ export class BattleMode extends BaseMode {
         }
     }
 
-    #syncStaminaBar(bar, character, mirrored) {
+    #syncStaminaBar(slot, bar, character, mirrored) {
+        // 修复：复活/场景重建后实体是新对象，旧条可能残留绑定已销毁的实体（每帧静默 update、
+        // 投影在旧位置，表现为“耐力条消失”）。按对象身份比对，不一致则销毁重建，无论漏清路径为何都能自愈。
+        if (bar && bar.character !== character) {
+            bar.dispose();
+            bar = null;
+        }
         if (bar) {
             if (character?.isDead || !character?.combat) {
                 bar.dispose();
@@ -204,11 +210,9 @@ export class BattleMode extends BaseMode {
             bar.update();
             return bar;
         }
-        if (character?.combat && !character.isDead
-            && CombatTuning.stamina.enabled !== false) {
-            return new StaminaBar(character, { mirrored });
-        }
-        return null;
+        if (!character || !character.combat || character.isDead) return null;
+        if (CombatTuning.stamina.enabled === false) return null;
+        return new StaminaBar(character, { mirrored });
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -547,8 +551,13 @@ export class BattleMode extends BaseMode {
         } = this.context;
         const cameraRig = cameraManager?.activeRig;
         if (!cameraRig) {
+            if (!this._warnedNoRig) {
+                this._warnedNoRig = true;
+                console.warn("[BattleMode] updateRender: activeRig missing — stamina/HP sync skipped");
+            }
             return;
         }
+        this._warnedNoRig = false;
 
         const combatants = this._combatants ?? [];
         if (combatants.length < 2) return;
@@ -561,8 +570,8 @@ export class BattleMode extends BaseMode {
 
         // 玩家/对手头顶耐力条（Step 1.7）：懒创建、每帧跟随投影；enabled=false 不渲染
         // 对手条为镜像模式：填充右锚定，从左向右减少（传统格斗游戏血条布局）
-        this._staminaBar = this.#syncStaminaBar(this._staminaBar, player, false);
-        this._oppStaminaBar = this.#syncStaminaBar(this._oppStaminaBar, combatants[1], true);
+        this._staminaBar = this.#syncStaminaBar("player", this._staminaBar, player, false);
+        this._oppStaminaBar = this.#syncStaminaBar("opponent", this._oppStaminaBar, combatants[1], true);
 
         const heroPos = combatants[0].root.position;
         const opponentPos = combatants[1].root.position;
