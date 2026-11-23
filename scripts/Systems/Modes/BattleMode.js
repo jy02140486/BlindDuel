@@ -189,6 +189,26 @@ export class BattleMode extends BaseMode {
             this._staminaBar.dispose();
             this._staminaBar = null;
         }
+        if (this._oppStaminaBar) {
+            this._oppStaminaBar.dispose();
+            this._oppStaminaBar = null;
+        }
+    }
+
+    #syncStaminaBar(bar, character, mirrored) {
+        if (bar) {
+            if (character?.isDead || !character?.combat) {
+                bar.dispose();
+                return null;
+            }
+            bar.update();
+            return bar;
+        }
+        if (character?.combat && !character.isDead
+            && CombatTuning.stamina.enabled !== false) {
+            return new StaminaBar(character, { mirrored });
+        }
+        return null;
     }
 
     fixedUpdate(dtMs, tickCount) {
@@ -539,19 +559,10 @@ export class BattleMode extends BaseMode {
             hpBar.update(player.hp, player.maxHp);
         }
 
-        // 玩家头顶耐力条（Step 1.7）：懒创建、每帧跟随投影；enabled=false 不渲染
-        if (!this._staminaBar && player?.combat && !player.isDead
-            && CombatTuning.stamina.enabled !== false) {
-            this._staminaBar = new StaminaBar(player);
-        }
-        if (this._staminaBar) {
-            if (player?.isDead || !player?.combat) {
-                this._staminaBar.dispose();
-                this._staminaBar = null;
-            } else {
-                this._staminaBar.update();
-            }
-        }
+        // 玩家/对手头顶耐力条（Step 1.7）：懒创建、每帧跟随投影；enabled=false 不渲染
+        // 对手条为镜像模式：填充右锚定，从左向右减少（传统格斗游戏血条布局）
+        this._staminaBar = this.#syncStaminaBar(this._staminaBar, player, false);
+        this._oppStaminaBar = this.#syncStaminaBar(this._oppStaminaBar, combatants[1], true);
 
         const heroPos = combatants[0].root.position;
         const opponentPos = combatants[1].root.position;

@@ -1,19 +1,24 @@
 /**
- * StaminaBar — 玩家头顶耐力条（世界坐标锚定）
- * 光谱渐变：左端红 → 右端绿。填充左锚定、随耐力从绿端收缩，
- * 剩余部分右缘的颜色即当前耐力状态色（满耐力偏绿、低耐力偏红）
+ * StaminaBar — 角色头顶耐力条（世界坐标锚定）
+ * 普通模式：填充左锚定、随耐力从右端收缩，剩余部分右缘的颜色即当前耐力状态色
+ * 镜像模式（mirrored: true）：填充右锚定、随耐力从左端收缩，剩余部分左缘为状态色
+ *   （用于对手侧，呈现传统格斗游戏血条的对称布局）
+ * 光谱渐变：左端红 → 右端蓝
  */
 const HEAD_OFFSET_Y = 3;
 
 export class StaminaBar {
-    constructor(character) {
+    constructor(character, options = {}) {
         this.character = character;
+        this.mirrored = options.mirrored === true;
 
         this.track = document.createElement("div");
         this.track.className = "stamina-bar-track";
 
         this.fill = document.createElement("div");
-        this.fill.className = "stamina-bar-fill";
+        this.fill.className = this.mirrored
+            ? "stamina-bar-fill stamina-bar-fill--mirrored"
+            : "stamina-bar-fill";
 
         this.track.appendChild(this.fill);
         document.body.appendChild(this.track);

@@ -38,7 +38,7 @@
             background: rgba(0, 0, 0, 0.55);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 5px;
-            z-index: 20;
+            z-index: 0;
             pointer-events: none;
             overflow: hidden;
             transform: translateX(-50%);
@@ -52,6 +52,11 @@
             background-repeat: no-repeat;
             border-radius: 4px;
             transition: width 0.08s linear;
+        }
+        .stamina-bar-fill--mirrored {
+            float: right;
+            background-image: linear-gradient(to left, #981818, #d2a932, #1f72e7);
+            background-position: right top;
         }
         #hud-left {
             position: absolute;
