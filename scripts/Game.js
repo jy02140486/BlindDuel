@@ -4,7 +4,7 @@ import { InventoryManager } from "./Systems/InventoryManager.js";
 import { Scene } from "./Scene.js";
 import { SCENARIO } from "../Data/ScenarioMilestones.js";
 import { BATTLE_DEFS } from "./SceneDefs.js";
-import { resolveSceneDef, getSceneDefSync } from "./SceneDefRegistry.js";
+import { resolveSceneDef } from "./SceneDefRegistry.js";
 import { InputSystem } from "./Systems/InputSystem.js";
 import { PlayerController } from "./Systems/PlayerController.js";
 import { CombatSystem } from "./Systems/CombatSystem.js";
@@ -28,6 +28,9 @@ import { GameplayEventBus } from "./Systems/GameplayEventBus.js";
 import { AnimationEventBus } from "./Systems/AnimationEventBus.js";
 import { AIKnowledgeRegistry } from "./Systems/AI/AIKnowledgeRegistry.js";
 import { GameFlowManager } from "./Systems/GameFlowManager.js";
+
+const CHECKPOINT_STORAGE_KEY = "blinduel_checkpoint_v1";
+const CHECKPOINT_VERSION = 1;
 
 const DEFAULT_DUEL_CAMERA = {
     zoomMinDistance: 3.2, zoomMaxDistance: 6.4,
@@ -61,7 +64,7 @@ export class Game {
             inventoryManager: this.inventoryManager,
             game: this,
         });
-        this._checkpoint = null;
+        this._checkpoint = this._loadCheckpointFromDisk();
         this._flowReady = false;
         this.gameFlowManager = null;
 
@@ -299,10 +302,11 @@ export class Game {
         console.log('[Game] WorldState reset to scenario', this.worldState.scenario);
     }
 
-    // New Game：清 _checkpoint + Inventory（计划 §5.4 方案 A）
+    // New Game：清 _checkpoint + Inventory（计划 §5.4 方案 A），同步清磁盘档（单存档槽语义）
     prepareNewRun() {
         this.resetWorldState();
         this._checkpoint = null;
+        this._clearCheckpointFromDisk();
         this.inventoryManager.items = [];
     }
 
@@ -328,6 +332,38 @@ export class Game {
             buffs: JSON.parse(JSON.stringify(this.scene?.playerController?.buffs ?? [])),
         };
         console.log('[Checkpoint] saved', { sceneId, spawnId, scenario: this._checkpoint.scenario, hp: this._checkpoint.hp, heroPos, items: this._checkpoint.inventory.length, buffs: this._checkpoint.buffs.length });
+        this._writeCheckpointToDisk();
+    }
+
+    _writeCheckpointToDisk() {
+        try {
+            localStorage.setItem(CHECKPOINT_STORAGE_KEY, JSON.stringify({
+                version: CHECKPOINT_VERSION,
+                savedAt: Date.now(),
+                ...this._checkpoint,
+            }));
+        } catch (err) {
+            console.warn("[Checkpoint] write to localStorage failed", err);
+        }
+    }
+
+    _loadCheckpointFromDisk() {
+        try {
+            const raw = localStorage.getItem(CHECKPOINT_STORAGE_KEY);
+            if (!raw) return null;
+            const cp = JSON.parse(raw);
+            if (cp?.version !== CHECKPOINT_VERSION || !cp.sceneId || !cp.spawnId) return null;
+            return cp;
+        } catch (err) {
+            console.warn("[Checkpoint] load from localStorage failed", err);
+            return null;
+        }
+    }
+
+    _clearCheckpointFromDisk() {
+        try {
+            localStorage.removeItem(CHECKPOINT_STORAGE_KEY);
+        } catch (_) { /* ignore */ }
     }
 
     // 战斗/剧情运行时统一清理入口（计划 §三）：
@@ -382,7 +418,7 @@ export class Game {
             this.inventoryManager.items = [];
             this._pendingRestore = { hp: 3, maxHp: 3, buffs: [], heroPos: null };
             await this.requestSceneSwitch(
-                getSceneDefSync(this.worldState.currentSceneId),
+                await resolveSceneDef(this.worldState.currentSceneId),
                 this.worldState.currentSpawnId ?? "house_door",
                 { skipTransition: true }
             );
@@ -404,7 +440,7 @@ export class Game {
             buffs: JSON.parse(JSON.stringify(cp.buffs)),
             heroPos: cp.heroPos ? [...cp.heroPos] : null,
         };
-        await this.requestSceneSwitch(getSceneDefSync(cp.sceneId), cp.spawnId, { skipTransition: true });
+        await this.requestSceneSwitch(await resolveSceneDef(cp.sceneId), cp.spawnId, { skipTransition: true });
         if (opts.fadeInAfter) {
             this._enqueueFadeIn(fadeInDurationMs, 'cp');
         }
@@ -504,6 +540,9 @@ export class Game {
         newScene._loading = false;
         this.worldState.currentSceneId = sceneDef.id;
         this.worldState.currentSpawnId = spawnId;
+        // Continue 路径（刷新后 restoreCheckpoint / 通关回主菜单后）不经过 init()，
+        // 必须在此置回 true，否则 render/fixedUpdate/updateRender 全被门卫拦掉 → 黑屏
+        this._flowReady = true;
         console.log("[Game] _loadSceneInternal done, new scene=", sceneDef.id);
     }
 
