@@ -193,6 +193,8 @@ export class BattleMode extends BaseMode {
             this._oppStaminaBar.dispose();
             this._oppStaminaBar = null;
         }
+        // 战斗结束清空右上角对手 HP，避免残留到探索模式
+        this.context.oppHpBar?.dispose?.();
     }
 
     #syncStaminaBar(slot, bar, character, mirrored) {
@@ -547,7 +549,8 @@ export class BattleMode extends BaseMode {
             sceneVisualSystem,
             cameraBasePosition,
             cameraTarget,
-            hpBar
+            hpBar,
+            oppHpBar
         } = this.context;
         const cameraRig = cameraManager?.activeRig;
         if (!cameraRig) {
@@ -566,6 +569,12 @@ export class BattleMode extends BaseMode {
         const player = combatants[0];
         if (hpBar && player?.hp !== undefined) {
             hpBar.update(player.hp, player.maxHp);
+        }
+        // 对手 HP 同步到右上角（#hp-bar-right，右锚定）：
+        // 容器 absolute right 定位宽度收缩、爱心贴右缘聚拢，减少自然从左端发生（格斗游戏血条镜像布局）
+        const opponent = combatants[1];
+        if (oppHpBar && opponent?.hp !== undefined) {
+            oppHpBar.update(opponent.hp, opponent.maxHp);
         }
 
         // 玩家/对手头顶耐力条（Step 1.7）：懒创建、每帧跟随投影；enabled=false 不渲染

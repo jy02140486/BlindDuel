@@ -107,6 +107,7 @@ export class Game {
         this.inventoryBar = new InventoryBar(document.getElementById("inventory-bar"));
         this.buffBar = new BuffBar(document.getElementById("buff-bar"));
         this.hpBar = new HpBar(document.getElementById("hp-bar"));
+        this.oppHpBar = new HpBar(document.getElementById("hp-bar-right"));
         this.dialogueBubble = new DialogueBubble(document.getElementById("dialogue-bubble-container"));
 
         // 影子 sharedContext（Scene 不读它，仅为后续切换准备结构）
@@ -124,6 +125,7 @@ export class Game {
             inventoryBar: this.inventoryBar,
             buffBar: this.buffBar,
             hpBar: this.hpBar,
+            oppHpBar: this.oppHpBar,
             dialogueBubble: this.dialogueBubble,
             sequenceHandlers: new Map(),
             cameraBasePosition: new BABYLON.Vector3(0, 8, -25),
@@ -276,6 +278,7 @@ export class Game {
         this.inventoryBar?.hide?.();
         this.buffBar?.hide?.();
         this.hpBar?.hide?.();
+        this.oppHpBar?.dispose?.();
         this.dialogueBubble?.dispose?.();
         this.gameFlowManager?.dispose?.();
         this.gameModeManager = null;

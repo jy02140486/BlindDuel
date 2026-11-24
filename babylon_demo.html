@@ -31,6 +31,18 @@
             letter-spacing: 2px;
             user-select: none;
         }
+        #hp-bar-right {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            font-size: 28px;
+            color: #e04040;
+            z-index: 0;
+            pointer-events: none;
+            text-shadow: 0 0 6px rgba(0,0,0,0.7);
+            letter-spacing: 2px;
+            user-select: none;
+        }
         .stamina-bar-track {
             position: absolute;
             width: 168px;
@@ -242,6 +254,7 @@
 <body>
     <canvas id="renderCanvas"></canvas>
     <div id="hp-bar"></div>
+    <div id="hp-bar-right"></div>
     <div id="hud-left">
         <div id="inventory-bar"></div>
         <div id="buff-bar"></div>

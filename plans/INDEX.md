@@ -2,6 +2,15 @@
 > 本文件跟踪当前计划入口、待办入口与最近归档。项目上下文、技术栈与协作约定见 `PROJECT_CONTEXT.md`。
 > 当前进行中：**通关流程解耦 26.11.14 已落地并全链路回归通过（战斗结束 → explore → cutsceneInvokers 播 ending → 通关画面 → 主菜单，取代 26.11.11 的 BattleMode ending 接力，见 `plans/26.11.14 通关流程调整计划.MD`）；主菜单与通关逻辑 26.11.11 已落地（步骤 1~5，剩步骤 6 战败路径回归，见 `plans/26.11.11 主菜单和通关逻辑.MD` §十落地记录）；**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；攻击耐力计划 26.11.9 已落地开闸（`plans/26.11.9 AI进攻决策引入耐力计划.MD`，已知问题见其 §6）；quart trailmarker 已重扫修复；clash trailmarker 资产待画（主人公/rabble 各一，画完跑同款扫描命令）；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
 
+## Update Log (2026-11-24)
+- **对手耐力条镜像 + 右上角对手 HP + 复活后耐力条消失修复**：
+  - StaminaBar 镜像模式：`constructor(character, {mirrored})`，对手条右锚定填充、从左向右减少（格斗游戏血条对称布局）；CSS 注意点：镜像样式必须用 `background-image` + `background-position: right top`，`background` 简写会重置基础类 `background-size: 168px 100%` 导致光谱色标失效
+  - 对手 HP 右上角：Game 第二个 HpBar 实例（`#hp-bar-right`，absolute right 定位天然右锚定，爱心减少从左端发生，零翻转逻辑）；BattleMode.updateRender 同步 combatants[1]、exit 清空防残留；右上角容器 z-index 0 低于 fade 黑屏（1）——对手战败时 hp>0，若用 20 会浮在黑屏上
+  - 修复：复活/场景重建后 `BattleMode._oppStaminaBar` 残留绑定已销毁旧实体（每帧静默 update、投影在旧位置，表现为条消失且零日志）；`#syncStaminaBar` 加实体身份比对（`bar.character !== character`），不一致 dispose 重建自愈
+  - 层级统一：`.stamina-bar-track` z-index 20→0，CameraManager fade（z-index 1）可覆盖所有头顶 UI
+  - 诊断日志已清理，仅保留 REBIND 自愈逻辑（无日志）
+- **涉及文件**：`scripts/UI/StaminaBar.js`（镜像模式）+ `scripts/UI/HpBar.js`（未改，双实例复用）+ `scripts/Systems/Modes/BattleMode.js`（对手条 + 对手 HP 同步 + 身份重绑）+ `scripts/Game.js`（oppHpBar 实例注入）+ `babylon_demo.html`（CSS+DOM）+ `index.html`（旧原型页引用不存在的 main.js，改为跳转 babylon_demo.html）
+
 ## Update Log (2026-11-14)
 - **通关流程与战斗解耦落地（按 `plans/26.11.14 通关流程调整计划.MD`，Step 1+2 全部完成，全链路回归通过）**：
   - 架构变更：BattleDef.onVictory.ending 接力拆除（`_ending` 冻结 + `battle_on_ending_black` 接力链路移除）→ 胜利只推 scenario + flag + checkpoint → 照常播退场序列回 explore → ExploreMode 的 cutsceneInvokers 轮询命中 → 播 ep1_ending → 黑屏回调推 210 + 通关画面 → 主菜单。ending 职责从 BattleDef 迁至 SceneDef.cutsceneInvokers，与序章交 gem 触发 sequence 同构（解决战斗尾部相机抖动的模式/相机/序列三方耦合）

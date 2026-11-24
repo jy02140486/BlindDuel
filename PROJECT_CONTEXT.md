@@ -92,7 +92,9 @@ py .\.serve.ps1
 - 背包管理器：`scripts/Systems/InventoryManager.js`
 - 玩家控制器：`scripts/Systems/PlayerController.js`（输入 → 移动 + 指令队列 + buff 管理）
 - 可拾取实体：`scripts/Enties/PickableEntity.js`（轻量实体，不继承 CharacterBase）
-- UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`、`scripts/UI/StaminaBar.js`（玩家头顶耐力条，世界坐标投影锚定，BattleMode 懒创建、enabled=false 不渲染）
+- UI 组件：`scripts/UI/InventoryBar.js`、`scripts/UI/BuffBar.js`、`scripts/UI/HpBar.js`、`scripts/UI/StaminaBar.js`
+  - HpBar：♥ 文本渲染，两个实例——`#hp-bar`（左上角，玩家）+ `#hp-bar-right`（右上角，对手，BattleMode.updateRender 同步、exit 清空防残留）；右锚定容器宽度收缩，爱心减少自然从左端发生（格斗游戏镜像布局，零翻转逻辑）；右上角容器 z-index 0 低于 fade 黑屏（1）——对手战败时 hp>0，用 20 会浮在黑屏上
+  - StaminaBar：玩家头顶耐力条（世界坐标投影锚定，BattleMode 懒创建、enabled=false 不渲染）+ 对手镜像条（右锚定填充、从左向右减少，`stamina-bar-fill--mirrored`：float right + 渐变翻转 + background-position right top；必须用 `background-image` 属性而非 `background` 简写，否则重置基础类 `background-size: 168px 100%` 导致光谱色标失效）；`#syncStaminaBar` 按实体对象身份比对（`bar.character !== character` 不一致即 dispose 重建），修复复活/场景重建后旧条残留绑定已销毁实体导致条消失（且零日志）；`.stamina-bar-track` z-index 0，fade 黑屏可覆盖
 - 音频系统入口：`scripts/Systems/AudioManager.js`（Game 持有，Scene 通过 `this._game.audioManager` 访问）
 - 音频数据库：`scripts/Systems/Audio/AudioDatabase.js`（AudioId → Clip Definition）
 - 音频池：`scripts/Systems/Audio/AudioPool.js`（基于 `BABYLON.Sound` 的缓存与复用）
