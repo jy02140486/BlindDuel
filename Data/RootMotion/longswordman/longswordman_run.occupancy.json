@@ -1,0 +1,121 @@
+﻿{
+    "source":  {
+                   "rootAtlasJson":  "Data/RootMotion/longswordman/longswordman_run.json",
+                   "rootAtlasPng":  "Data/RootMotion/longswordman/longswordman_run.png",
+                   "rootColor":  "#7082C1",
+                   "actionAnchorColor":  "#00FF00",
+                   "occupancyWidthPx":  40,
+                   "occupancyHeightPx":  16,
+                   "generatedAtUtc":  "2026-11-16T02:19:20.0801475Z"
+               },
+    "frames":  [
+                   {
+                       "frameIndex":  0,
+                       "frameName":  "longswordman_run 0.ase",
+                       "frameRect":  {
+                                         "x":  0,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  58.5,
+                                                    "cy":  116.5
+                                                },
+                                       "action":  {
+                                                      "cx":  80,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  58.5,
+                                         "cy":  116.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  1,
+                       "frameName":  "longswordman_run 1.ase",
+                       "frameRect":  {
+                                         "x":  160,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  62.5,
+                                                    "cy":  116.5
+                                                },
+                                       "action":  {
+                                                      "cx":  80,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  62.5,
+                                         "cy":  116.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  2,
+                       "frameName":  "longswordman_run 2.ase",
+                       "frameRect":  {
+                                         "x":  320,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  59.5,
+                                                    "cy":  116.5
+                                                },
+                                       "action":  {
+                                                      "cx":  80,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  59.5,
+                                         "cy":  116.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   },
+                   {
+                       "frameIndex":  3,
+                       "frameName":  "longswordman_run 3.ase",
+                       "frameRect":  {
+                                         "x":  480,
+                                         "y":  0,
+                                         "w":  160,
+                                         "h":  128
+                                     },
+                       "anchors":  {
+                                       "root":  {
+                                                    "cx":  60.5,
+                                                    "cy":  116.5
+                                                },
+                                       "action":  {
+                                                      "cx":  80,
+                                                      "cy":  102.4
+                                                  }
+                                   },
+                       "occupancy":  {
+                                         "type":  "aabb",
+                                         "cx":  60.5,
+                                         "cy":  116.5,
+                                         "w":  40,
+                                         "h":  16
+                                     }
+                   }
+               ]
+}
