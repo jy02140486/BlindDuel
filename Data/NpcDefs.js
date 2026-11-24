@@ -84,6 +84,18 @@ export const NPC_DEFS = {
             },
         ],
     },
+    tavernhost: {
+        id: "tavernhost",
+        name: "酒馆老板",
+        idle: { clip: "stand" },
+        dialogues: [
+            {
+                priority: 0,
+                condition: {},
+                text: "👧↙️"
+            }
+        ],
+    },
 };
 
 export function getNpcDef(npcId) {

@@ -47,8 +47,14 @@ export class NpcFrameComponent {
             const frames = this.#buildFrames(atlasData);
             const frameTags = atlasData.meta?.frameTags || [];
 
+            // 无 frameTags 图集（如 TavernHost）回退到 clipDef.frameRange 显式声明播放范围，
+            // 避免手改 Aseprite 导出的图集 JSON（重新导出会被覆盖）
             const tag = frameTags.find((t) => t.name === clipName);
-            const frameTag = tag ? { from: tag.from, to: tag.to } : { from: 0, to: 0 };
+            const frameTag = tag
+                ? { from: tag.from, to: tag.to }
+                : (Array.isArray(clipDef.frameRange)
+                    ? { from: clipDef.frameRange[0], to: clipDef.frameRange[1] }
+                    : { from: 0, to: 0 });
 
             this.clips[clipName] = {
                 ...clipDef,
