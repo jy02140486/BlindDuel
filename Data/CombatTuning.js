@@ -10,6 +10,8 @@
  */
 export const CombatTuning = {
     hit: {
+        /** Phase 2 命中缺省伤害（按 attackWeight 兜底；招式级 override 走 StateGraph attackDamage 字段） */
+        damageByWeight: { light: 1, heavy: 2 },
         /** 受击方的击退位移（Phase 2 weapon vs hitbox） */
         victimKnockbackX: 0.32,
         /** 普通 hit 双方 hitstop 帧（双方各停这么多帧） */

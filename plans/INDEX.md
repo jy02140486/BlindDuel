@@ -3,6 +3,14 @@
 > 当前进行中：**通关流程解耦 26.11.14 已落地并全链路回归通过（战斗结束 → explore → cutsceneInvokers 播 ending → 通关画面 → 主菜单，取代 26.11.11 的 BattleMode ending 接力，见 `plans/26.11.14 通关流程调整计划.MD`）；主菜单与通关逻辑 26.11.11 已落地（步骤 1~5，剩步骤 6 战败路径回归，见 `plans/26.11.11 主菜单和通关逻辑.MD` §十落地记录）；**疲劳度计划大块二核心（Step 2.1~2.3）已落地并三档实战验证，剩 Step 2.5 对照 playtest 待新场景**（`plans/26.11.6 疲劳度计划.MD`）；攻击耐力计划 26.11.9 已落地开闸（`plans/26.11.9 AI进攻决策引入耐力计划.MD`，已知问题见其 §6）；quart trailmarker 已重扫修复；clash trailmarker 资产待画（主人公/rabble 各一，画完跑同款扫描命令）；刀光 Phase ④（渐变贴图/横向羽化/发光）待启动。AI 问题修复计划 26.11.2 已完成关闭（四类问题 + 计划外三项全部落地：防御可达性门 / committedScoreThreshold 仲裁 / holdTimeout 周期化 / 近距衰减与失败驱动脱离 / dodge i-frame 资格门；Step 6 guard 早开豁免转观察项）。投掷物斩落判定修复 26.10.30 落地（distanceAlignment 带状判据，minReach 贴脸死区）；防御型角色无限 hold 修复 26.10.26 落地（idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控）。Backlog B7 已关闭（根因 closestMinReach 退化修复 + positioning 距离模型重构）。
 
 ## Update Log (2026-11-24)
+- **招式伤害数据驱动落地（固定伤害 1 → 分级伤害）**：
+  - 数值：light 1 / heavy 2（`CombatTuning.hit.damageByWeight` 按 attackWeight 兑底）；派生招式覆盖：longswordman `nachschlag` 3 / manatarms `reverse_quart` 3（StateGraphDef 攻击态 `attackDamage` 字段；优先级 招式级 > weight 兑底 > 缺省 1）
+  - 链路：CombatCharacter weaponbox 快照新增 `attackDamage` 透传（与 attackWeight 同模式，仅 active attack box 携带）→ ContactResolver Phase 2 `damage: w.attackDamage ?? 1`（原硬编码 1 移除）→ takeDamage ctx.damage（原已支持，未改）
+  - 设计要点：attackWeight（拼刀胜负/耐力消耗维度）与 attackDamage（伤害量维度）解耦——reverse_quart（light + 3 伤）即反例；Phase 1 拼刀/格挡只看 weight 不看 damage，被挡/拼输的攻击进不了 Phase 2 无伤害泄漏；投掷物伤害走 ProjectileDefs.damage 独立管道不变
+  - 平衡影响：maxHp 10 下 heavy（2 伤）两刀近半血；AI Clash Seeker 尚未感知高伤招式风险（拼输 nachschlag 代价 3 血），实测过烈再议纳入评分
+- **涉及文件**：`Data/CombatTuning.js`（hit.damageByWeight）+ `scripts/Enties/CombatCharacter.js`（weaponbox 快照透传）+ `scripts/Systems/ContactResolver.js`（Phase 2 damage 读取）+ `Data/StateGraphDef/LongSwordMan.json` + `Data/StateGraphDef/ManatarmsSword.json`（attackDamage: 3）+ `docs/战斗规则说明.MD`（§2.3/§三/§七/§八）+ `PROJECT_CONTEXT.md`（§3）
+
+## Update Log (2026-11-24)
 - **对手耐力条镜像 + 右上角对手 HP + 复活后耐力条消失修复**：
   - StaminaBar 镜像模式：`constructor(character, {mirrored})`，对手条右锚定填充、从左向右减少（格斗游戏血条对称布局）；CSS 注意点：镜像样式必须用 `background-image` + `background-position: right top`，`background` 简写会重置基础类 `background-size: 168px 100%` 导致光谱色标失效
   - 对手 HP 右上角：Game 第二个 HpBar 实例（`#hp-bar-right`，absolute right 定位天然右锚定，爱心减少从左端发生，零翻转逻辑）；BattleMode.updateRender 同步 combatants[1]、exit 清空防残留；右上角容器 z-index 0 低于 fade 黑屏（1）——对手战败时 hp>0，若用 20 会浮在黑屏上

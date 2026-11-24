@@ -297,6 +297,7 @@
       "allowMoveInput": false,
       "attackActive": true,
       "attackWeight": "heavy",
+      "attackDamage": 3,
       "attackTrajectory": "slash",
       "impactMaterial": "sharp",
       "attackActiveFrames": [2],

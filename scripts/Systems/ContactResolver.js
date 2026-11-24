@@ -306,7 +306,7 @@ export class ContactResolver {
                     attackWeight: contact.weapon.attackWeight ?? null,
                     sourceMaterial: contact.weapon.impactMaterial ?? null,
                     targetSurface: contact.hitbox.contactSurface ?? null,
-                    damage: 1,
+                    damage: w.attackDamage ?? 1,
                     hitState: "hit",
                     knockbackX: knockback,
                     attackHitstopFrames: attackerImpact.attackHitstopFrames ?? this.tuning.hit.hitstopFrames,
