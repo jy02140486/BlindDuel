@@ -68,7 +68,8 @@ export const ASSET_MANIFEST = {
             merchant: "./Art/Sprite/NPCs/merchant.json",
             customer: "./Art/Sprite/NPCs/customer.json",
             customer2: "./Art/Sprite/NPCs/customer2.json",
-            bard: "./Art/Sprite/NPCs/bard.json"
+            bard: "./Art/Sprite/NPCs/bard.json",
+            tavernhost: "./Art/Sprite/NPCs/TavernHost.json"
         },
         companion: {
             charlotte: "./Art/Sprite/NPCs/Charlotte.json"
@@ -177,7 +178,8 @@ export const ASSET_MANIFEST = {
             merchant: "./Data/RootMotion/NPCs/merchant.json",
             customer: "./Data/RootMotion/NPCs/customer.json",
             customer2: "./Data/RootMotion/NPCs/customer2.json",
-            bard: "./Data/RootMotion/NPCs/bard.json"
+            bard: "./Data/RootMotion/NPCs/bard.json",
+            tavernhost: "./Data/RootMotion/NPCs/TavernHost.json"
         },
         companion: {
             charlotte: "./Data/RootMotion/NPCs/Charlotte.json"
@@ -198,7 +200,8 @@ export const ASSET_MANIFEST = {
             merchant: "./Data/RootMotion/NPCs/merchant.occupancy.json",
             customer: "./Data/RootMotion/NPCs/customer.occupancy.json",
             customer2: "./Data/RootMotion/NPCs/customer2.occupancy.json",
-            bard: "./Data/RootMotion/NPCs/bard.occupancy.json"
+            bard: "./Data/RootMotion/NPCs/bard.occupancy.json",
+            tavernhost: "./Data/RootMotion/NPCs/TavernHost.occupancy.json"
         },
         companion: {
             charlotte: "./Data/RootMotion/NPCs/Charlotte.occupancy.json"

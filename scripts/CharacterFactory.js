@@ -17,7 +17,7 @@ export function createHeroCharacter(scene, assets) {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "hero",
         kind: "player",
-        maxHp: 10,
+        maxHp: 1,
         blocksMovement: false,
         interactable: false,
         stateGraph: assets.stateGraphs.hero,
@@ -515,6 +515,37 @@ export function createBardNpc(scene, assets) {
         },
         rootMotion: assets.rootMotion?.npc?.bard ?? null,
         occupancy: assets.occupancy?.npc?.bard ?? null
+    });
+}
+
+export function createTavernHostNpc(scene, assets) {
+    const tavernHostAtlas = assets.atlas.npc.tavernhost;
+    const spriteUrl = "./Art/Sprite/NPCs/TavernHost.png";
+
+    return new NpcCharacter(scene, {
+        ...DEFAULT_CHARACTER_OPTIONS,
+        name: "tavernhost",
+        kind: "npc",
+        blocksMovement: true,
+        interactable: true,
+        capabilities: { combat: false, interaction: true },
+        showCollision: false,
+        stateGraph: {
+            initialState: "idle",
+            states: {
+                idle: { clip: "stand", loop: true }
+            }
+        },
+        clips: {
+            stand: {
+                spriteSheetUrl: spriteUrl,
+                atlasData: tavernHostAtlas,
+                frameRange: [0, 4],
+                loop: true
+            }
+        },
+        rootMotion: assets.rootMotion?.npc?.tavernhost ?? null,
+        occupancy: assets.occupancy?.npc?.tavernhost ?? null
     });
 }
 

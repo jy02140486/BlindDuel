@@ -47,6 +47,15 @@
             "arrow": { "enabled": true }
         },
         {
+            "archetype": "npc_tavernhost",
+            "id": "tavernhost",
+            "name": "tavernhost",
+            "kind": "npc",
+            "pos": [-5.4, -1.2],
+            "controller": "npc",
+            "arrow": { "enabled": true }
+        },
+        {
             "archetype": "pickable",
             "id": "ham_01",
             "name": "ham",
