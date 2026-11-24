@@ -68,6 +68,7 @@ py .\.serve.ps1
 - 战斗会话抽象：`scripts/Systems/BattleSession.js`（`createBattleSession` 严格 1v1 校验 + 每场独立 session 对象；绑定 playerId/opponentId/battleDef/enterSequence/exitSequence/retryCheckpointSpawnId）
 - 顶层流程管理器：`scripts/Systems/GameFlowManager.js`（Game-scoped，跨 Scene 存活；MENU/PLAYING/ENDING 三态，纯事件驱动不进主循环；主菜单显隐 + HUD DOM 显隐 `_setHudVisible` + `_suspendWorld/_resumeWorld` 冻结/恢复；通关 ending 时序见 `plans/26.11.11 主菜单和通关逻辑.MD`）
 - 游戏模式管理器：`scripts/Systems/GameModeManager.js`（持有 ExploreMode / BattleMode 实例，负责模式切换 + 序列播放 + pending/active session 转移；Scene-scoped，每次 Scene.init 重建，只服务场景内玩法模式）
+  - ⚠ 约束：`Game.teardownGameplay()`（restoreCheckpoint / unloadScene / 回主菜单共用）调完 `currentMode.exit()` 后必须将 `currentMode` 摘回 explore（或 null）——exit 只清数据不动 currentMode，若不摘除，旧场景 dispose 前每帧仍跑旧 mode 的 updateRender，把败北时刻残值写回 sharedContext，导致下一轮入战 blend 结束后 DuelCameraRig 读到脏 basePosition/fighterDistance、镜头多缩放一次。若后续改 GameModeManager 切换语义或新增跳过 exit 的 teardown 路径，需重新评估此约束。
 - 探索模式：`scripts/Systems/Modes/ExploreMode.js`（驱动场景探索、多 trigger 重叠取最近、写入 pendingBattleSession、入场前应用本场 duelCamera + 播放入场序列；sequence trigger type=sequence 支持非战斗过场；cutsceneInvokers 世界状态自动触发过场，ending 语义：黑屏回调 advanceScenario + 通关画面 → 主菜单——26.11.14 解耦后 ending 归 SceneDef invoker，BattleDef.onVictory.ending 已移除）
 - 战斗模式：`scripts/Systems/Modes/BattleMode.js`（`enter({session})` 保存 activeSession，player/opponent/CombatSystem/ProjectileManager 全从 session 取，不再按数组位置猜身份；exit 清理 active+pending+本场投掷物；stageBounds 在场内应用）
 - 场景序列器：`scripts/Systems/SceneSequencer.js`（支持 `STEP_TYPE` 整数枚举 step）

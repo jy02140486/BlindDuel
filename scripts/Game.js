@@ -376,9 +376,11 @@ export class Game {
     // 幂等：BattleMode.exit 各段均有守卫，重复调用安全。
     // 供 restoreCheckpoint / GameFlowManager（回主菜单、New Game）共用。
     teardownGameplay() {
-        const currentMode = this.gameModeManager?.currentMode;
+        const gm = this.gameModeManager;
+        const currentMode = gm?.currentMode;
         if (currentMode && typeof currentMode.exit === "function" && currentMode.id !== "explore") {
             currentMode.exit();
+            gm.currentMode = gm.modes.get("explore") ?? null;
         }
     }
 
