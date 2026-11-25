@@ -53,7 +53,7 @@
             "id": "ham_01",
             "name": "ham",
             "kind": "pickable",
-            "pos": [2.2, -0.32],
+            "pos": [1.52, -0.23],
             "controller": "none",
             "visualYOffset": 1.5,
             "arrow": { "enabled": true },
