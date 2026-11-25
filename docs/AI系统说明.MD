@@ -184,6 +184,8 @@ cutScore = cutBase(0.65) × timingAlignment × distanceAlignment × attackMult �
 ### #scoreAttack 完整链路
 
 base = 0.4 (AITuning.attack.baseWeight)
+  × damageFactor (26.11.24 B2 伤害次级评价，乘性：clamp(1 + 0.08×(damage-1)×(0.5+baseAggression)), [0.85,1.20]；
+    只乘 common 桶基座段（base+加分），罚项乘后原值扣减不被放大；damage=1 恒为 1.0，轻招评分逐位不变)
   × rangeFactor (远端：distance 在 [effectiveRange, effectiveRange*1.3] 窗口内衰减；
     近端（26.11.2 Step 4A）：distance 在 [minReach, effectiveRange] 内从 1.0 衰减到
     attack.nearDecayFloor(0.5)——锚定单招自己的射程带，长招先于短招感受贴脸劣势，
@@ -375,6 +377,22 @@ base = throw.baseWeight(0.35)
 - **成本同源（R3）**：`CombatCharacter.getAttackCommitCost()` 公开查询口，AI 资格预测与实际扣费用同一规则
 - **日志标签**：`fatigueGate`（候选过滤）/ `fatigueCycle`（周期状态）/ `[AI-Diag] COMBAT`（命中事件，含 stamina/fatigueCycle 字段）
 - ⚠ 已知问题：D8 设计假设"压制 guard 后 dodge 接管"与 StateGraphDef 状态封闭（hit/guard 态无 dodge 出口）互相对消——低耐力被压制场景防御全空，详见 `plans/26.11.9 AI进攻决策引入耐力计划.MD` §6
+
+### Effective Timing 快照口径（26.11.24）
+
+- **入场快照**：`CombatCharacter._getStateTimeScale` 的返回值在 `enterState` 内快照到 `combat.stateEntryTimeScale`（含 `bonusTimeScale` 加速与疲劳减速）。⚠ 红线：必须在 enterState 内取函数返回值，不能事后读 `animation.getTimeScale()`——hitstop 会把 animation timeScale 置 0，实时读是脏数据
+- **分流口径**：`AIController.#getEffectiveTiming(timing, char)` 按目标角色状态分流——已在 fatigable 状态（attack/throw/clash，即 timing 对应的状态已入场）→ 读快照 `base / snap`（对手侧唯一正确口径：chainBonus 已被 clearTags 清空，tag 不可反推，快照是规则执行的结果）；否则（idle/guard 中预测尚未入场的候选招式，无对应入场快照）→ 保持 26.11.9 实时 `staminaSlowdown` 口径。两口径互斥不叠加
+- **行为面**：对手带 tag 加速的连招态（quart→reverse_quart 1.5× / 弹反接 zornhut 1.2×）AI 预测窗口与实际动画播放时长时间同口径（修复前系统性偏慢 1/加速倍率，dodge i-frame 门与防御紧迫度随之失准）
+- **名单单一源头**：fatigable 状态判定 = `CombatCharacter.isFatigableState` getter，动画减速与 AI 预测分流共用，防两处漂移
+
+### 伤害次级评价（26.11.24 目标 B）
+
+- **KB 数据源**：AIKnowledgeRegistry v7 attack profile 新增 `damage` 字段，表达式 `stateDef.attackDamage ?? CombatTuning.hit.damageByWeight[weight] ?? 1`，与结算侧（CombatCharacter 构建 ImpactContext）同源。扫描输出变更必须 bump SCHEMA_VERSION（否则旧缓存缺字段，`d=?` 诊断即是缓存未刷新信号）
+- **公式**：`damageFactor = clamp(1 + perDamagePoint(0.08) × (damage-1) × (aggressionScaleBase(0.5) + baseAggression), 0.85, 1.20)`，常量集中在 AIController 顶部 `DAMAGE_FACTOR_TUNING`（评分加权，非战斗规则）
+- **数值表**：agg=0.25（manatarms）→ d=2 得 ×1.06、d=3 得 ×1.12；agg=1.0 → d=2 ×1.12、d=3 ×1.20（触顶）。轻招 damage=1 恒 ×1.0，评分逐位不变
+- **罚项保护**：`#scoreAttack` 内基座/加分（`_baseBonusSum`）与罚项（`_penaltySum`）双跟踪，意图权重重组时 `common = 基座×commonW×damageFactor − 罚项×commonW`——repetition/feedback/threat 等惩罚不被伤害倍率放大，damageFactor=1 时与旧公式逐项相等
+- **人格稀释双层**：damageFactor（伤害敏感度，随 aggression 变化）与 attackPreferences（招式偏好，固定人格表）独立，二者共同决定高伤害招的实际选用倾向。动态 caution 调制会形成反馈环，不做（backlog）
+- **观测**：`[AI-Diag]` 攻击候选 breakdown 行新增 `d=` 字段；B-T4 验证用 `grep "best=attack" | 统计 stateName 分布` 对比 baseline
 
 ### 三种敌人配置示例
 

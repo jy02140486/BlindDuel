@@ -7,6 +7,16 @@ import { CombatMemory } from "./CombatMemory.js";
 import { CombatPosture } from "./CombatPosture.js";
 import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
 
+/** B2 伤害次级评价调参常量（Utility 评分加权，非战斗规则）：damageFactor = clamp(1 + perDamagePoint × (damage-1) × (aggressionScaleBase + baseAggression), floor, ceiling)。
+ *  只乘 attack 评分 common 桶基座段（base+加分），罚项乘后原值扣减不被放大（罚项保护条款） */
+const DAMAGE_FACTOR_TUNING = Object.freeze({
+    perDamagePoint: 0.08,
+    aggressionScaleBase: 0.5,
+    factorFloor: 0.85,
+    factorCeiling: 1.20,
+    defaultAggression: 0.5,
+});
+
 /**
  * AIController - AI 控制器（Phase 1：局面感知 + Utility 选招 + Action Commitment）
  * 核心流程：
@@ -247,16 +257,21 @@ export class AIController extends BaseController {
         const oppState = opp.currentStateName;
         const oppDef = opp.currentStateDef;
         let oppAtkTag = "none";
+        let oppAtkElapsedMs = 0;
         if (oppDef?.attackActive === true && this.opponentKB) {
             const ap = this.opponentKB.attacks.find(a => a.stateName === oppState);
             if (ap) {
-                oppAtkTag = `${ap.stateName}/${this.#getAttackPhase(ap, opp.animation?.normalizedTime ?? 0)}`;
+                const oppNorm = opp.animation?.normalizedTime ?? 0;
+                oppAtkTag = `${ap.stateName}/${this.#getAttackPhase(ap, oppNorm)}`;
+                oppAtkElapsedMs = oppNorm * (ap.timing?.totalMs ?? 0);
             }
         }
+        const selfStateDur = self._stateEnteredAtMs != null ? performance.now() - self._stateEnteredAtMs : 0;
         console.log(
-            `[AI-Diag] COMBAT: view=${perspective ?? "attacker"} outcome=${outcome} state=${targetState ?? "?"}` +
+            `[AI-Diag] COMBAT: id=${self.id} tick=${this._lastTick ?? "?"} view=${perspective ?? "attacker"} outcome=${outcome} state=${targetState ?? "?"}` +
             `${counteredBy ? ` by=${counteredBy}` : ""} dist=${distance.toFixed(2)}` +
-            ` selfState=${self.currentStateName ?? "?"} oppState=${oppState ?? "?"} oppAtk=${oppAtkTag}` +
+            ` selfState=${self.currentStateName ?? "?"}(dur=${selfStateDur.toFixed(0)}ms) prev=${self.prevStateName ?? "?"}(held=${(self._prevStateHeldMs ?? 0).toFixed(0)}ms)` +
+            ` oppState=${oppState ?? "?"} oppAtk=${oppAtkTag}(elapsed=${oppAtkElapsedMs.toFixed(0)}ms)` +
             ` stamina=${(self.stamina ?? 0).toFixed(0)}/${self.combat?.maxStamina ?? 100} fatigueCycle=${this._fatigueGateActive ? "on" : "off"}`
         );
     }
@@ -270,7 +285,8 @@ export class AIController extends BaseController {
         }
     }
 
-    fixedUpdate(dtMs = 0) {
+    fixedUpdate(dtMs = 0, tickCount = null) {
+        this._lastTick = tickCount ?? this._lastTick ?? null;
         if (!this.character || !this.opponent) {
             this.applyToCharacter();
             return;
@@ -550,7 +566,7 @@ export class AIController extends BaseController {
                         rf *= nearFloor + (1 - nearFloor) * t;
                     }
                 }
-                return `${a.stateName}(minR=${(r?.minReach ?? 0).toFixed(2)} maxR=${(r?.maxReach ?? 0).toFixed(2)} effR=${effR.toFixed(2)} rf=${rf.toFixed(2)} sc=${(s?.score ?? 0).toFixed(3)})`;
+                return `${a.stateName}(minR=${(r?.minReach ?? 0).toFixed(2)} maxR=${(r?.maxReach ?? 0).toFixed(2)} effR=${effR.toFixed(2)} rf=${rf.toFixed(2)} d=${a.damage ?? "?"} sc=${(s?.score ?? 0).toFixed(3)})`;
             }).join(", ");
 
             const _posDetail = `POS: approach=${pos.score.toFixed(3)} hold=${pos.holdScore.toFixed(3)} retreat=${pos.retreatScore.toFixed(3)}`;
@@ -568,8 +584,9 @@ export class AIController extends BaseController {
 
             const _bestLabel = best?.action?.stateName ?? "(pos)";
             console.log(
-                `[AI-Diag] dist=${sit.distance.toFixed(2)} oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)} ` +
-                `→ best=${best?.kind}:${_bestLabel}(${best?.score?.toFixed(3) ?? "0"}) ` +
+                `[AI-Diag] id=${this.character.id} tick=${this._lastTick ?? "?"} dist=${sit.distance.toFixed(2)} oppPhase=${sit.opp.phase} oppThreat=${sit.oppThreat.toFixed(2)}` +
+                ` self=${sit.self?.stateName ?? "?"}@${(sit.self?.normTime ?? 0).toFixed(2)} stamina=${(this.character.stamina ?? 0).toFixed(0)}` +
+                ` → best=${best?.kind}:${_bestLabel}(${best?.score?.toFixed(3) ?? "0"}) ` +
                 `top3=[${_top3}] ${_posDetail} attacks: ${_atkBreakdown}` +
                 `${_throwBreakdown ? ` throws: ${_throwBreakdown}` : ""}`
             );
@@ -841,14 +858,27 @@ export class AIController extends BaseController {
     }
 
     /**
-     * 疲劳计划 Step 2.1: base timing × 目标角色当前疲劳倍率
-     * 所有绝对 ms 消费点（预测事件 / dodge 资格门 / 自招窗口）统一经此换算，
-     * 保证"动画实际变慢"与"AI 预测窗口"同一口径。攻击状态内耐力不变，
-     * 实时 staminaRatio 即 commit 时刻倍率；startup/total 同乘 slowdown 保持减法公式自洽
+     * 统一 timing 换算口，按目标角色状态分流（effective timing 计划 A2）：
+     * - char 已在 fatigable 状态（attack/throw/clash，即 timing 对应的状态已入场）：
+     *   读入场快照 1/stateEntryTimeScale（快照即最终播放 timeScale，含 bonusTimeScale 替换与疲劳
+     *   减速；KB timing 定义于 timeScale=1.0 口径，段时长 = timing/snap，对手 chain 加速因此
+     *   可被预测，D1）；不除 currentStateDef.timeScale——bonus 分支是替换而非相乘，除回去
+     *   会丢弃 timeScale≠1 状态自身的变速分量
+     * - 否则（idle/guard 中预测尚未入场的候选招式，无对应入场快照）：
+     *   保持 26.11.9 实时疲劳口径（A-T1：无 tag 行为与改前一致）
+     * 两种口径互不叠加；startup/total 同乘 slow 保持减法公式自洽
      */
     #getEffectiveTiming(timing, char) {
         if (!timing) return timing;
-        const slow = char?.staminaSlowdown ?? 1.0;
+        let slow;
+        if (char?.isFatigableState === true) {
+            const snap = char.combat?.stateEntryTimeScale;
+            slow = (typeof snap === "number" && snap > 0)
+                ? 1 / snap
+                : (char.staminaSlowdown ?? 1.0);
+        } else {
+            slow = char?.staminaSlowdown ?? 1.0;
+        }
         if (slow === 1.0) return timing;
         const scale = (v) => (typeof v === "number" ? v * slow : v);
         return {
@@ -1072,6 +1102,15 @@ export class AIController extends BaseController {
         const range = attack.range?.maxReach ?? 0;
         const timing = this.#getEffectiveTiming(attack.timing, this.character);
 
+        // B2：伤害次级评价（有界乘性）。灵敏度挂配置级 aiProfile.baseAggression（人格差异化；
+        // 动态 caution 会形成反馈环，backlog）。damage=1 恒为 1.0；数值验证见计划 B-T2
+        const _agg = this.tuning.aiProfile?.baseAggression ?? DAMAGE_FACTOR_TUNING.defaultAggression;
+        const _rawDmgFactor = 1
+            + DAMAGE_FACTOR_TUNING.perDamagePoint * ((attack.damage ?? 1) - 1)
+              * (DAMAGE_FACTOR_TUNING.aggressionScaleBase + _agg);
+        const damageFactor = Math.max(DAMAGE_FACTOR_TUNING.factorFloor,
+            Math.min(DAMAGE_FACTOR_TUNING.factorCeiling, _rawDmgFactor));
+
         // frameSpeeds 位移加成：activeDisplacement 是 weaponbox 实际覆盖期间的位移（负=向对手前冲）
         // 用 activeDisplacement 而不是全动画 displacement，避免 dash 这类 weaponbox 只在短窗口存在的动作
         // 被高估可达距离（dash 全位移 ~3.8 但 weaponbox 只覆盖 ~1.7 的位移）
@@ -1172,6 +1211,10 @@ export class AIController extends BaseController {
 
         let score = this.tuning.attack.baseWeight; // base: 距离可达就有基础分
         const baseScore = score;
+        // B2：common 桶内「基座+加分」与「罚项」分开跟踪——damageFactor 只乘前者，
+        // 罚项（cooldown/miss/threat/feedbackFail/repetition）乘后原值扣减，不被倍率放大
+        let _baseBonusSum = score;
+        let _penaltySum = 0;
 
         // === Step B: 意图分项诊断 ===
         // 记录每个分项归属，最后输出 breakdown 日志
@@ -1191,6 +1234,7 @@ export class AIController extends BaseController {
             const _cdPenalty = this.tuning.attack.cooldownPenalty;
             score -= _cdPenalty;
             _breakdown.common -= _cdPenalty;
+            _penaltySum += _cdPenalty;
         }
 
         // ---- Phase 2: 克制关系查询 ----
@@ -1207,11 +1251,13 @@ export class AIController extends BaseController {
             const penalty = interaction.parryable ? this.tuning.attack.parryRiskPenalty : this.tuning.attack.missPenalty; // parry 更危险（有反击）
             score -= penalty;
             _breakdown.common -= penalty;
+            _penaltySum += penalty;
         } else if (sit.opp.guardType && !interaction.blocked) {
             // opponent 在 guard 但防不住我的攻击 → 加分（抓漏洞）
             const _leak = this.tuning.attack.guardLeakBonus;
             score += _leak;
             _breakdown.common += _leak;
+            _baseBonusSum += _leak;
         }
         // --------------------------------
 
@@ -1240,6 +1286,7 @@ export class AIController extends BaseController {
             threatPenaltyApplied = effectiveThreat * this.tuning.attack.threatPenalty;
             score -= threatPenaltyApplied;
             _breakdown.common -= threatPenaltyApplied;
+            _penaltySum += threatPenaltyApplied;
         }
 
         // Phase 5 Step 3a: preemptive bonus 迁移到 events 层
@@ -1310,6 +1357,7 @@ export class AIController extends BaseController {
             const _reb = this.tuning.attack.rangeEdgeBonus;
             score += _reb;
             _breakdown.common += _reb;
+            _baseBonusSum += _reb;
         }
 
         // ---- Phase 3 Feedback Memory: Adaptation 调节器 ----
@@ -1322,10 +1370,12 @@ export class AIController extends BaseController {
             failDelta = -(this.tuning.attack.feedbackFailPenalty * adaptation.consecutiveFail);
             score += failDelta;
             _breakdown.common += failDelta;
+            _penaltySum += -failDelta;
         } else if (adaptation.consecutiveFail === 1) {
             failDelta = -(this.tuning.attack.feedbackFailPenalty * 0.5);
             score += failDelta;
             _breakdown.common += failDelta;
+            _penaltySum += -failDelta;
         }
 
         // 成功累积奖励（保持惯性，封顶 Step 3: 只反映最近短期成功）
@@ -1335,6 +1385,7 @@ export class AIController extends BaseController {
             successDelta = this.tuning.attack.feedbackSuccessBonus * cappedSuccess;
             score += successDelta;
             _breakdown.common += successDelta;
+            _baseBonusSum += successDelta;
         }
 
         // ---- Feedback Memory Step 4: Continuity 调节器 ----
@@ -1344,6 +1395,7 @@ export class AIController extends BaseController {
             continuityDelta = this.tuning.attack.continuityBonus;
             score += continuityDelta;
             _breakdown.common += continuityDelta;
+            _baseBonusSum += continuityDelta;
         }
 
         // ---- Repetition Cost: 重复行为成本（Step 2）----
@@ -1359,6 +1411,7 @@ export class AIController extends BaseController {
             repetitionCost = Math.min(rcMax, rcRate * (usageCount - 1));
             score -= repetitionCost;
             _breakdown.common -= repetitionCost;
+            _penaltySum += repetitionCost;
         }
 
         // === Step C: 意图级权重（绕过共享乘数，让三条进攻意图可独立配置）===
@@ -1379,9 +1432,12 @@ export class AIController extends BaseController {
             default:
                 break;
         }
-        _breakdown.common     *= commonW;
         _breakdown.preemptive *= preemptiveW;
         _breakdown.punish     *= punishW;
+        // B2：damageFactor 只乘 common 桶基座段（base+加分），罚项乘后原值扣减不放大；
+        // damageFactor=1 时与原式逐项相等（B-T2 罚项验证依据）
+        const _penPart = _penaltySum * commonW;
+        _breakdown.common = _baseBonusSum * commonW * damageFactor - _penPart;
         score = _breakdown.common + _breakdown.preemptive + _breakdown.punish + _breakdown.clashSeeker;
 
         // 26.11.9 Step 4：意图权重后、乘性阶段前的机会分量快照（Gate 放行判据）
@@ -1699,7 +1755,7 @@ export class AIController extends BaseController {
             if (timeUntilHit < escapeLatency) {
                 if (this.debugVisible) {
                     console.log(
-                        `[AI-Diag] dodgeGate REJECT ${defenseAction.stateName}: ` +
+                        `[AI-Diag] dodgeGate REJECT id=${this.character.id} ${defenseAction.stateName}: ` +
                         `hitIn=${timeUntilHit.toFixed(0)}ms < dodgeReadyIn=${escapeLatency.toFixed(0)}ms ` +
                         `(selfState=${_selfStateName ?? "?"})`
                     );
@@ -2901,7 +2957,7 @@ export class AIController extends BaseController {
         const oppIdleSec = (sit?.oppIdleMs ?? 0) / 1000;
 
         console.log(
-            `[Phase0] oppIdleMs=${(oppIdleSec).toFixed(1)}s ` +
+            `[Phase0] id=${this.character.id} oppIdleMs=${(oppIdleSec).toFixed(1)}s ` +
             `oppPhase=${sit?.opp?.phase ?? "?"} oppVuln=${(sit?.oppVulnerable ?? 0).toFixed(2)} | ` +
             `Mem: pressure=${mem.pressure} consecMiss=${mem.consecutiveMisses} outCnt=${mem.outcomesCount} | ` +
             `Posture: cur={att=${cur.attackMultiplier},def=${cur.defenseMultiplier},adv=${cur.advanceMultiplier},ret=${cur.retreatMultiplier}} ` +

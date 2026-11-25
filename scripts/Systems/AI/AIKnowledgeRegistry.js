@@ -1,5 +1,6 @@
 import { ProjectileDefs } from "../../../Data/ProjectileDefs.js";
 import { AITuning } from "../../../Data/AITuning.js";
+import { CombatTuning } from "../../../Data/CombatTuning.js";
 
 /**
  * AIKnowledgeRegistry - 全局 AI 知识缓存系统
@@ -12,8 +13,9 @@ export class AIKnowledgeRegistry {
      *  v1=初始, v2=minReach, v3=新增 throw 状态扫描（Phase 2 Step 4）,
      *  v4=throw profile 增加弹道物理射程 flight 块,
      *  v5=射程计入手部释放高度（真实落地方程，替代地面起落地面对称弧假设）,
-     *  v6=#computeReach/#computeMinReach 修正旋转 AABB 的 X 轴投影（原代码忽略 angle，把所有 box 当轴对齐） */
-    static #SCHEMA_VERSION = 6;
+     *  v6=#computeReach/#computeMinReach 修正旋转 AABB 的 X 轴投影（原代码忽略 angle，把所有 box 当轴对齐）,
+     *  v7=attack profile 新增 damage 字段（伤害差异计划 B1：attackDamage ?? damageByWeight[weight] ?? 1，与结算同源） */
+    static #SCHEMA_VERSION = 7;
 
     // 全局缓存: characterId -> { versionHash, profile }
     static #cache = new Map();
@@ -381,6 +383,9 @@ export class AIKnowledgeRegistry {
             stateName,
             trajectory: stateDef.attackTrajectory ?? null, // "thrust" | "slash" | null
             weight: stateDef.attackWeight ?? null,         // "light" | "heavy" | null
+            // B1：实际结算伤害（招式级 attackDamage 覆写 → weight 兑底表 → 1），与
+            // CombatCharacter 构建 ImpactContext 的表达式同源；接入≠决策，B2 才进评分
+            damage: stateDef.attackDamage ?? CombatTuning.hit.damageByWeight?.[stateDef.attackWeight] ?? 1,
             timing: {
                 startupMs,
                 activeMs,

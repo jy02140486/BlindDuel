@@ -104,7 +104,6 @@
       "clip": "reverse_quart",
       "attackActive": true,
       "attackWeight": "light",
-      "attackDamage": 3,
       "attackTrajectory": "slash",
       "impactMaterial": "sharp",
       "attackActiveFrames": [2],

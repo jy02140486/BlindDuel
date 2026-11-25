@@ -44,6 +44,7 @@ export class CombatCharacter extends CharacterBase {
             lastActionTime: -Infinity,
             timeControl: new TimeControlComponent(),
             timeControlSystem: new TimeControlSystem(),
+            stateEntryTimeScale: 1.0,
             hp: config.maxHp ?? 3,
             maxHp: config.maxHp ?? 3,
             stamina: maxStamina,
@@ -162,18 +163,27 @@ export class CombatCharacter extends CharacterBase {
             ? (stateDef.bonusTimeScale ?? stateDef.timeScale ?? 1.0)
             : (stateDef.timeScale ?? 1.0);
 
-        // D1/D4/D5：疲劳减速只作用于 attack 类 + throw + clash（super.enterState 内调用时
-        // currentStateName/currentStateDef 已指向新状态）；guard/dodge 豁免（D1/D9）
         const st = CombatTuning.stamina;
-        if (st.enabled === false) return base;
-        const name = this.currentStateName;
-        const fatigable = stateDef?.attackActive === true
-            || name === "throw"
-            || name === "clash";
-        if (!fatigable) return base;
 
-        const slowdown = this.staminaSlowdown;
-        return base / slowdown;
+        // 入场快照（effective timing 计划 A1）：本方法仅由 CharacterBase.enterState
+        // 在 clearTags 之前调用（P2 红线时刻），此时 currentStateName/currentStateDef
+        // 已指向新状态，isFatigableState 与传入 stateDef 一致；快照含 bonusTimeScale
+        // 与疲劳减速；不读 animation.getTimeScale()（hitstop 会置 0，是脏数据）
+        let value = base;
+        if (st.enabled !== false && this.isFatigableState) {
+            value = base / this.staminaSlowdown;
+        }
+        if (this.combat) {
+            this.combat.stateEntryTimeScale = value;
+        }
+        return value;
+    }
+
+    /** 当前状态是否参与疲劳减速（attack 类 + throw + clash；guard/dodge 豁免 D1/D9）。动画减速与 AI 预测分流共用此单一判定，防两处名单漂移 */
+    get isFatigableState() {
+        return this.currentStateDef?.attackActive === true
+            || this.currentStateName === "throw"
+            || this.currentStateName === "clash";
     }
 
     /** 当前疲劳减速因子（≥1.0，disabled=1.0）；动画减速与 AI 时序预测共用单一来源（疲劳计划 Step 2.1） */
