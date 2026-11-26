@@ -1,10 +1,4 @@
 {
-    "pickup": {
-        "clips": ["./Audio/sfx/player/pickup_01.wav"],
-        "volume": 0.8,
-        "pitch": [0.96, 1.04],
-        "bus": "sfx"
-    },
     "swing_light": {
         "clips": ["./Audio/sfx/weapon/263595__porkmuncher__swoosh/slice_04.wav"],
         "volume": 0.8,

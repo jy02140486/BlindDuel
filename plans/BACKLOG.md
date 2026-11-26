@@ -31,7 +31,13 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 buff
 抽象一个hud类统一管理所有hud元素，目前是耐力条和血条，道具，buff栏
 致命一击时的freeze，尤其man at arms
-重击额外伤害
+通关后continue清理
+tavern hall去人物重导
+tavern night 血量
+nashachlag 范围加大
+rabble thrust 动画帧加长
+fullthrust 稍加快
+AI反应速度增加疲劳惩罚
 
 
 

@@ -4,3 +4,5 @@ Audio/sfx/_raw
 *.scancache
 *.*~
 *.log
+dist/
+build_release.log
