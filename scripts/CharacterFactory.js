@@ -17,7 +17,7 @@ export function createHeroCharacter(scene, assets) {
         ...DEFAULT_CHARACTER_OPTIONS,
         name: "hero",
         kind: "player",
-        maxHp: 1,
+        maxHp: 10,
         blocksMovement: false,
         interactable: false,
         stateGraph: assets.stateGraphs.hero,

@@ -13,7 +13,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
     "sourceSize": { "w": 220, "h": 128 },
-    "duration": 100
+    "duration": 75
    },
    "longswordman_fullthrust 2.ase": {
     "frame": { "x": 440, "y": 0, "w": 220, "h": 128 },
@@ -21,7 +21,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
     "sourceSize": { "w": 220, "h": 128 },
-    "duration": 200
+    "duration": 300
    },
    "longswordman_fullthrust 3.ase": {
     "frame": { "x": 660, "y": 0, "w": 220, "h": 128 },
@@ -29,7 +29,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
     "sourceSize": { "w": 220, "h": 128 },
-    "duration": 200
+    "duration": 125
    },
    "longswordman_fullthrust 4.ase": {
     "frame": { "x": 880, "y": 0, "w": 220, "h": 128 },
@@ -37,7 +37,7 @@
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 220, "h": 128 },
     "sourceSize": { "w": 220, "h": 128 },
-    "duration": 350
+    "duration": 300
    },
    "longswordman_fullthrust 5.ase": {
     "frame": { "x": 1100, "y": 0, "w": 220, "h": 128 },
@@ -66,6 +66,7 @@
    { "name": "right arm", "opacity": 255, "blendMode": "normal" },
    { "name": "collisionmask", "opacity": 255, "blendMode": "normal" },
    { "name": "pushbox", "opacity": 255, "blendMode": "normal" },
+   { "name": "trailmarker", "opacity": 255, "blendMode": "normal" },
    { "name": "rootmotion", "opacity": 255, "blendMode": "normal" }
   ]
  }

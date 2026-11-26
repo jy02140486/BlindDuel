@@ -4,7 +4,9 @@
                    "collisionPng":  "Data/CollisionMask/rabble_stick/rabble_stick_thrust.png",
                    "rootPng":  "Data/RootMotion/rabble_stick/rabble_stick_thrust.png",
                    "pushboxPng":  "Data/PushBox/rabble_stick/rabble_stick_thrust.png",
+                   "pushboxSource":  "scan",
                    "trailMarkerPng":  "Data/TrailMarker/rabblestick/rabble_stick_thrust.png",
+                   "trailMarkerSource":  "scan",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -33,7 +35,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-03T01:26:53.0386767Z"
+                   "generatedAtUtc":  "2026-11-26T11:05:18.5286449Z"
                },
     "frames":  [
                    {

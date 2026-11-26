@@ -1,11 +1,11 @@
 ﻿{
     "source":  {
-                   "atlasJson":  ".\\Data\\CollisionMask\\longswordman\\longswordman_nachschlag.json",
-                   "collisionPng":  ".\\Data\\CollisionMask\\longswordman\\longswordman_nachschlag.png",
-                   "rootPng":  ".\\Data\\RootMotion\\longswordman\\longswordman_nachschlag.png",
-                   "pushboxPng":  ".\\Data\\PushBox\\longswordman\\longswordman_nachschlag.png",
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_nachschlag.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_nachschlag.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_nachschlag.png",
+                   "pushboxPng":  "Data/PushBox/longswordman/longswordman_nachschlag.png",
                    "pushboxSource":  "scan",
-                   "trailMarkerPng":  ".\\Data\\TrailMarker\\longswordman\\longswordman_nachschlag.png",
+                   "trailMarkerPng":  "Data/TrailMarker/longswordman/longswordman_nachschlag.png",
                    "trailMarkerSource":  "scan",
                    "collisionTypeColors":  [
                                                {
@@ -35,7 +35,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-12T16:48:22.8096053Z"
+                   "generatedAtUtc":  "2026-11-26T08:03:39.8748630Z"
                },
     "frames":  [
                    {
@@ -176,8 +176,8 @@
                                          "id":  "weaponbox_weak_blade_0",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  161,
-                                         "cy":  128,
+                                         "cx":  176,
+                                         "cy":  126,
                                          "w":  55,
                                          "h":  39,
                                          "angle":  90,

@@ -1,10 +1,12 @@
 ﻿{
     "source":  {
-                   "atlasJson":  ".\\Data\\CollisionMask\\longswordman\\longswordman_fullthrust.json",
-                   "collisionPng":  ".\\Data\\CollisionMask\\longswordman\\longswordman_fullthrust.png",
-                   "rootPng":  ".\\Data\\RootMotion\\longswordman\\longswordman_fullthrust.png",
-                   "pushboxPng":  ".\\Data\\PushBox\\longswordman\\longswordman_fullthrust.png",
-                   "trailMarkerPng":  ".\\Data\\TrailMarker\\longswordman\\longswordman_fullthrust.png",
+                   "atlasJson":  "Data/CollisionMask/longswordman/longswordman_fullthrust.json",
+                   "collisionPng":  "Data/CollisionMask/longswordman/longswordman_fullthrust.png",
+                   "rootPng":  "Data/RootMotion/longswordman/longswordman_fullthrust.png",
+                   "pushboxPng":  "Data/PushBox/longswordman/longswordman_fullthrust.png",
+                   "pushboxSource":  "scan",
+                   "trailMarkerPng":  "Data/TrailMarker/longswordman/longswordman_fullthrust.png",
+                   "trailMarkerSource":  "scan",
                    "collisionTypeColors":  [
                                                {
                                                    "key":  "hitbox",
@@ -33,7 +35,7 @@
                    "minPixels":  6,
                    "minRootPixels":  1,
                    "minTrailMarkerPixels":  2,
-                   "generatedAtUtc":  "2026-11-01T04:16:26.3559105Z"
+                   "generatedAtUtc":  "2026-11-26T08:19:57.8839614Z"
                },
     "frames":  [
                    {
@@ -324,12 +326,12 @@
                                          "id":  "weaponbox_weak_blade_1",
                                          "type":  "weaponbox",
                                          "subtype":  "weak_blade",
-                                         "cx":  178.5,
+                                         "cx":  170,
                                          "cy":  64.5,
-                                         "w":  44,
+                                         "w":  63,
                                          "h":  8,
                                          "angle":  0,
-                                         "pixelCount":  352
+                                         "pixelCount":  500
                                      },
                                      {
                                          "id":  "pushbox_4",

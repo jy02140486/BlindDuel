@@ -92,7 +92,7 @@ export const BATTLE_TAVERN_NIGHT_RABBLE = {
     combatants: ["hero", "enemy_1"],
     // 每战斗人员配置：AI throwAmmo 缺省/0 = 无投掷能力（不装配 ThrowComponent）；player 弹药走背包
     combatantConfig: {
-        enemy_1: { throwAmmo: 5, maxHp: 1 },
+        enemy_1: { throwAmmo: 5, maxHp: 10 },
     },
     stageBounds: { minX: -19, maxX: -7   , minY: -0.85, maxY: -0.65 },
     battleYBaseline: -0.76,
@@ -193,7 +193,7 @@ export const BATTLE_TAVERN_NIGHT_MANATARMS = {
     id: "battle_tavern_night_manatarms",
     combatants: ["hero", "enemy_2"],     // enemy_2 对应 ep1_tavern_night.json 里的实体 id
     combatantConfig: {
-        enemy_2: { throwAmmo: 0, maxHp: 1 },
+        enemy_2: { throwAmmo: 0, maxHp: 10 },
     },
     stageBounds: { minX: -9, maxX: 7, minY: -0.85, maxY: -0.65 },
     battleYBaseline: -0.76,
