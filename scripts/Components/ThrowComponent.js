@@ -1,4 +1,5 @@
 import { getProjectileDef } from "../../Data/ProjectileDefs.js";
+import { IS_RELEASE } from "../ReleaseFlag.js";
 
 /**
  * ThrowComponent — 管理 CombatCharacter 的投掷弹药 + 负责实际 spawn Projectile。
@@ -29,7 +30,7 @@ export class ThrowComponent {
 
     /** Gate 查询 — CombatCharacter._matchesTransitionCondition 调用。 */
     canThrow() {
-        if (ThrowComponent.DEBUG_INFINITE_AMMO) return true;
+        if (ThrowComponent.DEBUG_INFINITE_AMMO && !IS_RELEASE) return true;
         return this.ammo > 0;
     }
 
@@ -43,7 +44,7 @@ export class ThrowComponent {
 
     /** 直接消耗 1 发 — release() 内部调用，外部一般不用。 */
     consumeAmmo() {
-        if (ThrowComponent.DEBUG_INFINITE_AMMO) return;  // 无限弹药：不扣
+        if (ThrowComponent.DEBUG_INFINITE_AMMO && !IS_RELEASE) return;  // 无限弹药：不扣
         this.ammo = Math.max(0, this.ammo - 1);
     }
 

@@ -1,3 +1,4 @@
+import { IS_RELEASE } from "./ReleaseFlag.js";
 import { WorldState, INITIAL_SCENE_ID } from "./WorldState.js";
 import { QuestManager } from "./Systems/QuestManager.js";
 import { InventoryManager } from "./Systems/InventoryManager.js";
@@ -96,8 +97,8 @@ export class Game {
         this.assets = await loadDataAssets(ASSET_MANIFEST);
         console.log("[Game.bootstrap] B2 done — assets loaded, keys=", Object.keys(this.assets).length);
 
-        this.inputSystem = new InputSystem({ debugEnabled: true });
-        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: true });
+        this.inputSystem = new InputSystem({ debugEnabled: !IS_RELEASE });
+        this.combatSystem = new CombatSystem({ combatTuning: CombatTuning, debugTrace: !IS_RELEASE });
         this.playerController = new PlayerController(this.inputSystem, null);
 
         this.cameraRig = new DuelCameraRig(DEFAULT_DUEL_CAMERA);

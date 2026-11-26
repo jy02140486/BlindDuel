@@ -10,10 +10,11 @@
 // - 顶点 uv.u 携带沿轨迹进度 t ∈ [0,1]（首标记=0，末标记=1），为下一任务沿轨迹渐隐预留（D7）
 // - 单点采样 width=0 → 两顶点重合，自然收尖（§2.2）
 import { getTrailColor } from "../../Data/TrailColors.js";
+import { IS_RELEASE } from "../ReleaseFlag.js";
 
 export class TrailRenderer {
     /** debug 采样点开关（验证 marker 采样用，false 关闭；与 ThrowComponent.DEBUG_INFINITE_AMMO 同风格） */
-    static DEBUG_POINTS = true;
+    static DEBUG_POINTS = !IS_RELEASE;
 
     // 控制点间每段插入的子采样数——稀疏采样点下把折线近似为曲线（同 Unity Line/TrailRenderer 思路）
     static SUBDIVISIONS_PER_SEGMENT = 10;
@@ -47,7 +48,7 @@ export class TrailRenderer {
         this._dissolving = false;
         this._dissolveElapsed = 0;
         // debug 采样点实例级显隐（X 键联动，Scene._applyDebugVisible 下发；与静态 DEBUG_POINTS 总开关并联）
-        this._debugVisible = true;
+        this._debugVisible = !IS_RELEASE;
     }
 
     /**

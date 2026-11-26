@@ -1,3 +1,4 @@
+import { IS_RELEASE } from "./ReleaseFlag.js";
 import { DummyController } from "./Systems/DummyController.js";
 import { TestController } from "./Systems/TestController.js";
 import { NpcController } from "./Systems/NpcController.js";
@@ -44,7 +45,7 @@ export class Scene {
         this._sceneDef = null;
         // 多敌人同场景时，通用别名 rabbleStick/"enemy" 冲突 warning 只报一次
         this._enemyAliasWarned = false;
-        this._debugVisible = true;
+        this._debugVisible = !IS_RELEASE;
     }
 
     async init(sceneDef, battleDefs = {}) {
@@ -54,11 +55,13 @@ export class Scene {
         this.scene.clearColor = new BABYLON.Color4(0.08, 0.08, 0.1, 1);
         this._game?.audioManager?.attachScene(this.scene);
 
-        // 添加调试层（按Ctrl+Shift+I打开）
-        await this.scene.debugLayer.show({
-            overlay: true,
-            globalRoot: document.getElementById("canvas") || undefined
-        });
+        // 添加调试层（按Ctrl+Shift+I打开）——release 不加载 inspector
+        if (!IS_RELEASE) {
+            await this.scene.debugLayer.show({
+                overlay: true,
+                globalRoot: document.getElementById("canvas") || undefined
+            });
+        }
 
         const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.scene);
         light.intensity = 1.0;
@@ -301,7 +304,7 @@ export class Scene {
         console.log("[Scene] B8: using game UI + sceneSequencer + gameModeManager");
 
         this._onKeyDown = (e) => {
-            if (e.key.toLowerCase() === "x") {
+            if (e.key.toLowerCase() === "x" && !IS_RELEASE) {
                 this._debugVisible = !this._debugVisible;
                 this._applyDebugVisible();
             }

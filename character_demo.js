@@ -1,6 +1,7 @@
 import { Game } from "./scripts/Game.js";
 import { FrameClock } from "./scripts/Systems/FrameClock.js";
 import { SCENARIO } from "./Data/ScenarioMilestones.js";
+import { IS_RELEASE } from "./scripts/ReleaseFlag.js";
 
 async function start() {
     const canvas = document.getElementById("renderCanvas");
@@ -10,9 +11,11 @@ async function start() {
     await game.bootstrap();
 
     // 暴露到全局，方便控制台调试
-    window.game = game;
-    window.resetWorldState = () => game.resetWorldState();
-    window.SCENARIO = SCENARIO;
+    if (!IS_RELEASE) {
+        window.game = game;
+        window.resetWorldState = () => game.resetWorldState();
+        window.SCENARIO = SCENARIO;
+    }
 
     // 暂停键监听（P 或 Esc）；主菜单/流程过渡期屏蔽，避免菜单期间暂停或切相机
     window.addEventListener("keydown", (e) => {
@@ -20,7 +23,7 @@ async function start() {
         if (e.key.toLowerCase() === "p" || e.key === "Escape") {
             game.togglePause();
         }
-        if (e.key.toLowerCase() === "c") {
+        if (e.key.toLowerCase() === "c" && !IS_RELEASE) {
             game.toggleCameraProjection();
         }
     });
