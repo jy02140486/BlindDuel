@@ -1,4 +1,4 @@
-export const INITIAL_SCENE_ID = "ep1_tavern_night";
+export const INITIAL_SCENE_ID = "prologue";
 
 export class WorldState {
     constructor() {
