@@ -34,6 +34,7 @@ export class AIController extends BaseController {
     #disengageUntilTs;         // 失败驱动脱离锁存到期时间（ms）；0 = 未激活
     #disengageLine;            // 脱离锁存期间的退离目标线（触发时冻结）
     #attackFailBudget;         // Map<stateName, 自上轮脱离预算清零以来的失败次数>（Step 4c 触发依据）
+    #pendingDefense;           // 疲劳防御延迟锁存 { candidate, delayMs, elapsedMs, tried }；null = 无 pending（26.11.26 §9）
 
     /** 判定为「失败」的 combat outcome（类静态，避免每次评分重建） */
 
@@ -101,6 +102,7 @@ export class AIController extends BaseController {
         // 失败驱动脱离（26.11.2 Step 4c）
         this.#disengageUntilTs = 0;
         this.#disengageLine = 0;
+        this.#pendingDefense = null;
         this.#attackFailBudget = new Map();
 
         // === Layer 0: CombatMemory（Phase 0 新增）===
@@ -300,6 +302,9 @@ export class AIController extends BaseController {
         // Phase 0: tick CombatMemory（每帧衰减 pressure + 清理过期 outcomes）
         this.combatMemory.tick(dtMs);
 
+        // 26.11.26 §9：pending 防御 fixed 级计时 + 到点提交节流（决策 100ms / 提交 ~16.67ms 混合粒度）
+        this.#updatePendingDefense(dtMs);
+
         // Action Commitment：self 正在 committed action（attack/guard/dodge）就跳过决策
         if (this.#isCommitted()) {
             this.decisionAccumulatedMs = 0; // 重置，让 committed action 有完整生命周期
@@ -384,6 +389,9 @@ export class AIController extends BaseController {
      * Phase 1 核心决策：构建 Combat Situation → Utility 评分 → 选最高分 → 执行
      */
     #makeDecision() {
+        // 26.11.26 §9：pending 计时与到点提交已迁至 #updatePendingDefense（fixedUpdate 级），
+        // 决策 tick 只负责锁存/替换/取消（见下方 defense commit 锁存拦截）
+
         // 为本决策 tick 抽取 reflex 偏移（0 ~ reflexMaxMs 均匀分布）
         this._reflexOffset = this.reflexMaxMs > 0
             ? Math.random() * this.reflexMaxMs
@@ -596,6 +604,35 @@ export class AIController extends BaseController {
         // 执行最高分（26.11.2 Step 2：committed 候选已经过阈值仲裁，positioning 候选
         // 有自己的距离门控；无达标候选 → 原地待机，不强制提交战斗动作）
         if (best && best.score > 0) {
+            // 26.11.26 疲劳反应延迟计划：defense commit pending 锁存（commit 层，评分层不可见）
+            // 实现于 commit 前：评分/仲裁照常，仅延迟执行；attack/throw/positioning 取消 pending（防御可弃，攻击优先）
+            if (best.kind === "guard" || best.kind === "dodge") {
+                const cfg = CombatTuning.stamina?.fatigueReaction;
+                const delayMs = this.#getFatigueReactionDelayMs();
+                if (cfg?.enabled && delayMs > 0) {
+                    // pending 生命周期保证（§9）：!tried 跨决策 tick 不可替换；
+                    // tried（已提交过一次）→ 允许新防御候选替换（新计时，重置 tried）
+                    if (this.#pendingDefense && !this.#pendingDefense.tried) {
+                        return;
+                    }
+                    this.#pendingDefense = { candidate: best, delayMs, elapsedMs: 0, tried: false };
+                    if (this.debugVisible) {
+                        console.log(
+                            `[AI-Diag] fatigueDefenseDelay: mode=active kind=${best.kind} state=${best.action?.stateName} ` +
+                            `delayMs=${delayMs.toFixed(0)} stamina=${(this.character.stamina ?? 0).toFixed(0)}/${this.character.combat?.maxStamina ?? 100}`
+                        );
+                    }
+                    return;
+                }
+                if (this.debugVisible && !cfg?.enabled && delayMs >= this.decisionIntervalMs / 2) {
+                    console.log(
+                        `[AI-Diag] fatigueDefenseDelay: mode=shadow kind=${best.kind} state=${best.action?.stateName} ` +
+                        `delayMs=${delayMs.toFixed(0)} stamina=${(this.character.stamina ?? 0).toFixed(0)}/${this.character.combat?.maxStamina ?? 100}`
+                    );
+                }
+            } else {
+                this.#pendingDefense = null;
+            }
             this.#executeCommitted(best);
         } else {
             // 全零塌缩或 committed 全被仲裁过滤 → 原地待机（不 fallback 到 hold 候选：
@@ -1897,6 +1934,67 @@ export class AIController extends BaseController {
                 );
             }
         }
+    }
+
+    /**
+     * 26.11.26 疲劳反应延迟计划：AI 防御感知延迟（F = 1 - staminaRatio）
+     * sigmoid：F=0（满）→≈0ms，F=0.5 → delayMaxMs/2，F=1（空）→≈delayMaxMs
+     * 恒返回理论值（影子模式也返回，供日志观察分布）；是否实际延迟由调用方按 enabled 判定
+     */
+    #getFatigueReactionDelayMs() {
+        const cfg = CombatTuning.stamina?.fatigueReaction;
+        if (!cfg) return 0;
+        const ratio = (this.character.stamina ?? 100) / (this.character.combat?.maxStamina ?? 100);
+        const F = 1 - Math.min(1, Math.max(0, ratio));
+        return cfg.delayMaxMs / (1 + Math.exp((0.5 - F) * cfg.steepness));
+    }
+
+    /**
+     * 26.11.26 §9：pending 防御 fixed 级驱动（每 fixedUpdate 调一次）
+     * 取消：opp phase 离开 startup/active/throw_windup（威胁消失）→ 清 pending；
+     * 计时：dtMs 为全局时钟增量（与 per-character hitstop 无关）→ self hitstop 期间显式冻结；
+     * 提交：elapsedMs ≥ delayMs 且未尝试 → 提交一次并标 tried（不清除；重试资格由下个决策 tick 授予）
+     */
+    #updatePendingDefense(dtMs) {
+        const pd = this.#pendingDefense;
+        if (!pd) return;
+        const phase = this.#getOppThreatPhase();
+        if (phase !== "startup" && phase !== "active" && phase !== "throw_windup") {
+            this.#pendingDefense = null;
+            return;
+        }
+        if (pd.tried) return;
+        if ((this.character.hitstopFrames ?? 0) > 0) return;
+        pd.elapsedMs += dtMs;
+        if (pd.elapsedMs >= pd.delayMs) {
+            pd.tried = true;
+            if (this.debugVisible) {
+                console.log(
+                    `[AI-Diag] fatigueDefenseCommit: kind=${pd.candidate.kind} state=${pd.candidate.action?.stateName} ` +
+                    `waitedMs=${pd.elapsedMs.toFixed(0)} delayMs=${pd.delayMs.toFixed(0)}`
+                );
+            }
+            this.#executeCommitted(pd.candidate);
+        }
+    }
+
+    /**
+     * 26.11.26 §9：轻量 opp 威胁相位（与 #buildSituation 同口径，供 fixed 级取消检查复用）
+     */
+    #getOppThreatPhase() {
+        const opp = this.opponent;
+        const oppDef = opp?.currentStateDef;
+        const oppState = opp?.currentStateName;
+        const oppNormTime = opp?.animation?.normalizedTime ?? 0;
+        if (oppDef?.attackActive === true && this.opponentKB) {
+            const profile = this.opponentKB.attacks.find(a => a.stateName === oppState);
+            if (profile) return this.#getAttackPhase(profile, oppNormTime);
+        }
+        if (oppDef?.throwActive === true && this.opponentKB?.throws) {
+            const profile = this.opponentKB.throws.find(t => t.stateName === oppState);
+            if (profile) return "throw_windup";
+        }
+        return "none";
     }
 
     /**

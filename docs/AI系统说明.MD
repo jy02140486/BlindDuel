@@ -378,6 +378,16 @@ base = throw.baseWeight(0.35)
 - **日志标签**：`fatigueGate`（候选过滤）/ `fatigueCycle`（周期状态）/ `[AI-Diag] COMBAT`（命中事件，含 stamina/fatigueCycle 字段）
 - ⚠ 已知问题：D8 设计假设"压制 guard 后 dodge 接管"与 StateGraphDef 状态封闭（hit/guard 态无 dodge 出口）互相对消——低耐力被压制场景防御全空，详见 `plans/26.11.9 AI进攻决策引入耐力计划.MD` §6
 
+### 疲劳反应延迟（26.11.26）
+
+- **机制**（26.11.27 §9 升级后，fixedUpdate 级计时 + 提交节流）：`#getFatigueReactionDelayMs()` sigmoid `delayMaxMs / (1 + e^((0.5-F)×steepness))`（F = 1 - staminaRatio）+ `#pendingDefense` defense commit 锁存——guard/dodge 候选过全部门控后锁存 {candidate, delayMs, elapsedMs, tried}，由 #updatePendingDefense 在每个 fixedUpdate（~16.67ms）驱动计时与到点提交。锁存实现于 commit 前，**评分层不可见**（AI 不能拿 T_fatigue 计算行动时机，与计划边界一致）
+- **提交节流**：到点提交不论 gate 接受与否都标 tried，fixed 级不再重复发送；重试资格只能由下个决策 tick 的新评分授予（tried=true 时允许新防御候选替换，重置计时）。**生命周期保证**：!tried 的 pending 跨决策 tick 不可被替换（延迟 >100ms 不会被新决策作废，每个锁存恰好一次提交机会，无饿死路径）；重试节奏 = delayMs(新 sigmoid 值) + decisionIntervalMs(≤100)，重试付全额延迟为既定语义
+- **取消**：attack/throw/positioning 候选提交时取消 pending（防御可弃，攻击优先）；自然取消 = #getOppThreatPhase 检测 opp phase 离开 startup/active/throw_windup（fixed 级每 tick 查，威胁消失即清）；self hitstop 期间计时冻结（显式检查 hitstopFrames——dtMs 是全局时钟增量，与 per-character hitstop 无关）。提交被 gate 拒后下决策 tick 重锁存（重锁存循环保留，见计划 §8 已知问题）
+- **边界**（吃延迟）：melee guard/dodge + reactive 投掷物 dodge（同一 latch，不设可行性门，对齐玩家"不拦截输入"哲学）；不吃：reactive cut（主动择机）/ preemptive / positioning / escapeLatency / cutReadyMs
+- **计时精度**：~16.67ms fixed tick 分辨率，sigmoid 理论值近似精确兑现（waitedMs = ceil(delayMs/16.67)×16.67，如 49→50、87→100）；无决策 tick 量化二值化。低耐力最坏总延迟 = 检测量化(≤100ms) + 锁存兑现(≤delayMaxMs)（delayMaxMs=100 时 ≈200ms）
+- **配置**：`CombatTuning.stamina.fatigueReaction`（enabled / delayMaxMs=100 / steepness=10）；计划与验收：`plans/26.11.26 AI基于疲劳的反应延迟计划.MD` §6~§9
+- **日志**：`[AI-Diag] fatigueDefenseDelay`（mode/delayMs/stamina）+ `fatigueDefenseCommit`（kind/waitedMs/delayMs，waitedMs≈delayMs 为兑现正常；同 delayMs 多轮配对 = 重锁存循环信号），X 键门控
+
 ### Effective Timing 快照口径（26.11.24）
 
 - **入场快照**：`CombatCharacter._getStateTimeScale` 的返回值在 `enterState` 内快照到 `combat.stateEntryTimeScale`（含 `bonusTimeScale` 加速与疲劳减速）。⚠ 红线：必须在 enterState 内取函数返回值，不能事后读 `animation.getTimeScale()`——hitstop 会把 animation timeScale 置 0，实时读是脏数据
@@ -574,6 +584,15 @@ alpha=0.15 → 追 target 需要 ~2-3s（默认）
 alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 ```
 
+### 想让疲劳 AI 防御更快/更慢
+
+| 目标 | 改什么 | 位置 |
+|------|--------|------|
+| 疲劳防御延迟上限 | `stamina.fatigueReaction.delayMaxMs`（当前 100）| CombatTuning.js |
+| 曲线陡峭度（中耐力段延迟）| `fatigueReaction.steepness` ↓ 更平缓 | CombatTuning.js |
+| 临时关闭 | `enabled: false`（影子模式：日志照打，不实际延迟）| CombatTuning.js |
+| 是否"会管理"疲劳（guard 压制/攻击门）| `fatigueAwareness` 感知档位 | aiProfile |
+
 ---
 
 ## 8. 常用日志 grep
@@ -592,6 +611,8 @@ alpha=0.25 → 追 target 需要 ~1s（灵敏，精英/Boss）
 | `[AI-Diag] preemptive_gate:` | preemptive 门控结果（含 releaseRemaining/distErr 偏差定量）|
 | `[AI-Diag] projDodge:` | reactive dodge 评分明细（band/surplus = dodge 结束到 projectile 到达的余量）|
 | `[AI-Diag] projCut[reactive]:` | reactive cut 评分明细（projBand vs boxBand + distAlign）|
+| `[AI-Diag] fatigueDefenseDelay` | 疲劳反应延迟锁存（mode/delayMs/stamina/oppState；同 delayMs 连续两组 = 重锁存循环信号）|
+| `[AI-Diag] fatigueDefenseCommit` | 疲劳延迟到点提交（kind/waitedMs/delayMs）|
 | `[ProjectileResolver] nearMiss` | projectile 与 slash weaponbox 接近未相交的逐帧几何（需 CombatSystem debugTrace=true）|
 | `throws: throw(...)` | throw 候选评分行 | 
 | `[Phase0] oppIdleMs=` | Memory pressure + Posture target/current + label |

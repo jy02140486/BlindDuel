@@ -108,5 +108,13 @@ export const CombatTuning = {
         attackGate: {
             enabled: true,
         },
+        /** 26.11.26 AI基于疲劳的反应延迟计划：AI 防御 commit 感知延迟
+         *  delay = delayMaxMs × sigmoid(F; 中心0.5, 斜率steepness)，F = 1 - staminaRatio
+         *  enabled=false = 影子模式（仅诊断日志观察延迟分布，commit 不延迟） */
+        fatigueReaction: {
+            enabled: true,
+            delayMaxMs: 100,
+            steepness: 10,
+        },
     },
 };

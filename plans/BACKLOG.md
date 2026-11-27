@@ -32,8 +32,8 @@ buff
 抽象一个hud类统一管理所有hud元素，目前是耐力条和血条，道具，buff栏
 致命一击时的freeze，尤其man at arms
 通关后continue清理
-tavern night 血量
-AI反应速度增加疲劳惩罚
+
+tavern night 打完刷新再continue manatarms动画直接放了
 
 
 
