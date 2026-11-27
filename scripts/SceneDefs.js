@@ -60,6 +60,9 @@ export function createEntityFromDef(scene, assets, entityDef) {
     // 实例级初始状态：构造后 enterState 覆盖，不改共享 stateGraph
     if (entityDef.initialState && typeof entity.enterState === "function") {
         entity.enterState(entityDef.initialState);
+        if (entityDef.initialStatePaused && entity.animation?.pause) {
+            entity.animation.pause();
+        }
     }
 
     // 覆盖 id / name（工厂函数内部设了 name，这里按 def 覆盖）

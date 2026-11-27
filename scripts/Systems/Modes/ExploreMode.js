@@ -619,6 +619,7 @@ export class ExploreMode extends BaseMode {
                     if (questManager && invoker.ending.scenario) {
                         questManager.advanceTo(invoker.ending.scenario);
                     }
+                    game?.clearCheckpoint?.();
                     game?.gameFlowManager?.showEnding(invoker.ending.text ?? "EPISODE COMPLETE");
                     game?.audioManager?.suppressSfx(true);
                 });

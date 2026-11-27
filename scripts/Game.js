@@ -370,6 +370,11 @@ export class Game {
         } catch (_) { /* ignore */ }
     }
 
+    clearCheckpoint() {
+        this._checkpoint = null;
+        this._clearCheckpointFromDisk();
+    }
+
     // 战斗/剧情运行时统一清理入口（计划 §三）：
     //   - AudioManager 内部状态由 detachScene 自清（见 plans/commits_detailed/26.7.28 战败重置后 ambient 不响修复）
     //   - GameMode context 残留由此显式调 currentMode.exit() 清：

@@ -31,11 +31,6 @@ prologue_cs_rabble_flee.json摄像机移向prop时会有jitter
 buff
 抽象一个hud类统一管理所有hud元素，目前是耐力条和血条，道具，buff栏
 致命一击时的freeze，尤其man at arms
-通关后continue清理
-
-tavern night 打完刷新再continue manatarms动画直接放了
-
-
 
 Scene.debugLayer.show() 在 Scene.init 无条件执行（原注释写的 Ctrl+Shift+I 与实际不符），菜单/黑屏 overlay 期间调试面板会浮在最上层——改按需开启
 UI 控件统一 Widget 基类：show/hide/dispose 生命周期协议统一（EndingOverlay 已是雏形），GameFlowManager._setHudVisible 手摤 id 列表为临时方案，与上面「抽象 hud 类」一起做

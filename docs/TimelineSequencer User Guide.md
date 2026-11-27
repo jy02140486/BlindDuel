@@ -82,6 +82,8 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 
 **`pause: true` 典型场景**：某个序列专用动画（非循环、一次性）在第一帧等待编排者的显式播放指令。写法通常是 command+pause 进态 → 可选的暂停维持 → resumeAnimation 播放 → 动画自然播完停在末帧（靠状态图 `loop: false` + 空 `transitions` 实现）。
 
+**⚠ 只用于 sequence 内部时序控制**：如果目的是"实体 spawn 即冻结在某个初始姿态，等后续另一条 sequence（如战斗 enterSequence）解冻"，不要靠 intro sequence 的 command+pause——一旦该路径没播 intro（Continue 读档、skipTransition），冻结就不会发生，动画会在 spawn 时直接播完。正确做法是 SceneDef 实体级数据字段：`"initialState": "CS_to_arms"` + `"initialStatePaused": true`（`createEntityFromDef` 在 `enterState` 后立即 pause，不依赖任何 sequence）。intro 里的 command+pause 只在需要 sequence 内部重新对帧/中途冻结时使用。
+
 ### 5.2 moveActorTo（actor 移动）
 
 线性插值移动 actor 的 `root.position`。
@@ -486,6 +488,8 @@ camera binding 类似：`{ "cameraId": "duel" | "explore" | "scripted" }`。
 - 帧推进从 pause 中断的那一帧继续，不会重新开始当前帧的 durationMs 计时（`timeInFrameMs` 在 pause 期间不累积，resume 后继续累加）
 
 **与 command+paused 的配合**：两者都会调 `animation.pause()`，效果等价。区别在于：`command+paused` 是单条 clip（进态 + 立即暂停），适合"进第一帧等播放"的场景；`pauseAnimation` / `resumeAnimation` 是两条独立 event clip，适合"动画正在播放中，临时冻结一会儿再继续"的场景。两者可以混用——`resumeAnimation` 也能解除 `command+paused` 造成的暂停。
+
+**与 SceneDef `initialStatePaused` 的配合**：`resumeAnimation` 同样能解冻实体 spawn 时的 `initialStatePaused` 冻结（同为 `FrameAnimationComponent._paused` 标志）。跨 sequence 的初始姿态冻结（spawn 冻结 → 战斗 enterSequence 解冻）推荐用这条链路，见 §5.1 的警告说明。
 
 **完整示例**（暂停 sleep 第二帧 1 秒）：
 ```jsonc

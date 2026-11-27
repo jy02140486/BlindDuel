@@ -36,6 +36,7 @@
             "pos": [0, -1.22],
             "controller": "ai",
             "initialState": "CS_to_arms",
+            "initialStatePaused": true,
             "spawnIf": { "flagNot": "battle_tavern_night_manatarms" },
             "aiProfile": {
                 "clashSeekerWeight": 1.0,
