@@ -1515,6 +1515,16 @@ export class AIController extends BaseController {
         const pref = this.tuning?.aiProfile?.attackPreferences?.[attack.stateName] ?? 1.0;
         score *= pref;
 
+        // 26.11.27 P2-A anchorMisalignRelief：短带招（effR < hold 锚 median）的锚点错位补偿。
+        // 平加在全部乘性阶段之后，量纲可预测（rabble dash 0.124+0.03=0.154 过 0.15 线）；
+        // 乘性阶段前加会被 rangeFactor/posture 缩水，擦边场景补偿不到位。
+        // swing（effR == median）不命中、thrust（effR > median）不命中，外溢为零。
+        const thresholdRelief = this.tuning.thresholdRelief ?? 0;
+        if (thresholdRelief > 0 && effectiveRange > 0) {
+            const idealEffReach = this.#getIdealEffReach();
+            if (effectiveRange < idealEffReach) score += thresholdRelief;
+        }
+
         return score;
     }
 
@@ -1885,6 +1895,8 @@ export class AIController extends BaseController {
         const agg = Math.max(0, Math.min(1, this.tuning.aiProfile?.baseAggression ?? 1.0));
         const reserveThreshold = 0.7 - 0.5 * agg;
         const filtering = st.attackGate?.enabled === true;
+        // 26.11.27 P1.2：机会释放物理底线——released 候选必须留有 releaseFloor 比例残量（0 = 无底线）
+        const releaseFloor = st.attackGate?.releaseFloor ?? 0;
 
         const wouldBlock = [];
         const released = [];
@@ -1901,7 +1913,7 @@ export class AIController extends BaseController {
             else if (opp?.punish > 0) opportunity = "punish(unqualified)";
             entry.fatigueGate = { cost, projected, reserveThreshold, opportunity, blocked, filtering, filtered: false };
             if (blocked) {
-                const releaseable = opportunity === "preemptive" || opportunity === "clashSeeker";
+                const releaseable = (opportunity === "preemptive" || opportunity === "clashSeeker") && projected >= releaseFloor;
                 const label = `${entry.action?.stateName ?? "?"}(cost=${cost.toFixed(0)} proj=${(projected * 100).toFixed(0)}%` +
                     (opportunity ? ` opp=${opportunity}${releaseable ? "→RELEASE" : "→BLOCK"}` : "→BLOCK") + ")";
                 if (filtering && releaseable) {
@@ -2015,12 +2027,14 @@ export class AIController extends BaseController {
         if (CombatTuning.stamina?.enabled === false) {
             this._fatigueGateActive = false;
             this._fatigueGuardSuppressed = false;
+            this._fatiguePosBias = 0;
             return;
         }
         const aware = this.fatigueAwareness;
         if (aware <= 0.0) {
             this._fatigueGateActive = false;
             this._fatigueGuardSuppressed = false;
+            this._fatiguePosBias = 0;
             return;
         }
         const self = this.character;
@@ -2042,6 +2056,7 @@ export class AIController extends BaseController {
             this._fatigueCycleLatchUntil = 0;
             this._fatigueGateActive = false;
             this._fatigueGuardSuppressed = false;
+            this._fatiguePosBias = 0;
             return;
         }
         const wasActive = this._fatigueGateActive;
@@ -2073,6 +2088,19 @@ export class AIController extends BaseController {
         // guard 压制 = 周期在管 且 耐力低于 guard 物理风险线（Step 2.3 语义：guard 后可能归零，dodge 接管）
         const guardLine = (st.costs?.guard ?? 10) * (self?.costMultiplier ?? 1.0);
         this._fatigueGuardSuppressed = this._fatigueGateActive && (self?.stamina ?? Infinity) < guardLine;
+        // 26.11.27 P1.1 低耐力恢复倾向：周期在管且 ratio 低于 retreatLine 时，
+        // 给 hold/retreat 加 positioningBias（主动拉开/站定等恢复，打破 thrust spam 死锁）。
+        // 退出复用上方 exitLine（ratio >= exitLine 时周期整体解除，bias 随之归零）。
+        const posBias = this.tuning.fatiguePositioningBias ?? 0;
+        const retreatLine = this.tuning.fatigueRetreatLine ?? 0.35;
+        const prevPosBias = this._fatiguePosBias ?? 0;
+        this._fatiguePosBias = (this._fatigueGateActive && posBias > 0 && ratio < retreatLine) ? posBias : 0;
+        if (this.debugVisible && this._fatiguePosBias > 0 && prevPosBias <= 0) {
+            console.log(
+                `[AI-Diag] fatiguePosBias: ratio=${(ratio * 100).toFixed(0)}% < line=${(retreatLine * 100).toFixed(0)}% ` +
+                `→ hold/retreat +${this._fatiguePosBias}（低耐力恢复倾向，拉开后等 exitLine 解除）`
+            );
+        }
     }
 
     // =========================================================================
@@ -2608,7 +2636,9 @@ export class AIController extends BaseController {
             // holdTimeout 的语义是"这个位置意图该重新评价了"，不是"永远不许再 hold"。
             // 修复原 bug：计时器只在非 hold commit 时重置，baseAggression=1.0 时
             // maxHoldMs=0 → 每 tick 判超时且永不复位 = hold 被永久禁用。
-            if (this.#holdCommitStart !== null) {
+            // 26.11.27 P1.1：疲劳恢复期跳过超时闪烁——低耐力时超时归零会让
+            // retreat 趁虚赢一拍（退半步）→ 下一拍 hold 回来 → 停住，产生周期性抽搐。
+            if (this.#holdCommitStart !== null && (this._fatiguePosBias ?? 0) <= 0) {
                 const holdDuration = performance.now() - this.#holdCommitStart;
                 const maxHoldMs = this.#getMaxHoldMs();
                 if (holdDuration > maxHoldMs) {
@@ -2628,6 +2658,11 @@ export class AIController extends BaseController {
                 && sit.now - this.lastAttackTime < this.attackCooldownMs) {
                 holdScore += 0.08;
             }
+        }
+        // 26.11.27 P1.1: 疲劳恢复 bias——仅 holdScore>0 时加权（尊重 hold 带边界
+        // 与 holdTimeout 归零语义，不在带外凭空制造 hold 资格）
+        if ((this._fatiguePosBias ?? 0) > 0 && holdScore > 0) {
+            holdScore += this._fatiguePosBias;
         }
         // === Step 新增：throw_windup hold 保底 ===
         // opp 在抬手准备投掷 + projectile 可被斩时，给 hold 一个小保底分
@@ -2685,6 +2720,12 @@ export class AIController extends BaseController {
             retreatScore = Math.max(retreatScore, 0.3);
         }
         retreatScore *= retMult;
+        // 26.11.27 P1.1: 疲劳恢复 bias——必须在 retMult 之后平加。
+        // 首版加在乘性之前被 posture multiplier（≈0.73）稀释成 0.088 < approach 0.129，
+        // 退不干净且 tired-advance 未被压制；乘后平加保证量纲可预测（0.15 vs approach 0.129）。
+        if ((this._fatiguePosBias ?? 0) > 0) {
+            retreatScore += this._fatiguePosBias;
+        }
 
         // === 26.11.2 Step 4c: 失败驱动脱离（语义挂现有 posture 参数，无新 tuning 旋钮）===
         // 场景：玩家持续 dodge / 连续挥空后，AI 需要退出攻击范围外重整，

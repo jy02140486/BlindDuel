@@ -1,6 +1,7 @@
 # AI 系统说明
 
-> 更新：2026-11-02 — 近距带欲望制衡（26.11.2 Step 4A/4B：attack 近端锚定单招射程带衰减到 nearDecayFloor 0.5 + retreat 中间档 (0.4, 0.7]×ideal 线性爬升）+ 失败驱动脱离（Step 4c：连续 miss≥2 时 retreat 获必退级加成，退离目标线由 posture.attackMultiplier 插值——标准侵略性退到自己攻击距离外，高侵略退短至 0.85×射程，低侵略退长至 max(自己,对手) 射程；无新 tuning 参数）。此前同日：holdTimeout 周期性语义（Step 3）：maxHoldMs = max(Σ attack.totalMs × (1 - aggression), minHoldPeriodMs=400)，超时 tick holdScore 归零并重置计时器开启下一评价周期（修复 baseAggression=1.0 时 hold 被永久禁用的 bug）；AITuning 新增 hold.minHoldPeriodMs。更早同日：口径核对同步（Step 0）+ 防御可达性门修复（Step 1 / 1b / 1c）：Step 0 = defense 链路文档与代码对齐、删除死配置 activationThreshold / startupTooLateBase。Step 1 = 可达性门改物理口径，不再含 rangeBuffer / ×1.5。Step 1b = 门加受击体延伸 bodyReachAllowance——root-to-root 距离 vs weaponbox × hitbox 重叠的口径差导致尖端擦身命中；补 minR 贴脸死区近端门。Step 1c = 自身闭合法则（approach 中的 AI 命中时刻距离更近，closure = currentSpd × timeUntilActiveEnd，上限 0.3m）+ [AI-Diag] COMBAT 命中事件日志（onCombatResult 挂点）+ defenseGate REJECT 门拒观测日志。复测（REJECT 日志实证）：closure 输入全部正常，但 allowance 初版 0.45 低估 hitbox 实际延伸（门差 0.01-0.02m 拒掉后即被命中，实测命中带 4.90-5.10m）→ 重校准 0.7。Step 2 = committedScoreThreshold 仲裁接线：committed action（attack/dodge/guard/throw）score ≥ 0.15 才留候选池，positioning 不受约束，无达标候选 → 原地待机（杜绝 0 分 dodge 平局获胜），被过滤候选打印 [AI-Diag] commitArbitration:
+> 更新：2026-11-27 — 疲劳感知行为退化修复（P1.2 RELEASE 底线 releaseFloor=0.02 / P1.1 低耐力恢复倾向 fatiguePosBias：retreatLine=0.50 + bias=0.15，retreat 后乘平加 + holdTimeout 恢复期豁免 / P2-A thresholdRelief=0.04 锚点错位补偿）+ rabble attackPreferences.dash=1.5 角色风味（详见 `plans/26.11.27 疲劳感知导致AI行为退化修复计划.MD`）
+> 上一次：2026-11-02 — 近距带欲望制衡（26.11.2 Step 4A/4B：attack 近端锚定单招射程带衰减到 nearDecayFloor 0.5 + retreat 中间档 (0.4, 0.7]×ideal 线性爬升）+ 失败驱动脱离（Step 4c：连续 miss≥2 时 retreat 获必退级加成，退离目标线由 posture.attackMultiplier 插值——标准侵略性退到自己攻击距离外，高侵略退短至 0.85×射程，低侵略退长至 max(自己,对手) 射程；无新 tuning 参数）。此前同日：holdTimeout 周期性语义（Step 3）：maxHoldMs = max(Σ attack.totalMs × (1 - aggression), minHoldPeriodMs=400)，超时 tick holdScore 归零并重置计时器开启下一评价周期（修复 baseAggression=1.0 时 hold 被永久禁用的 bug）；AITuning 新增 hold.minHoldPeriodMs。更早同日：口径核对同步（Step 0）+ 防御可达性门修复（Step 1 / 1b / 1c）：Step 0 = defense 链路文档与代码对齐、删除死配置 activationThreshold / startupTooLateBase。Step 1 = 可达性门改物理口径，不再含 rangeBuffer / ×1.5。Step 1b = 门加受击体延伸 bodyReachAllowance——root-to-root 距离 vs weaponbox × hitbox 重叠的口径差导致尖端擦身命中；补 minR 贴脸死区近端门。Step 1c = 自身闭合法则（approach 中的 AI 命中时刻距离更近，closure = currentSpd × timeUntilActiveEnd，上限 0.3m）+ [AI-Diag] COMBAT 命中事件日志（onCombatResult 挂点）+ defenseGate REJECT 门拒观测日志。复测（REJECT 日志实证）：closure 输入全部正常，但 allowance 初版 0.45 低估 hitbox 实际延伸（门差 0.01-0.02m 拒掉后即被命中，实测命中带 4.90-5.10m）→ 重校准 0.7。Step 2 = committedScoreThreshold 仲裁接线：committed action（attack/dodge/guard/throw）score ≥ 0.15 才留候选池，positioning 不受约束，无达标候选 → 原地待机（杜绝 0 分 dodge 平局获胜），被过滤候选打印 [AI-Diag] commitArbitration:
 > 上一次：2026-10-30 — 投掷物斩落修复：distanceAlignment 带状判据（minReach 贴脸死区）+ preemptive gate 文档与代码同步（Step 2b 后为单条件门控）+ 新增 projDodge/projCut/nearMiss 诊断日志
 > 上一次：2026-10-26 — defensive chars 无限 hold 修复：idealEffReach 中位数锚点 + hold 封顶 attackMultiplier + holdTimeout 强制打破 + posPlan/throw_windup hold bonus 资格门控（修复上轮 clash seeker 被压制根因）。详见 `plans/26.10.25 防御偏好型人物无限hold问题修正计划.MD`。
 > 上一次：2026-10-25 — Clash Seeker（主动寻求拼刀）落地
@@ -221,6 +222,8 @@ base = 0.4 (AITuning.attack.baseWeight)
 Clash Seeker **不受 rangeFactor 衰减**（clash 合格候选在硬门控已放行），让远距离 opp 刚起手时 AI 能 seek。
 
 baseAttackScore ×= posture.attackMultiplier × attackPreferences[stateName]
+
+**锚点错位补偿（26.11.27 P2-A）**：乘性阶段之后，若 `effectiveRange < #getIdealEffReach()`（hold 锚 median）则平加 `AITuning.thresholdRelief`(0.04)——短带招（dash/smash）被 hold 锚钉在射程外导致擦边死（0.124 vs 0.15）的补偿；平加不被 rangeFactor/pref 缩水，量纲可预测；clash 不合格 return 0 路径不受影响。rabble 另有 attackPreferences.dash=1.5 角色风味（argmax 层开窗，2.6~2.8m 带）。
 ```
 
 ### #scoreDefense 完整链路（2026-11-02 与代码核实同步）
@@ -373,9 +376,10 @@ base = throw.baseWeight(0.35)
 ### 疲劳感知机制（26.11.9）
 
 - **`#updateFatigueCycle`**：每 `cycleMs` 掷骰一次疲劳意识周期，`fatigueAwareness` 为通过概率；周期在管时 attack gate 过滤与 guard 压制共享同一锁存（R1，原两路独立掷骰已废弃）。guard 物理风险线（stamina < guard 耗费×costMultiplier）独立判定，不受周期压制
-- **`#applyFatigueAttackGate`**：位于全部候选评分后、仲裁前（D1），按 `reserveThreshold` 过滤耐力不足的 attack 候选（heavy 先于 light 被限制）；preemptive/clashSeeker 等机会攻击（`fatigueOpportunity > 0`）放行。不改任何 attack utility 分数与族内排序。总开关 `CombatTuning.stamina.attackGate.enabled`
+- **`#applyFatigueAttackGate`**：位于全部候选评分后、仲裁前（D1），按 `reserveThreshold` 过滤耐力不足的 attack 候选（heavy 先于 light 被限制）；preemptive/clashSeeker 等机会攻击（`fatigueOpportunity > 0`）且 projected ≥ `releaseFloor`(0.02) 才 RELEASE（26.11.27 P1.2：修 stamina=0 时 proj=0% 仍释放的破产漏洞）。不改任何 attack utility 分数与族内排序。总开关 `CombatTuning.stamina.attackGate.enabled`
+- **低耐力恢复倾向（26.11.27 P1.1）**：周期在管且 `staminaRatio < fatigueRetreatLine`(0.50) 时 `_fatiguePosBias`(0.15) 生效——hold（带内、holdScore>0 门控）与 retreat（retMult 之后平加）加权，打破低耐力攻击死锁；疲劳恢复期 holdTimeout 跳过归零（防 hold/retreat 交替抽搐）；ratio 回 exitLine 周期解除即退出，approach 拉回闭环
 - **成本同源（R3）**：`CombatCharacter.getAttackCommitCost()` 公开查询口，AI 资格预测与实际扣费用同一规则
-- **日志标签**：`fatigueGate`（候选过滤）/ `fatigueCycle`（周期状态）/ `[AI-Diag] COMBAT`（命中事件，含 stamina/fatigueCycle 字段）
+- **日志标签**：`fatigueGate`（候选过滤）/ `fatigueCycle`（周期状态）/ `fatiguePosBias`（P1.1 恢复倾向上升沿）/ `[AI-Diag] COMBAT`（命中事件，含 stamina/fatigueCycle 字段）
 - ⚠ 已知问题：D8 设计假设"压制 guard 后 dodge 接管"与 StateGraphDef 状态封闭（hit/guard 态无 dodge 出口）互相对消——低耐力被压制场景防御全空，详见 `plans/26.11.9 AI进攻决策引入耐力计划.MD` §6
 
 ### 疲劳反应延迟（26.11.26）

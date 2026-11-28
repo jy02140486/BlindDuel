@@ -107,6 +107,10 @@ export const CombatTuning = {
          *  false/缺省 = 影子模式（仅诊断日志，不过滤候选）；true = 实际过滤（Step 3 起） */
         attackGate: {
             enabled: true,
+            /** 26.11.27 P1.2 机会释放物理底线：released 候选至少需留有此比例残量
+             *  （调查 §8.4：stamina=0/proj=0% 时 smash 仍 →RELEASE 的破产漏洞）
+             *  设 0 = 回滚为无条件释放 */
+            releaseFloor: 0.02,
         },
         /** 26.11.26 AI基于疲劳的反应延迟计划：AI 防御 commit 感知延迟
          *  delay = delayMaxMs × sigmoid(F; 中心0.5, 斜率steepness)，F = 1 - staminaRatio

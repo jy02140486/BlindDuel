@@ -31,9 +31,29 @@ export const AITuning = {
     // 才留在候选池（positioning 不受约束，有自己的距离门控）。注意 0.15 数值未经证明，
     // 是回归验证项——可能过滤掉低分但有价值的反应（观察 commitArbitration 日志）。
     // 26.11.2 Step 4 复测修正：运行时按角色 attack.baseWeight / 系统默认值归一化
-    // （钳制 [0.25, 1.5]）——防御偏好型人格（manatarms baseWeight=0.10）攻击分天花板
+    // （錨制 [0.25, 1.5]）——防御偏好型人格（manatarms baseWeight=0.10）攻击分天花板
     // ≈0.09，绝对阈值使其永远无法攻击 → 无限 hold。此字段只保留"系统默认量纲"下的值。
     committedScoreThreshold: 0.15,
+    // 26.11.27 P2-A anchorMisalignRelief：攻击候选 effR < idealEffReach（hold 锚 median）时
+    // 评分侧平加此补偿——短带招（dash/smash）被 hold 锚钉在射程外导致擦边死
+    // （rabble dash 0.124/0.148 vs 0.15）的锚点错位补偿。乘性阶段之后平加，
+    // 不被 rangeFactor/posture/pref 缩水；设 0 关闭（回归现行为）。不改全局阈值，不影响人格缩放。
+    // 26.11.27 复测 0.03→0.04：0.03 在 approach 停止距离 3.0m 处仍差 0.001 擦边
+    // （tick2605 实测 rf=0.31 → 0.119+0.03=0.149 < 0.15），dash 被动化为「仅对手推进才触发」；
+    // 0.04 使 3.0m 处 0.159 过线 → dash 可在 approach 天花板处主动开火（gap-closer 语义），
+    // 3.1m 外 rf 过低仍不触发，外溢受控。
+    thresholdRelief: 0.04,
+    // 26.11.27 P1.1 低耐力恢复倾向：疲劳周期在管且 staminaRatio 低于 fatigueRetreatLine 时，
+    // 给 hold/retreat 评分平加 fatiguePositioningBias（主动站定/拉开等恢复），
+    // 打破 thrust spam → stamina 死锁循环（rabble 局 stamina 悬停 15~52）。
+    // 退出复用疲劳周期 exitLine；两个参数均设 0 可关闭（回归现行为）。
+    // 26.11.27 复测调整：
+    //   bias 0.12→0.15：首版 0.12 在 hold 带外退不过 approach(0.129)，退不干净；
+    //   line 0.35→0.50：首版 35 就关 bias，36~45 区间 bias 已退出但 dash 需 stamina≥46
+    //   才过疲劳门 → thrust(0.113) 抢蓝，dash 窗口（dist≈2.6 rf 0.83 + stamina 41）差 5 点蓝
+    //   被掐断；0.50 盖住 36~50 整个 gap，46+ 时 dash(rf 0.83 → sc≈0.26) 直接胜过 hold。
+    fatigueRetreatLine: 0.50,
+    fatiguePositioningBias: 0.15,
     reactionVariance: 0.05,            // 随机扰动幅度（降级为 tie-break，Step 5）
 
     // === oppThreat 感知 ===
