@@ -91,6 +91,24 @@
         "house_door": [-19, 0, 0]
     },
     "triggers": [
+         {
+            "type": "sceneSwitch",
+            "id": "enter_house",
+            "pos": [-19, 0, 0],
+            "size": [2, 2, 2],
+            "targetScene": "ep1_tavern_hall_night",
+            "targetSpawn": "house_door",
+            "debugColor": [0, 1, 1],
+            "debugVisible": true,
+            "arrow": {
+                "enabled": true,
+                "edge": "top",
+                "direction": "up",
+                "offset": 0.3,
+                "scale": 0.4,
+                "frameMs": 250
+            }
+        },
         {
             "type": "battle",
             "id": "bt_field_1",

@@ -7,6 +7,7 @@ export const ITEM_DEFS = {
         id: "ham",
         name: "火腿",
         consumeType: "eat",
+        healAmount: "full",
         atlasKey: "ham",
         textureUrl: "./Art/Sprite/items/Ham.png",
     },

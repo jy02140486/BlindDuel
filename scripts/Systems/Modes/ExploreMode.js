@@ -1038,7 +1038,13 @@ export class ExploreMode extends BaseMode {
             // consume 动画播完，收尾
             seq.phase = "done";
             if (seq.consumeType === "eat") {
-                character.heal(1);
+                const regDef = getItemDef(pickable.itemDef?.id);
+                const healAmount = regDef?.healAmount ?? pickable.itemDef?.healAmount;
+                if (healAmount === "full") {
+                    character.heal(character.maxHp);
+                } else {
+                    character.heal(healAmount ?? 1);
+                }
             }
             if (seq.consumeType === "drink" && this.context.playerController) {
                 this.context.playerController.addBuff({
